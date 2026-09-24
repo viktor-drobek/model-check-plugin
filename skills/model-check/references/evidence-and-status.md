@@ -82,13 +82,22 @@ Notes on exclusivity:
 | `not-executed` | `unknown` | "Not checked: reason (construct X at line n / unsupported semantics / no engine). Model and properties are attached; route: …" | any result, including "likely fine" |
 | `invalid-model` | any | "The model overflowed domain D at step s (trace attached); fix the model before any property claim." | "violated"; "the system overflows" |
 
-## 5. Size bounds (plan A4, provisional)
+## 5. Size bounds (plan A4 as fixed at control point K1)
 
-The engine targets "small and medium" models: the plan's orientation is up to about
-10⁶ states in 60 s and 1 GB on a typical machine, to be replaced by the numbers
-measured in the Spike (control point K1). Above that, `mc_estimate` warns before the
-run and a full run ends `inconclusive`, not in silent waiting. Quote the measured
-numbers from the manifest, not this paragraph.
+The engine targets "small and medium" models. Plan 14 §12 A4, fixed after the Spike
+(`model-check-plugin/steps/spike-confirmation.md`):
+
+| Class | States | DFS depth | State vector | Time | Memory |
+|---|---|---|---|---|---|
+| small | ≤ 10⁵ | ≤ 10⁵ | — | 60 s | 1 GB |
+| medium | ≤ 10⁶ | ≤ 10⁶ | ≤ 128 bytes | 60 s | 1 GB |
+
+Depth is a budget of its own, separate from the state count. Spike measurements:
+0.5–1.2× the speed of `pan`, 32 bytes per stored state; the overhead of
+interpreting the IR was not measured and is checked in G0 (the plan allows up to
+20×). Above the medium class `mc_estimate` warns before the run and a full run ends
+`inconclusive`, not in silent waiting. Quote the numbers of the actual run from the
+manifest, not this table.
 
 ## 6. Forbidden phrasings
 

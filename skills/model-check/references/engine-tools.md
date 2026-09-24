@@ -63,7 +63,7 @@ gap with your own reasoning.
 
 | Capability | Available from |
 |---|---|
-| Petri JSON, `deadlock`, `invariant`, `reach`, DFS/BFS, JSON report, CLI | G0 |
+| Petri JSON, `deadlock`, `invariant`, `reach`, DFS/BFS with lazy successors and a depth budget, JSON report with a `complete` flag (whether the search finished), CLI | G0 |
 | Promela subset (chapters 2–3), counterexamples with reverse mapping | G1 |
 | MCP server with all seven tools, manifest, session directory | G2 |
 | `ltl` (never claims and formulas), `progress`, weak fairness | G4 (LTL evidence `unknown`/experimental until the differential oracle passes) |
