@@ -1,0 +1,60 @@
+{
+  "skill_name": "model-check",
+  "note": "Prompts from model-check-skill-notes/14-skill-building-plan.md §8.2 (E1–E6). Expectations (assertions) are deliberately empty: the evals half of G3 runs only when the engine and the MCP server exist (G0–G2). Fixtures are corpus files referenced by path and hash in evals/fixtures/README.md; nothing is copied.",
+  "evals": [
+    {
+      "id": 1,
+      "name": "mutex-invariant-violated",
+      "prompt": "Два процесса не должны одновременно попадать в критическую секцию. Проверь эту модель: Promela - examples/CH2/mutex_flaw.pml",
+      "expected_output": "Invariant violated; status `violated`, evidence `exhaustive`; counterexample decoded through labels L1–L4 with both users at L7; cause class: system defect; manifest attached; no forbidden phrasing.",
+      "files": [],
+      "fixture": "Promela - examples/CH2/mutex_flaw.pml",
+      "expectations": []
+    },
+    {
+      "id": 2,
+      "name": "alternating-bit-liveness-fairness",
+      "prompt": "Докажи, что alternating bit доставляет каждое сообщение. Модель: Promela - examples/CH3/alternatingbit.pml",
+      "expected_output": "The fairness question is asked (or an explicit labelled assumption is made) before the liveness run; safety `verified`; liveness reported with a status that depends on the fairness setting, both readings shown as different results; the word \"proved\" is not used for the model result.",
+      "files": [],
+      "fixture": "Promela - examples/CH3/alternatingbit.pml",
+      "expectations": []
+    },
+    {
+      "id": 3,
+      "name": "petri-net-hang",
+      "prompt": "Сеть Петри: места p1…p6, переходы t1: p1→p2; t2: p2,p4→p3; t3: p3→p1,p4; t4: p4→p5; t5: p1,p5→p6; t6: p6→p4,p1. Начальная маркировка p1=1, p4=1. Может ли она зависнуть?",
+      "expected_output": "Petri JSON built to assets/petri-net.schema.json → mc_parse → deadlock property `violated`, evidence `exhaustive`; counterexample t1, t4; final marking p2 = p5 = 1; the standard property set (hang, safe) offered; CTL vs LTL transition liveness distinguished if asked.",
+      "files": [],
+      "fixture": "Promela - examples/App_C/petrinet1",
+      "expectations": []
+    },
+    {
+      "id": 4,
+      "name": "telephone-busy-liveness",
+      "prompt": "Телефон не может зависнуть в состоянии Busy? Модель коммутатора: Promela - examples/CH14/version1",
+      "expected_output": "Requirement classified as liveness; formalised with a `progress` label or an LTL `<>`/`[]<>` formula on the labels (not on printf output); fairness question asked; status with evidence level reported; if LTL evidence is `unknown`/experimental the report says so.",
+      "files": [],
+      "fixture": "Promela - examples/CH14/version1",
+      "expectations": []
+    },
+    {
+      "id": 5,
+      "name": "c-code-out-of-subset",
+      "prompt": "Проверь эту модель с c_code: Promela - examples/CH17/simple1.pr",
+      "expected_output": "Parser rejection explained (c_code/c_expr are outside the subset; no host code is executed); status `not-executed` with the construct and line; no imitation of a result; a rewrite of the C effect as Promela statements offered.",
+      "files": [],
+      "fixture": "Promela - examples/CH17/simple1.pr",
+      "expectations": []
+    },
+    {
+      "id": 6,
+      "name": "ctl-ag-ef-idle",
+      "prompt": "Проверь свойство AG EF idle на модели Promela - examples/CH14/version1 (idle — метка Idle процесса switch).",
+      "expected_output": "Checked as CTL through mc_check with the `ctl` property kind; not rewritten into LTL; the branching-time meaning explained; the report says the result is fairness-free and whether the witness is a path or a tree.",
+      "files": [],
+      "fixture": "Promela - examples/CH14/version1",
+      "expectations": []
+    }
+  ]
+}

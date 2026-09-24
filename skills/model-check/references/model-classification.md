@@ -57,8 +57,8 @@ Boundary cases decided by the requirement, not by the model text (10 §4, §13):
 
 ## 4. Nature of transitions
 
-| Finding | Class | Engine |
-|---|---|---|
+| Finding | Engine |
+|---|---|
 | Nondeterministic (environment, scheduler) | supported: both universal (LTL, `A…`) and existential (`E…`) properties |
 | Probabilistic (Markov chain, MDP) | see §2 → `not-executed` |
 | Timed automaton, hybrid | see §2 → `not-executed` |
@@ -76,7 +76,8 @@ Record it; it decides how the report's Limitations section is worded.
 
 ## 6. Decision table (exclusive branches)
 
-Evaluate in this order; take the first row that matches.
+Rows 1–3 are evaluated first, in order (1 and 2 exit; 3 modifies the model and
+continues); then exactly one of rows 4–7 picks the formalism.
 
 | # | Condition | Action |
 |---|---|---|
@@ -88,9 +89,8 @@ Evaluate in this order; take the first row that matches.
 | 6 | synchronous system without scheduler encoding | `not-executed` (SMV export vNext) or ask to encode the round explicitly |
 | 7 | everything else finite and untimed | Promela subset route |
 
-Rows 1–2 exit, row 3 continues, rows 4–7 pick the formalism. A model that hits row 3
-and row 4 (an unbounded place with an accepted bound) goes through row 3 first: the
-bound becomes the place capacity in the JSON.
+A model that hits row 3 and row 4 (an unbounded place with an accepted bound) goes
+through row 3 first: the bound becomes the place capacity in the JSON.
 
 ## 7. What to write down
 

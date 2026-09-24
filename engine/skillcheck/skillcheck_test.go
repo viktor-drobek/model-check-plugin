@@ -149,7 +149,7 @@ func TestSchemaWalkers(t *testing.T) {
 		"type": "object", "additionalProperties": false,
 		"properties": map[string]any{
 			"arcs": map[string]any{"type": "array", "items": map[string]any{
-				"type": "object",
+				"type":       "object",
 				"properties": map[string]any{"inhibitor": map[string]any{"type": "boolean"}},
 			}},
 			"kind": map[string]any{"enum": []any{"normal", "Inhibitor"}},

@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://model-check.local/schemas/petri-net.schema.json",
+  "title": "Place/transition Petri net for the model-check engine",
+  "description": "A basic place/transition net after Holzmann §8.10 (plan 14 §2.2, §5.3): places carry an integer marking with an optional capacity (default 255); transitions consume from input places and produce into output places with integer multiplicities of at least 1. Arrays fix the engine's deterministic order. Test-for-absence arcs are not representable: every object is closed and an arc has only a place and a multiplicity.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["places", "transitions"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Optional net name used in reports."
+    },
+    "places": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Places in the order the engine will use.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "initial"],
+        "properties": {
+          "id": { "$ref": "#/$defs/identifier" },
+          "initial": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Initial marking: number of tokens in this place."
+          },
+          "capacity": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 255,
+            "description": "Maximum number of tokens; an effect that would exceed it is reported as invalid-model. Default 255 (a Promela byte, as in App_C/petrinet1)."
+          },
+          "meaning": {
+            "type": "string",
+            "description": "What a token in this place stands for (condition, control point or resource) — used to decode counterexamples."
+          }
+        }
+      }
+    },
+    "transitions": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Transitions in the order the engine will use.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "inputs", "outputs"],
+        "properties": {
+          "id": { "$ref": "#/$defs/identifier" },
+          "inputs": {
+            "type": "array",
+            "description": "Arcs from places to this transition. The transition is enabled when every input place holds at least the arc's multiplicity.",
+            "items": { "$ref": "#/$defs/arc" }
+          },
+          "outputs": {
+            "type": "array",
+            "description": "Arcs from this transition to places. Firing adds the arc's multiplicity to each output place.",
+            "items": { "$ref": "#/$defs/arc" }
+          },
+          "meaning": {
+            "type": "string",
+            "description": "What firing this transition stands for in the source system."
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+      "description": "Place or transition name; must be unique within its list."
+    },
+    "arc": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["place"],
+      "properties": {
+        "place": { "$ref": "#/$defs/identifier" },
+        "multiplicity": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1,
+          "description": "Tokens moved along this arc per firing. 1 is Holzmann's basic net; larger values are the plan's extension."
+        }
+      }
+    }
+  }
+}

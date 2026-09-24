@@ -19,9 +19,10 @@ the user one grouped set of questions, or **exit** with a status. Exits are
 still written, with the exit reason in section 9 (Limitations) and the route in
 section 10 (Next actions).
 
-The branch conditions at every node are written so that exactly one applies. If you
-find a case that fits none or two, that is a defect in this file — record it in the
-report's Limitations and pick the more conservative branch (the one that claims less).
+At every node take the **first** branch whose condition holds; the branches are
+ordered so that exits come before continuations. If no branch fits, that is a defect
+in this file — record it in the report's Limitations and pick the branch that claims
+least.
 
 ## 2. Mandatory questions (11 §4)
 
@@ -49,9 +50,9 @@ need the user's explicit confirmation, defaults are not enough.
 
 ### Node 1 — goal
 
-- Bug-finding wanted → continue with early stop enabled (`mc_check` stops at the first violation per property).
+- A guarantee is wanted (alone or together with bug-finding) → continue; nodes 3 and 6 must both pass for `exhaustive` to be possible.
 - Bounded assurance is enough → continue; the report will carry evidence `bounded` or `inconclusive` by construction.
-- A guarantee is wanted → continue; nodes 3 and 8 must both pass for `exhaustive` to be possible.
+- Only a concrete failing scenario is wanted → continue with early stop enabled (`mc_check` stops at the first violation per property).
 
 ### Node 2 — is there a model?
 
@@ -72,16 +73,16 @@ need the user's explicit confirmation, defaults are not enough.
 
 ### Node 5 — property class
 
-- "Bad state never reached" → invariant / safety / deadlock; continue.
-- "Every request is eventually answered", "infinitely often", "eventually forever" → liveness; continue **through node 7**.
-- "From every state there exists a path to …", "it is possible that …" → CTL; continue. CTL is checked without fairness (engine scope).
 - Time bound inside the property → back to node 4 exit.
 - Probability inside the property → back to node 4 exit.
+- "From every state there exists a path to …", "it is possible that …" (an existential or nested path quantifier) → CTL; continue. CTL is checked without fairness (engine scope).
+- "Every request is eventually answered", "infinitely often", "eventually forever" → liveness; continue **through node 7**.
+- "Bad state never reached" → invariant / safety / deadlock; continue.
 
 ### Node 6 — complete or bounded
 
 - `mc_estimate` shows the reachable space fits the budget → exhaustive search; continue.
-- It does not fit → reduce the model first (smaller data, fewer processes, smaller queues — each change documented), then rerun the estimate. If it still does not fit → run with the budget anyway; the outcome will be `violated` (a counterexample is a counterexample) or `inconclusive` (never `verified`).
+- It does not fit → reduce the model first (smaller data, fewer processes, smaller queues — each change documented), then rerun the estimate. If it still does not fit → run with the budget anyway and expect `violated` (a counterexample is a counterexample) or `inconclusive`; `verified` appears only if the estimate was pessimistic and the search actually completed.
 
 ### Node 7 — fairness (liveness only)
 

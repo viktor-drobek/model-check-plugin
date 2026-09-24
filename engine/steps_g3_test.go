@@ -424,7 +424,7 @@ func registerG3Steps(sc *godog.ScenarioContext) {
 		}
 		var bad []string
 		for _, sec := range skillcheck.NumberedSections(s) {
-			if !skillcheck.NamesCorpusPath(sec.Body) && !strings.Contains(sec.Body, phrase) {
+			if !skillcheck.NamesCorpusPath(sec.Body) && !strings.Contains(strings.ToLower(sec.Body), strings.ToLower(phrase)) {
 				bad = append(bad, sec.Title)
 			}
 		}

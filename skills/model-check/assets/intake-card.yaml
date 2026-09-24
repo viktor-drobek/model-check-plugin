@@ -1,0 +1,68 @@
+# Intake card — one per check (FR-001, FR-002).
+# Source: model-check-skill-notes/11-skill-requirements.md §3 (normalised task card),
+# §4 (mandatory questions). Fill every field or write the question you asked;
+# "inferred" marks a value the user has not confirmed. For a critical check,
+# fairness, atomicity and the system boundary need explicit confirmation.
+
+system:
+  name: ""
+  boundary: ""            # components inside the model
+  environment: ""         # what the environment may do (inputs, losses, duplicates, failures)
+  excluded: []            # components deliberately left out, with the reason
+  relation_to_implementation: ""   # hand-written model | extracted from code | built from prose
+
+state:
+  variables: []           # name, domain, encoding, source meaning
+  processes: []           # or places for a Petri net
+  channels: []            # name, capacity, message type, FIFO
+  initial_states: ""      # formula or enumeration; confirm S0 is non-empty and not wider than the environment
+  observables: []         # atoms the properties use → model expression → source meaning
+
+transitions:
+  semantics: ""           # interleaving | rendezvous | buffered channels | synchronous update
+  atomic_step: ""         # one statement | one automaton transition | one event | one tick
+  terminal_states: ""     # allowed end states (end labels) | deadlock is an error
+  nondeterminism: ""      # sources of choice: scheduler, environment, model abstraction
+
+properties:               # one entry per property
+  - id: P1
+    wording: ""           # the user's words
+    class: ""             # safety | reachability | liveness
+    logic: ""             # invariant | LTL | CTL | deadlock | progress
+    extension: untimed    # untimed | timed | probabilistic (timed/probabilistic → not-executed)
+    formula: ""
+    atoms: []
+    expected_evidence: "" # finite trace | lasso | tree | none
+    sanity_companion: ""  # reachability property that guards against vacuity
+
+assumptions:
+  scheduler: ""
+  delivery: ""            # loss, duplication, reordering allowed?
+  failures: ""
+  environment_inputs: ""
+  bounds: []              # every bound that makes the model finite, as a visible parameter
+
+fairness:
+  required: ""            # none | weak | strong (strong → not supported; see references/fairness.md)
+  justification: ""       # why the excluded infinite paths are unrealistic in operation
+  confirmed_by_user: false
+
+backend:
+  engine: mcd             # the built-in engine; MCP or CLI
+  search_mode: dfs        # dfs | bfs
+  reductions: none
+
+budget:
+  time: ""
+  states: ""
+  depth: ""
+  memory: ""
+  repeats: 1
+
+evidence:
+  expected: ""            # exhaustive | bounded | unknown  (approximate only in vNext; statistical is never produced)
+  goal: ""                # bug-finding | bounded assurance | exhaustive result
+
+artefacts:
+  may_store_models_and_traces: false
+  contains_secrets_or_personal_data: ""

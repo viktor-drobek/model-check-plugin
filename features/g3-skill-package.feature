@@ -63,7 +63,7 @@ Feature: G3 skill package — documentation half
     Then every file under "references" names its source notes within its first 12 lines
 
   # ---------------------------------------------------------------- statuses
-  Scenario: Status vocabulary is the six words of 11 §14 and nothing else
+  Scenario: Status vocabulary is the six words of 11 §14 — no status-labelled token or misspelling outside it
     Then "references/evidence-and-status.md" lists exactly these statuses:
       | verified      |
       | violated      |

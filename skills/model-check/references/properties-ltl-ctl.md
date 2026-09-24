@@ -51,7 +51,8 @@ the verdict.
 ## 3. Typical properties in LTL and CTL
 
 "Same?" says whether the two formulas have the same truth value on every finite
-model without fairness. Where they differ, the last column says which one to use.
+model without fairness and with a total transition relation (the engine reports
+deadlocks separately, so the models it evaluates formulas on are total). Where they differ, the last column says which one to use.
 
 | Intent (user's words) | LTL (SPIN syntax) | CTL | Same? | Note |
 |---|---|---|---|---|

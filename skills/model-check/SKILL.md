@@ -50,8 +50,9 @@ the sources, your memory was not.
 
 ## Workflow in eight steps
 
-Follow the steps in order. Every step has an exit point where the honest answer is a
-question or a `not-executed`; taking the exit is a success, not a failure. Read
+Follow the steps in order. Steps 1–4, 6 and 7 have exit points where the honest answer
+is a question, a `not-executed`, an `invalid-model` or a rerun; taking an exit is a
+success, not a failure. Read
 `references/workflow.md` before the first run in a session: it holds the full
 decision tree with the exit conditions and the staged-budget rule.
 
@@ -73,9 +74,9 @@ semantic class (untimed / timed / probabilistic). Then decide the input formalis
 
 - asynchronous processes, channels, shared variables → Promela subset
   (`references/promela-subset.md`);
-- places, transitions, tokens, "marking", a token game → Petri net JSON
-  (`references/petri-nets.md`), which the engine turns into the same intermediate
-  representation;
+- places, transitions, tokens, "marking", a token game → Petri net JSON written
+  to `assets/petri-net.schema.json` (`references/petri-nets.md`), which the engine
+  turns into the same intermediate representation;
 - a system described only in words → write it in the Promela subset first; direct IR
   authoring is experimental (plan assumption A7).
 
@@ -124,16 +125,18 @@ property.
 Pass the IR, the property list, the fairness setting and an explicit budget. When a
 property returns `inconclusive`, increase the budget in steps (FR-024) and rerun; do
 not reformulate the result. When the engine reports an overflow (`byte` wrap, channel
-capacity, place capacity) the status is `invalid-model`: fix the model, do not report
-a system defect. After any change to the model, rerun every property, not only the one
+capacity, place capacity) the status is `invalid-model`: the engine cannot tell
+whether the real system has the same bound, so fix or justify the domain in the
+model first and make no property claim until then. After any change to the model, rerun every property, not only the one
 that failed — fixing a deadlock can open a non-progress cycle.
 
 ### 7. Analyse with `mc_explain`
 
 For every `violated` property call `mc_explain` to get the counterexample as prefix
 and loop with the user's names and per-step variable diffs. Then classify the cause:
-system defect, model defect, property defect (wrong polarity, wrong atom, wrong
-logic), or an artefact of the model's over-approximation of the real system. The
+system defect, model defect (including artefacts of the model's over-approximation
+of the real system), property defect (wrong polarity, wrong atom, wrong logic), or a
+fairness/environment artefact that a justified assumption would exclude. The
 classification procedure and the "first causal fork" rule are in
 `references/counterexamples.md`. Propose the fix as a hypothesis to verify, never
 as an edit to the requirement.
@@ -153,7 +156,7 @@ Every property gets one status from the vocabulary of 11 §14 and one evidence l
 | Status | Meaning |
 |---|---|
 | `verified` | search completed, no violation found |
-| `violated` | a concrete counterexample exists and was replayed |
+| `violated` | the engine found a concrete counterexample; you replay and classify it before reporting |
 | `inconclusive` | a correct but incomplete search: budget exhausted, bounded, approximate |
 | `unknown` | the result cannot be read even as partial coverage |
 | `not-executed` | nothing was run: out of subset, unsupported semantics, no binary, user declined |
@@ -189,8 +192,9 @@ the status, the status × evidence table, and the list of phrasings you must not
   showing both users at `L7`. Cause class: system defect (the algorithm is wrong).
 - **`CH3/alternatingbit.pml`** — safety (no message accepted out of order) can be
   `verified`; liveness "every message is eventually acknowledged" depends on the
-  fairness question you asked in step 4 — without fairness the channel may lose
-  forever, and the report must show both readings as different results.
+  fairness setting you agreed in step 4 (the corpus file has lossless channels, so
+  any unfair path is a scheduling path); the report shows the readings with and
+  without fairness as different results.
 - **`CH5/pathfinder.pml`** — deadlock through priority inversion. The model uses
   `provided`, which is v1 of the subset; until then the honest status is
   `not-executed` with the construct named. When accepted, partial-order reduction is
