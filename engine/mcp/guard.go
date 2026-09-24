@@ -7,16 +7,22 @@ import (
 	"strings"
 )
 
-// Resolve maps a client-supplied relative path onto the session directory
-// dir and refuses anything that would leave it (NFR-004). It is the only
-// place where a path under the session directory is formed; every read and
-// write of session files goes through it.
+// Resolve maps a session-relative name onto the session directory dir and
+// refuses anything that would leave it (NFR-004). It is the only place where
+// a path to a session file is formed; every read and write of session files
+// goes through it. (The session directory itself is created by
+// Sessions.New with os.Mkdir under the base directory; that is the server's
+// own choice of location, not a name a client supplied.)
 //
 // Rules, in order:
 //
-//  1. rel must be non-empty and relative. An absolute path is refused even
-//     if it happens to lie under dir, because the client is never meant to
-//     know or choose absolute locations.
+//  1. rel must be non-empty and relative. Names are relative by contract:
+//     a client names a file inside the session ("cex/cex-1.json"), never a
+//     location. An absolute path is refused even if it happens to lie under
+//     dir, so that the guard has one form to check and a refusal cannot be
+//     worked around by re-spelling the same target. (Answers do return
+//     absolute paths, for the client to read files; those are outputs, not
+//     names the guard accepts.)
 //  2. The lexical join filepath.Join(dir, rel) is cleaned, so `a/../../x`
 //     is already `<parent of dir>/x` here — and refused by rule 4.
 //  3. Symlinks are followed: the longest existing prefix of the joined path
@@ -29,6 +35,12 @@ import (
 // The returned path is the lexical join (inside dir), not the resolved one,
 // so that files are created where the caller expects them; the check itself
 // is on the resolved form.
+//
+// Premise, stated because the guarantee depends on it: nothing else writes
+// into the session directory between the check and the write (no local
+// actor plants a symlink in the not-yet-existing suffix). The server is the
+// only writer under its base directory by design; a base directory shared
+// with untrusted local processes is outside what the guard promises.
 func Resolve(dir, rel string) (string, error) {
 	if !filepath.IsAbs(dir) {
 		return "", fmt.Errorf("session directory %q is not absolute", dir)

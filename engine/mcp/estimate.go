@@ -35,11 +35,12 @@ type Growth struct {
 	RateBasis string  `json:"rate_basis"`
 }
 
-// Projection extrapolates the growth. It is marked approximate and is not a
-// verification result.
+// Projection extrapolates the growth. It is not a verification result: it
+// is approximate while it extrapolates, and exhaustive only when there was
+// nothing left to extrapolate (the whole graph was expanded).
 type Projection struct {
-	Evidence          string `json:"evidence" jsonschema:"always approximate"`
-	StatesAtNextLevel int    `json:"states_at_next_level" jsonschema:"states(last depth) × rate, rounded; 0 when no rate"`
+	Evidence          string `json:"evidence" jsonschema:"approximate for an extrapolation; exhaustive when the whole reachable graph was expanded and the count is exact"`
+	StatesAtNextLevel int    `json:"states_at_next_level" jsonschema:"states(last depth) × rate, rounded; the exact total when complete; 0 when no rate"`
 	Note              string `json:"note"`
 }
 
@@ -81,7 +82,7 @@ func (s *Server) estimate(ctx context.Context, req *sdk.CallToolRequest, in Esti
 		return nil, nil, err
 	}
 	if rej != nil {
-		err = fmt.Errorf("ir rejected: %s", rej.Reason)
+		err = rejectedInput(rej)
 		return nil, nil, err
 	}
 	release, err := s.acquire(ctx)
@@ -99,7 +100,9 @@ func (s *Server) estimate(ctx context.Context, req *sdk.CallToolRequest, in Esti
 	defer cancel()
 	out := &EstimateOut{SessionID: sess.ID, TimeLimitMS: limit, Growth: Growth{PerLevel: []Level{}},
 		Note: "estimate of the state space by partial breadth-first exploration; not a verification result"}
-	budget := explore.Budget{MaxStates: s.cfg.Ceiling.States, MaxMemBytes: s.cfg.Ceiling.MemoryMB << 20}
+	// States and memory are bounded by the server defaults (which lie within
+	// the ceilings), as for a check whose client left those fields at 0.
+	budget := explore.Budget{MaxStates: s.cfg.Default.States, MaxMemBytes: s.cfg.Default.MemoryMB << 20}
 	for d := 1; ; d++ {
 		if time.Now().After(deadline) {
 			break
@@ -107,10 +110,14 @@ func (s *Server) estimate(ctx context.Context, req *sdk.CallToolRequest, in Esti
 		budget.MaxDepth = d
 		res, e := explore.Run(runCtx, m, explore.Options{Mode: explore.BFS, Budget: budget})
 		if e != nil {
-			err = fmt.Errorf("ir rejected: %v", e)
+			err = rejectedInput(&Rejection{Kind: "ir", Construct: "model", Reason: e.Error()})
 			return nil, nil, err
 		}
-		out.StatesVisited, out.Transitions, out.DepthReached = res.States, res.Transitions, res.MaxDepth
+		// A deeper run stores a superset of the shallower one unless the
+		// time cut it short, so the maximum is the states actually seen.
+		if res.States > out.StatesVisited {
+			out.StatesVisited, out.Transitions, out.DepthReached = res.States, res.Transitions, res.MaxDepth
+		}
 		if runCtx.Err() != nil {
 			// The time ran out inside this run: its counts are partial and
 			// are not a level.
@@ -135,6 +142,8 @@ func (s *Server) estimate(ctx context.Context, req *sdk.CallToolRequest, in Esti
 	out.Projection = Projection{Evidence: string(explore.Approximate)}
 	switch {
 	case out.Complete:
+		// Nothing is projected: the count is the whole graph.
+		out.Projection.Evidence = string(explore.Exhaustive)
 		out.Projection.Note = fmt.Sprintf("the reachable graph was expanded completely: %d states is exact, no projection needed", out.StatesVisited)
 		out.Projection.StatesAtNextLevel = out.StatesVisited
 	case out.Growth.Rate > 0:

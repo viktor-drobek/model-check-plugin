@@ -49,7 +49,11 @@ func edgeID(st *explore.Stepper, ref explore.EdgeRef) string {
 	return st.Layout().Model.Processes[ref.Proc].Name + "/" + strconv.Itoa(ref.Edge)
 }
 
-// nameMatches reports whether the client's name denotes ref.
+// nameMatches reports whether the client's name denotes ref. Texts and
+// origin names need not be unique across the model (two processes may
+// both have an edge "x++"); when several enabled moves answer to a name,
+// guided mode takes the first in the explorer's order. process/index is
+// always unique.
 func nameMatches(st *explore.Stepper, name string, ref explore.EdgeRef) bool {
 	e := st.Edge(ref)
 	if edgeID(st, ref) == name || (e.Text != "" && e.Text == name) {
@@ -108,12 +112,12 @@ func (s *Server) simulate(ctx context.Context, req *sdk.CallToolRequest, in Simu
 		return nil, nil, err
 	}
 	if rej != nil {
-		err = fmt.Errorf("ir rejected: %s", rej.Reason)
+		err = rejectedInput(rej)
 		return nil, nil, err
 	}
 	st, err := explore.NewStepper(m)
 	if err != nil {
-		err = fmt.Errorf("ir rejected: %v", err)
+		err = rejectedInput(&Rejection{Kind: "ir", Construct: "model", Reason: err.Error()})
 		return nil, nil, err
 	}
 	// Unknown guided ids are a client mistake, found before running.

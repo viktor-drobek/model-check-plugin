@@ -7,14 +7,18 @@ import (
 )
 
 // Budget is the client-facing budget of plan 14 §6: states, depth,
-// milliseconds of wall time and MiB of estimated memory. 0 in a request means
-// "server default"; in a ceiling it means "no ceiling" for that field. The
-// names are the JSON names the skill uses.
+// milliseconds of wall time and MiB of estimated memory. Every field is
+// optional in a request: absent or 0 means "server default"; in a ceiling
+// it means "no ceiling" for that field. (The CLI reads 0 as "unlimited";
+// the MCP interface deliberately does not — a client cannot lift a limit,
+// only ask for one within the ceiling.) In an answer (budget_applied) a
+// field is omitted only when it is 0, i.e. neither a default nor a ceiling
+// bounds it. The names are the JSON names the skill uses.
 type Budget struct {
-	States   int   `json:"states" jsonschema:"maximum number of stored states; 0 = server default"`
-	Depth    int   `json:"depth" jsonschema:"maximum search depth in transitions; 0 = server default"`
-	MS       int64 `json:"ms" jsonschema:"wall-clock limit in milliseconds; 0 = server default"`
-	MemoryMB int64 `json:"memory_mb" jsonschema:"memory estimate limit in MiB; 0 = server default"`
+	States   int   `json:"states,omitempty" jsonschema:"maximum number of stored states; absent or 0 = server default"`
+	Depth    int   `json:"depth,omitempty" jsonschema:"maximum search depth in transitions; absent or 0 = server default"`
+	MS       int64 `json:"ms,omitempty" jsonschema:"wall-clock limit in milliseconds; absent or 0 = server default"`
+	MemoryMB int64 `json:"memory_mb,omitempty" jsonschema:"memory estimate limit in MiB; absent or 0 = server default"`
 }
 
 // DefaultBudget is the "medium model" of plan 14 §12 (A4), the same numbers

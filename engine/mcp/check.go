@@ -42,7 +42,7 @@ type PropertyIn struct {
 type CheckIn struct {
 	SessionID  string       `json:"session_id,omitempty" jsonschema:"session holding the parsed model; omitted = a new session (then ir is required)"`
 	IR         any          `json:"ir,omitempty" jsonschema:"IR JSON to check; omitted = the session's parsed model"`
-	Properties []PropertyIn `json:"properties,omitempty" jsonschema:"properties to check; they replace the model's own properties when given, omitted = the model's own"`
+	Properties []PropertyIn `json:"properties,omitempty" jsonschema:"properties to check; they replace the model's own properties when given, omitted = the model's own; in both cases the engine adds its implicit property 'assert' when some edge carries an assert, so that asserts are never checked silently"`
 	Fairness   string       `json:"fairness,omitempty" jsonschema:"none | weak (default none); weak fairness applies to ltl and progress only and therefore has no effect in G2"`
 	Budget     *Budget      `json:"budget,omitempty" jsonschema:"limits; fields at 0 take the server default; fields above the server ceiling are clamped"`
 	Search     string       `json:"search,omitempty" jsonschema:"dfs | bfs (default dfs; bfs gives shortest counterexamples)"`
@@ -66,7 +66,7 @@ type TraceRef struct {
 	Path      string   `json:"path" jsonschema:"session file with the full trace"`
 	Summary   string   `json:"summary" jsonschema:"the commands taken, comma-separated"`
 	Steps     int      `json:"steps"`
-	UserNames []string `json:"user_names" jsonschema:"per step, the user's name for the command when the frontend recorded one"`
+	UserNames []string `json:"user_names" jsonschema:"per step, the user's name for the command when the frontend recorded one, else the command text"`
 }
 
 // PropertyOut is the result for one property.
@@ -193,6 +193,14 @@ func (s *Server) check(ctx context.Context, req *sdk.CallToolRequest, in CheckIn
 		mm := *m
 		mm.Properties = props
 		m = &mm
+	}
+	if len(m.Properties) == 0 && !hasAsserts(m) {
+		// Nothing to check is a client mistake, not a result with no
+		// properties (an empty result would invite an aggregate over
+		// nothing, and no status of the vocabulary describes "nothing was
+		// asked").
+		err = errors.New("no properties: the model declares none and none were given; pass `properties`")
+		return nil, nil, err
 	}
 	if in.Fairness == "weak" {
 		hasTemporal := false
@@ -326,7 +334,23 @@ func (s *Server) storeTrace(sess *Session, property, role string, t *cex.Trace) 
 	return ref, rel, nil
 }
 
-// aggregate applies the fixed priority of plan 14 §6.
+// hasAsserts reports whether the engine will add its implicit `assert`
+// property (some edge carries an assert).
+func hasAsserts(m *ir.Model) bool {
+	for _, p := range m.Processes {
+		for _, e := range p.Edges {
+			if e.Assert != nil {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// aggregate applies the fixed priority of plan 14 §6. The list is never
+// empty here (check refuses a call with nothing to check), so the aggregate
+// is always one of the properties' own statuses; nil is returned rather than
+// inventing a status for an empty list.
 func aggregate(props []PropertyOut) *Aggregate {
 	order := []string{"invalid-model", "not-executed", "violated", "inconclusive", "unknown", "verified"}
 	for _, st := range order {
@@ -336,7 +360,7 @@ func aggregate(props []PropertyOut) *Aggregate {
 			}
 		}
 	}
-	return &Aggregate{Status: "unknown", Basis: "no properties"}
+	return nil
 }
 
 // --- mc_explain -----------------------------------------------------------------

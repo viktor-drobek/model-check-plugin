@@ -293,6 +293,9 @@ func registerG2Steps(sc *godog.ScenarioContext) {
 	sc.Step(`^I call "mc_check" in that session with the model's own properties and budget states (\d+), depth (\d+), ms (\d+), memory_mb (\d+)$`, func(states, depth, ms, mem int) error {
 		return call("mc_check", inSession(map[string]any{"budget": map[string]any{"states": states, "depth": depth, "ms": ms, "memory_mb": mem}}))
 	})
+	sc.Step(`^I call "mc_check" in that session with the model's own properties and only budget states (\d+)$`, func(states int) error {
+		return call("mc_check", inSession(map[string]any{"budget": map[string]any{"states": states}}))
+	})
 	sc.Step(`^I call "mc_check" in that session with properties:$`, func(t *godog.Table) error {
 		props, err := propsFromTable(t)
 		if err != nil {

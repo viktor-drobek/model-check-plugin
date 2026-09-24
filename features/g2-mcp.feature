@@ -18,6 +18,13 @@
 #      unsupported construct, invalid IR). mc_parse / mc_check answer with
 #      isError = false and `outcome: "rejected"` plus
 #      `rejection: {construct, file, line, reason}`. No property gets a status.
+#      The tools without a result document (mc_simulate, mc_lint_property,
+#      mc_estimate) report a rejected inline IR as a tool error whose text
+#      starts with "rejected input", so the class stays recognisable.
+#      mc_parse also answers `outcome: "not-executed"` when the frontend for
+#      the input kind is not linked into the build: the same word as the
+#      verification status, used deliberately for "nothing was run", and
+#      always with a `reason` naming the missing frontend.
 #   3. A verification result — every property carries exactly one status of
 #      the 11 §14 vocabulary (verified, violated, inconclusive, unknown,
 #      not-executed, invalid-model) and one evidence level (exhaustive,
@@ -35,16 +42,19 @@
 #
 # Session directory: every tool answer names its session id; large results
 # (IR, reports, traces) are files under <base>/<session id>/ and the answer
-# gives their paths. Every write goes through one guard that resolves
-# symlinks and refuses any path that leaves the session directory; the same
-# guard resolves ids the client supplies (counterexample ids) into paths.
+# gives their paths. Every file the tools produce goes through one guard that
+# resolves symlinks and refuses any name that leaves the session directory;
+# the same guard resolves ids the client supplies (counterexample ids) into
+# paths. (The session directory itself is created by the server at a
+# location of its own choosing.)
 # mc_parse reads a file only when the client names it explicitly and the
 # server was started with --allow-read for a prefix of it; otherwise inputs
 # are inline.
 #
 # Budgets: a client budget field left at 0 takes the server default; a field
 # above the server ceiling is clamped to the ceiling and the answer says so in
-# `search.budget_notes`. Concurrent mc_check calls beyond --concurrency wait.
+# `search.budget_notes`. Concurrent mc_check and mc_estimate runs beyond
+# --concurrency wait for a free slot.
 Feature: G2 — MCP server with the seven tools, session directory, budgets
 
   Background:
@@ -138,6 +148,18 @@ Feature: G2 — MCP server with the seven tools, session directory, budgets
     And the budget notes mention "states" clamped to 1000
     And the budget notes mention "memory_mb" clamped to 256
 
+  # Found by driving the binary over stdio: the schema must not require the
+  # four fields, otherwise "left at zero" is impossible for a real client.
+  Scenario: a partial budget is accepted and its missing fields take the server default
+    Given a session in which the Petri net "testdata/petri/petrinet1.json" was parsed
+    When I call "mc_check" in that session with the model's own properties and only budget states 50
+    Then the call is not an error
+    And the applied budget has states 50
+    And the applied budget has depth 1000
+    And the applied budget has ms 5000
+    And the applied budget has memory_mb 256
+    And the budget notes are empty
+
   Scenario: a budget left at zero takes the server default, which lies within the ceiling
     Given a session in which the Petri net "testdata/petri/petrinet1.json" was parsed
     When I call "mc_check" in that session with the model's own properties
@@ -197,7 +219,7 @@ Feature: G2 — MCP server with the seven tools, session directory, budgets
     When I call "mc_check" with no input
     Then the call is an error whose message mentions "ir"
 
-  Scenario: mc_check of an IR whose expression is ill-typed is a rejection
+  Scenario: mc_check with a property expression that does not compile (undeclared variable) is a rejection
     Given a session in which the Petri net "testdata/petri/petrinet1.json" was parsed
     When I call "mc_check" in that session with properties:
       | id  | kind      | expr                          |

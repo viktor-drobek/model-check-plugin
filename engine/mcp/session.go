@@ -163,9 +163,11 @@ func (s *Session) Path(rel string) (string, error) {
 	return p, nil
 }
 
-// WriteFile is the single file writer of the server: everything that lands
-// on disk goes through it, and it goes through Resolve. It returns the
-// absolute path written.
+// WriteFile is the single file writer of the server: every file the tools
+// produce (IR, reports, traces, manifest) goes through it, and it goes
+// through Resolve. The only directories created elsewhere are the base
+// directory (NewSessions) and the session directory itself (New), both at
+// server-chosen locations. It returns the absolute path written.
 func (s *Session) WriteFile(rel string, data []byte) (string, error) {
 	p, err := s.Path(rel)
 	if err != nil {
@@ -225,7 +227,7 @@ type EngineInfo struct {
 type ManifestInput struct {
 	Kind   string `json:"kind" jsonschema:"promela | petri | ir"`
 	Source string `json:"source" jsonschema:"inline, or the client-named file that was read"`
-	SHA256 string `json:"sha256" jsonschema:"sha256 of the bytes as received"`
+	SHA256 string `json:"sha256" jsonschema:"sha256 of the input: the file's bytes for a file, the source text for promela, the canonical JSON (sorted keys) of an inline object for petri/ir"`
 	Path   string `json:"path,omitempty" jsonschema:"session file holding the canonical IR produced from it"`
 }
 

@@ -70,7 +70,7 @@ func (s *Server) lint(ctx context.Context, req *sdk.CallToolRequest, in LintIn) 
 		return nil, nil, err
 	}
 	if rej != nil {
-		err = fmt.Errorf("ir rejected: %s", rej.Reason)
+		err = rejectedInput(rej)
 		return nil, nil, err
 	}
 	l, err := ir.NewLayout(m)

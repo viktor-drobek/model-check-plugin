@@ -13,9 +13,14 @@
 //     with isError = true and a text message, and nothing is claimed about
 //     the model.
 //   - An input rejection — a frontend refuses the input (schema violation,
-//     unsupported construct, IR that does not validate or compile) — is a
+//     unsupported construct, IR that does not validate or compile) — is, for
+//     the two tools that produce a result document (mc_parse, mc_check), a
 //     structured answer with `outcome: "rejected"` and a Rejection
-//     {kind, construct, file, line, reason}; no property gets a status.
+//     {kind, construct, file, line, reason}; no property gets a status. The
+//     tools that produce no result document (mc_simulate, mc_lint_property,
+//     mc_estimate) report a rejected inline IR as an isError result whose
+//     text starts with "rejected input (<kind>):", so that the class stays
+//     recognisable (see rejectedInput).
 //   - A verification result carries, per property, exactly one status of the
 //     11 §14 vocabulary and one evidence level, with the meanings fixed by
 //     package report. Kinds ltl, ctl and progress are `not-executed` in G2
@@ -23,13 +28,13 @@
 //     brings it; the server never fabricates a verdict.
 //
 // Every tool answer names its session id. Large results are files under
-// <base>/<session id>/ and the answer carries their paths; every write goes
-// through Session.WriteFile and therefore through Resolve, the guard that
-// refuses paths leaving the session directory (NFR-004). Budgets are applied
-// inside the server (Clamp): a field left at 0 takes the default, a field
-// above the ceiling is clamped and the answer says so; a per-call deadline
-// is set from the applied time budget; concurrent checks are bounded by a
-// semaphore.
+// <base>/<session id>/ and the answer carries their paths; every file the
+// tools produce goes through Session.WriteFile and therefore through
+// Resolve, the guard that refuses names leaving the session directory
+// (NFR-004). Budgets are applied inside the server (Clamp): a field left at
+// 0 takes the default, a field above the ceiling is clamped and the answer
+// says so; a per-call deadline is set from the applied time budget;
+// concurrent mc_check and mc_estimate runs are bounded by a semaphore.
 package mcp
 
 import (
@@ -123,7 +128,7 @@ func New(cfg Config) (*Server, error) {
 	}
 	s := &Server{cfg: cfg, sessions: ss, sem: make(chan struct{}, cfg.Concurrency)}
 	s.sdk = sdk.NewServer(&sdk.Implementation{Name: report.EngineName, Version: report.EngineVersion}, &sdk.ServerOptions{
-		Instructions: "Model-check engine (plan 14 §6). Call mc_parse first; it returns a session id that the other tools take. " +
+		Instructions: "Model-check engine (plan 14 §6). Typically call mc_parse first; it returns a session id that the other tools take (they also accept an inline `ir`). " +
 			"Statuses per property: verified, violated, inconclusive, unknown, not-executed, invalid-model; evidence: exhaustive, bounded, approximate, unknown.",
 	})
 	s.register()
@@ -180,6 +185,14 @@ type Rejection struct {
 	File      string `json:"file,omitempty"`
 	Line      int    `json:"line,omitempty"`
 	Reason    string `json:"reason"`
+}
+
+// rejectedInput is the tool-error form of a Rejection, for tools that have
+// no result document to carry a structured one. The fixed prefix keeps the
+// NFR-007 class (input refused by a frontend) distinguishable from other
+// tool failures.
+func rejectedInput(r *Rejection) error {
+	return fmt.Errorf("rejected input (%s): %s", r.Kind, r.Reason)
 }
 
 // session returns the named session or, when id is empty and create is
