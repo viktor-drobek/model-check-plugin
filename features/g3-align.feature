@@ -104,7 +104,11 @@ Feature: G3 skill package — alignment with the G0 engine
       | regex_order      |
       | petri_json_valid |
       | json_field       |
-    And every eval in "evals/evals.json" has a "runnable_from" of "G0", "G1" or "G2"
+    And every eval in "evals/evals.json" has a "runnable_from" that is one of:
+      | G0 |
+      | G1 |
+      | G4 |
+      | G5 |
     And the eval with id 3 has "runnable_from" equal to "G0"
 
   Scenario: The E3 fixture is the skill's own encoding of petrinet1 and the engine finds the hang in it

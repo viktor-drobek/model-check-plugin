@@ -1,0 +1,77 @@
+# Intake card — заполнена по запросу пользователя (сеть Петри p1…p6, t1…t6).
+# "inferred" = значение по умолчанию для учебного примера, пользователем не подтверждено.
+
+system:
+  name: "user_net_p1_p6"
+  boundary: "сеть Петри целиком: 6 мест, 6 переходов, начальная маркировка p1=1, p4=1"
+  environment: "отсутствует — сеть замкнута, внешних событий нет (inferred)"
+  excluded: []
+  relation_to_implementation: "built from prose — сеть задана пользователем в тексте, о реальной системе за ней ничего не известно"
+
+state:
+  variables:
+    - "p1..p6: byte, 0..255 (ёмкость по умолчанию), число фишек в месте"
+  processes: ["места p1, p2, p3, p4, p5, p6"]
+  channels: []
+  initial_states: "p1=1, p4=1, остальные 0 (одно начальное состояние)"
+  observables:
+    - "deadlock: ни один переход не разрешён"
+    - "safe: во всех местах ≤ 1 фишки"
+
+transitions:
+  semantics: "interleaving — за шаг срабатывает ровно один разрешённый переход (Holzmann §8.10, claim 2)"
+  atomic_step: "срабатывание одного перехода: снятие фишек со входных мест и добавление на выходные — неделимо"
+  terminal_states: "зависание (маркировка без разрешённых переходов) считается нарушением — это и есть вопрос пользователя"
+  nondeterminism: "конфликт переходов за общие входные места (t1/t5 за p1; t2/t4 за p4)"
+
+properties:
+  - id: P1
+    wording: "Может ли она зависнуть?"
+    class: reachability   # достижимость маркировки без разрешённых переходов; двойственно — safety «зависание недостижимо»
+    logic: deadlock
+    extension: untimed
+    formula: "deadlock (генерируется фронтендом Petri)"
+    atoms: ["разрешённость t1..t6 по маркировке"]
+    expected_evidence: "finite trace"
+    sanity_companion: "P2 safe как побочный результат; достижимость самой начальной маркировки тривиальна"
+  - id: P2
+    wording: "(не запрашивалось; стандартный набор фронтенда) в каждом месте не более одной фишки"
+    class: safety
+    logic: invariant
+    extension: untimed
+    formula: "safe: ∀p. p ≤ 1"
+    atoms: ["p1..p6"]
+    expected_evidence: "finite trace"
+    sanity_companion: "—"
+
+assumptions:
+  scheduler: "любой: все чередования допустимы"
+  delivery: "не применимо (каналов нет)"
+  failures: "не моделируются"
+  environment_inputs: "нет"
+  bounds: ["ёмкость каждого места 255 (по умолчанию схемы); превышение → invalid-model"]
+
+fairness:
+  required: none          # свойство безопасности/достижимости, конечная трасса — справедливость не нужна
+  justification: "для deadlock не требуется"
+  confirmed_by_user: false
+
+backend:
+  engine: mcd 0.1.0-g0 (CLI; MCP-сервер ещё не существует)
+  search_mode: dfs        # плюс контрольный прогон bfs
+  reductions: none
+
+budget:
+  time: "60000 ms"
+  states: "100000"
+  depth: "100000"
+  memory: "1024 MiB"
+  repeats: 1
+
+evidence:
+  expected: exhaustive
+  goal: "exhaustive result (ответ «может ли» требует либо контрпримера, либо полного обхода)"
+
+artefacts:
+  may_store_models_and_traces: true   # каталог сессии evals-workspace/.../outputs
+  contains_secrets_or_personal_data: "нет — учебная сеть без бизнес-данных"

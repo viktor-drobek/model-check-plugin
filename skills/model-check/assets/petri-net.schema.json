@@ -1,90 +1,95 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://model-check.local/schemas/petri-net.schema.json",
-  "title": "Place/transition Petri net for the model-check engine",
-  "description": "A basic place/transition net after Holzmann §8.10 (plan 14 §2.2, §5.3): places carry an integer marking with an optional capacity (default 255); transitions consume from input places and produce into output places with integer multiplicities of at least 1. Arrays fix the engine's deterministic order. Test-for-absence arcs are not representable: every object is closed and an arc has only a place and a multiplicity.",
+  "$id": "https://model-check/petri-net.schema.json",
+  "title": "P/T Petri net (model-check engine input)",
+  "description": "A place/transition net in the sense of Holzmann, Design and Validation of Computer Protocols, §8.10: places carry tokens, a transition is enabled when every input place holds at least the arc weight, firing removes the input weights and adds the output weights. Arc weights > 1 extend Holzmann's one-token arcs. Inhibitor arcs are recognised only to be rejected: Holzmann's §8.10 net has no negation ('the absence of a token cannot be tested'), and the engine encodes exactly that class as byte variables and guarded commands, as in Promela - examples/App_C/petrinet1. The frontend (frontend/petri) validates against this schema by hand-written checks that mirror it clause by clause.",
   "type": "object",
-  "additionalProperties": false,
   "required": ["places", "transitions"],
+  "additionalProperties": false,
   "properties": {
     "name": {
       "type": "string",
-      "description": "Optional net name used in reports."
+      "description": "Model name used in reports. Defaults to the file name."
     },
     "places": {
       "type": "array",
       "minItems": 1,
-      "description": "Places in the order the engine will use.",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["id", "initial"],
-        "properties": {
-          "id": { "$ref": "#/$defs/identifier" },
-          "initial": {
-            "type": "integer",
-            "minimum": 0,
-            "description": "Initial marking: number of tokens in this place."
-          },
-          "capacity": {
-            "type": "integer",
-            "minimum": 1,
-            "default": 255,
-            "description": "Maximum number of tokens; an effect that would exceed it is reported as invalid-model. Default 255 (a Promela byte, as in App_C/petrinet1)."
-          },
-          "meaning": {
-            "type": "string",
-            "description": "What a token in this place stands for (condition, control point or resource) — used to decode counterexamples."
-          }
-        }
-      }
+      "items": { "$ref": "#/$defs/place" },
+      "description": "Places in declaration order; the order fixes the state-vector layout."
     },
     "transitions": {
       "type": "array",
       "minItems": 1,
-      "description": "Transitions in the order the engine will use.",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["id", "inputs", "outputs"],
-        "properties": {
-          "id": { "$ref": "#/$defs/identifier" },
-          "inputs": {
-            "type": "array",
-            "description": "Arcs from places to this transition. The transition is enabled when every input place holds at least the arc's multiplicity.",
-            "items": { "$ref": "#/$defs/arc" }
-          },
-          "outputs": {
-            "type": "array",
-            "description": "Arcs from this transition to places. Firing adds the arc's multiplicity to each output place.",
-            "items": { "$ref": "#/$defs/arc" }
-          },
-          "meaning": {
-            "type": "string",
-            "description": "What firing this transition stands for in the source system."
-          }
-        }
-      }
+      "items": { "$ref": "#/$defs/transition" },
+      "description": "Transitions in declaration order; the order is the deterministic firing order of the explorer."
     }
   },
   "$defs": {
     "identifier": {
       "type": "string",
       "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
-      "description": "Place or transition name; must be unique within its list."
+      "description": "Names double as IR variable names, so they follow identifier syntax."
+    },
+    "place": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/$defs/identifier" },
+        "initial": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0,
+          "description": "Initial marking of the place; must not exceed the capacity."
+        },
+        "capacity": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 255,
+          "default": 255,
+          "description": "Maximum tokens the place may hold (the Promela `byte` domain of the reference encoding). Exceeding it during exploration is a modelling error: every property is reported invalid-model."
+        },
+        "line": { "type": "integer", "minimum": 1, "description": "Optional source line for the mapping table." }
+      }
     },
     "arc": {
       "type": "object",
-      "additionalProperties": false,
       "required": ["place"],
+      "additionalProperties": false,
       "properties": {
         "place": { "$ref": "#/$defs/identifier" },
-        "multiplicity": {
+        "weight": {
           "type": "integer",
           "minimum": 1,
           "default": 1,
-          "description": "Tokens moved along this arc per firing. 1 is Holzmann's basic net; larger values are the plan's extension."
+          "description": "Tokens moved along the arc when the transition fires."
+        },
+        "inhibitor": {
+          "type": "boolean",
+          "default": false,
+          "description": "Input arcs only. An inhibitor arc enables the transition when the place is EMPTY. It is part of the schema so that the frontend can name the offending arc when rejecting it; the engine never translates inhibitor arcs (Holzmann §8.10: the P/T net cannot express negation, and the reference Promela encoding tests only x > 0)."
         }
+      }
+    },
+    "transition": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/$defs/identifier" },
+        "inputs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/arc" },
+          "default": [],
+          "description": "Input arcs (place → transition). A transition without inputs is always enabled."
+        },
+        "outputs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/arc" },
+          "default": [],
+          "description": "Output arcs (transition → place). `inhibitor` is not allowed here."
+        },
+        "line": { "type": "integer", "minimum": 1 }
       }
     }
   }

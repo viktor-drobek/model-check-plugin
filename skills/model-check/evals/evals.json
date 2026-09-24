@@ -1,15 +1,25 @@
 {
   "skill_name": "model-check",
-  "note": "Prompts from model-check-skill-notes/14-skill-building-plan.md §8.2 (E1–E6). Expectations (assertions) are deliberately empty: the evals half of G3 runs only when the engine and the MCP server exist (G0–G2). Fixtures are corpus files referenced by path and hash in evals/fixtures/README.md; nothing is copied.",
+  "note": "Prompts from model-check-skill-notes/14-skill-building-plan.md §8.2 (E1–E6). Each eval has 'assertions' (plan §8.2 as amended; 'expectations' is the key of grading.json only). Every assertion has a 'text' for the human reader and a 'check' a grader applies without judgement: regex / not_regex / regex_order run over the answer text (Python re, flags given in the pattern); petri_json_valid looks for a JSON file in the run's outputs directory that the engine's Petri frontend accepts and, when 'equivalent_to' is set, that has the same places, initial marking, transitions and arcs as that fixture; json_field reads a value from a JSON file in the outputs directory. 'runnable_from' names the build step from which the engine can execute the eval (G0: Petri JSON via the mcd CLI; G1: Promela; G4: ltl/progress; G5: ctl). Corpus fixtures are referenced by path and SHA-256 in evals/fixtures/README.md; evals/fixtures/petrinet1.json is the skill's own encoding, not a corpus copy. Grader: model-check-plugin/evals-workspace/grader.py.",
   "evals": [
     {
       "id": 1,
       "name": "mutex-invariant-violated",
       "prompt": "Два процесса не должны одновременно попадать в критическую секцию. Проверь эту модель: Promela - examples/CH2/mutex_flaw.pml",
-      "expected_output": "Invariant violated; status `violated`, evidence `exhaustive`; counterexample decoded through labels L1–L4 with both users at L7; cause class: system defect; manifest attached; no forbidden phrasing.",
+      "expected_output": "Invariant violated; status `violated`, evidence `exhaustive`; counterexample decoded through labels L1–L4 with both users at L7; cause class: system defect; the report's engine/inputs sections (manifest) attached; no forbidden phrasing.",
       "files": [],
       "fixture": "Promela - examples/CH2/mutex_flaw.pml",
-      "expectations": []
+      "runnable_from": "G1",
+      "assertions": [
+        {"text": "The mutual-exclusion property is reported with status violated", "check": {"type": "regex", "pattern": "\\bviolated\\b"}},
+        {"text": "The evidence level exhaustive is stated", "check": {"type": "regex", "pattern": "\\bexhaustive\\b"}},
+        {"text": "The counterexample is decoded through the model's labels L1–L4", "check": {"type": "regex", "pattern": "\\bL[1-4]\\b"}},
+        {"text": "The counterexample shows both users at label L7 (the critical section)", "check": {"type": "regex", "pattern": "\\bL7\\b"}},
+        {"text": "The cause is classified as a system (algorithm) defect", "check": {"type": "regex", "pattern": "(?i)system defect|algorithm (is|itself is) wrong|дефект (системы|алгоритма)|ошибка (в )?алгоритм"}},
+        {"text": "The engine was invoked (CLI or MCP), not reasoned around", "check": {"type": "regex", "pattern": "mcd check|mc_check"}},
+        {"text": "The engine version and input hash (manifest) are quoted", "check": {"type": "regex", "pattern": "(?i)(sha256|sha-256)[^\\n]{0,40}[0-9a-f]{16}|0\\.1\\.0-g\\d|mcd \\d+\\.\\d+"}},
+        {"text": "No forbidden phrasing (no errors / proved / system is correct)", "check": {"type": "not_regex", "pattern": "(?i)\\bno errors\\b|\\bproved\\b|\\bproven\\b|ошибок нет|доказано|system is correct|система корректна"}}
+      ]
     },
     {
       "id": 2,
@@ -18,16 +28,37 @@
       "expected_output": "The fairness question is asked (or an explicit labelled assumption is made) before the liveness run; safety `verified`; liveness reported with a status that depends on the fairness setting, both readings shown as different results; the word \"proved\" is not used for the model result.",
       "files": [],
       "fixture": "Promela - examples/CH3/alternatingbit.pml",
-      "expectations": []
+      "runnable_from": "G4",
+      "assertions": [
+        {"text": "Fairness is raised as a question or as an explicitly labelled assumption before the liveness result", "check": {"type": "regex", "pattern": "(?i)(fairness|справедлив)[^\\n]{0,120}(\\?|assum|допущен|предполож|assume)"}},
+        {"text": "The safety property (no out-of-order acceptance) is reported verified", "check": {"type": "regex", "pattern": "\\bverified\\b"}},
+        {"text": "The liveness result is given both without and with (weak) fairness as two different results", "check": {"type": "regex_order", "patterns": ["(?i)without (weak )?fairness|no fairness|без (слабой )?(fairness|справедлив)", "(?i)with weak fairness|under weak fairness|(с|при) (слабой |weak )?(fairness|справедлив)"]}},
+        {"text": "Each liveness result carries an evidence level", "check": {"type": "regex", "pattern": "\\b(exhaustive|bounded|approximate|unknown)\\b"}},
+        {"text": "The engine was invoked", "check": {"type": "regex", "pattern": "mcd check|mc_check"}},
+        {"text": "The word proved/доказано is not used for the model result", "check": {"type": "not_regex", "pattern": "(?i)\\bproved\\b|\\bproven\\b|доказано|доказал"}},
+        {"text": "No forbidden phrasing", "check": {"type": "not_regex", "pattern": "(?i)\\bno errors\\b|ошибок нет|protocol is correct|протокол корректен"}}
+      ]
     },
     {
       "id": 3,
       "name": "petri-net-hang",
       "prompt": "Сеть Петри: места p1…p6, переходы t1: p1→p2; t2: p2,p4→p3; t3: p3→p1,p4; t4: p4→p5; t5: p1,p5→p6; t6: p6→p4,p1. Начальная маркировка p1=1, p4=1. Может ли она зависнуть?",
-      "expected_output": "Petri JSON built to assets/petri-net.schema.json → mc_parse → deadlock property `violated`, evidence `exhaustive`; counterexample t1, t4; final marking p2 = p5 = 1; the standard property set (hang, safe) offered; CTL vs LTL transition liveness distinguished if asked.",
+      "expected_output": "Petri JSON built to assets/petri-net.schema.json → mcd parse/check --petri → deadlock property `violated`, evidence `exhaustive`; counterexample t1, t4; final marking p2 = p5 = 1; the generated property set (deadlock/hang, safe) reported; 6 reachable markings; CTL vs LTL transition liveness distinguished if asked.",
       "files": [],
-      "fixture": "Promela - examples/App_C/petrinet1",
-      "expectations": []
+      "fixture": "evals/fixtures/petrinet1.json",
+      "runnable_from": "G0",
+      "assertions": [
+        {"text": "A Petri-net JSON accepted by the engine's frontend was written, with the six places, initial marking p1=p4=1 and the six transitions of the prompt", "check": {"type": "petri_json_valid", "equivalent_to": "evals/fixtures/petrinet1.json"}},
+        {"text": "The engine CLI was run on the net and the command line is shown (mcd check --petri, the binary possibly named through a shell variable)", "check": {"type": "regex", "pattern": "(?i)mcd check[^\\n]*--petri"}},
+        {"text": "The hang (deadlock) property is reported with status violated", "check": {"type": "regex", "pattern": "\\bviolated\\b"}},
+        {"text": "The evidence level exhaustive is stated", "check": {"type": "regex", "pattern": "\\bexhaustive\\b"}},
+        {"text": "The counterexample is the firing sequence t1 then t4", "check": {"type": "regex", "pattern": "\\bt1\\b[^\\n]{0,25}\\bt4\\b"}},
+        {"text": "The final marking has one token in p2 (p2 = 1, or set notation {p2, p5})", "check": {"type": "regex", "pattern": "p2\\s*=\\s*(p5\\s*=\\s*)?1|\\{\\s*p2\\s*,\\s*p5\\s*\\}"}},
+        {"text": "The final marking has one token in p5 (p5 = 1, or set notation {p2, p5})", "check": {"type": "regex", "pattern": "p5\\s*=\\s*1|\\{\\s*p2\\s*,\\s*p5\\s*\\}"}},
+        {"text": "The number of reachable markings (6) is quoted from the engine's counters", "check": {"type": "regex", "pattern": "(?i)\\b6\\b\\s*(reachable\\s+)?(states|markings|достижим\\w*\\s+)?(состояни|маркиров|states|markings)"}},
+        {"text": "The generated safe property is also reported", "check": {"type": "regex", "pattern": "\\bsafe\\b"}},
+        {"text": "No forbidden phrasing (no errors / proved / net is correct)", "check": {"type": "not_regex", "pattern": "(?i)\\bno errors\\b|\\bproved\\b|\\bproven\\b|ошибок нет|доказано|net is correct|сеть корректна"}}
+      ]
     },
     {
       "id": 4,
@@ -36,7 +67,16 @@
       "expected_output": "Requirement classified as liveness; formalised with a `progress` label or an LTL `<>`/`[]<>` formula on the labels (not on printf output); fairness question asked; status with evidence level reported; if LTL evidence is `unknown`/experimental the report says so.",
       "files": [],
       "fixture": "Promela - examples/CH14/version1",
-      "expectations": []
+      "runnable_from": "G4",
+      "assertions": [
+        {"text": "The requirement is classified as a liveness property", "check": {"type": "regex", "pattern": "(?i)\\bliveness\\b|живост"}},
+        {"text": "It is formalised as a progress label or an LTL eventually/infinitely-often formula", "check": {"type": "regex", "pattern": "(?i)\\bprogress\\b|<>|\\[\\]\\s*<>|eventually|непременно|когда-нибудь"}},
+        {"text": "The formula refers to the model's labels or states (Busy), not to printf output", "check": {"type": "regex", "pattern": "Busy"}},
+        {"text": "Fairness is raised before the result", "check": {"type": "regex", "pattern": "(?i)fairness|справедлив"}},
+        {"text": "A status from the vocabulary is given", "check": {"type": "regex", "pattern": "\\b(verified|violated|inconclusive|unknown|not-executed|invalid-model)\\b"}},
+        {"text": "An evidence level is given", "check": {"type": "regex", "pattern": "\\b(exhaustive|bounded|approximate|unknown)\\b"}},
+        {"text": "No forbidden phrasing", "check": {"type": "not_regex", "pattern": "(?i)\\bno errors\\b|\\bproved\\b|\\bproven\\b|ошибок нет|доказано"}}
+      ]
     },
     {
       "id": 5,
@@ -45,7 +85,16 @@
       "expected_output": "Parser rejection explained (c_code/c_expr are outside the subset; no host code is executed); status `not-executed` with the construct and line; no imitation of a result; a rewrite of the C effect as Promela statements offered.",
       "files": [],
       "fixture": "Promela - examples/CH17/simple1.pr",
-      "expectations": []
+      "runnable_from": "G1",
+      "assertions": [
+        {"text": "Status not-executed is reported", "check": {"type": "regex", "pattern": "\\bnot-executed\\b"}},
+        {"text": "The rejected construct c_code is named", "check": {"type": "regex", "pattern": "c_code"}},
+        {"text": "The rejection is attributed to the parser/frontend (exit code 2 or an explicit rejection)", "check": {"type": "regex", "pattern": "(?i)exit code 2|rejected|rejection|отверг|отклон"}},
+        {"text": "A source line of the construct is given", "check": {"type": "regex", "pattern": "(?i)(line|строк\\w*)\\s*\\d+"}},
+        {"text": "No property result is imitated: none of verified/violated/inconclusive appears", "check": {"type": "not_regex", "pattern": "\\b(verified|violated|inconclusive)\\b"}},
+        {"text": "A rewrite of the C effect as Promela statements is offered", "check": {"type": "regex", "pattern": "(?i)rewrite|rewritten|перепис|переписать"}},
+        {"text": "No host code is executed and the answer says so", "check": {"type": "regex", "pattern": "(?i)(not|never|no)[^\\n]{0,30}(execut|run|compile)|не (исполня|выполня|компилир)"}}
+      ]
     },
     {
       "id": 6,
@@ -54,7 +103,16 @@
       "expected_output": "Checked as CTL through mc_check with the `ctl` property kind; not rewritten into LTL; the branching-time meaning explained; the report says the result is fairness-free and whether the witness is a path or a tree.",
       "files": [],
       "fixture": "Promela - examples/CH14/version1",
-      "expectations": []
+      "runnable_from": "G5",
+      "assertions": [
+        {"text": "The property is handled as CTL", "check": {"type": "regex", "pattern": "\\bCTL\\b"}},
+        {"text": "The formula AG EF idle is kept as written", "check": {"type": "regex", "pattern": "AG\\s*EF\\s*idle"}},
+        {"text": "No LTL formula on idle is substituted for it", "check": {"type": "not_regex", "pattern": "\\[\\]\\s*<>\\s*idle|<>\\s*\\[\\]\\s*idle|G\\s*F\\s*idle"}},
+        {"text": "The branching-time meaning (from every reachable state some path reaches idle) is explained", "check": {"type": "regex", "pattern": "(?i)branching|every reachable state|from every state|some (path|continuation)|ветв|из (любого|каждого) (достижимого )?состояния"}},
+        {"text": "The result is stated to be fairness-free", "check": {"type": "regex", "pattern": "(?i)fairness-free|without fairness|no fairness|independent of fairness|без (fairness|справедлив)|не (зависит|требует)[^\\n]{0,20}(fairness|справедлив)"}},
+        {"text": "The answer says whether the witness or counterexample is a path or a tree", "check": {"type": "regex", "pattern": "(?i)\\b(tree|path)\\b|дерев|путь"}},
+        {"text": "A status from the vocabulary is given", "check": {"type": "regex", "pattern": "\\b(verified|violated|inconclusive|unknown|not-executed|invalid-model)\\b"}}
+      ]
     }
   ]
 }

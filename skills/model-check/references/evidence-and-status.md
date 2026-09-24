@@ -7,10 +7,12 @@ result), §10 (budget exhaustion → `inconclusive`), FR-013, FR-014, FR-016, NF
 AC-01, AC-02, AC-11, AC-12, AC-15; `model-check-skill-notes/10-cross-book-synthesis.md`
 §2 (the contract of every answer), §3.6 (classified outcomes), §14 (red lines);
 `model-check-skill-notes/14-skill-building-plan.md` §4.1 (overflow →
-`invalid-model`), §6 (one vocabulary for all tools; evidence levels; statistical
-not produced), §11 (LTL evidence `unknown` while experimental), §12 A4 (size
-bounds published here); `model-check-skill-notes/02-design-and-validation-of-computer-protocols.md`
-гл. 11, 14 ("no errors" holds only for the chosen options and bounds).
+`invalid-model`), §6 (one vocabulary for all tools; evidence levels; aggregation
+priority; `bounded` vs `unknown`), §11 (LTL evidence `unknown` while experimental),
+§12 A4 (size bounds published here); `model-check-skill-notes/02-design-and-validation-of-computer-protocols.md`
+гл. 11, 14 ("no errors" holds only for the chosen options and bounds). Engine as
+built: `model-check-plugin/engine/report/report.go` (rules enforced by `Build`),
+`model-check-plugin/steps/g0-confirmation.md` §3.2 (measurements), §4 (decisions 3–4).
 
 ## 1. The vocabulary
 
@@ -19,85 +21,109 @@ Status vocabulary: `verified`, `violated`, `inconclusive`, `unknown`, `not-execu
 Evidence levels: `exhaustive`, `bounded`, `approximate`, `unknown`
 
 Every property gets exactly one status and exactly one evidence level, from the
-engine, unchanged (FR-014). Anything you derive beyond that — a reading under an
-assumption the engine did not check — is a sentence in the report, never a status. The same words are used by all tools and in the report
-(plan §6). Statistical or numerical evidence is not produced by the engine — it
-checks no probabilistic models — so the fifth kind of positive result in 11 §1.1
-(a statistical or numerical estimate) never appears; if a user asks for a
-probability, the route is `not-executed` (see `model-classification.md`).
+engine, unchanged (FR-014). The one case in which you write the status yourself is
+when the engine produced no record for the property — nothing ran (§2, row 1: input
+rejected with exit code 2, no binary, user declined): then the status is
+`not-executed` with evidence `unknown`, and the report says the engine did not assign
+it. Anything you derive beyond that — a reading under an
+assumption the engine did not check — is a sentence in the report, never a status.
+The same words are used by the CLI, by the MCP tools when they arrive (G2) and in
+the report (plan §6). Statistical or numerical evidence is not produced by the
+engine — it checks no probabilistic models — so the fifth kind of positive result
+in 11 §1.1 (a statistical or numerical estimate) never appears; if a user asks for
+a probability, the route is `not-executed` (see `model-classification.md`).
 
-## 2. Decision procedure for the status
+## 2. How a property gets its status
 
-The six statuses partition the outcomes. Answer the questions in order; the first
-"yes" decides. The engine is expected to apply the same order (to be confirmed
-against the result schema in G2); if its word and your reading disagree, report the
-engine's word and the disagreement.
+The six statuses partition the outcomes of one property. Answered for one property
+in the order below, the questions reproduce the engine's verdicts (`engine/explore`,
+`engine/report`; the per-property rules are the K1 rules and `report.Build` refuses a
+document that breaks them). The engine itself decides in time order — the first
+finding for a property wins and is never revised — which the questions encode by
+asking about the property's own run, not about the run as a whole. When you
+assign a status yourself — because nothing ran, or the input was rejected with
+exit code 2 — use the same order; if the engine's word and your reading disagree,
+report the engine's word and the disagreement.
 
-| # | Question | Status |
-|---|---|---|
-| 1 | Did nothing run for this property? (construct outside the subset, unsupported semantics or capability, no engine binary, user declined, missing input) | `not-executed` |
-| 2 | Did the run stop on a defect of the model itself? (domain overflow, capacity overflow, blocking inside `d_step`) | `invalid-model` |
-| 3 | Did the run find a concrete violation (a bad state, a deadlock, an accepting cycle, a non-progress cycle, a failing CTL state) and was it replayed? | `violated` |
-| 4 | Did the run complete the search without finding a violation? | `verified` |
-| 5 | Did the run stop before completing (budget exhausted: time, states, depth, memory) or was the search incomplete by construction (bounded, approximate)? | `inconclusive` |
-| 6 | Otherwise: the outcome cannot be read even as partial coverage (semantics ambiguous, result not interpretable) | `unknown` |
+| # | Question | Status | Evidence | Rule |
+|---|---|---|---|---|
+| 1 | Did nothing run for this property? A construct outside the subset gives `not-executed` (input rejected by the frontend with exit code 2); so does a capability the current build lacks (property kind not executed yet: `ltl`, `ctl`, `progress` before G4/G5 — inside the plan's subset, not yet built), no engine binary, user declined, missing input | `not-executed` | `unknown` | `reason` names the construct or the capability; which of the two boundaries was hit is said in the report |
+| 2 | Was the property still undecided when the run hit a defect of the model itself? A domain overflow gives `invalid-model`: a `byte` wrap, a place above its capacity, a division by zero or an out-of-range index in a guard or effect | `invalid-model` | `unknown` | the run to the offending step is attached as `counterexample`; every property still undecided gets this status, a property already decided keeps its verdict (g0-confirmation §4, decision 3) |
+| 3 | Did the run find a concrete violation — a bad state, a hang, a failing `assert` — or, for `reach`, complete the search without any state satisfying the condition? | `violated` | `exhaustive` | `violated` carries evidence `exhaustive` always: the counterexample is an exact run of the model whatever cut the search afterwards; for `reach` because only a complete search establishes unreachability |
+| 4 | Did the search complete (whole reachable graph expanded) without a violation? For `reach`: was a state satisfying the condition found? | `verified` | `exhaustive` | `verified` requires `complete` = true, except for `reach`, which is verified by a witness — the exact run attached as `witness`, so `complete` may be false |
+| 5 | Did a budget stop the run first (states, depth, time, memory)? Budget exhaustion gives `inconclusive` with `reason` naming the exhausted resource and the point it was reached (N states, depth D) | `inconclusive` | `bounded` | `complete` is false; the search covered everything up to the named bound and nothing beyond |
+| 6 | Otherwise: the outcome cannot be read even as partial coverage (semantics ambiguous, result not interpretable, an interruption without a bound) | `unknown` | `unknown` | in the vocabulary, but the G0 engine never emits it; it is reserved for tool errors without a bound (plan §6) and for experimental modes |
 
 Notes on exclusivity:
 
 - 1 comes before everything: a property that never ran has no other status.
-- 2 comes before 3: a state after an overflow is not a state of the intended model,
-  so a violation found *after* it would be meaningless. The engine stops at the
-  first finding in its deterministic order; after you fix the model, rerun, and a
-  violation may then appear.
-- 3 before 4 and 5: a concrete, replayed counterexample is a counterexample even
-  in an incomplete search (02 гл. 11: an incomplete search does not create false
-  errors).
-- 4 requires **completion**; 5 covers every stop before completion. A search that
-  hit the depth bound and found nothing is 5, not 4 (11 §10; AC-11).
-- 6 is the remainder (11 §12): use it when none of 1–5 applies — a solver-style
-  "don't know", an ambiguous semantics the engine flags, an experimental mode whose
-  result the engine refuses to classify.
+- 2 comes before 3 and 4 for the properties still open: a state after an overflow
+  is not a state of the intended model, so a violation found *after* it would be
+  meaningless. Fix the model, rerun; a violation may then appear.
+- 3 before 4 and 5: a concrete counterexample is a counterexample even in an
+  incomplete search (02 гл. 11: an incomplete search does not create false errors).
+- 4 requires **completion** (or, for `reach`, a witness); 5 covers every stop
+  before completion. A search that hit the depth bound and found nothing is 5,
+  not 4 (11 §10; AC-11). The depth budget is a budget of its own: states deeper
+  than D are stored and counted but not expanded, and `reason` says how many.
+- 6 is the remainder (11 §12); with the G0 engine it can only come from you, and
+  only when neither a bound nor a construct can be named.
+
+**Aggregation priority** (plan §6). Statuses are per property and the engine does
+not aggregate them. If the caller needs one word for the whole run, the order is
+fixed: Aggregation priority: `invalid-model` > `not-executed` > `violated` > `inconclusive` > `unknown` > `verified` — the first of these that occurs among the properties is the overall word, and the per-property records are still listed. Note that this differs from the per-property order above (rows 1–2): a run with one `not-executed` property and one `invalid-model` property is summarised as `invalid-model`. Plan §6 fixes the order without giving a reason; our reading of it: the model must be fixed before anything else is worth executing.
 
 ## 3. Evidence levels
 
 | Level | Meaning | Produced when |
 |---|---|---|
-| `exhaustive` | the whole reachable state space (of the model × property automaton) was explored with an exact visited set | the search completed within budget, no reductions that lose states |
-| `bounded` | the search covered everything up to an explicit bound (depth, steps, states) and nothing beyond | the run was configured with a bound, or a budget cut it off at a point the engine can name (depth d, N states) |
+| `exhaustive` | the whole reachable state space (of the model × property automaton) was explored with an exact visited set, or an exact run decides the property | a complete search (`verified`); any `violated`; a `reach` witness |
+| `bounded` | the search covered everything up to an explicit bound and nothing beyond, and the result is stated relative to that bound | a budget cut the run at a point the engine can name: N states, depth D, the time or memory limit at N states (`inconclusive`) |
 | `approximate` | the visited set may have lost states (hash collisions); coverage is a probability, not a fact | bitstate / hash-compact modes (vNext only) |
-| `unknown` | the engine does not vouch for coverage | `not-executed`, `unknown`, experimental LTL (plan §11), a stop whose coverage the engine cannot name (server-side interruption) |
+| `unknown` | the engine does not vouch for coverage | `not-executed`, `invalid-model`, `unknown`, experimental LTL (plan §11) |
+
+The rule that separates the last two (plan §6): `bounded` is used when the engine can
+name the bound at which it stopped (depth, states, or the budget hit after N states)
+and the result is phrased relative to it; `unknown` is used when it cannot — a tool
+error, an interruption without a bound, a result that cannot be classified. Plan §6
+names depth and states as the bounds; the engine extends the same rule to
+`--budget-ms` and `--budget-mem-mb` (a decision of G0, not the plan's letter): at a
+time or memory stop it still knows the number of stored states (`counters.states`)
+and phrases the result relative to it, so those stops are `bounded`, not `unknown`.
 
 ## 4. Status × evidence: what each combination allows you to say
 
 | Status | Evidence | You may say | You may not say |
 |---|---|---|---|
 | `verified` | `exhaustive` | "Property P holds on model M under assumptions A; the search was exhaustive (N states)." (AC-01) | "the system is correct"; anything about the implementation |
-| `verified` | `unknown` (experimental LTL) | "The search completed and found no counterexample; the LTL translation is experimental and the engine does not vouch for this result. Treat it as not established." | "holds", "proved" |
+| `verified` | `unknown` (experimental LTL, G4) | "The search completed and found no counterexample; the LTL translation is experimental and the engine does not vouch for this result. Treat it as not established." | "holds", "proved" |
 | `verified` | `bounded`, `approximate` | not produced: an incomplete search without a violation is `inconclusive` (§2, row 5) | — |
-| `violated` | any | "P is violated on M; counterexample replayed: … (prefix …, loop …)." | "the system has a bug" before the cause classification (`counterexamples.md` §3) |
-| `inconclusive` | `bounded` | "No counterexample within bound k / within N states / depth d; beyond that nothing is known." (AC-02) | "holds up to k" as if it said something about beyond k; "no errors" |
+| `violated` | `exhaustive` (the only combination the engine emits) | "P is violated on M; counterexample replayed: … (final state …)." | "the system has a bug" before the cause classification (`counterexamples.md` §3) |
+| `inconclusive` | `bounded` | "No counterexample within N states / depth D; beyond that nothing is known." (AC-02) | "holds up to k" as if it said something about beyond k; "no errors" |
 | `inconclusive` | `approximate` | "No counterexample found in an approximate search with estimated coverage c." (AC-12) | "exhaustive", "proved" |
-| `inconclusive` | `unknown` | "The run stopped (resource R exhausted) before coverage could be measured." | any coverage claim |
+| `inconclusive` | `unknown` | not produced by the engine (a budget stop always names its bound); if a server-side interruption ever yields it: "The run stopped before coverage could be measured." | any coverage claim |
 | `unknown` | `unknown` | "The engine could not classify the result: reason. Next step: …" (AC-15) | any of the other five statuses |
-| `not-executed` | `unknown` | "Not checked: reason (construct X at line n / unsupported semantics / no engine). Model and properties are attached; route: …" | any result, including "likely fine" |
-| `invalid-model` | any | "The model overflowed domain D at step s (trace attached); fix the model before any property claim." | "violated"; "the system overflows" |
+| `not-executed` | `unknown` | "Not checked: reason (construct X at line n / kind K not executed by this build / no engine). Model and properties are attached; route: …" | any result, including "likely fine" |
+| `invalid-model` | `unknown` | "The model overflowed domain D at step s (trace attached); fix the model before any property claim." | "violated"; "the system overflows" |
 
-## 5. Size bounds (plan A4 as fixed at control point K1)
+## 5. Size bounds (plan §12 A4 as fixed at control point K1, measured in G0)
 
-The engine targets "small and medium" models. Plan 14 §12 A4, fixed after the Spike
-(`model-check-plugin/steps/spike-confirmation.md`):
+The engine targets "small and medium" models. The CLI defaults are the medium
+bounds; smaller budgets are set with the `--budget-*` flags (`engine-tools.md` §2).
 
 | Class | States | DFS depth | State vector | Time | Memory |
 |---|---|---|---|---|---|
 | small | ≤ 10⁵ | ≤ 10⁵ | — | 60 s | 1 GB |
 | medium | ≤ 10⁶ | ≤ 10⁶ | ≤ 128 bytes | 60 s | 1 GB |
 
-Depth is a budget of its own, separate from the state count. Spike measurements:
-0.5–1.2× the speed of `pan`, 32 bytes per stored state; the overhead of
-interpreting the IR was not measured and is checked in G0 (the plan allows up to
-20×). Above the medium class `mc_estimate` warns before the run and a full run ends
-`inconclusive`, not in silent waiting. Quote the numbers of the actual run from the
-manifest, not this table.
+Depth is a budget of its own, separate from the state count. G0 measurements
+(`steps/g0-confirmation.md` §3.2, `counters` model, linux/arm64): 10⁶ states in
+1.1–1.6 s of DFS with a peak RSS of 0.17 GB, 0.65–0.90 M states/s; the interpretation
+overhead the plan allowed (≤ 20× the Spike) came out below 1× on that model, with
+the caveat that its guards are trivial. Above the medium class a full run ends
+`inconclusive` with the resource named, not in silent waiting; `mc_estimate` (G5)
+will warn before the run. Quote the numbers of the actual run from the report's
+`counters`, not this table.
 
 ## 6. Forbidden phrasings
 
@@ -106,27 +132,27 @@ a user's phrasing when you quote it back.
 
 | Do not write | Because | Write instead |
 |---|---|---|
-| "no errors", "the model has no errors", "ошибок нет" | 11 §14 forbids it outright; it claims completeness that only `exhaustive` supports and hides which properties were checked | "no counterexample was found for properties P1–P3 in an exhaustive search" / "…in a bounded search up to k" |
+| "no errors", "the model has no errors", "ошибок нет" | 11 §14 forbids it outright; it claims completeness that only `exhaustive` supports and hides which properties were checked | "no counterexample was found for properties P1–P3 in an exhaustive search" / "…in a bounded search up to N states" |
 | "proved", "proven", "доказано", "verified" as a plain adjective | only `verified` + `exhaustive` supports it, and only about the model | "P holds on model M under assumptions A (exhaustive search)" |
 | "the system is correct", "the protocol is safe", "the implementation is verified" | the result is about the model; transfer needs a conformance argument (11 §1.3; 10 §12) | "on the model M, …; carrying this to the implementation requires …" |
 | "holds up to k" implying beyond k | AC-02, AC-07 | "no counterexample of length ≤ k; nothing is claimed beyond k" |
-| "the search timed out but found nothing, so it is probably fine" | 11 §10: budget exhaustion is `inconclusive`, never a hint of `verified` | "inconclusive: time budget exhausted after N states; coverage unknown" |
+| "the search timed out but found nothing, so it is probably fine" | 11 §10: budget exhaustion is `inconclusive`, never a hint of `verified` | "inconclusive: time budget exhausted after N states; nothing is known beyond them" |
 | "with fairness the property holds" without the result without fairness | AC-05; 03 гл. 6: fairness can prove by forbidding | both results, each with its assumption |
 | "the trace shows a bug in the system" before the cause classification | 11 §11: classify system / specification / model / translation first | "the trace violates P on the model; cause class: …" |
 | "the property is true" when the antecedent is unreachable | vacuity (AC-13) | "P holds vacuously: `req` is unreachable; the response guarantee is empty" |
 | "simulation shows it works" | 02 гл. 12: one trace proves nothing | "simulation reached the expected states (sanity check); no property result" |
 | "bitstate/approximate search found no errors, so exhaustive" | AC-12 | "approximate search, coverage estimate c, status `inconclusive`" |
-| "the model was verified by SPIN/NuSMV" | the engine is the backend; SPIN is only the test oracle | "checked by the built-in engine version v (manifest attached)" |
+| "the model was verified by SPIN/NuSMV" | the engine is the backend; SPIN is only the test oracle | "checked by the built-in engine `mcd` version v (report's `engine` and `inputs` sections attached)" |
 | "statistically", "with probability" about a result | the engine produces no statistical evidence | remove, or route the question to a probabilistic tool as `not-executed` |
 
 ## 7. Allowed phrasings (11 §14)
 
 - "Property P1 holds on the finite model M under the stated assumptions; the search
   was exhaustive (N states, depth d)."
-- "No counterexample was found in a bounded search up to k = …; the result is
+- "No counterexample was found in a bounded search up to N states; the result is
   inconclusive beyond that bound."
-- "P2 is violated; the counterexample (prefix of n steps, loop of m steps) was
-  replayed; cause class: model defect (channel capacity 2 admits a reordering the
-  real link cannot produce)."
+- "P2 is violated; the counterexample (n steps, final state …) was replayed; cause
+  class: model defect (channel capacity 2 admits a reordering the real link cannot
+  produce)."
 - "P3 was not executed: the model uses `unless` (line 12), which is outside the
   engine's subset; a rewrite is proposed below."

@@ -1,0 +1,9 @@
+{
+  "eval_id": 3,
+  "iteration": 1,
+  "date": "2026-09-24",
+  "source": "Agent task notifications of the two subagent runs (subagent_tokens, duration_ms, tool_uses); no other measurement",
+  "engine": "mcd 0.1.0-g0 (CLI fallback; MCP server not built yet)",
+  "with_skill": {"tokens": 93160, "duration_s": 244.187, "tool_uses": 8},
+  "without_skill": {"tokens": 41934, "duration_s": 57.318, "tool_uses": 2}
+}

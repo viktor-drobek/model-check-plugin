@@ -74,9 +74,10 @@ semantic class (untimed / timed / probabilistic). Then decide the input formalis
 
 - asynchronous processes, channels, shared variables → Promela subset
   (`references/promela-subset.md`);
-- places, transitions, tokens, "marking", a token game → Petri net JSON written
-  to `assets/petri-net.schema.json` (`references/petri-nets.md`), which the engine
-  turns into the same intermediate representation;
+- places, transitions, tokens, "marking", a token game → Petri net JSON conforming
+  to `assets/petri-net.schema.json` (`references/petri-nets.md`; keys `name`,
+  `initial`, `inputs`/`outputs` with `place` and `weight`), which the engine turns
+  into the same intermediate representation;
 - a system described only in words → write it in the Promela subset first; direct IR
   authoring is experimental (plan assumption A7).
 
@@ -86,6 +87,12 @@ tool class would fit), no imitation of a result. Details and the branch table:
 `references/model-classification.md`.
 
 ### 3. Model → IR with `mc_parse`
+
+Until the MCP server exists (build step G2) every `mc_*` name in this file means its
+`mcd` CLI equivalent from `references/engine-tools.md` §1–§2: today that is
+`mcd parse --petri|--ir` and `mcd check --petri|--ir [--budget-*] [--bfs] [--no-timing]`
+(Promela input `--promela` arrives with G1); exit code 2 with a JSON `error` is the
+parser rejection meant below, exit code 0 is a report even when it says `invalid-model`.
 
 Call `mc_parse` on the Promela text or the Petri JSON. Read the warnings, not just the
 success flag: `printf` ignored, capacity defaults applied, labels without references.

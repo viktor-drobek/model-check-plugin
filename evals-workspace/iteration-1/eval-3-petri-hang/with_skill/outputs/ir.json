@@ -1,0 +1,632 @@
+{
+  "schema": "mcd-ir/1",
+  "name": "user_net_p1_p6",
+  "globals": [
+    {
+      "name": "p1",
+      "type": "byte",
+      "init": [
+        1
+      ],
+      "origin": {
+        "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
+        "name": "p1"
+      }
+    },
+    {
+      "name": "p2",
+      "type": "byte",
+      "origin": {
+        "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
+        "name": "p2"
+      }
+    },
+    {
+      "name": "p3",
+      "type": "byte",
+      "origin": {
+        "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
+        "name": "p3"
+      }
+    },
+    {
+      "name": "p4",
+      "type": "byte",
+      "init": [
+        1
+      ],
+      "origin": {
+        "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
+        "name": "p4"
+      }
+    },
+    {
+      "name": "p5",
+      "type": "byte",
+      "origin": {
+        "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
+        "name": "p5"
+      }
+    },
+    {
+      "name": "p6",
+      "type": "byte",
+      "origin": {
+        "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
+        "name": "p6"
+      }
+    }
+  ],
+  "processes": [
+    {
+      "name": "init",
+      "locations": [
+        {
+          "name": "do"
+        }
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 0,
+          "guard": {
+            "op": "gt",
+            "args": [
+              {
+                "op": "var",
+                "var": "p1"
+              },
+              {
+                "op": "const"
+              }
+            ]
+          },
+          "effect": [
+            {
+              "var": "p1",
+              "value": {
+                "op": "sub",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p1"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            {
+              "var": "p2",
+              "value": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p2"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "t1",
+          "origin": {
+            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
+            "name": "t1"
+          }
+        },
+        {
+          "from": 0,
+          "to": 0,
+          "guard": {
+            "op": "and",
+            "args": [
+              {
+                "op": "gt",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p2"
+                  },
+                  {
+                    "op": "const"
+                  }
+                ]
+              },
+              {
+                "op": "gt",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p4"
+                  },
+                  {
+                    "op": "const"
+                  }
+                ]
+              }
+            ]
+          },
+          "effect": [
+            {
+              "var": "p2",
+              "value": {
+                "op": "sub",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p2"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            {
+              "var": "p4",
+              "value": {
+                "op": "sub",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p4"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            {
+              "var": "p3",
+              "value": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p3"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "t2",
+          "origin": {
+            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
+            "name": "t2"
+          }
+        },
+        {
+          "from": 0,
+          "to": 0,
+          "guard": {
+            "op": "gt",
+            "args": [
+              {
+                "op": "var",
+                "var": "p3"
+              },
+              {
+                "op": "const"
+              }
+            ]
+          },
+          "effect": [
+            {
+              "var": "p3",
+              "value": {
+                "op": "sub",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p3"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            {
+              "var": "p1",
+              "value": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p1"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            {
+              "var": "p4",
+              "value": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p4"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "t3",
+          "origin": {
+            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
+            "name": "t3"
+          }
+        },
+        {
+          "from": 0,
+          "to": 0,
+          "guard": {
+            "op": "gt",
+            "args": [
+              {
+                "op": "var",
+                "var": "p4"
+              },
+              {
+                "op": "const"
+              }
+            ]
+          },
+          "effect": [
+            {
+              "var": "p4",
+              "value": {
+                "op": "sub",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p4"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            {
+              "var": "p5",
+              "value": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p5"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "t4",
+          "origin": {
+            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
+            "name": "t4"
+          }
+        },
+        {
+          "from": 0,
+          "to": 0,
+          "guard": {
+            "op": "and",
+            "args": [
+              {
+                "op": "gt",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p1"
+                  },
+                  {
+                    "op": "const"
+                  }
+                ]
+              },
+              {
+                "op": "gt",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p5"
+                  },
+                  {
+                    "op": "const"
+                  }
+                ]
+              }
+            ]
+          },
+          "effect": [
+            {
+              "var": "p1",
+              "value": {
+                "op": "sub",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p1"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            {
+              "var": "p5",
+              "value": {
+                "op": "sub",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p5"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            {
+              "var": "p6",
+              "value": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p6"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "t5",
+          "origin": {
+            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
+            "name": "t5"
+          }
+        },
+        {
+          "from": 0,
+          "to": 0,
+          "guard": {
+            "op": "gt",
+            "args": [
+              {
+                "op": "var",
+                "var": "p6"
+              },
+              {
+                "op": "const"
+              }
+            ]
+          },
+          "effect": [
+            {
+              "var": "p6",
+              "value": {
+                "op": "sub",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p6"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            {
+              "var": "p4",
+              "value": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p4"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            {
+              "var": "p1",
+              "value": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p1"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "t6",
+          "origin": {
+            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
+            "name": "t6"
+          }
+        }
+      ],
+      "origin": {
+        "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
+        "name": "user_net_p1_p6"
+      }
+    }
+  ],
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "hang (Holzmann §8.10): a reachable marking in which no transition is enabled",
+      "origin": {
+        "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
+        "name": "hang"
+      }
+    },
+    {
+      "id": "safe",
+      "kind": "invariant",
+      "expr": {
+        "op": "and",
+        "args": [
+          {
+            "op": "and",
+            "args": [
+              {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "and",
+                    "args": [
+                      {
+                        "op": "and",
+                        "args": [
+                          {
+                            "op": "le",
+                            "args": [
+                              {
+                                "op": "var",
+                                "var": "p1"
+                              },
+                              {
+                                "op": "const",
+                                "value": 1
+                              }
+                            ]
+                          },
+                          {
+                            "op": "le",
+                            "args": [
+                              {
+                                "op": "var",
+                                "var": "p2"
+                              },
+                              {
+                                "op": "const",
+                                "value": 1
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "op": "le",
+                        "args": [
+                          {
+                            "op": "var",
+                            "var": "p3"
+                          },
+                          {
+                            "op": "const",
+                            "value": 1
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "op": "le",
+                    "args": [
+                      {
+                        "op": "var",
+                        "var": "p4"
+                      },
+                      {
+                        "op": "const",
+                        "value": 1
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "le",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p5"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "op": "le",
+            "args": [
+              {
+                "op": "var",
+                "var": "p6"
+              },
+              {
+                "op": "const",
+                "value": 1
+              }
+            ]
+          }
+        ]
+      },
+      "text": "safe (Holzmann §8.10): every place holds at most one token in every reachable marking",
+      "origin": {
+        "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
+        "name": "safe"
+      }
+    }
+  ],
+  "origin": {
+    "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
+    "name": "user_net_p1_p6"
+  }
+}

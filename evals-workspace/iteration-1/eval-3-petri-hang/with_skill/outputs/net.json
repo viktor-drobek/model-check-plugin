@@ -1,0 +1,19 @@
+{
+  "name": "user_net_p1_p6",
+  "places": [
+    {"name": "p1", "initial": 1},
+    {"name": "p2"},
+    {"name": "p3"},
+    {"name": "p4", "initial": 1},
+    {"name": "p5"},
+    {"name": "p6"}
+  ],
+  "transitions": [
+    {"name": "t1", "inputs": [{"place": "p1"}], "outputs": [{"place": "p2"}]},
+    {"name": "t2", "inputs": [{"place": "p2"}, {"place": "p4"}], "outputs": [{"place": "p3"}]},
+    {"name": "t3", "inputs": [{"place": "p3"}], "outputs": [{"place": "p1"}, {"place": "p4"}]},
+    {"name": "t4", "inputs": [{"place": "p4"}], "outputs": [{"place": "p5"}]},
+    {"name": "t5", "inputs": [{"place": "p1"}, {"place": "p5"}], "outputs": [{"place": "p6"}]},
+    {"name": "t6", "inputs": [{"place": "p6"}], "outputs": [{"place": "p4"}, {"place": "p1"}]}
+  ]
+}

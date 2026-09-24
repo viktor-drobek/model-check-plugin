@@ -1,0 +1,140 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0-g0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "petri",
+      "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
+      "sha256": "713a21439586bb68d67a323aa84296558d21cb99a38917123e7c3b3caa9c38c6"
+    }
+  ],
+  "model": {
+    "name": "user_net_p1_p6",
+    "state_bytes": 8,
+    "processes": 1,
+    "variables": 6
+  },
+  "search": {
+    "mode": "bfs",
+    "budget": {
+      "states": 100000,
+      "depth": 100000,
+      "time_ms": 60000,
+      "mem_bytes": 1073741824
+    },
+    "stop": "complete",
+    "complete": true
+  },
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "hang (Holzmann §8.10): a reachable marking in which no transition is enabled",
+      "status": "violated",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 6,
+        "transitions": 8,
+        "depth": 2,
+        "time_ms": 0,
+        "memory_bytes_est": 24768
+      },
+      "complete": true,
+      "counterexample": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "init",
+            "command": "t1",
+            "changes": [
+              {
+                "var": "p1",
+                "before": 1,
+                "after": 0
+              },
+              {
+                "var": "p2",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "location": "do",
+            "origin": {
+              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
+              "name": "t1"
+            }
+          },
+          {
+            "index": 2,
+            "process": "init",
+            "command": "t4",
+            "changes": [
+              {
+                "var": "p4",
+                "before": 1,
+                "after": 0
+              },
+              {
+                "var": "p5",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "location": "do",
+            "origin": {
+              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
+              "name": "t4"
+            }
+          }
+        ],
+        "final_state": [
+          {
+            "var": "p1",
+            "value": 0
+          },
+          {
+            "var": "p2",
+            "value": 1
+          },
+          {
+            "var": "p3",
+            "value": 0
+          },
+          {
+            "var": "p4",
+            "value": 0
+          },
+          {
+            "var": "p5",
+            "value": 1
+          },
+          {
+            "var": "p6",
+            "value": 0
+          }
+        ],
+        "summary": "t1, t4"
+      },
+      "reason": "deadlock: no transition is enabled and not every process is terminated (at an end label or without outgoing edges)"
+    },
+    {
+      "id": "safe",
+      "kind": "invariant",
+      "text": "safe (Holzmann §8.10): every place holds at most one token in every reachable marking",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 6,
+        "transitions": 8,
+        "depth": 2,
+        "time_ms": 0,
+        "memory_bytes_est": 24768
+      },
+      "complete": true
+    }
+  ]
+}
