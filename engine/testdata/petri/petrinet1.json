@@ -1,0 +1,19 @@
+{
+  "name": "petrinet1",
+  "places": [
+    {"name": "p1", "initial": 1},
+    {"name": "p2"},
+    {"name": "p3"},
+    {"name": "p4", "initial": 1},
+    {"name": "p5"},
+    {"name": "p6"}
+  ],
+  "transitions": [
+    {"name": "t1", "line": 16, "inputs": [{"place": "p1"}], "outputs": [{"place": "p2"}]},
+    {"name": "t2", "line": 17, "inputs": [{"place": "p2"}, {"place": "p4"}], "outputs": [{"place": "p3"}]},
+    {"name": "t3", "line": 18, "inputs": [{"place": "p3"}], "outputs": [{"place": "p1"}, {"place": "p4"}]},
+    {"name": "t4", "line": 19, "inputs": [{"place": "p4"}], "outputs": [{"place": "p5"}]},
+    {"name": "t5", "line": 20, "inputs": [{"place": "p1"}, {"place": "p5"}], "outputs": [{"place": "p6"}]},
+    {"name": "t6", "line": 21, "inputs": [{"place": "p6"}], "outputs": [{"place": "p4"}, {"place": "p1"}]}
+  ]
+}

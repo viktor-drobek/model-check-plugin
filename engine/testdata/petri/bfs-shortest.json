@@ -1,0 +1,10 @@
+{
+  "name": "bfs-shortest",
+  "places": [{"name": "p1", "initial": 1}, {"name": "a"}, {"name": "b"}, {"name": "dead"}],
+  "transitions": [
+    {"name": "t1", "inputs": [{"place": "p1"}], "outputs": [{"place": "a"}]},
+    {"name": "t2", "inputs": [{"place": "a"}], "outputs": [{"place": "b"}]},
+    {"name": "t3", "inputs": [{"place": "b"}], "outputs": [{"place": "dead"}]},
+    {"name": "t4", "inputs": [{"place": "p1"}], "outputs": [{"place": "dead"}]}
+  ]
+}

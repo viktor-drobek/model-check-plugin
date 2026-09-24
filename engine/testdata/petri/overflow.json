@@ -1,0 +1,7 @@
+{
+  "name": "overflow",
+  "places": [{"name": "src", "initial": 1}, {"name": "buf", "capacity": 1}],
+  "transitions": [
+    {"name": "produce", "inputs": [{"place": "src"}], "outputs": [{"place": "src"}, {"place": "buf"}]}
+  ]
+}

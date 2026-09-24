@@ -1,0 +1,190 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0-g0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "petri",
+      "path": "testdata/petri/petrinet2.json",
+      "sha256": "6d68d35eda518b6182fff3c6c6570627e29f9648ca26681b9d7517689934b122"
+    }
+  ],
+  "model": {
+    "name": "petrinet2",
+    "state_bytes": 18,
+    "processes": 1,
+    "variables": 16
+  },
+  "search": {
+    "mode": "dfs",
+    "budget": {
+      "states": 100000,
+      "depth": 100000,
+      "time_ms": 10000,
+      "mem_bytes": 1073741824
+    },
+    "stop": "complete",
+    "complete": true
+  },
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "hang (Holzmann §8.10): a reachable marking in which no transition is enabled",
+      "status": "violated",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 20,
+        "transitions": 32,
+        "depth": 10,
+        "memory_bytes_est": 25472
+      },
+      "complete": true,
+      "counterexample": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "init",
+            "command": "T1",
+            "changes": [
+              {
+                "var": "P1",
+                "before": 1,
+                "after": 0
+              },
+              {
+                "var": "P2",
+                "before": 0,
+                "after": 1
+              },
+              {
+                "var": "rc",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "location": "do",
+            "origin": {
+              "file": "testdata/petri/petrinet2.json",
+              "line": 14,
+              "name": "T1"
+            }
+          },
+          {
+            "index": 2,
+            "process": "init",
+            "command": "t1",
+            "changes": [
+              {
+                "var": "RC",
+                "before": 0,
+                "after": 1
+              },
+              {
+                "var": "p1",
+                "before": 1,
+                "after": 0
+              },
+              {
+                "var": "p2",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "location": "do",
+            "origin": {
+              "file": "testdata/petri/petrinet2.json",
+              "line": 22,
+              "name": "t1"
+            }
+          }
+        ],
+        "final_state": [
+          {
+            "var": "P1",
+            "value": 0
+          },
+          {
+            "var": "P2",
+            "value": 1
+          },
+          {
+            "var": "P4",
+            "value": 0
+          },
+          {
+            "var": "P5",
+            "value": 0
+          },
+          {
+            "var": "RC",
+            "value": 1
+          },
+          {
+            "var": "CC",
+            "value": 0
+          },
+          {
+            "var": "RD",
+            "value": 0
+          },
+          {
+            "var": "CD",
+            "value": 0
+          },
+          {
+            "var": "p1",
+            "value": 0
+          },
+          {
+            "var": "p2",
+            "value": 1
+          },
+          {
+            "var": "p4",
+            "value": 0
+          },
+          {
+            "var": "p5",
+            "value": 0
+          },
+          {
+            "var": "rc",
+            "value": 1
+          },
+          {
+            "var": "cc",
+            "value": 0
+          },
+          {
+            "var": "rd",
+            "value": 0
+          },
+          {
+            "var": "cd",
+            "value": 0
+          }
+        ],
+        "summary": "T1, t1"
+      },
+      "reason": "deadlock: no transition is enabled and not every process is terminated (at an end label or without outgoing edges)"
+    },
+    {
+      "id": "safe",
+      "kind": "invariant",
+      "text": "safe (Holzmann §8.10): every place holds at most one token in every reachable marking",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 20,
+        "transitions": 32,
+        "depth": 10,
+        "memory_bytes_est": 25472
+      },
+      "complete": true
+    }
+  ]
+}

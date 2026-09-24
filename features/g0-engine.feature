@@ -121,7 +121,16 @@ Feature: G0 engine — Petri nets through IR to a JSON verdict via the mcd CLI
       | flags                                                         | resource |
       | --budget-states 1000 --budget-depth 1000000 --budget-ms 60000 | states   |
       | --budget-states 1000000 --budget-depth 50 --budget-ms 60000   | depth    |
-      | --budget-states 1000000 --budget-depth 1000000 --budget-ms 20 | time     |
+
+  # counters(K=10, N=6): 1 000 000 states, more than a second of work, so a
+  # 20 ms budget always runs out before the sweep ends.
+  Scenario: exhausting the time budget is inconclusive with the resource named
+    Given the IR file "testdata/ir/counters-10-6.json"
+    When I run "mcd check --ir <file> --budget-states 0 --budget-depth 0 --budget-ms 20"
+    Then the exit code is 0
+    And the property "deadlock" has status "inconclusive" with evidence "bounded"
+    And the reason of "deadlock" mentions "time"
+    And the report is not complete
 
   Scenario: the same model within budget is verified and complete
     Given the IR file "testdata/ir/counters-10-5.json"

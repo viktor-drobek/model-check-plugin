@@ -1,0 +1,8 @@
+{
+  "name": "inhibitor",
+  "places": [{"name": "a", "initial": 1}, {"name": "b"}],
+  "transitions": [
+    {"name": "t1", "inputs": [{"place": "a"}], "outputs": [{"place": "b"}]},
+    {"name": "t2", "inputs": [{"place": "b", "inhibitor": true}], "outputs": [{"place": "a"}]}
+  ]
+}

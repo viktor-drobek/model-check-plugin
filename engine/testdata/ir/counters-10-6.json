@@ -1,0 +1,306 @@
+{
+  "schema": "mcd-ir/1",
+  "name": "counters(K=10, N=6)",
+  "processes": [
+    {
+      "name": "P0",
+      "locals": [
+        {
+          "name": "c",
+          "type": "byte"
+        }
+      ],
+      "locations": [
+        {
+          "name": "do"
+        }
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 0,
+          "effect": [
+            {
+              "var": "c",
+              "value": {
+                "op": "mod",
+                "args": [
+                  {
+                    "op": "add",
+                    "args": [
+                      {
+                        "op": "var",
+                        "var": "c"
+                      },
+                      {
+                        "op": "const",
+                        "value": 1
+                      }
+                    ]
+                  },
+                  {
+                    "op": "const",
+                    "value": 10
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "c = (c + 1) % K"
+        }
+      ]
+    },
+    {
+      "name": "P1",
+      "locals": [
+        {
+          "name": "c",
+          "type": "byte"
+        }
+      ],
+      "locations": [
+        {
+          "name": "do"
+        }
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 0,
+          "effect": [
+            {
+              "var": "c",
+              "value": {
+                "op": "mod",
+                "args": [
+                  {
+                    "op": "add",
+                    "args": [
+                      {
+                        "op": "var",
+                        "var": "c"
+                      },
+                      {
+                        "op": "const",
+                        "value": 1
+                      }
+                    ]
+                  },
+                  {
+                    "op": "const",
+                    "value": 10
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "c = (c + 1) % K"
+        }
+      ]
+    },
+    {
+      "name": "P2",
+      "locals": [
+        {
+          "name": "c",
+          "type": "byte"
+        }
+      ],
+      "locations": [
+        {
+          "name": "do"
+        }
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 0,
+          "effect": [
+            {
+              "var": "c",
+              "value": {
+                "op": "mod",
+                "args": [
+                  {
+                    "op": "add",
+                    "args": [
+                      {
+                        "op": "var",
+                        "var": "c"
+                      },
+                      {
+                        "op": "const",
+                        "value": 1
+                      }
+                    ]
+                  },
+                  {
+                    "op": "const",
+                    "value": 10
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "c = (c + 1) % K"
+        }
+      ]
+    },
+    {
+      "name": "P3",
+      "locals": [
+        {
+          "name": "c",
+          "type": "byte"
+        }
+      ],
+      "locations": [
+        {
+          "name": "do"
+        }
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 0,
+          "effect": [
+            {
+              "var": "c",
+              "value": {
+                "op": "mod",
+                "args": [
+                  {
+                    "op": "add",
+                    "args": [
+                      {
+                        "op": "var",
+                        "var": "c"
+                      },
+                      {
+                        "op": "const",
+                        "value": 1
+                      }
+                    ]
+                  },
+                  {
+                    "op": "const",
+                    "value": 10
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "c = (c + 1) % K"
+        }
+      ]
+    },
+    {
+      "name": "P4",
+      "locals": [
+        {
+          "name": "c",
+          "type": "byte"
+        }
+      ],
+      "locations": [
+        {
+          "name": "do"
+        }
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 0,
+          "effect": [
+            {
+              "var": "c",
+              "value": {
+                "op": "mod",
+                "args": [
+                  {
+                    "op": "add",
+                    "args": [
+                      {
+                        "op": "var",
+                        "var": "c"
+                      },
+                      {
+                        "op": "const",
+                        "value": 1
+                      }
+                    ]
+                  },
+                  {
+                    "op": "const",
+                    "value": 10
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "c = (c + 1) % K"
+        }
+      ]
+    },
+    {
+      "name": "P5",
+      "locals": [
+        {
+          "name": "c",
+          "type": "byte"
+        }
+      ],
+      "locations": [
+        {
+          "name": "do"
+        }
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 0,
+          "effect": [
+            {
+              "var": "c",
+              "value": {
+                "op": "mod",
+                "args": [
+                  {
+                    "op": "add",
+                    "args": [
+                      {
+                        "op": "var",
+                        "var": "c"
+                      },
+                      {
+                        "op": "const",
+                        "value": 1
+                      }
+                    ]
+                  },
+                  {
+                    "op": "const",
+                    "value": 10
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "c = (c + 1) % K"
+        }
+      ]
+    }
+  ],
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock"
+    }
+  ]
+}

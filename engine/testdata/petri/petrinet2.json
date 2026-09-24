@@ -1,0 +1,25 @@
+{
+  "name": "petrinet2",
+  "places": [
+    {"name": "P1", "initial": 1}, {"name": "P2"}, {"name": "P4"}, {"name": "P5"},
+    {"name": "RC"}, {"name": "CC"}, {"name": "RD"}, {"name": "CD"},
+    {"name": "p1", "initial": 1}, {"name": "p2"}, {"name": "p4"}, {"name": "p5"},
+    {"name": "rc"}, {"name": "cc"}, {"name": "rd"}, {"name": "cd"}
+  ],
+  "transitions": [
+    {"name": "T1", "line": 14, "inputs": [{"place": "P1"}], "outputs": [{"place": "rc"}, {"place": "P2"}]},
+    {"name": "T2", "line": 15, "inputs": [{"place": "P2"}, {"place": "CC"}], "outputs": [{"place": "P4"}]},
+    {"name": "T3", "line": 16, "inputs": [{"place": "P4"}], "outputs": [{"place": "P5"}, {"place": "rd"}]},
+    {"name": "T4", "line": 17, "inputs": [{"place": "P5"}, {"place": "CD"}], "outputs": [{"place": "P1"}]},
+    {"name": "T5", "line": 18, "inputs": [{"place": "P1"}, {"place": "RC"}], "outputs": [{"place": "P4"}, {"place": "cc"}]},
+    {"name": "T6", "line": 19, "inputs": [{"place": "P4"}, {"place": "RD"}], "outputs": [{"place": "P1"}, {"place": "cd"}]},
+    {"name": "T7", "line": 20, "inputs": [{"place": "P5"}, {"place": "RD"}], "outputs": [{"place": "P1"}]},
+    {"name": "t1", "line": 22, "inputs": [{"place": "p1"}], "outputs": [{"place": "RC"}, {"place": "p2"}]},
+    {"name": "t2", "line": 23, "inputs": [{"place": "p2"}, {"place": "cc"}], "outputs": [{"place": "p4"}]},
+    {"name": "t3", "line": 24, "inputs": [{"place": "p4"}], "outputs": [{"place": "p5"}, {"place": "RD"}]},
+    {"name": "t4", "line": 25, "inputs": [{"place": "p5"}, {"place": "cd"}], "outputs": [{"place": "p1"}]},
+    {"name": "t5", "line": 26, "inputs": [{"place": "p1"}, {"place": "rc"}], "outputs": [{"place": "p4"}, {"place": "CC"}]},
+    {"name": "t6", "line": 27, "inputs": [{"place": "p4"}, {"place": "rd"}], "outputs": [{"place": "p1"}, {"place": "CD"}]},
+    {"name": "t7", "line": 28, "inputs": [{"place": "p5"}, {"place": "rd"}], "outputs": [{"place": "p1"}]}
+  ]
+}

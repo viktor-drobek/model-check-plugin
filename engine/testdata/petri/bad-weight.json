@@ -1,0 +1,7 @@
+{
+  "name": "bad-weight",
+  "places": [{"name": "a", "initial": 1}],
+  "transitions": [
+    {"name": "t1", "inputs": [{"place": "a", "weight": 0}], "outputs": [{"place": "a"}]}
+  ]
+}
