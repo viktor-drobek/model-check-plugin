@@ -11,10 +11,11 @@
 //	           [--budget-mem-mb N] [--bfs] [--no-timing]        → report JSON
 //	mcd version                                                → "mcd <version>"
 //
-// Exit codes: 0 — a JSON document was produced (report or IR), whatever the
-// verdicts, including invalid-model; 2 — the input was rejected by a
-// frontend (schema violation, unsupported construct, invalid IR), with a
-// JSON `{"error": {kind, path, message}}` on stdout; 1 — tool error
+// Exit codes, one per outcome: 0 — a result document (report or IR) was
+// produced, whatever the verdicts, including invalid-model; 2 — no result:
+// the input was rejected by a frontend (schema violation, unsupported
+// construct, invalid IR) and stdout carries a JSON
+// `{"error": {kind, path, message}}` instead; 1 — no result: tool error
 // (unreadable file, bad flags, internal failure), message on stderr.
 //
 // Flag names are part of the skill's contract and stay stable.

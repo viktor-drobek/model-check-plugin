@@ -10,16 +10,20 @@
 // A state is a deadlock when no transition is enabled in it and not every
 // process is terminated. A process is terminated when its control location
 // carries the `end` label or has no outgoing edge. This is the definition
-// the feature file and the report use; it coincides with SPIN's "invalid end
-// state" for models in the Promela subset and with Holzmann's *hang* for a
-// Petri net encoded as one looping process.
+// the feature file and the report use. For a Petri net encoded as one
+// looping process it is Holzmann's *hang*. It is meant to coincide with
+// SPIN's "invalid end state" on the Promela subset; that coincidence is a
+// claim to be checked differentially in G1, not a fact established here.
 //
 // # Statuses
 //
 // Every property ends in exactly one status of 11 §14:
 //
-//	violated       a witness was found (exact run → evidence exhaustive)
-//	verified       undecided after a complete search (evidence exhaustive)
+//	violated       a counterexample was found (exact run → evidence
+//	               exhaustive); for reach: a complete search found no
+//	               satisfying state (exhaustive because complete)
+//	verified       undecided after a complete search (evidence exhaustive);
+//	               for reach: a satisfying state was found (witness, exact run)
 //	inconclusive   undecided and a budget stopped the search (bounded)
 //	invalid-model  undecided when the model misbehaved: domain overflow,
 //	               index out of range, division by zero (evidence unknown;
@@ -31,8 +35,10 @@
 // statement "some reachable state satisfies E": finding one verifies it
 // (with a witness), a complete search without one violates it.
 // A verdict decided before the search stopped (violated, or reach verified)
-// stands whatever stopped the search afterwards, because its witness is an
-// exact run from the initial state.
+// stands whatever stopped the search afterwards — a budget or an invalid
+// step elsewhere — because its witness is an exact run from the initial
+// state that itself contains no invalid step (had it contained one, the run
+// would have ended there as invalid-model).
 package explore
 
 import (
@@ -55,8 +61,11 @@ const (
 // Budget bounds a run. Zero means unlimited. Wall time comes from the
 // context deadline.
 type Budget struct {
-	MaxStates   int
-	MaxDepth    int // transitions from the initial state; deeper states are stored, not expanded
+	MaxStates int
+	// MaxDepth bounds the depth (transitions from the initial state) of the
+	// states that are expanded: a successor at depth MaxDepth+1 is stored
+	// but not expanded, in both DFS and BFS.
+	MaxDepth    int
 	MaxMemBytes int64
 }
 
@@ -105,10 +114,12 @@ type Result struct {
 	Outcomes    []Outcome
 	States      int
 	Transitions int
-	MaxDepth    int
-	MemBytes    int64
-	Elapsed     time.Duration
-	StateBytes  int
+	// MaxDepth is the greatest depth of an expanded state (never above
+	// Budget.MaxDepth when that is set).
+	MaxDepth   int
+	MemBytes   int64
+	Elapsed    time.Duration
+	StateBytes int
 	// Complete is true only when the whole reachable graph was expanded.
 	Complete bool
 	// Stop says why the search ended: "complete", "all properties decided",
@@ -684,10 +695,13 @@ func (s *search) bfs() {
 	for head < s.visited.Len() && s.stop == "" {
 		copy(s.cur, s.visited.Get(head))
 		d := int(s.depth[head])
-		if s.opt.Budget.MaxDepth > 0 && d >= s.opt.Budget.MaxDepth {
-			s.truncated++
+		if s.opt.Budget.MaxDepth > 0 && d > s.opt.Budget.MaxDepth {
+			s.truncated++ // stored (by its parent) but not expanded, as in DFS
 			head++
 			continue
+		}
+		if d > s.res.MaxDepth {
+			s.res.MaxDepth = d
 		}
 		f := frame{proc: -1}
 		for s.stop == "" {
@@ -732,9 +746,6 @@ func (s *search) bfs() {
 			s.viaP = append(s.viaP, int32(e.proc))
 			s.viaE = append(s.viaE, int32(e.idx))
 			s.depth = append(s.depth, int32(d+1))
-			if d+1 > s.res.MaxDepth {
-				s.res.MaxDepth = d + 1
-			}
 			s.res.States = s.visited.Len()
 			if err := s.checkState(s.next, pathTo(idx)); err != nil {
 				s.fail(err.Error(), pathTo(idx)())

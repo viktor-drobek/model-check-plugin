@@ -2,8 +2,11 @@
 // JSON Schema draft 2020-12) into the IR and the standard property set of
 // plan 14 §5.3.
 //
-// Encoding, identical to Promela - examples/App_C/petrinet1 so that state
-// counts are comparable with pan: every place is a global byte variable
+// Encoding, the same as Promela - examples/App_C/petrinet1 for everything
+// that is stored in a state, so that state counts are comparable with pan
+// up to the two states pan stores for the `init` assignments of the initial
+// marking (the IR has the marking as initial values, not as steps): every
+// place is a global byte variable
 // (Max = capacity when it is below 255), the net is one process with a
 // single control location and one self-loop edge per transition; the edge's
 // guard is the conjunction of `place >= weight` over the input arcs (written
@@ -78,7 +81,7 @@ type Transition struct {
 
 const (
 	defaultCapacity = 255
-	holzmannNote    = "Holzmann, Design and Validation of Computer Protocols §8.10: a P/T net cannot express negation — a transition is enabled by the presence of tokens, never by their absence — and the engine encodes exactly that class (place = byte, transition = guarded command with guards `place > 0`, as in App_C/petrinet1). Rewrite the net without inhibitor arcs (e.g. a complementary place that holds a token exactly when the inhibited place is empty), or model the system in the Promela subset."
+	holzmannNote    = "Holzmann, Design and Validation of Computer Protocols §8.10: a P/T net cannot express negation — a transition is enabled by the presence of tokens, never by their absence — and the engine encodes exactly that class (place = byte, transition = guarded command with guards `place > 0`, as in App_C/petrinet1). Rewrite the net without inhibitor arcs — for a place bounded by a known capacity k this is possible with a complementary place holding k minus its marking, so that \"empty\" becomes \"complement holds k tokens\" — or model the system in the Promela subset."
 )
 
 var identRe = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)

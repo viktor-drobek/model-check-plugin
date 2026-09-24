@@ -9,10 +9,14 @@
 //
 // Status/evidence rules enforced by Build (they are the K1 rules):
 //
-//   - `verified` requires complete = true and carries evidence `exhaustive`;
-//     Build refuses to emit `verified` on an incomplete search.
-//   - `violated` carries `exhaustive` because its counterexample is an exact
-//     run of the model, whatever stopped the search afterwards.
+//   - `verified` carries evidence `exhaustive`. For deadlock, invariant and
+//     assert it requires complete = true, and Build refuses it otherwise; for
+//     `reach` it rests on the attached witness (an exact run), so complete
+//     may be false.
+//   - `violated` carries `exhaustive`: for deadlock, invariant and assert
+//     because its counterexample is an exact run of the model, whatever
+//     stopped the search afterwards; for `reach` because only a complete
+//     search can establish that no state satisfies the condition.
 //   - `inconclusive` carries `bounded` and a `reason` naming the exhausted
 //     resource; complete is false.
 //   - `invalid-model` and `not-executed` carry `unknown` and a `reason`; an
@@ -98,6 +102,9 @@ type Property struct {
 	Reason  string     `json:"reason,omitempty"`
 }
 
+// Counters describe the whole run (they are the same for every property of
+// one report). Depth is the greatest depth, in transitions from the initial
+// state, of a state that was expanded.
 type Counters struct {
 	States      int `json:"states"`
 	Transitions int `json:"transitions"`

@@ -10,19 +10,26 @@
 #
 # Vocabulary (11 §14, one status per property, the six values partition the
 # outcomes):
-#   verified      — the property holds on the whole reachable graph; requires
-#                   complete = true and carries evidence "exhaustive".
-#   violated      — a witness was found; the witness is an exact run of the
-#                   model, so the evidence is "exhaustive" even when the search
-#                   was cut short afterwards (complete may be false).
+#   verified      — for deadlock/invariant/assert: the property holds on the
+#                   whole reachable graph, which requires complete = true; for
+#                   reach: a state satisfying the condition was found, and the
+#                   witness (an exact run) is attached, so complete may be
+#                   false. Evidence "exhaustive" in both cases.
+#   violated      — for deadlock/invariant/assert: a counterexample was found;
+#                   it is an exact run of the model, so the evidence is
+#                   "exhaustive" even when the search was cut short afterwards
+#                   (complete may be false). For reach: a complete search found
+#                   no satisfying state (evidence "exhaustive", complete = true).
 #   inconclusive  — a budget (states, depth, time, memory) stopped the search
 #                   before the property was decided; evidence "bounded",
 #                   `reason` names the exhausted resource, complete = false.
 #   invalid-model — the model itself misbehaved: a variable left its domain
 #                   (e.g. a place exceeded its capacity), an index left its
-#                   array, a division by zero. No verdict on the property;
-#                   evidence "unknown"; the trace to the offending step is
-#                   attached.
+#                   array, a division by zero. Every property still undecided
+#                   at that step gets this status, evidence "unknown", and the
+#                   trace to the offending step as its counterexample. A
+#                   verdict decided earlier stands: its own run reached no
+#                   offending step, otherwise it would have been invalid there.
 #   not-executed  — the property kind is outside what this engine version
 #                   executes; evidence "unknown", reason says which kind.
 #   unknown       — reserved (11 §12: a backend answer that is not even a
@@ -35,9 +42,10 @@
 # one looping process this is Holzmann's *hang* (§8.10): no transition is
 # enabled in the marking.
 #
-# Exit codes of `mcd`: 0 — a JSON document (report or IR) was produced,
-# whatever the verdicts; 2 — the input was rejected by a frontend, with a JSON
-# explanation on stdout; 1 — tool error (unreadable file, bad flags).
+# Exit codes of `mcd`, one per outcome: 0 — a result document (report or IR)
+# was produced, whatever the verdicts; 2 — no result: the input was rejected
+# by a frontend, and stdout carries a JSON error document instead; 1 — no
+# result: tool error (unreadable file, bad flags), message on stderr.
 #
 # Timing (`time_ms`) is the only report field that is not a function of the
 # input; `--no-timing` omits it so that runs can be compared byte for byte.
@@ -66,9 +74,12 @@ Feature: G0 engine — Petri nets through IR to a JSON verdict via the mcd CLI
     And the report is complete
     And the report counts 6 states
 
-  # petrinet2 has no oracle-free expected verdict; its result became golden
-  # after the first run that agreed with pan on the verdict class and on the
-  # state count (pan stored = engine states + 2, see steps/g0-confirmation.md).
+  # petrinet2 has no oracle-free expected verdict. The golden file is the
+  # engine's own output, so this scenario is a regression pin and a
+  # determinism check, not a correctness proof; the correctness ground is
+  # the agreement with pan recorded in steps/g0-confirmation.md (verdict
+  # class, first witness, pan stored = engine states + 2 init assignments),
+  # obtained before the file was frozen.
   Scenario: petrinet2 gives a reproducible, golden result
     Given the Petri net file "testdata/petri/petrinet2.json"
     When I run "mcd check --petri <file> --budget-states 100000 --budget-depth 100000 --budget-ms 10000 --no-timing" twice
