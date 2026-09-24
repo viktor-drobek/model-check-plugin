@@ -1,0 +1,184 @@
+# G0 (plan 14 §9): IR, Petri-net frontend, explicit-state explorer (DFS/BFS),
+# JSON report and the `mcd` CLI. Every scenario observes the engine through
+# the CLI and its JSON output, never through Go structures.
+#
+# Exit criterion (14 §9, G0 row): petrinet1 → deadlock `t1, t4`; petrinet2
+# gives a reproducible result; budget tests; the overhead of interpreting the
+# IR relative to the Spike is measured and does not exceed 20×. The
+# measurement itself lives in steps/g0-confirmation.md; the scenarios below
+# fix the behaviour the measurement is taken on.
+#
+# Vocabulary (11 §14, one status per property, the six values partition the
+# outcomes):
+#   verified      — the property holds on the whole reachable graph; requires
+#                   complete = true and carries evidence "exhaustive".
+#   violated      — a witness was found; the witness is an exact run of the
+#                   model, so the evidence is "exhaustive" even when the search
+#                   was cut short afterwards (complete may be false).
+#   inconclusive  — a budget (states, depth, time, memory) stopped the search
+#                   before the property was decided; evidence "bounded",
+#                   `reason` names the exhausted resource, complete = false.
+#   invalid-model — the model itself misbehaved: a variable left its domain
+#                   (e.g. a place exceeded its capacity), an index left its
+#                   array, a division by zero. No verdict on the property;
+#                   evidence "unknown"; the trace to the offending step is
+#                   attached.
+#   not-executed  — the property kind is outside what this engine version
+#                   executes; evidence "unknown", reason says which kind.
+#   unknown       — reserved (11 §12: a backend answer that is not even a
+#                   partial coverage); G0 never emits it.
+#
+# "deadlock" means exactly this, in the feature, in the code and in the
+# report: a reachable state with no enabled transition in which not every
+# process is terminated; a process is terminated when its control location
+# carries the `end` label or has no outgoing edge. For a Petri net encoded as
+# one looping process this is Holzmann's *hang* (§8.10): no transition is
+# enabled in the marking.
+#
+# Exit codes of `mcd`: 0 — a JSON document (report or IR) was produced,
+# whatever the verdicts; 2 — the input was rejected by a frontend, with a JSON
+# explanation on stdout; 1 — tool error (unreadable file, bad flags).
+#
+# Timing (`time_ms`) is the only report field that is not a function of the
+# input; `--no-timing` omits it so that runs can be compared byte for byte.
+
+Feature: G0 engine — Petri nets through IR to a JSON verdict via the mcd CLI
+
+  # --- Petri frontend and explorer on the corpus --------------------------
+
+  Scenario: petrinet1 hangs after t1, t4 (Holzmann §8.10, App_C/petrinet1)
+    Given the Petri net file "testdata/petri/petrinet1.json"
+    When I run "mcd check --petri <file> --budget-states 100000 --budget-depth 100000 --budget-ms 10000"
+    Then the exit code is 0
+    And the property "deadlock" has status "violated" with evidence "exhaustive"
+    And the counterexample of "deadlock" fires the transitions "t1, t4"
+    And the final marking of the counterexample of "deadlock" is "p2=1 p5=1"
+    And the counterexample of "deadlock" maps its steps to the user names "t1, t4"
+
+  # Oracle (spin 6.5.2, gcc -O2 -DNOREDUCE, pan -c0): 8 states stored, of
+  # which 2 are the `p1 = 1` / `p4 = 1` initialisation steps of the Promela
+  # init process that the Petri encoding does not have; 8 - 2 = 6 markings.
+  Scenario: petrinet1 is safe and the full sweep stores the 6 reachable markings
+    Given the Petri net file "testdata/petri/petrinet1.json"
+    When I run "mcd check --petri <file> --budget-states 100000 --budget-depth 100000 --budget-ms 10000"
+    Then the exit code is 0
+    And the property "safe" has status "verified" with evidence "exhaustive"
+    And the report is complete
+    And the report counts 6 states
+
+  # petrinet2 has no oracle-free expected verdict; its result became golden
+  # after the first run that agreed with pan on the verdict class and on the
+  # state count (pan stored = engine states + 2, see steps/g0-confirmation.md).
+  Scenario: petrinet2 gives a reproducible, golden result
+    Given the Petri net file "testdata/petri/petrinet2.json"
+    When I run "mcd check --petri <file> --budget-states 100000 --budget-depth 100000 --budget-ms 10000 --no-timing" twice
+    Then both outputs are byte-identical
+    And the output equals the golden file "testdata/golden/petrinet2.report.json"
+
+  # --- Frontend rejections and model validity ------------------------------
+
+  Scenario: an inhibitor arc is rejected with an explanation
+    Given the Petri net file "testdata/petri/inhibitor.json"
+    When I run "mcd parse --petri <file>"
+    Then the exit code is 2
+    And the error kind is "unsupported-input"
+    And the error message mentions "inhibitor"
+    And the error message mentions "Holzmann"
+    And the error message mentions "t2"
+
+  Scenario: a net that violates the JSON schema is rejected at the offending path
+    Given the Petri net file "testdata/petri/bad-weight.json"
+    When I run "mcd parse --petri <file>"
+    Then the exit code is 2
+    And the error kind is "schema"
+    And the error message mentions "transitions[0].inputs[0].weight"
+
+  # A place with capacity 1 that receives a second token: the model, not the
+  # system, is at fault, so every property gets invalid-model (14 §11).
+  Scenario: exceeding a place capacity is invalid-model, not a violation
+    Given the Petri net file "testdata/petri/overflow.json"
+    When I run "mcd check --petri <file> --budget-states 1000 --budget-depth 1000 --budget-ms 10000"
+    Then the exit code is 0
+    And the property "deadlock" has status "invalid-model" with evidence "unknown"
+    And the property "safe" has status "invalid-model" with evidence "unknown"
+    And the reason of "deadlock" mentions "capacity"
+    And the reason of "deadlock" mentions "buf"
+    And the counterexample of "deadlock" fires the transitions "produce, produce"
+
+  # --- Budgets -------------------------------------------------------------
+
+  # counters(K=10, N=5): 100000 states, no deadlock. IR-encoded version of the
+  # Spike's synthetic model (see testdata/ir/README.md).
+  Scenario Outline: exhausting a budget is inconclusive with the resource named
+    Given the IR file "testdata/ir/counters-10-5.json"
+    When I run "mcd check --ir <file> <flags>"
+    Then the exit code is 0
+    And the property "deadlock" has status "inconclusive" with evidence "bounded"
+    And the reason of "deadlock" mentions "<resource>"
+    And the report is not complete
+
+    Examples:
+      | flags                                                         | resource |
+      | --budget-states 1000 --budget-depth 1000000 --budget-ms 60000 | states   |
+      | --budget-states 1000000 --budget-depth 50 --budget-ms 60000   | depth    |
+      | --budget-states 1000000 --budget-depth 1000000 --budget-ms 20 | time     |
+
+  Scenario: the same model within budget is verified and complete
+    Given the IR file "testdata/ir/counters-10-5.json"
+    When I run "mcd check --ir <file> --budget-states 200000 --budget-depth 200000 --budget-ms 60000"
+    Then the exit code is 0
+    And the property "deadlock" has status "verified" with evidence "exhaustive"
+    And the report is complete
+    And the report counts 100000 states
+
+  # --- Search modes --------------------------------------------------------
+
+  # bfs-shortest.json: t1: p1→a, t2: a→b, t3: b→dead, t4: p1→dead. DFS in
+  # transition order goes t1, t2, t3 and reports a three-step witness; BFS
+  # finds the one-step witness t4.
+  Scenario: DFS reports the first witness on its stack
+    Given the Petri net file "testdata/petri/bfs-shortest.json"
+    When I run "mcd check --petri <file> --budget-states 1000 --budget-depth 1000 --budget-ms 10000"
+    Then the property "deadlock" has status "violated" with evidence "exhaustive"
+    And the counterexample of "deadlock" fires the transitions "t1, t2, t3"
+
+  Scenario: BFS returns a shortest witness
+    Given the Petri net file "testdata/petri/bfs-shortest.json"
+    When I run "mcd check --petri <file> --budget-states 1000 --budget-depth 1000 --budget-ms 10000 --bfs"
+    Then the property "deadlock" has status "violated" with evidence "exhaustive"
+    And the counterexample of "deadlock" fires the transitions "t4"
+
+  # --- IR ------------------------------------------------------------------
+
+  Scenario: the IR round-trips through JSON and checks identically
+    Given the Petri net file "testdata/petri/petrinet1.json"
+    When I run "mcd parse --petri <file>" and save the output as "ir1"
+    And I run "mcd parse --ir ir1" and save the output as "ir2"
+    Then the saved outputs "ir1" and "ir2" are byte-identical
+    And the saved output "ir1" declares 6 global variables of type "byte" and 1 process with 6 edges
+    When I run "mcd check --ir ir1 --budget-states 1000 --budget-depth 1000 --budget-ms 10000 --no-timing" and save the output as "r-ir"
+    And I run "mcd check --petri <file> --budget-states 1000 --budget-depth 1000 --budget-ms 10000 --no-timing" and save the output as "r-petri"
+    Then the saved outputs "r-ir" and "r-petri" are identical except for the inputs section
+
+  Scenario: the IR carries the source mapping of every Petri element
+    Given the Petri net file "testdata/petri/petrinet1.json"
+    When I run "mcd parse --petri <file>"
+    Then the exit code is 0
+    And every global variable and every edge of the IR has an origin with a user name
+
+  # --- CLI contract --------------------------------------------------------
+
+  Scenario: mcd version prints the engine version
+    When I run "mcd version"
+    Then the exit code is 0
+    And the output mentions "mcd"
+
+  Scenario: a missing input file is a tool error
+    When I run "mcd check --petri testdata/petri/does-not-exist.json"
+    Then the exit code is 1
+
+  Scenario: the report names the engine version and hashes its inputs
+    Given the Petri net file "testdata/petri/petrinet1.json"
+    When I run "mcd check --petri <file> --budget-states 1000 --budget-depth 1000 --budget-ms 10000"
+    Then the report names the engine and its version
+    And the report lists 1 input with a sha256 hash
