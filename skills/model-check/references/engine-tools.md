@@ -89,7 +89,7 @@ Rules that do not change with the layer:
 | `engine` | `name` (`mcd`), `version`, `ir_schema`, `report_schema` |
 | `inputs` | one entry per input file: `kind` (`petri` / `ir`), `path`, `sha256` of the file's bytes |
 | `model` | `name`, `state_bytes` (state-vector length), `processes`, `variables` |
-| `search` | `mode` (`dfs` / `bfs`), `budget` {`states`, `depth`, `time_ms`, `mem_bytes`} as given, `stop` (why the search ended: `complete`, `all properties decided`, `invalid model`, or a budget sentence), `complete` (true only when the whole reachable graph was expanded) |
+| `search` | `mode` (`dfs` / `bfs`), `budget` {`states`, `depth`, `time_ms`, `mem_bytes`} as given, `stop` (why the search ended, as a sentence: "complete", "all properties decided", "invalid model" — the engine's literal text with a space, a stop reason, not a verdict — or a budget sentence), `complete` (true only when the whole reachable graph was expanded) |
 | `properties` | one record per property, in the model's property order (§3.2) |
 
 ### 3.2. One property record

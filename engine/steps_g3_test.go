@@ -1,7 +1,11 @@
 package modelcheck_test
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,16 +14,24 @@ import (
 
 	"github.com/cucumber/godog"
 
+	"modelcheck/cli"
+	"modelcheck/frontend/petri"
 	"modelcheck/skillcheck"
 )
 
-// g3World is the per-scenario state for features/g3-skill-package.feature.
-// All checks are pure file/regex/JSON checks over skills/model-check.
+// g3World is the per-scenario state for features/g3-skill-package.feature and
+// features/g3-align.feature. Most checks are pure file/regex/JSON checks over
+// skills/model-check; the alignment scenarios also call the engine's Petri
+// frontend and the in-process CLI, so that the skill package is checked against
+// the engine that exists rather than against a description of it.
 type g3World struct {
 	skillDir  string   // absolute path of the skill package
 	pluginDir string   // absolute path of model-check-plugin
 	repoDir   string   // absolute path of the repository root
+	workDir   string   // absolute path of an evals-workspace run directory
 	statuses  []string // list captured by "lists exactly these statuses"
+	report    map[string]any
+	property  map[string]any
 }
 
 func init() {
@@ -34,6 +46,78 @@ func tableColumn(t *godog.Table) []string {
 		}
 	}
 	return out
+}
+
+var (
+	jsonBlockRe    = regexp.MustCompile("(?s)```json\\s*\n(.*?)\n```")
+	backtickSpanRe = regexp.MustCompile("`([^`\n]+)`")
+	sha256Re       = regexp.MustCompile(`^[0-9a-f]{64}$`)
+)
+
+// resolveRef follows a local "$ref": "#/$defs/x" inside schema, if node is one.
+func resolveRef(schema, node any) (any, bool) {
+	ref, ok := skillcheck.Get(node, "$ref")
+	if !ok {
+		return node, true
+	}
+	s, _ := ref.(string)
+	if !strings.HasPrefix(s, "#/") {
+		return nil, false
+	}
+	return skillcheck.Get(schema, strings.Split(strings.TrimPrefix(s, "#/"), "/")...)
+}
+
+// jsonKeys returns the set of object keys used anywhere in v.
+func jsonKeys(v any, into map[string]bool) {
+	switch t := v.(type) {
+	case map[string]any:
+		for k, e := range t {
+			into[k] = true
+			jsonKeys(e, into)
+		}
+	case []any:
+		for _, e := range t {
+			jsonKeys(e, into)
+		}
+	}
+}
+
+func fileSHA256(path string) (string, error) {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	sum := sha256.Sum256(b)
+	return hex.EncodeToString(sum[:]), nil
+}
+
+// hashesUnder returns sha256 → relative path for every regular file under root.
+func hashesUnder(root string) (map[string]string, error) {
+	files, err := skillcheck.WalkFiles(root)
+	if err != nil {
+		return nil, err
+	}
+	out := map[string]string{}
+	for _, f := range files {
+		h, err := fileSHA256(filepath.Join(root, f))
+		if err != nil {
+			return nil, err
+		}
+		out[h] = f
+	}
+	return out, nil
+}
+
+// sentenceWith reports whether s matches re; used for rules that must be
+// stated as a sentence, not merely have their words somewhere in the file.
+func sentenceWith(s string, re *regexp.Regexp) bool {
+	return re.MatchString(s)
+}
+
+// phrase turns a literal phrase (with regex fragments allowed) into a pattern
+// in which every space also matches a markdown line wrap.
+func phrase(p string) *regexp.Regexp {
+	return regexp.MustCompile(strings.ReplaceAll(p, " ", `\s+`))
 }
 
 func registerG3Steps(sc *godog.ScenarioContext) {
@@ -86,6 +170,32 @@ func registerG3Steps(sc *godog.ScenarioContext) {
 			out[n] = s
 		}
 		return out, nil
+	}
+	mentionsEach := func(rel string, t *godog.Table) error {
+		s, err := read(rel)
+		if err != nil {
+			return err
+		}
+		var missing []string
+		for _, p := range tableColumn(t) {
+			if !strings.Contains(s, p) {
+				missing = append(missing, p)
+			}
+		}
+		if len(missing) > 0 {
+			return fmt.Errorf("%s does not mention: %v", rel, missing)
+		}
+		return nil
+	}
+	statesRule := func(rel string, re *regexp.Regexp, what string) error {
+		s, err := read(rel)
+		if err != nil {
+			return err
+		}
+		if !sentenceWith(s, re) {
+			return fmt.Errorf("%s does not state that %s (pattern %s)", rel, what, re)
+		}
+		return nil
 	}
 
 	// ---------------------------------------------------------- background
@@ -189,38 +299,9 @@ func registerG3Steps(sc *godog.ScenarioContext) {
 		}
 		return nil
 	})
-	sc.Step(`^"([^"]+)" references each of:$`, func(rel string, t *godog.Table) error {
-		s, err := read(rel)
-		if err != nil {
-			return err
-		}
-		var missing []string
-		for _, p := range tableColumn(t) {
-			if !strings.Contains(s, p) {
-				missing = append(missing, p)
-			}
-		}
-		if len(missing) > 0 {
-			return fmt.Errorf("%s does not reference: %v", rel, missing)
-		}
-		return nil
-	})
-	sc.Step(`^"([^"]+)" mentions each of:$`, func(rel string, t *godog.Table) error {
-		s, err := read(rel)
-		if err != nil {
-			return err
-		}
-		var missing []string
-		for _, p := range tableColumn(t) {
-			if !strings.Contains(s, p) {
-				missing = append(missing, p)
-			}
-		}
-		if len(missing) > 0 {
-			return fmt.Errorf("%s does not mention: %v", rel, missing)
-		}
-		return nil
-	})
+	sc.Step(`^"([^"]+)" references each of:$`, mentionsEach)
+	sc.Step(`^"([^"]+)" mentions each of:$`, mentionsEach)
+	sc.Step(`^"([^"]+)" names each of:$`, mentionsEach)
 
 	// -------------------------------------------------------- traceability
 	sc.Step(`^every "FR-" or "NFR-" identifier used in the skill package exists in "([^"]+)"$`, func(noteRel string) error {
@@ -489,6 +570,9 @@ func registerG3Steps(sc *godog.ScenarioContext) {
 		if !ok {
 			return fmt.Errorf("no properties.places.items")
 		}
+		if items, ok = resolveRef(v, items); !ok {
+			return fmt.Errorf("unresolved $ref in places.items")
+		}
 		if t, _ := skillcheck.Get(items, "properties", "initial", "type"); t != "integer" {
 			return fmt.Errorf("places.items.initial.type = %v", t)
 		}
@@ -506,27 +590,29 @@ func registerG3Steps(sc *godog.ScenarioContext) {
 		}
 		return nil
 	})
-	sc.Step(`^the schema defines "transitions" items with "inputs" and "outputs" arcs whose "multiplicity" has minimum (\d+)$`, func(min int) error {
+	sc.Step(`^the schema defines "transitions" items with "inputs" and "outputs" arcs whose "([^"]+)" has minimum (\d+)$`, func(field string, min int) error {
 		v, err := schema()
 		if err != nil {
 			return err
 		}
+		items, ok := skillcheck.Get(v, "properties", "transitions", "items")
+		if !ok {
+			return fmt.Errorf("no properties.transitions.items")
+		}
+		if items, ok = resolveRef(v, items); !ok {
+			return fmt.Errorf("unresolved $ref in transitions.items")
+		}
 		for _, side := range []string{"inputs", "outputs"} {
-			arc, ok := skillcheck.Get(v, "properties", "transitions", "items", "properties", side, "items")
+			arc, ok := skillcheck.Get(items, "properties", side, "items")
 			if !ok {
 				return fmt.Errorf("no transitions.items.properties.%s.items", side)
 			}
-			// the arc schema may be inline or a $ref into $defs
-			if ref, ok := skillcheck.Get(arc, "$ref"); ok {
-				name := strings.TrimPrefix(ref.(string), "#/$defs/")
-				arc, ok = skillcheck.Get(v, "$defs", name)
-				if !ok {
-					return fmt.Errorf("unresolved $ref %v", ref)
-				}
+			if arc, ok = resolveRef(v, arc); !ok {
+				return fmt.Errorf("unresolved $ref in %s arc", side)
 			}
-			m, _ := skillcheck.Get(arc, "properties", "multiplicity", "minimum")
+			m, _ := skillcheck.Get(arc, "properties", field, "minimum")
 			if m != float64(min) {
-				return fmt.Errorf("%s arc multiplicity.minimum = %v, want %d", side, m, min)
+				return fmt.Errorf("%s arc %s.minimum = %v, want %d", side, field, m, min)
 			}
 		}
 		return nil
@@ -541,15 +627,225 @@ func registerG3Steps(sc *godog.ScenarioContext) {
 		}
 		return nil
 	})
-	sc.Step(`^the schema contains no key or enum value mentioning "([^"]+)"$`, func(word string) error {
+	sc.Step(`^the schema's only key mentioning "([^"]+)" is the arc flag whose description says the engine rejects it$`, func(word string) error {
 		v, err := schema()
 		if err != nil {
 			return err
 		}
-		if hits := skillcheck.KeysOrEnumsMentioning(v, word); len(hits) > 0 {
-			return fmt.Errorf("schema mentions %q at %v", word, hits)
+		hits := skillcheck.KeysOrEnumsMentioning(v, word)
+		if len(hits) != 1 || hits[0] != "/$defs/arc/properties/"+word {
+			return fmt.Errorf("keys mentioning %q: %v, want exactly /$defs/arc/properties/%s", word, hits, word)
+		}
+		d, _ := skillcheck.Get(v, "$defs", "arc", "properties", word, "description")
+		if s, _ := d.(string); !regexp.MustCompile(`(?i)reject|never translates`).MatchString(s) {
+			return fmt.Errorf("%s description does not say the engine rejects it: %q", word, s)
 		}
 		return nil
+	})
+
+	// ---------------------------------------------------- schema identity
+	sc.Step(`^"([^"]+)" is byte-for-byte identical to the engine file "([^"]+)"$`, func(skillRel, engineRel string) error {
+		a, err := os.ReadFile(filepath.Join(w.skillDir, skillRel))
+		if err != nil {
+			return err
+		}
+		b, err := os.ReadFile(filepath.Join(w.pluginDir, "engine", engineRel))
+		if err != nil {
+			return err
+		}
+		if !bytes.Equal(a, b) {
+			return fmt.Errorf("%s differs from engine/%s: copy the engine's schema over the asset (cp engine/%s skills/model-check/%s)", skillRel, engineRel, engineRel, skillRel)
+		}
+		return nil
+	})
+	sc.Step(`^every "json" code block in "([^"]+)" that has a "places" key parses with the engine's Petri frontend$`, func(rel string) error {
+		s, err := read(rel)
+		if err != nil {
+			return err
+		}
+		n := 0
+		for _, m := range jsonBlockRe.FindAllStringSubmatch(s, -1) {
+			if !strings.Contains(m[1], `"places"`) {
+				continue
+			}
+			n++
+			if _, err := petri.Parse([]byte(m[1]), "example"); err != nil {
+				return fmt.Errorf("%s: json example %d rejected by the Petri frontend: %v", rel, n, err)
+			}
+		}
+		if n == 0 {
+			return fmt.Errorf("%s has no json code block with a places key", rel)
+		}
+		return nil
+	})
+	sc.Step(`^"([^"]+)" uses the schema keys "([^"]+)" and "([^"]+)" and not "([^"]+)" or "([^"]+)" in its JSON examples$`, func(rel, k1, k2, bad1, bad2 string) error {
+		s, err := read(rel)
+		if err != nil {
+			return err
+		}
+		keys := map[string]bool{}
+		for _, m := range jsonBlockRe.FindAllStringSubmatch(s, -1) {
+			var v any
+			if err := json.Unmarshal([]byte(m[1]), &v); err != nil {
+				return fmt.Errorf("%s: json block does not parse: %v", rel, err)
+			}
+			jsonKeys(v, keys)
+		}
+		for _, k := range []string{k1, k2} {
+			if !keys[k] {
+				return fmt.Errorf("%s: no JSON example uses key %q", rel, k)
+			}
+		}
+		for _, k := range []string{bad1, bad2} {
+			if keys[k] {
+				return fmt.Errorf("%s: a JSON example still uses the sketch key %q", rel, k)
+			}
+		}
+		return nil
+	})
+
+	// -------------------------------------------------------- engine-tools
+	sc.Step(`^"([^"]+)" describes exit codes 0, 1 and 2 each with a meaning$`, func(rel string) error {
+		s, err := read(rel)
+		if err != nil {
+			return err
+		}
+		for _, code := range []string{"0", "1", "2"} {
+			re := regexp.MustCompile(`(?i)exit code ` + code + `\b[^\n]{20,}`)
+			if !re.MatchString(s) {
+				return fmt.Errorf("%s does not explain exit code %s", rel, code)
+			}
+		}
+		return nil
+	})
+	sc.Step(`^"([^"]+)" says that the flag "([^"]+)" arrives with "([^"]+)"$`, func(rel, flag, step string) error {
+		return statesRule(rel, regexp.MustCompile(`(?i)`+regexp.QuoteMeta(flag)+`[^\n]{0,80}arrives with `+step), "the flag "+flag+" arrives with "+step)
+	})
+	sc.Step(`^"([^"]+)" says that the MCP layer arrives with "([^"]+)"$`, func(rel, step string) error {
+		return statesRule(rel, phrase(`(?i)MCP[^.]{0,60}arrives? with `+step), "the MCP layer arrives with "+step)
+	})
+	sc.Step(`^"([^"]+)" says that until then the CLI is the only path$`, func(rel string) error {
+		return statesRule(rel, phrase(`(?i)until then[^.]{0,40}CLI[^.]{0,30}only path`), "until then the CLI is the only path")
+	})
+	sc.Step(`^"([^"]+)" does not call the report fields illustrative$`, func(rel string) error {
+		s, err := read(rel)
+		if err != nil {
+			return err
+		}
+		if strings.Contains(strings.ToLower(s), "illustrative") {
+			return fmt.Errorf("%s still calls something illustrative", rel)
+		}
+		return nil
+	})
+
+	// ------------------------------------------------------- status rules
+	sc.Step(`^"([^"]+)" states that violated carries evidence exhaustive$`, func(rel string) error {
+		return statesRule(rel, phrase("`violated` carries evidence `exhaustive`"), "violated carries evidence exhaustive")
+	})
+	sc.Step(`^"([^"]+)" states that verified requires complete true except for reach$`, func(rel string) error {
+		return statesRule(rel, phrase("`verified` requires `complete` = true[^.]*except for `reach`"), "verified requires complete = true except for reach")
+	})
+	sc.Step(`^"([^"]+)" states that reach is verified by a witness$`, func(rel string) error {
+		return statesRule(rel, phrase("`reach`[^.]{0,20}is verified by a witness"), "reach is verified by a witness")
+	})
+	sc.Step(`^"([^"]+)" states that budget exhaustion gives inconclusive naming the exhausted resource$`, func(rel string) error {
+		return statesRule(rel, phrase("(?i)budget exhaustion gives `inconclusive`[^.]*naming the exhausted resource"), "budget exhaustion gives inconclusive naming the exhausted resource")
+	})
+	sc.Step(`^"([^"]+)" states that a construct outside the subset gives not-executed$`, func(rel string) error {
+		return statesRule(rel, phrase("(?i)a construct outside the subset gives `not-executed`"), "a construct outside the subset gives not-executed")
+	})
+	sc.Step(`^"([^"]+)" states that a domain overflow gives invalid-model$`, func(rel string) error {
+		return statesRule(rel, phrase("(?i)a domain overflow gives `invalid-model`"), "a domain overflow gives invalid-model")
+	})
+	sc.Step(`^"([^"]+)" lists the plan §6 aggregation priority in this order:$`, func(rel string, t *godog.Table) error {
+		s, err := read(rel)
+		if err != nil {
+			return err
+		}
+		const marker = "Aggregation priority:"
+		i := strings.Index(s, marker)
+		if i < 0 {
+			return fmt.Errorf("%s has no %q line", rel, marker)
+		}
+		line := s[i+len(marker):]
+		if j := strings.Index(line, "\n"); j >= 0 {
+			line = line[:j]
+		}
+		want := tableColumn(t)
+		parts := strings.Split(line, ">")
+		if len(parts) < len(want) {
+			return fmt.Errorf("%s: priority line has %d '>'-separated items, want %d", rel, len(parts), len(want))
+		}
+		for k, tok := range want {
+			m := backtickSpanRe.FindStringSubmatch(parts[k])
+			if m == nil || m[1] != tok {
+				return fmt.Errorf("%s: priority item %d is %q, want `%s`", rel, k+1, strings.TrimSpace(parts[k]), tok)
+			}
+		}
+		return nil
+	})
+
+	// ---------------------------------------------------------- size bounds
+	boundsRow := func(rel, row string) (string, error) {
+		s, err := read(rel)
+		if err != nil {
+			return "", err
+		}
+		inTable := false
+		for _, line := range strings.Split(s, "\n") {
+			l := strings.TrimSpace(line)
+			if strings.HasPrefix(l, "| Class") && strings.Contains(l, "States") {
+				inTable = true
+				continue
+			}
+			if inTable {
+				if !strings.HasPrefix(l, "|") {
+					break
+				}
+				if strings.HasPrefix(l, "| "+row+" ") {
+					return l, nil
+				}
+			}
+		}
+		return "", fmt.Errorf("%s has no size-bounds table row %q", rel, row)
+	}
+	sc.Step(`^"([^"]+)" has a size-bounds table with rows "([^"]+)" and "([^"]+)"$`, func(rel, r1, r2 string) error {
+		for _, r := range []string{r1, r2} {
+			if _, err := boundsRow(rel, r); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	sc.Step(`^the "([^"]+)" row of that table contains "([^"]+)" for states and depth$`, func(row, val string) error {
+		l, err := boundsRow("references/evidence-and-status.md", row)
+		if err != nil {
+			return err
+		}
+		if strings.Count(l, val) < 2 {
+			return fmt.Errorf("row %q does not carry %q twice (states and depth): %s", row, val, l)
+		}
+		return nil
+	})
+	sc.Step(`^the "([^"]+)" row of that table contains "([^"]+)", "([^"]+)" and "([^"]+)" and "([^"]+)"$`, func(row, a, b, c, d string) error {
+		l, err := boundsRow("references/evidence-and-status.md", row)
+		if err != nil {
+			return err
+		}
+		for _, v := range []string{a, b, c, d} {
+			if !strings.Contains(l, v) {
+				return fmt.Errorf("row %q lacks %q: %s", row, v, l)
+			}
+		}
+		return nil
+	})
+	sc.Step(`^"([^"]+)" states that bounded is used when the engine can name the bound and unknown when it cannot$`, func(rel string) error {
+		return statesRule(rel, phrase("`bounded` is used when the engine can name the bound[^.]*`unknown` is used when it cannot"), "bounded is used when the engine can name the bound and unknown when it cannot")
+	})
+
+	// ----------------------------------------------------------- petri-nets
+	sc.Step(`^"([^"]+)" says that no fire atom is exposed by the G0 frontend$`, func(rel string) error {
+		return statesRule(rel, phrase("(?i)G0 frontend exposes no `fire\\(t\\)` atom"), "the G0 frontend exposes no fire(t) atom")
 	})
 
 	// --------------------------------------------------------------- evals
@@ -594,7 +890,7 @@ func registerG3Steps(sc *godog.ScenarioContext) {
 		}
 		return nil
 	})
-	sc.Step(`^every eval in "([^"]+)" has a non-empty "prompt" and an empty assertions list$`, func(_ string) error {
+	nonEmptyAssertions := func() error {
 		_, list, err := evals()
 		if err != nil {
 			return err
@@ -604,19 +900,88 @@ func registerG3Steps(sc *godog.ScenarioContext) {
 			if s, _ := p.(string); strings.TrimSpace(s) == "" {
 				return fmt.Errorf("eval %d has an empty prompt", i+1)
 			}
-			// skill-creator names the list "expectations"; the plan calls them assertions.
+			if _, has := skillcheck.Get(e, "expectations"); has {
+				return fmt.Errorf("eval %d still has an 'expectations' key; plan §8.2 names the list 'assertions'", i+1)
+			}
 			a, ok := skillcheck.Get(e, "assertions")
 			if !ok {
-				a, ok = skillcheck.Get(e, "expectations")
+				return fmt.Errorf("eval %d has no assertions", i+1)
 			}
-			if !ok {
-				return fmt.Errorf("eval %d has neither assertions nor expectations", i+1)
-			}
-			if arr, _ := a.([]any); len(arr) != 0 {
-				return fmt.Errorf("eval %d already has assertions; they are deferred to the evals half", i+1)
+			if arr, _ := a.([]any); len(arr) == 0 {
+				return fmt.Errorf("eval %d has an empty assertions list", i+1)
 			}
 		}
 		return nil
+	}
+	sc.Step(`^every eval in "([^"]+)" has a non-empty "prompt" and a non-empty "assertions" list$`, func(_ string) error { return nonEmptyAssertions() })
+	sc.Step(`^every eval in "([^"]+)" has a non-empty "assertions" list and no "expectations" key$`, func(_ string) error { return nonEmptyAssertions() })
+	sc.Step(`^every assertion in "([^"]+)" has a "text" and a "check" whose "type" is one of:$`, func(_ string, t *godog.Table) error {
+		_, list, err := evals()
+		if err != nil {
+			return err
+		}
+		allowed := map[string]bool{}
+		for _, k := range tableColumn(t) {
+			allowed[k] = true
+		}
+		for i, e := range list {
+			a, _ := skillcheck.Get(e, "assertions")
+			for j, as := range a.([]any) {
+				txt, _ := skillcheck.Get(as, "text")
+				if s, _ := txt.(string); strings.TrimSpace(s) == "" {
+					return fmt.Errorf("eval %d assertion %d has no text", i+1, j+1)
+				}
+				typ, _ := skillcheck.Get(as, "check", "type")
+				ts, _ := typ.(string)
+				if !allowed[ts] {
+					return fmt.Errorf("eval %d assertion %d has check type %q, not in %v", i+1, j+1, ts, tableColumn(t))
+				}
+				switch ts {
+				case "regex", "not_regex":
+					if p, _ := skillcheck.Get(as, "check", "pattern"); p == nil {
+						return fmt.Errorf("eval %d assertion %d: %s without pattern", i+1, j+1, ts)
+					}
+				case "regex_order":
+					if p, _ := skillcheck.Get(as, "check", "patterns"); p == nil {
+						return fmt.Errorf("eval %d assertion %d: regex_order without patterns", i+1, j+1)
+					}
+				}
+			}
+		}
+		return nil
+	})
+	sc.Step(`^every eval in "([^"]+)" has a "runnable_from" that is one of:$`, func(_ string, t *godog.Table) error {
+		_, list, err := evals()
+		if err != nil {
+			return err
+		}
+		allowed := map[string]bool{}
+		for _, k := range tableColumn(t) {
+			allowed[k] = true
+		}
+		for i, e := range list {
+			r, _ := skillcheck.Get(e, "runnable_from")
+			if s, _ := r.(string); !allowed[s] {
+				return fmt.Errorf("eval %d runnable_from = %v, want one of %v", i+1, r, tableColumn(t))
+			}
+		}
+		return nil
+	})
+	sc.Step(`^the eval with id (\d+) has "runnable_from" equal to "([^"]+)"$`, func(id int, want string) error {
+		_, list, err := evals()
+		if err != nil {
+			return err
+		}
+		for _, e := range list {
+			if v, _ := skillcheck.Get(e, "id"); v == float64(id) {
+				r, _ := skillcheck.Get(e, "runnable_from")
+				if r != want {
+					return fmt.Errorf("eval %d runnable_from = %v, want %q", id, r, want)
+				}
+				return nil
+			}
+		}
+		return fmt.Errorf("no eval with id %d", id)
 	})
 	sc.Step(`^"([^"]+)" explains that fixtures reference corpus paths and hashes instead of copying files$`, func(rel string) error {
 		s, err := read(rel)
@@ -634,14 +999,218 @@ func registerG3Steps(sc *godog.ScenarioContext) {
 		}
 		return nil
 	})
-	sc.Step(`^no file under "([^"]+)" other than "([^"]+)" exists$`, func(dir, only string) error {
-		files, err := skillcheck.WalkFiles(filepath.Join(w.skillDir, dir))
+	notACopy := func(skillRelDir, corpusRel string) error {
+		corpus, err := hashesUnder(filepath.Join(w.repoDir, corpusRel))
 		if err != nil {
 			return err
 		}
+		target := filepath.Join(w.skillDir, skillRelDir)
+		st, err := os.Stat(target)
+		if err != nil {
+			return err
+		}
+		var files []string
+		if st.IsDir() {
+			files, err = skillcheck.WalkFiles(target)
+			if err != nil {
+				return err
+			}
+		} else {
+			target, files = filepath.Dir(target), []string{filepath.Base(target)}
+		}
 		for _, f := range files {
-			if f != only {
-				return fmt.Errorf("unexpected file %s under %s", f, dir)
+			h, err := fileSHA256(filepath.Join(target, f))
+			if err != nil {
+				return err
+			}
+			if orig, dup := corpus[h]; dup {
+				return fmt.Errorf("%s/%s is a copy of %s/%s", skillRelDir, f, corpusRel, orig)
+			}
+		}
+		return nil
+	}
+	sc.Step(`^no file under "([^"]+)" is a copy of a file under "([^"]+)"$`, notACopy)
+	sc.Step(`^"([^"]+)" is not a copy of any file under "([^"]+)"$`, notACopy)
+	sc.Step(`^"([^"]+)" parses with the engine's Petri frontend$`, func(rel string) error {
+		b, err := os.ReadFile(filepath.Join(w.skillDir, rel))
+		if err != nil {
+			return err
+		}
+		_, err = petri.Parse(b, "fixture")
+		return err
+	})
+	sc.Step(`^running "([^"]+)" on "([^"]+)" exits (\d+)$`, func(cmd, rel string, want int) error {
+		args := append(strings.Fields(cmd)[1:], filepath.Join(w.skillDir, rel))
+		var stdout, stderr bytes.Buffer
+		if code := cli.Run(args, &stdout, &stderr); code != want {
+			return fmt.Errorf("%s exited %d, want %d; stderr: %s; stdout: %s", cmd, code, want, stderr.String(), stdout.String())
+		}
+		var rep map[string]any
+		if err := json.Unmarshal(stdout.Bytes(), &rep); err != nil {
+			return fmt.Errorf("stdout is not JSON: %v", err)
+		}
+		w.report = rep
+		return nil
+	})
+	sc.Step(`^the report has property "([^"]+)" with status "([^"]+)" and evidence "([^"]+)" and complete (true|false)$`, func(id, status, evidence, complete string) error {
+		if w.report == nil {
+			return fmt.Errorf("no report captured")
+		}
+		props, _ := w.report["properties"].([]any)
+		for _, p := range props {
+			pm, _ := p.(map[string]any)
+			if pm["id"] != id {
+				continue
+			}
+			if pm["status"] != status || pm["evidence"] != evidence || pm["complete"] != (complete == "true") {
+				return fmt.Errorf("property %s: status %v evidence %v complete %v", id, pm["status"], pm["evidence"], pm["complete"])
+			}
+			w.property = pm
+			return nil
+		}
+		return fmt.Errorf("report has no property %q", id)
+	})
+	sc.Step(`^that property's counterexample summary is "([^"]+)" and its non-zero final state is "([^"]+)"$`, func(summary, nonzero string) error {
+		if w.property == nil {
+			return fmt.Errorf("no property captured")
+		}
+		cex, _ := w.property["counterexample"].(map[string]any)
+		if cex == nil {
+			return fmt.Errorf("property %v has no counterexample", w.property["id"])
+		}
+		if cex["summary"] != summary {
+			return fmt.Errorf("summary = %v, want %q", cex["summary"], summary)
+		}
+		var parts []string
+		for _, v := range cex["final_state"].([]any) {
+			vm := v.(map[string]any)
+			if val, _ := vm["value"].(float64); val != 0 {
+				parts = append(parts, fmt.Sprintf("%s=%d", vm["var"], int64(val)))
+			}
+		}
+		if got := strings.Join(parts, " "); got != nonzero {
+			return fmt.Errorf("non-zero final state = %q, want %q", got, nonzero)
+		}
+		return nil
+	})
+	sc.Step(`^every SHA-256 row in "([^"]+)" matches the file it names, resolved from the repository root$`, func(rel string) error {
+		s, err := read(rel)
+		if err != nil {
+			return err
+		}
+		rows := 0
+		for _, line := range strings.Split(s, "\n") {
+			if !strings.HasPrefix(strings.TrimSpace(line), "|") {
+				continue
+			}
+			cells := strings.Split(strings.Trim(strings.TrimSpace(line), "|"), "|")
+			var path, hash string
+			for _, c := range cells {
+				for _, m := range backtickSpanRe.FindAllStringSubmatch(c, -1) {
+					if sha256Re.MatchString(m[1]) && hash == "" {
+						hash = m[1]
+					} else if path == "" && !sha256Re.MatchString(m[1]) {
+						path = m[1]
+					}
+				}
+			}
+			if hash == "" || path == "" {
+				continue
+			}
+			rows++
+			got, err := fileSHA256(filepath.Join(w.repoDir, path))
+			if err != nil {
+				return fmt.Errorf("%s: row for %q: %v", rel, path, err)
+			}
+			if got != hash {
+				return fmt.Errorf("%s: %s has sha256 %s, README says %s", rel, path, got, hash)
+			}
+		}
+		if rows == 0 {
+			return fmt.Errorf("%s has no table rows with a path and a SHA-256", rel)
+		}
+		return nil
+	})
+
+	// -------------------------------------------------------- E3 graded run
+	sc.Step(`^the evals workspace "([^"]+)"$`, func(rel string) error {
+		w.workDir = filepath.Join(w.pluginDir, rel)
+		if st, err := os.Stat(w.workDir); err != nil || !st.IsDir() {
+			return fmt.Errorf("evals workspace %s missing", w.workDir)
+		}
+		return nil
+	})
+	grading := func(rel string) ([]map[string]any, error) {
+		v, err := skillcheck.ParseJSONFile(filepath.Join(w.workDir, rel))
+		if err != nil {
+			return nil, err
+		}
+		list, ok := skillcheck.Get(v, "expectations")
+		if !ok {
+			return nil, fmt.Errorf("%s has no expectations list", rel)
+		}
+		arr, _ := list.([]any)
+		if len(arr) == 0 {
+			return nil, fmt.Errorf("%s has an empty expectations list", rel)
+		}
+		var out []map[string]any
+		for i, e := range arr {
+			m, _ := e.(map[string]any)
+			for _, k := range []string{"text", "passed", "evidence"} {
+				if _, ok := m[k]; !ok {
+					return nil, fmt.Errorf("%s entry %d lacks %q", rel, i+1, k)
+				}
+			}
+			out = append(out, m)
+		}
+		return out, nil
+	}
+	sc.Step(`^"([^"]+)" has an "expectations" list where every entry has "text", "passed" and "evidence"$`, func(rel string) error {
+		_, err := grading(rel)
+		return err
+	})
+	sc.Step(`^every entry of "([^"]+)" has passed true$`, func(rel string) error {
+		list, err := grading(rel)
+		if err != nil {
+			return err
+		}
+		var failed []string
+		for _, e := range list {
+			if e["passed"] != true {
+				failed = append(failed, fmt.Sprint(e["text"]))
+			}
+		}
+		if len(failed) > 0 {
+			return fmt.Errorf("%s: %d assertion(s) not passed: %v", rel, len(failed), failed)
+		}
+		return nil
+	})
+	sc.Step(`^at least one entry of "([^"]+)" has passed false$`, func(rel string) error {
+		list, err := grading(rel)
+		if err != nil {
+			return err
+		}
+		for _, e := range list {
+			if e["passed"] == false {
+				return nil
+			}
+		}
+		return fmt.Errorf("%s: every assertion passed — the baseline is not distinguished from the skill", rel)
+	})
+	sc.Step(`^"([^"]+)" records tokens and duration for "([^"]+)" and "([^"]+)"$`, func(rel, a, b string) error {
+		v, err := skillcheck.ParseJSONFile(filepath.Join(w.workDir, rel))
+		if err != nil {
+			return err
+		}
+		for _, run := range []string{a, b} {
+			for _, k := range []string{"tokens", "duration_s"} {
+				x, ok := skillcheck.Get(v, run, k)
+				if !ok {
+					return fmt.Errorf("%s: %s lacks %s", rel, run, k)
+				}
+				if _, isNum := x.(float64); !isNum {
+					return fmt.Errorf("%s: %s.%s is not a number: %v", rel, run, k, x)
+				}
 			}
 		}
 		return nil
