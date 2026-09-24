@@ -48,6 +48,11 @@ type Report struct {
 	Model      ModelInfo  `json:"model"`
 	Search     Search     `json:"search"`
 	Properties []Property `json:"properties"`
+	// Warnings are frontend notes that do not change the verdict but that
+	// a reader must know to interpret it (G1: `printf` output is not
+	// produced; a never claim was parsed and not executed). Deterministic
+	// order: the frontend's textual order.
+	Warnings []string `json:"warnings,omitempty"`
 }
 
 type Engine struct {
@@ -120,15 +125,17 @@ type Meta struct {
 	Mode     explore.Mode
 	Budget   Budget
 	NoTiming bool
+	Warnings []string
 }
 
 // Build turns an explorer result into a report, enforcing the status rules.
 func Build(m *ir.Model, res *explore.Result, meta Meta) (*Report, error) {
 	r := &Report{
-		Engine: Engine{Name: EngineName, Version: EngineVersion, IRSchema: ir.Schema, ReportSchema: ReportSchema},
-		Inputs: meta.Inputs,
-		Model:  ModelInfo{Name: m.Name, StateBytes: res.StateBytes, Processes: len(m.Processes), Variables: countVars(m)},
-		Search: Search{Mode: string(meta.Mode), Budget: meta.Budget, Stop: res.Stop, Complete: res.Complete},
+		Engine:   Engine{Name: EngineName, Version: EngineVersion, IRSchema: ir.Schema, ReportSchema: ReportSchema},
+		Inputs:   meta.Inputs,
+		Model:    ModelInfo{Name: m.Name, StateBytes: res.StateBytes, Processes: len(m.Processes), Variables: countVars(m)},
+		Search:   Search{Mode: string(meta.Mode), Budget: meta.Budget, Stop: res.Stop, Complete: res.Complete},
+		Warnings: meta.Warnings,
 	}
 	if r.Inputs == nil {
 		r.Inputs = []Input{}

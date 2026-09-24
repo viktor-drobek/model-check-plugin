@@ -36,7 +36,7 @@ func TestBuildDiffsAndNames(t *testing.T) {
 	l.Resolve("arr", -1).At(1).Write(s1, 9)
 	s2 := append([]byte(nil), s1...)
 
-	tr := Build(l, [][]byte{s0, s1, s2}, []Ref{{0, 0}, {0, 1}})
+	tr := Build(l, [][]byte{s0, s1, s2}, []Ref{{Proc: 0, Edge: 0}, {Proc: 0, Edge: 1}})
 	if len(tr.Steps) != 2 || tr.Summary != "g > 0 -> g = g - 1 x = -3 arr[1] = 9, loop" {
 		t.Fatalf("summary %q", tr.Summary)
 	}

@@ -5,6 +5,7 @@
 package cex
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 
@@ -18,8 +19,17 @@ type Trace struct {
 	// ones, so that a reader can see the whole marking / valuation at the
 	// point of the violation without replaying the steps.
 	Final []Value `json:"final_state"`
+	// FinalChannels lists the buffer of every channel in the last state.
+	FinalChannels []ChanValue `json:"final_channels,omitempty"`
 	// Summary is the step texts joined with ", ", e.g. "t1, t4".
 	Summary string `json:"summary"`
+}
+
+// ChanValue is a channel and its buffer, head first; each message is one
+// value per field.
+type ChanValue struct {
+	Chan     string    `json:"chan"`
+	Messages [][]int64 `json:"messages"`
 }
 
 // Step is one transition of the run.
@@ -30,10 +40,16 @@ type Step struct {
 	// empty, the guard and effect rendered from the IR.
 	Command string   `json:"command"`
 	Changes []Change `json:"changes,omitempty"`
+	// Channels lists the buffers that the step changed, as they are after
+	// it (a send, a receive or a rendezvous handshake).
+	Channels []ChanValue `json:"channels,omitempty"`
 	// Location is the process's control location after the step, when the
 	// location has a name.
 	Location string     `json:"location,omitempty"`
 	Origin   *ir.Origin `json:"origin,omitempty"`
+	// Partner is present for a rendezvous handshake: the receiver moved in
+	// the same step.
+	Partner *Partner `json:"partner,omitempty"`
 }
 
 // Change is one variable that differs between the source and target state.
@@ -49,10 +65,23 @@ type Value struct {
 	Value int64  `json:"value"`
 }
 
-// Ref identifies an edge taken from a state.
+// Ref identifies an edge taken from a state and, for a rendezvous
+// handshake, the receiving edge taken in the same step.
 type Ref struct {
 	Proc int
 	Edge int
+
+	HasPartner  bool
+	PartnerProc int
+	PartnerEdge int
+}
+
+// Partner is the receiving half of a rendezvous handshake step.
+type Partner struct {
+	Process  string     `json:"process"`
+	Command  string     `json:"command"`
+	Location string     `json:"location,omitempty"`
+	Origin   *ir.Origin `json:"origin,omitempty"`
 }
 
 // Build renders a run given the sequence of states s0..sn and the edges
@@ -68,11 +97,26 @@ func Build(l *ir.Layout, states [][]byte, refs []Ref) *Trace {
 		if name := pr.Locations[e.To].Name; name != "" {
 			st.Location = name
 		}
+		if r.HasPartner {
+			qr := &l.Model.Processes[r.PartnerProc]
+			qe := &qr.Edges[r.PartnerEdge]
+			st.Partner = &Partner{Process: qr.Name, Command: CommandText(qe), Origin: qe.Origin}
+			if name := qr.Locations[qe.To].Name; name != "" {
+				st.Partner.Location = name
+			}
+		}
 		before, after := states[i], states[i+1]
 		for _, sl := range l.Slots {
 			b, a := sl.Read(before), sl.Read(after)
 			if b != a {
 				st.Changes = append(st.Changes, Change{Var: slotName(l, sl), Before: b, After: a})
+			}
+		}
+		for ci := range l.Chans {
+			c := &l.Chans[ci]
+			end := c.Off + 1 + c.Chan.Capacity*c.Width
+			if !bytes.Equal(before[c.Off:end], after[c.Off:end]) {
+				st.Channels = append(st.Channels, ChanValue{Chan: c.Chan.Name, Messages: l.ChanMessages(after, ci)})
 			}
 		}
 		t.Steps = append(t.Steps, st)
@@ -81,6 +125,9 @@ func Build(l *ir.Layout, states [][]byte, refs []Ref) *Trace {
 	last := states[len(states)-1]
 	for _, sl := range l.Slots {
 		t.Final = append(t.Final, Value{Var: slotName(l, sl), Value: sl.Read(last)})
+	}
+	for ci := range l.Chans {
+		t.FinalChannels = append(t.FinalChannels, ChanValue{Chan: l.Chans[ci].Chan.Name, Messages: l.ChanMessages(last, ci)})
 	}
 	t.Summary = strings.Join(texts, ", ")
 	return t
@@ -95,8 +142,41 @@ func CommandText(e *ir.Edge) string {
 	if e.Guard != nil {
 		parts = append(parts, e.Guard.String()+" ->")
 	}
+	if e.Else {
+		parts = append(parts, "else")
+	}
 	if e.Assert != nil {
 		parts = append(parts, "assert("+e.Assert.String()+")")
+	}
+	if e.Run != nil {
+		var args []string
+		for _, a := range e.Run.Args {
+			args = append(args, a.String())
+		}
+		parts = append(parts, fmt.Sprintf("run #%d(%s)", e.Run.Proc, strings.Join(args, ", ")))
+	}
+	if e.Send != nil {
+		var args []string
+		for _, a := range e.Send.Args {
+			args = append(args, a.String())
+		}
+		parts = append(parts, e.Send.Chan+"!"+strings.Join(args, ","))
+	}
+	if e.Recv != nil {
+		var args []string
+		for _, a := range e.Recv.Args {
+			switch {
+			case a.Var != "" && a.Index != nil:
+				args = append(args, a.Var+"["+a.Index.String()+"]")
+			case a.Var != "":
+				args = append(args, a.Var)
+			case a.Match != nil:
+				args = append(args, a.Match.String())
+			default:
+				args = append(args, "_")
+			}
+		}
+		parts = append(parts, e.Recv.Chan+"?"+strings.Join(args, ","))
 	}
 	for _, a := range e.Effect {
 		target := a.Var

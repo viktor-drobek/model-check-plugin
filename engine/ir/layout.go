@@ -28,11 +28,101 @@ type Layout struct {
 	// Slots lists every scalar slot in layout order (array elements are
 	// separate slots sharing one Var). Counterexample diffs walk this list.
 	Slots []*Slot
-	// Chans gives each channel's offset (length byte first).
-	Chans []int
+	// Chans describes each channel's room in the vector.
+	Chans []ChanLayout
+	// Timeout is the value the `timeout` op reads. The explorer sets it
+	// while it evaluates the timeout alternatives of a state; it is not
+	// part of the state vector (as in pan).
+	Timeout bool
 
 	globals map[string]*Slot
 	locals  []map[string]*Slot
+	chans   map[string]int
+}
+
+// ChanLayout is a channel's place in the vector: the length byte at Off,
+// then Capacity messages of Width bytes each, field f at FieldOff[f] within
+// a message.
+type ChanLayout struct {
+	Chan     *Channel
+	Off      int
+	Width    int
+	FieldOff []int
+}
+
+// ChanIndex returns the index of channel name, or false.
+func (l *Layout) ChanIndex(name string) (int, bool) {
+	i, ok := l.chans[name]
+	return i, ok
+}
+
+// ChanLen is the number of messages in channel ci.
+func (l *Layout) ChanLen(state []byte, ci int) int { return int(state[l.Chans[ci].Off]) }
+
+// ChanField reads field f of message i (0 = head) of channel ci.
+func (l *Layout) ChanField(state []byte, ci, i, f int) int64 {
+	c := &l.Chans[ci]
+	return readInt(state[c.Off+1+i*c.Width+c.FieldOff[f]:], c.Chan.Fields[f].Width())
+}
+
+// ChanPush appends a message (the caller has checked the capacity).
+func (l *Layout) ChanPush(state []byte, ci int, vals []int64) {
+	c := &l.Chans[ci]
+	n := int(state[c.Off])
+	base := c.Off + 1 + n*c.Width
+	for f, v := range vals {
+		writeInt(state[base+c.FieldOff[f]:], c.Chan.Fields[f].Width(), v)
+	}
+	state[c.Off] = byte(n + 1)
+}
+
+// ChanPop removes the head message, shifting the rest down and zeroing the
+// freed slot so that equal contents give equal vectors.
+func (l *Layout) ChanPop(state []byte, ci int) {
+	c := &l.Chans[ci]
+	n := int(state[c.Off])
+	buf := state[c.Off+1 : c.Off+1+c.Chan.Capacity*c.Width]
+	copy(buf, buf[c.Width:n*c.Width])
+	for k := (n - 1) * c.Width; k < n*c.Width; k++ {
+		buf[k] = 0
+	}
+	state[c.Off] = byte(n - 1)
+}
+
+// ChanMessages decodes the whole buffer of channel ci (for reports).
+func (l *Layout) ChanMessages(state []byte, ci int) [][]int64 {
+	n := l.ChanLen(state, ci)
+	out := make([][]int64, n)
+	for i := 0; i < n; i++ {
+		msg := make([]int64, len(l.Chans[ci].Chan.Fields))
+		for f := range msg {
+			msg[f] = l.ChanField(state, ci, i, f)
+		}
+		out[i] = msg
+	}
+	return out
+}
+
+func readInt(b []byte, width int) int64 {
+	switch width {
+	case 1:
+		return int64(b[0])
+	case 2:
+		return int64(int16(binary.LittleEndian.Uint16(b)))
+	default:
+		return int64(int32(binary.LittleEndian.Uint32(b)))
+	}
+}
+
+func writeInt(b []byte, width int, v int64) {
+	switch width {
+	case 1:
+		b[0] = byte(v)
+	case 2:
+		binary.LittleEndian.PutUint16(b, uint16(v))
+	default:
+		binary.LittleEndian.PutUint32(b, uint32(v))
+	}
 }
 
 // Slot is one scalar cell of the state vector.
@@ -101,7 +191,7 @@ func NewLayout(m *Model) (*Layout, error) {
 	if err := Validate(m); err != nil {
 		return nil, err
 	}
-	l := &Layout{Model: m, globals: map[string]*Slot{}}
+	l := &Layout{Model: m, globals: map[string]*Slot{}, chans: map[string]int{}}
 	off := 0
 	l.Excl = off
 	off++
@@ -125,12 +215,14 @@ func NewLayout(m *Model) (*Layout, error) {
 	}
 	for i := range m.Channels {
 		ch := &m.Channels[i]
-		l.Chans = append(l.Chans, off)
-		w := 0
+		cl := ChanLayout{Chan: ch, Off: off}
 		for _, f := range ch.Fields {
-			w += f.Width()
+			cl.FieldOff = append(cl.FieldOff, cl.Width)
+			cl.Width += f.Width()
 		}
-		off += 1 + ch.Capacity*w
+		l.Chans = append(l.Chans, cl)
+		l.chans[ch.Name] = i
+		off += 1 + ch.Capacity*cl.Width
 	}
 	l.Size = off
 	return l, nil
@@ -174,6 +266,15 @@ func (s layoutScope) LookupVar(name string) *Var {
 	}
 	return nil
 }
+
+func (s layoutScope) LookupChan(name string) *Channel {
+	if i, ok := s.l.chans[name]; ok {
+		return &s.l.Model.Channels[i]
+	}
+	return nil
+}
+
+func (s layoutScope) ProcessCount() int { return len(s.l.Model.Processes) }
 
 func (l *Layout) scope(proc int) Scope { return layoutScope{l, proc} }
 
@@ -252,9 +353,12 @@ func Validate(m *Model) error {
 		return fmt.Errorf("processes: %d exceed the 254 the exclusive-control byte can name", len(m.Processes))
 	}
 	// A scratch layout for expression scopes; built without re-validating.
-	l := &Layout{Model: m, globals: map[string]*Slot{}}
+	l := &Layout{Model: m, globals: map[string]*Slot{}, chans: map[string]int{}}
 	for i := range m.Globals {
 		l.place(&m.Globals[i], -1, 0, l.globals)
+	}
+	for i := range m.Channels {
+		l.chans[m.Channels[i].Name] = i
 	}
 	pnames := map[string]bool{}
 	for p := range m.Processes {
@@ -272,6 +376,9 @@ func Validate(m *Model) error {
 			l.place(&pr.Locals[i], p, 0, loc)
 		}
 		l.locals = append(l.locals, loc)
+		if pr.Params < 0 || pr.Params > len(pr.Locals) {
+			return fmt.Errorf("processes[%d].params: %d outside 0..%d", p, pr.Params, len(pr.Locals))
+		}
 		n := len(pr.Locations)
 		if n == 0 {
 			return fmt.Errorf("processes[%d]: no locations", p)
@@ -304,6 +411,82 @@ func Validate(m *Model) error {
 				if _, err := Check(e.Assert, l.scope(p)); err != nil {
 					return fmt.Errorf("%s.assert: %w", path, err)
 				}
+			}
+			if e.Else && e.Guard != nil {
+				return fmt.Errorf("%s: an else edge has no guard", path)
+			}
+			ops := 0
+			if e.Send != nil {
+				ops++
+				ch := l.scope(p).LookupChan(e.Send.Chan)
+				if ch == nil {
+					return fmt.Errorf("%s.send: undeclared channel %q", path, e.Send.Chan)
+				}
+				if len(e.Send.Args) != len(ch.Fields) {
+					return fmt.Errorf("%s.send: %d argument(s) for %d field(s) of %s", path, len(e.Send.Args), len(ch.Fields), ch.Name)
+				}
+				for j, a := range e.Send.Args {
+					if _, err := Check(a, l.scope(p)); err != nil {
+						return fmt.Errorf("%s.send.args[%d]: %w", path, j, err)
+					}
+				}
+			}
+			if e.Recv != nil {
+				ops++
+				ch := l.scope(p).LookupChan(e.Recv.Chan)
+				if ch == nil {
+					return fmt.Errorf("%s.recv: undeclared channel %q", path, e.Recv.Chan)
+				}
+				if len(e.Recv.Args) != len(ch.Fields) {
+					return fmt.Errorf("%s.recv: %d argument(s) for %d field(s) of %s", path, len(e.Recv.Args), len(ch.Fields), ch.Name)
+				}
+				for j, a := range e.Recv.Args {
+					apath := fmt.Sprintf("%s.recv.args[%d]", path, j)
+					if a.Var != "" && a.Match != nil {
+						return fmt.Errorf("%s: binds a variable and matches a value at once", apath)
+					}
+					if a.Var != "" {
+						v := l.scope(p).LookupVar(a.Var)
+						if v == nil {
+							return fmt.Errorf("%s: undeclared variable %q", apath, a.Var)
+						}
+						if (v.Len > 0) != (a.Index != nil) {
+							return fmt.Errorf("%s: %q needs an index iff it is an array", apath, a.Var)
+						}
+						if a.Index != nil {
+							if _, err := Check(a.Index, l.scope(p)); err != nil {
+								return fmt.Errorf("%s.index: %w", apath, err)
+							}
+						}
+					}
+					if a.Match != nil {
+						if _, err := Check(a.Match, l.scope(p)); err != nil {
+							return fmt.Errorf("%s.match: %w", apath, err)
+						}
+					}
+				}
+			}
+			if e.Run != nil {
+				ops++
+				r := e.Run
+				if r.Proc < 0 || r.Proc >= len(m.Processes) || r.Proc == p {
+					return fmt.Errorf("%s.run: process %d is not another process of the model", path, r.Proc)
+				}
+				target := &m.Processes[r.Proc]
+				if r.Entry < 0 || r.Entry >= len(target.Locations) {
+					return fmt.Errorf("%s.run.entry: %d outside 0..%d", path, r.Entry, len(target.Locations)-1)
+				}
+				if len(r.Args) != target.Params {
+					return fmt.Errorf("%s.run: %d argument(s) for %d parameter(s) of %s", path, len(r.Args), target.Params, target.Name)
+				}
+				for j, a := range r.Args {
+					if _, err := Check(a, l.scope(p)); err != nil {
+						return fmt.Errorf("%s.run.args[%d]: %w", path, j, err)
+					}
+				}
+			}
+			if ops > 1 {
+				return fmt.Errorf("%s: an edge carries at most one of send, recv, run", path)
 			}
 			for j, a := range e.Effect {
 				apath := fmt.Sprintf("%s.effect[%d]", path, j)

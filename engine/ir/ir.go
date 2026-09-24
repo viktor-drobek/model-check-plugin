@@ -116,14 +116,66 @@ func (v *Var) Count() int {
 	return 1
 }
 
-// Channel is a message channel. Capacity 0 is a rendezvous channel. G0
-// declares channels in the IR and reserves their room in the state vector
-// but has no channel operations; those arrive with the Promela frontend.
+// Channel is a message channel. Capacity 0 is a rendezvous channel. Its
+// room in the state vector is one length byte plus Capacity messages of
+// the summed field widths (a rendezvous channel takes the length byte
+// only: a handshake is a single step and never leaves a message stored).
+// Operations are Edge.Send and Edge.Recv (G1).
 type Channel struct {
 	Name     string  `json:"name"`
 	Capacity int     `json:"capacity"`
 	Fields   []Type  `json:"fields"`
 	Origin   *Origin `json:"origin,omitempty"`
+	// XR / XS record Promela `xr` / `xs` hints: the process types that
+	// alone receive from / send to the channel. They are stored for the
+	// partial-order reduction of a later version and change nothing in the
+	// search (plan 14 §5.2).
+	XR []string `json:"xr,omitempty"`
+	XS []string `json:"xs,omitempty"`
+}
+
+// ChanOp is a send: Args, one per channel field, are evaluated in the
+// source state (after the edge's Run, before its Effect) and appended to
+// the buffer. On a buffered channel the edge is enabled only when the
+// buffer is not full; on a rendezvous channel (capacity 0) only when some
+// other process has, at its current location, an enabled Recv edge on the
+// same channel whose Match values equal the sent values — the two edges are
+// then one indivisible step (the handshake) in which the receiver's
+// variables are bound and both processes advance.
+type ChanOp struct {
+	Chan string  `json:"chan"`
+	Args []*Expr `json:"args"`
+}
+
+// RecvOp is a receive: on a buffered channel the edge is enabled when the
+// buffer is not empty and the head message satisfies every Match; taking
+// it binds each Var to the corresponding field and dequeues the head. On a
+// rendezvous channel a Recv edge is never taken on its own: it is the
+// partner half of a Send (see ChanOp).
+type RecvOp struct {
+	Chan string    `json:"chan"`
+	Args []RecvArg `json:"args"`
+}
+
+// RecvArg is one field of a receive: Var (with Index for an array element)
+// binds the field, Match requires the field to equal the expression's
+// value, neither means the field is ignored (Promela `_`).
+type RecvArg struct {
+	Var   string `json:"var,omitempty"`
+	Index *Expr  `json:"index,omitempty"`
+	Match *Expr  `json:"match,omitempty"`
+}
+
+// RunOp starts process Proc (Promela `run`): its program counter moves
+// from its Initial (dormant) location to Entry, and Args, evaluated in the
+// source state, are written to its first len(Args) locals (the
+// parameters). The frontend pre-instantiates every process a `run` can
+// create, so Proc is a static index; the explorer reports an already
+// started target as an evaluation error.
+type RunOp struct {
+	Proc  int     `json:"proc"`
+	Entry int     `json:"entry"`
+	Args  []*Expr `json:"args,omitempty"`
 }
 
 // Label marks a control location.
@@ -166,6 +218,23 @@ type Edge struct {
 	// and the edge itself is the last step of the witness.
 	Assert *Expr    `json:"assert,omitempty"`
 	Effect []Assign `json:"effect,omitempty"`
+	// Send / Recv / Run are the channel and process-creation operations
+	// (G1). An edge carries at most one of them; the Promela frontend gives
+	// each statement its own edge. Order within a step: guard (and the
+	// operation's own enabling condition), assert, Run, Send or Recv,
+	// Effect.
+	Send *ChanOp `json:"send,omitempty"`
+	Recv *RecvOp `json:"recv,omitempty"`
+	Run  *RunOp  `json:"run,omitempty"`
+	// Else marks a Promela `else`: the edge is enabled iff no other edge
+	// out of the same location is enabled. Guard must be nil.
+	Else bool `json:"else,omitempty"`
+	// DStep: after this edge the same process continues at once with the
+	// first enabled edge of its new location, inside the same step, and so
+	// on while the edges taken carry DStep; intermediate states are not
+	// stored (Promela `d_step`). No enabled continuation is a model error
+	// ("block in d_step seq", invalid-model), as in SPIN.
+	DStep bool `json:"dstep,omitempty"`
 	// Atomic: the process keeps exclusive control after this edge (see the
 	// package comment). False for single-step commands such as a Petri
 	// transition.
@@ -179,12 +248,19 @@ type Edge struct {
 // Process is one process instance: a control-flow graph over Locations with
 // its own Locals. Locals shadow Globals of the same name inside the process.
 type Process struct {
-	Name      string     `json:"name"`
-	Locals    []Var      `json:"locals,omitempty"`
+	Name   string `json:"name"`
+	Locals []Var  `json:"locals,omitempty"`
+	// Params is the number of leading Locals that are parameters set by a
+	// RunOp (0 for processes that start with the system).
+	Params    int        `json:"params,omitempty"`
 	Locations []Location `json:"locations"`
 	Initial   int        `json:"initial"`
 	Edges     []Edge     `json:"edges"`
-	Origin    *Origin    `json:"origin,omitempty"`
+	// Claim marks a Promela never claim. G1 stores it and does not execute
+	// it: the explorer never takes its edges and ignores it in the deadlock
+	// rule; its synchronous product with the system is G4.
+	Claim  bool    `json:"claim,omitempty"`
+	Origin *Origin `json:"origin,omitempty"`
 }
 
 // Property kinds the IR can carry. The explorer executes Deadlock,

@@ -5,18 +5,25 @@
 //
 // Commands:
 //
-//	mcd parse   --petri file.json | --ir file.json            → IR JSON
-//	mcd check  (--petri file.json | --ir file.json)
+//	mcd parse   --petri file.json | --ir file.json | --promela file.pml [-D NAME[=val]]…
+//	                                                            → IR JSON
+//	mcd check  (--petri file.json | --ir file.json | --promela file.pml [-D …])
 //	           [--budget-states N] [--budget-depth N] [--budget-ms N]
-//	           [--budget-mem-mb N] [--bfs] [--no-timing]        → report JSON
+//	           [--budget-mem-mb N] [--bfs] [--sweep] [--no-timing]
+//	                                                            → report JSON
 //	mcd version                                                → "mcd <version>"
 //
 // Exit codes, one per outcome: 0 — a result document (report or IR) was
 // produced, whatever the verdicts, including invalid-model; 2 — no result:
-// the input was rejected by a frontend (schema violation, unsupported
-// construct, invalid IR) and stdout carries a JSON
-// `{"error": {kind, path, message}}` instead; 1 — no result: tool error
+// the input was rejected by a frontend (schema violation, syntax or
+// semantic error, construct outside the subset, invalid IR) and stdout
+// carries a JSON `{"error": {kind, status, path, message}}` instead — its
+// status is always "not-executed": nothing rejected has been executed, so
+// no verdict and no invalid-model can be claimed; 1 — no result: tool error
 // (unreadable file, bad flags, internal failure), message on stderr.
+//
+// Frontend warnings (G1: printf ignored, never claim not executed) go to
+// stderr as "warning: …" lines and into the report's "warnings" field.
 //
 // Flag names are part of the skill's contract and stay stable.
 package cli
@@ -37,6 +44,7 @@ import (
 
 	"modelcheck/explore"
 	"modelcheck/frontend/petri"
+	"modelcheck/frontend/promela"
 	"modelcheck/ir"
 	"modelcheck/report"
 )
@@ -63,9 +71,16 @@ type rejection struct {
 
 type rejectionBody struct {
 	Kind    string `json:"kind"`
+	Status  string `json:"status"`
 	Path    string `json:"path,omitempty"`
 	Message string `json:"message"`
 }
+
+// defineList collects repeated -D flags.
+type defineList []string
+
+func (d *defineList) String() string     { return strings.Join(*d, " ") }
+func (d *defineList) Set(s string) error { *d = append(*d, s); return nil }
 
 // Run executes args (without the program name) and returns the exit code.
 func Run(args []string, stdout, stderr io.Writer) int {
@@ -87,18 +102,23 @@ func Run(args []string, stdout, stderr io.Writer) int {
 }
 
 type input struct {
-	kind string
-	path string
-	data []byte
+	kind    string
+	path    string
+	data    []byte
+	defines []string
 }
 
-func loadInput(petriPath, irPath string) (*input, error) {
-	if (petriPath == "") == (irPath == "") {
-		return nil, errors.New("exactly one of --petri or --ir is required")
+func loadInput(petriPath, irPath, promelaPath string, defines []string) (*input, error) {
+	n := 0
+	in := &input{defines: defines}
+	for kind, path := range map[string]string{"petri": petriPath, "ir": irPath, "promela": promelaPath} {
+		if path != "" {
+			n++
+			in.kind, in.path = kind, path
+		}
 	}
-	in := &input{kind: "petri", path: petriPath}
-	if irPath != "" {
-		in.kind, in.path = "ir", irPath
+	if n != 1 {
+		return nil, errors.New("exactly one of --petri, --ir or --promela is required")
 	}
 	data, err := os.ReadFile(in.path)
 	if err != nil {
@@ -108,9 +128,10 @@ func loadInput(petriPath, irPath string) (*input, error) {
 	return in, nil
 }
 
-// toIR translates the input; a *petri.Error or an IR validation error is a
-// rejection (exit 2), anything else a tool error.
-func toIR(in *input) (*ir.Model, *rejectionBody) {
+// toIR translates the input; a frontend error or an IR validation error is
+// a rejection (exit 2), anything else a tool error. The warnings are the
+// frontend's.
+func toIR(in *input) (*ir.Model, []string, *rejectionBody) {
 	switch in.kind {
 	case "petri":
 		name := strings.TrimSuffix(filepath.Base(in.path), filepath.Ext(in.path))
@@ -118,17 +139,34 @@ func toIR(in *input) (*ir.Model, *rejectionBody) {
 		if err != nil {
 			var pe *petri.Error
 			if errors.As(err, &pe) {
-				return nil, &rejectionBody{Kind: pe.Kind, Path: pe.Path, Message: pe.Message}
+				return nil, nil, &rejectionBody{Kind: pe.Kind, Status: "not-executed", Path: pe.Path, Message: pe.Message}
 			}
-			return nil, &rejectionBody{Kind: "schema", Message: err.Error()}
+			return nil, nil, &rejectionBody{Kind: "schema", Status: "not-executed", Message: err.Error()}
 		}
-		return net.ToIR(in.path), nil
+		return net.ToIR(in.path), nil, nil
+	case "promela":
+		res, perr := promela.Parse(in.data, in.path, in.defines)
+		if perr != nil {
+			return nil, nil, &rejectionBody{
+				Kind:    perr.Kind,
+				Status:  "not-executed",
+				Path:    fmt.Sprintf("%s:%d:%d", perr.File, perr.Line, perr.Col),
+				Message: fmt.Sprintf("%s (%s, line %d)", perr.Message, filepath.Base(perr.File), perr.Line),
+			}
+		}
+		return res.Model, res.Warnings, nil
 	default:
 		m, err := ir.UnmarshalJSON(in.data)
 		if err != nil {
-			return nil, &rejectionBody{Kind: "ir", Message: err.Error()}
+			return nil, nil, &rejectionBody{Kind: "ir", Status: "not-executed", Message: err.Error()}
 		}
-		return m, nil
+		return m, nil, nil
+	}
+}
+
+func printWarnings(stderr io.Writer, warnings []string) {
+	for _, w := range warnings {
+		fmt.Fprintln(stderr, "warning:", w)
 	}
 }
 
@@ -145,18 +183,22 @@ func runParse(args []string, stdout, stderr io.Writer) int {
 	fs.SetOutput(stderr)
 	petriPath := fs.String("petri", "", "Petri net JSON file (frontend/petri/schema.json)")
 	irPath := fs.String("ir", "", "IR JSON file (validated and re-printed)")
+	promelaPath := fs.String("promela", "", "Promela file (the subset of plan 14 §5.2)")
+	var defines defineList
+	fs.Var(&defines, "D", "preprocessor symbol NAME or NAME=value (repeatable)")
 	if err := fs.Parse(args); err != nil {
 		return ExitTool
 	}
-	in, err := loadInput(*petriPath, *irPath)
+	in, err := loadInput(*petriPath, *irPath, *promelaPath, defines)
 	if err != nil {
 		fmt.Fprintln(stderr, "mcd parse:", err)
 		return ExitTool
 	}
-	m, rej := toIR(in)
+	m, warnings, rej := toIR(in)
 	if rej != nil {
 		return reject(stdout, rej)
 	}
+	printWarnings(stderr, warnings)
 	out, err := ir.MarshalJSON(m)
 	if err != nil {
 		fmt.Fprintln(stderr, "mcd parse:", err)
@@ -171,6 +213,10 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 	fs.SetOutput(stderr)
 	petriPath := fs.String("petri", "", "Petri net JSON file")
 	irPath := fs.String("ir", "", "IR JSON file")
+	promelaPath := fs.String("promela", "", "Promela file (the subset of plan 14 §5.2)")
+	var defines defineList
+	fs.Var(&defines, "D", "preprocessor symbol NAME or NAME=value (repeatable)")
+	sweep := fs.Bool("sweep", false, "keep searching after every property is decided (state count of the whole graph, as pan -c0)")
 	states := fs.Int("budget-states", DefaultStates, "maximum number of stored states (0 = unlimited)")
 	depth := fs.Int("budget-depth", DefaultDepth, "maximum search depth in transitions (0 = unlimited)")
 	ms := fs.Int64("budget-ms", DefaultMS, "wall-clock budget in milliseconds (0 = unlimited)")
@@ -180,15 +226,16 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 	if err := fs.Parse(args); err != nil {
 		return ExitTool
 	}
-	in, err := loadInput(*petriPath, *irPath)
+	in, err := loadInput(*petriPath, *irPath, *promelaPath, defines)
 	if err != nil {
 		fmt.Fprintln(stderr, "mcd check:", err)
 		return ExitTool
 	}
-	m, rej := toIR(in)
+	m, warnings, rej := toIR(in)
 	if rej != nil {
 		return reject(stdout, rej)
 	}
+	printWarnings(stderr, warnings)
 	mode := explore.DFS
 	if *bfs {
 		mode = explore.BFS
@@ -200,11 +247,11 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 		ctx, cancel = context.WithTimeout(ctx, time.Duration(*ms)*time.Millisecond)
 		defer cancel()
 	}
-	res, err := explore.Run(ctx, m, explore.Options{Mode: mode, Budget: budget})
+	res, err := explore.Run(ctx, m, explore.Options{Mode: mode, Budget: budget, Sweep: *sweep})
 	if err != nil {
 		// The IR validated but could not be compiled: treat as a rejection
 		// of the input, with the compiler's explanation.
-		return reject(stdout, &rejectionBody{Kind: "ir", Message: err.Error()})
+		return reject(stdout, &rejectionBody{Kind: "ir", Status: "not-executed", Message: err.Error()})
 	}
 	sum := sha256.Sum256(in.data)
 	rep, err := report.Build(m, res, report.Meta{
@@ -212,6 +259,7 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 		Mode:     mode,
 		Budget:   report.Budget{States: *states, Depth: *depth, TimeMS: *ms, MemBytes: *memMB << 20},
 		NoTiming: *noTiming,
+		Warnings: warnings,
 	})
 	if err != nil {
 		fmt.Fprintln(stderr, "mcd check: internal:", err)

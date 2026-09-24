@@ -40,7 +40,7 @@
         "states": 20,
         "transitions": 32,
         "depth": 10,
-        "memory_bytes_est": 25472
+        "memory_bytes_est": 25824
       },
       "complete": true,
       "counterexample": {
@@ -182,7 +182,7 @@
         "states": 20,
         "transitions": 32,
         "depth": 10,
-        "memory_bytes_est": 25472
+        "memory_bytes_est": 25824
       },
       "complete": true
     }

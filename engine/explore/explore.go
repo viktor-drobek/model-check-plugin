@@ -1,9 +1,51 @@
 // Package explore is the explicit-state explorer over the IR (plan 14 §4.1):
 // flat byte-vector states, a compact visited set, deterministic transition
-// order (process index, then edge index), DFS with an explicit stack of lazy
-// successor iterators, BFS for shortest witnesses, budgets, and the
-// properties of the MVP: deadlock, invariants, edge asserts, reachability,
-// with domain overflow reported as invalid-model.
+// order (process index, then edge index, then — for a rendezvous send — the
+// receiving process and edge), DFS with an explicit stack of lazy successor
+// iterators, BFS for shortest witnesses, budgets, and the properties of the
+// MVP: deadlock, invariants, edge asserts, reachability, with domain
+// overflow reported as invalid-model.
+//
+// # Enabledness (G1)
+//
+// An edge is enabled in a state when its guard holds and its operation can
+// proceed: a buffered send needs room, a buffered receive needs a head
+// message satisfying its Match values, a rendezvous send needs a partner —
+// another process whose current location has a Recv edge on the same
+// channel, itself enabled, whose Match values equal the sent values; every
+// such partner is a separate transition. An `else` edge is enabled iff no
+// other edge out of the same location is enabled. `run` is always enabled.
+//
+// `timeout` is evaluated in two phases per state: first every edge is
+// tried with timeout = false; only if none is enabled are the edges whose
+// guard mentions timeout tried again with timeout = true. So timeout is
+// true in a state iff nothing is enabled with timeout taken as false
+// (SPIN's rule), and a state with an enabled timeout edge is not a
+// deadlock.
+//
+// # Atomic sequences and stored states (G1)
+//
+// After an edge with Atomic the process holds exclusive control. As long as
+// the holder can move, the state is an *intermediate* state of the atomic
+// sequence: it is expanded (only the holder moves) but not stored in the
+// visited set — pan does the same, counting these transitions as "atomic
+// steps" apart from the stored states. When the holder is blocked the
+// sequence is interrupted: the state is stored like any other and every
+// process may move (Promela: a blocked atomic loses atomicity). Invariants
+// and reach conditions are evaluated on stored states only, so an atomic
+// sequence hides its intermediate states from them — the same visibility a
+// never claim has in SPIN, which does not move inside an atomic sequence;
+// asserts are evaluated on every step.
+//
+// An edge with DStep continues at once, in the same step, with the first
+// enabled edge of the process's new location, and so on while the edges
+// taken carry DStep; the intermediate states are never stored. No enabled
+// continuation is a model error ("block in d_step seq"), reported as
+// invalid-model with the run to the offending step.
+//
+// A process marked Claim (a never claim) is stored but never executed and
+// does not take part in the deadlock rule; its product with the system is
+// G4.
 //
 // # Deadlock
 //
@@ -11,9 +53,13 @@
 // process is terminated. A process is terminated when its control location
 // carries the `end` label or has no outgoing edge. This is the definition
 // the feature file and the report use. For a Petri net encoded as one
-// looping process it is Holzmann's *hang*. It is meant to coincide with
-// SPIN's "invalid end state" on the Promela subset; that coincidence is a
-// claim to be checked differentially in G1, not a fact established here.
+// looping process it is Holzmann's *hang*. On the Promela subset it is
+// meant to coincide with SPIN's "invalid end state": the frontend encodes
+// SPIN's process termination (the `-end-` transition and its "no younger
+// process alive" condition) so that the two rules see the same states. The
+// coincidence is established model by model by the differential tests —
+// on every chapter 2–3 model in the subset as of G1
+// (steps/g1-confirmation.md) — not proved in general.
 //
 // # Statuses
 //
@@ -26,8 +72,9 @@
 //	               for reach: a satisfying state was found (witness, exact run)
 //	inconclusive   undecided and a budget stopped the search (bounded)
 //	invalid-model  undecided when the model misbehaved: domain overflow,
-//	               index out of range, division by zero (evidence unknown;
-//	               the trace to the offending step is attached)
+//	               index out of range, division by zero, blocking inside
+//	               d_step (evidence unknown; the trace to the offending step
+//	               is attached)
 //	not-executed   the property kind is not executed by this version
 //	unknown        never produced by this package
 //
@@ -44,6 +91,7 @@ package explore
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"modelcheck/cex"
@@ -75,6 +123,10 @@ type Options struct {
 	Budget Budget
 	// NewVisited overrides the visited set (tests use the map reference).
 	NewVisited func(stateLen int) Visited
+	// Sweep keeps searching after every property is decided, so that the
+	// state count is that of the whole reachable graph (pan -c0). The
+	// verdicts do not change: the first one stands.
+	Sweep bool
 }
 
 // Status and Evidence values (11 §14).
@@ -114,6 +166,9 @@ type Result struct {
 	Outcomes    []Outcome
 	States      int
 	Transitions int
+	// AtomicSteps counts the transitions taken from intermediate states of
+	// atomic sequences (never stored), as pan reports them.
+	AtomicSteps int
 	// MaxDepth is the greatest depth of an expanded state (never above
 	// Budget.MaxDepth when that is set).
 	MaxDepth   int
@@ -167,18 +222,50 @@ type cAssign struct {
 	value *ir.Compiled
 }
 
+type cSend struct {
+	ch   int
+	args []*ir.Compiled
+}
+
+type cRecvArg struct {
+	slot  *ir.Slot     // bind target (nil: no binding)
+	index *ir.Compiled // array index of the bind target
+	match *ir.Compiled // required value (nil: none)
+}
+
+type cRecv struct {
+	ch   int
+	args []cRecvArg
+}
+
+type cRun struct {
+	proc, entry int
+	args        []*ir.Compiled
+	params      []*ir.Slot
+}
+
 type cEdge struct {
 	proc, idx int
 	e         *ir.Edge
 	guard     *ir.Compiled
 	assert    *ir.Compiled
 	effect    []cAssign
+	send      *cSend
+	recv      *cRecv
+	run       *cRun
+	// usesTimeout: the guard mentions timeout (phase-1 candidate).
+	usesTimeout bool
+	// rv: a send on a rendezvous channel; receivers lists every Recv edge
+	// on that channel in the other processes, in (process, edge) order.
+	rv        bool
+	receivers []*cEdge
 }
 
 type cProc struct {
-	out  [][]int // per location: edge indices, ascending
-	end  []bool  // per location: carries the end label
-	edge []cEdge
+	out   [][]int // per location: edge indices, ascending
+	end   []bool  // per location: carries the end label
+	edge  []cEdge
+	claim bool
 }
 
 type cProp struct {
@@ -187,15 +274,16 @@ type cProp struct {
 }
 
 type compiled struct {
-	m        *ir.Model
-	layout   *ir.Layout
-	procs    []cProc
-	hasAsrt  bool
-	props    []ir.Property
-	invs     []cProp
-	reaches  []cProp
-	deadlock []int
-	asserts  []int
+	m          *ir.Model
+	layout     *ir.Layout
+	procs      []cProc
+	hasAsrt    bool
+	hasTimeout bool
+	props      []ir.Property
+	invs       []cProp
+	reaches    []cProp
+	deadlock   []int
+	asserts    []int
 }
 
 func compile(m *ir.Model) (*compiled, error) {
@@ -206,7 +294,7 @@ func compile(m *ir.Model) (*compiled, error) {
 	c := &compiled{m: m, layout: l}
 	for p := range m.Processes {
 		pr := &m.Processes[p]
-		cp := cProc{out: make([][]int, len(pr.Locations)), end: make([]bool, len(pr.Locations))}
+		cp := cProc{out: make([][]int, len(pr.Locations)), end: make([]bool, len(pr.Locations)), claim: pr.Claim}
 		for i, loc := range pr.Locations {
 			for _, lb := range loc.Labels {
 				if lb == ir.End {
@@ -216,7 +304,7 @@ func compile(m *ir.Model) (*compiled, error) {
 		}
 		for i := range pr.Edges {
 			e := &pr.Edges[i]
-			ce := cEdge{proc: p, idx: i, e: e}
+			ce := cEdge{proc: p, idx: i, e: e, usesTimeout: e.Guard.Uses("timeout")}
 			if ce.guard, err = l.Compile(e.Guard, p); err != nil {
 				return nil, fmt.Errorf("%s edge %d guard: %w", pr.Name, i, err)
 			}
@@ -225,6 +313,9 @@ func compile(m *ir.Model) (*compiled, error) {
 			}
 			if e.Assert != nil {
 				c.hasAsrt = true
+			}
+			if ce.usesTimeout {
+				c.hasTimeout = true
 			}
 			for _, a := range e.Effect {
 				ca := cAssign{slot: l.Resolve(a.Var, p)}
@@ -236,10 +327,75 @@ func compile(m *ir.Model) (*compiled, error) {
 				}
 				ce.effect = append(ce.effect, ca)
 			}
+			if e.Send != nil {
+				ci, _ := l.ChanIndex(e.Send.Chan)
+				cs := &cSend{ch: ci}
+				for _, a := range e.Send.Args {
+					ca, err := l.Compile(a, p)
+					if err != nil {
+						return nil, err
+					}
+					cs.args = append(cs.args, ca)
+				}
+				ce.send = cs
+				ce.rv = m.Channels[ci].Capacity == 0
+			}
+			if e.Recv != nil {
+				ci, _ := l.ChanIndex(e.Recv.Chan)
+				cr := &cRecv{ch: ci}
+				for _, a := range e.Recv.Args {
+					var ra cRecvArg
+					if a.Var != "" {
+						ra.slot = l.Resolve(a.Var, p)
+						if ra.index, err = l.Compile(a.Index, p); err != nil {
+							return nil, err
+						}
+					}
+					if ra.match, err = l.Compile(a.Match, p); err != nil {
+						return nil, err
+					}
+					cr.args = append(cr.args, ra)
+				}
+				ce.recv = cr
+			}
+			if e.Run != nil {
+				r := &cRun{proc: e.Run.Proc, entry: e.Run.Entry}
+				target := &m.Processes[e.Run.Proc]
+				for j, a := range e.Run.Args {
+					ca, err := l.Compile(a, p)
+					if err != nil {
+						return nil, err
+					}
+					r.args = append(r.args, ca)
+					r.params = append(r.params, l.Resolve(target.Locals[j].Name, e.Run.Proc))
+				}
+				ce.run = r
+			}
 			cp.edge = append(cp.edge, ce)
 			cp.out[e.From] = append(cp.out[e.From], i)
 		}
 		c.procs = append(c.procs, cp)
+	}
+	// Rendezvous partners: every Recv edge on the channel in another,
+	// non-claim process, in (process, edge) order.
+	for p := range c.procs {
+		for i := range c.procs[p].edge {
+			e := &c.procs[p].edge[i]
+			if !e.rv {
+				continue
+			}
+			for q := range c.procs {
+				if q == p || c.procs[q].claim {
+					continue
+				}
+				for j := range c.procs[q].edge {
+					r := &c.procs[q].edge[j]
+					if r.recv != nil && r.recv.ch == e.send.ch {
+						e.receivers = append(e.receivers, r)
+					}
+				}
+			}
+		}
 	}
 	c.props = append(c.props, m.Properties...)
 	if c.hasAsrt {
@@ -277,13 +433,23 @@ func compile(m *ir.Model) (*compiled, error) {
 
 // ---- search state -----------------------------------------------------------
 
+// move is one transition: an edge and, for a rendezvous handshake, the
+// receiving edge taken in the same step.
+type move struct {
+	e, partner *cEdge
+}
+
 type frame struct {
 	idx      int32 // state index in visited
 	proc     int32 // iterator: current process; -1 = not started
 	pos      int32 // iterator: position in out[proc][pc]
 	viaProc  int32 // edge that led here (-1 for the initial state)
 	viaEdge  int32
+	viaPart  int32 // partner (process<<16 | edge) or -1
 	enabled  uint32
+	rv       int32  // iterator: next receiver of pend to try; -1 = none pending
+	pend     *cEdge // the rendezvous send whose receivers are enumerated
+	phase    int8   // 0: timeout = false; 1: timeout = true (see package doc)
 	exclOnly bool
 }
 
@@ -296,8 +462,16 @@ type search struct {
 
 	cur, next []byte
 	stack     []frame
-	// BFS bookkeeping (parallel to visited indices)
-	parent, viaP, viaE, depth []int32
+	// tmp holds the intermediate atomic states of the DFS stack (frames
+	// with idx < 0 refer to tmp[-idx-1]); it grows and shrinks with the
+	// stack.
+	tmp [][]byte
+	// BFS bookkeeping (parallel to visited indices): the parent stored
+	// state and the chain of moves from it (one move, or an atomic
+	// sequence's moves).
+	parent []int32
+	chains [][]cex.Ref
+	depth  []int32
 
 	undecided int
 	stop      string // set when the search must stop early
@@ -315,7 +489,7 @@ func (s *search) initOutcomes() {
 		default:
 			o.Status = NotExecuted
 			o.Evidence = EvUnknown
-			o.Reason = fmt.Sprintf("property kind %q is not executed by this engine version (G0 executes deadlock, invariant, reach, assert)", p.Kind)
+			o.Reason = fmt.Sprintf("property kind %q is not executed by this engine version (it executes deadlock, invariant, reach, assert)", p.Kind)
 		}
 		s.res.Outcomes = append(s.res.Outcomes, o)
 	}
@@ -328,7 +502,7 @@ func (s *search) decide(i int, st Status, ev Evidence, reason string, tr *cex.Tr
 	}
 	o.Status, o.Evidence, o.Reason, o.Trace = st, ev, reason, tr
 	s.undecided--
-	if s.undecided == 0 && s.stop == "" {
+	if s.undecided == 0 && s.stop == "" && !s.opt.Sweep {
 		s.stop = "all properties decided"
 	}
 }
@@ -349,10 +523,14 @@ func (s *search) budget(reason string) {
 	}
 }
 
-// allTerminated reports whether every process is at an end location or at a
-// location without outgoing edges (the second half of the deadlock rule).
+// allTerminated reports whether every non-claim process is at an end
+// location or at a location without outgoing edges (the second half of the
+// deadlock rule).
 func (s *search) allTerminated(state []byte) bool {
 	for p := range s.c.procs {
+		if s.c.procs[p].claim {
+			continue
+		}
 		loc := s.c.layout.ReadPC(state, p)
 		if s.c.procs[p].end[loc] || len(s.c.procs[p].out[loc]) == 0 {
 			continue
@@ -362,11 +540,104 @@ func (s *search) allTerminated(state []byte) bool {
 	return true
 }
 
-// hasEnabled reports whether process p has an enabled edge in state.
+// ---- enabledness ---------------------------------------------------------------
+
+// enabled reports whether e can be taken in state (timeout as currently set
+// in the layout). For a rendezvous send it asks whether some partner exists.
+func (s *search) enabled(e *cEdge, state []byte) (bool, error) {
+	if e.e.Else {
+		loc := s.c.layout.ReadPC(state, e.proc)
+		for _, oi := range s.c.procs[e.proc].out[loc] {
+			o := &s.c.procs[e.proc].edge[oi]
+			if o == e || o.e.Else {
+				continue
+			}
+			ok, err := s.enabled(o, state)
+			if err != nil || ok {
+				return false, err
+			}
+		}
+		return true, nil
+	}
+	ok, err := e.guard.Truth(state)
+	if err != nil || !ok {
+		return false, err
+	}
+	l := s.c.layout
+	switch {
+	case e.send != nil && e.rv:
+		for _, r := range e.receivers {
+			ok, err := s.rvMatch(e, r, state)
+			if err != nil || ok {
+				return ok, err
+			}
+		}
+		return false, nil
+	case e.send != nil:
+		return l.ChanLen(state, e.send.ch) < s.c.m.Channels[e.send.ch].Capacity, nil
+	case e.recv != nil:
+		return s.recvMatch(e.recv, state)
+	}
+	return true, nil
+}
+
+// recvMatch: the buffer is not empty and the head satisfies every Match.
+func (s *search) recvMatch(r *cRecv, state []byte) (bool, error) {
+	l := s.c.layout
+	if l.ChanLen(state, r.ch) == 0 {
+		return false, nil
+	}
+	for f, a := range r.args {
+		if a.match == nil {
+			continue
+		}
+		want, err := a.match.Eval(state)
+		if err != nil {
+			return false, err
+		}
+		if l.ChanField(state, r.ch, 0, f) != want {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
+// rvMatch: receiver r is at the location of its edge, its own guard holds
+// and its Match values equal what e sends.
+func (s *search) rvMatch(e, r *cEdge, state []byte) (bool, error) {
+	if s.c.layout.ReadPC(state, r.proc) != r.e.From {
+		return false, nil
+	}
+	ok, err := r.guard.Truth(state)
+	if err != nil || !ok {
+		return false, err
+	}
+	for f, a := range r.recv.args {
+		if a.match == nil {
+			continue
+		}
+		want, err := a.match.Eval(state)
+		if err != nil {
+			return false, err
+		}
+		got, err := e.send.args[f].Eval(state)
+		if err != nil {
+			return false, err
+		}
+		if got != want {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
+// hasEnabled reports whether process p has an enabled edge in state
+// (timeout = false).
 func (s *search) hasEnabled(p int, state []byte) (bool, error) {
+	s.c.layout.Timeout = false
 	loc := s.c.layout.ReadPC(state, p)
 	for _, ei := range s.c.procs[p].out[loc] {
-		ok, err := s.c.procs[p].edge[ei].guard.Truth(state)
+		ok, err := s.enabled(&s.c.procs[p].edge[ei], state)
 		if err != nil || ok {
 			return ok, err
 		}
@@ -377,7 +648,7 @@ func (s *search) hasEnabled(p int, state []byte) (bool, error) {
 // startIter positions f's iterator for state: only the exclusive holder if
 // it has an enabled edge (Promela atomic), else every process from 0.
 func (s *search) startIter(f *frame, state []byte) error {
-	f.proc, f.pos = 0, 0
+	f.proc, f.pos, f.rv, f.phase = 0, 0, -1, 0
 	if ex := state[s.c.layout.Excl]; ex != 0 {
 		p := int(ex) - 1
 		ok, err := s.hasEnabled(p, state)
@@ -391,19 +662,50 @@ func (s *search) startIter(f *frame, state []byte) error {
 	return nil
 }
 
-// nextEnabled advances f's iterator to the next enabled edge of state.
-func (s *search) nextEnabled(f *frame, state []byte) (*cEdge, bool, error) {
+// nextEnabled advances f's iterator to the next enabled move of state.
+func (s *search) nextEnabled(f *frame, state []byte) (move, bool, error) {
 	if f.proc < 0 {
 		if err := s.startIter(f, state); err != nil {
-			return nil, false, err
+			return move{}, false, err
 		}
 	}
-	for int(f.proc) < len(s.c.procs) {
+	l := s.c.layout
+	for {
+		if f.rv >= 0 {
+			// Enumerating the partners of a pending rendezvous send.
+			e := f.pend
+			l.Timeout = f.phase == 1
+			for int(f.rv) < len(e.receivers) {
+				r := e.receivers[f.rv]
+				f.rv++
+				ok, err := s.rvMatch(e, r, state)
+				if err != nil {
+					return move{}, false, err
+				}
+				if ok {
+					return move{e, r}, true, nil
+				}
+			}
+			f.rv, f.pend = -1, nil
+			continue
+		}
+		if int(f.proc) >= len(s.c.procs) {
+			if f.phase == 0 && f.enabled == 0 && s.c.hasTimeout {
+				f.phase, f.proc, f.pos = 1, 0, 0
+				continue
+			}
+			return move{}, false, nil
+		}
 		p := int(f.proc)
-		outs := s.c.procs[p].out[s.c.layout.ReadPC(state, p)]
+		if s.c.procs[p].claim {
+			f.proc++
+			f.pos = 0
+			continue
+		}
+		outs := s.c.procs[p].out[l.ReadPC(state, p)]
 		if int(f.pos) >= len(outs) {
 			if f.exclOnly {
-				return nil, false, nil
+				return move{}, false, nil
 			}
 			f.proc++
 			f.pos = 0
@@ -411,32 +713,161 @@ func (s *search) nextEnabled(f *frame, state []byte) (*cEdge, bool, error) {
 		}
 		e := &s.c.procs[p].edge[outs[f.pos]]
 		f.pos++
-		ok, err := e.guard.Truth(state)
+		if f.phase == 1 && !e.usesTimeout {
+			continue
+		}
+		l.Timeout = f.phase == 1
+		if e.rv {
+			ok, err := e.guard.Truth(state)
+			if err != nil {
+				return move{}, false, err
+			}
+			if ok {
+				f.pend, f.rv = e, 0
+			}
+			continue
+		}
+		ok, err := s.enabled(e, state)
 		if err != nil {
-			return nil, false, err
+			return move{}, false, err
 		}
 		if ok {
-			return e, true, nil
+			return move{e, nil}, true, nil
 		}
 	}
-	return nil, false, nil
 }
 
-// fire computes into s.next the state after e from s.cur. It returns an
-// evaluation/overflow error as the reason the model is invalid.
-func (s *search) fire(e *cEdge) error {
-	l := s.c.layout
+// ---- firing -------------------------------------------------------------------
+
+const dstepLimit = 100000
+
+// fire computes into s.next the state after m from s.cur, including the
+// d_step continuation. It returns the edge whose assert failed (evaluated
+// in the state just before that edge), if any, and an evaluation/overflow
+// error as the reason the model is invalid.
+func (s *search) fire(m move) (failed *cEdge, err error) {
 	copy(s.next, s.cur)
-	l.WritePC(s.next, e.proc, e.e.To)
+	s.c.layout.Timeout = false
+	e := m.e
+	if e.assert != nil {
+		ok, err := e.assert.Truth(s.next)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			failed = e
+		}
+	}
+	if err := s.apply(e, m.partner); err != nil {
+		return failed, err
+	}
+	last := e
+	for n := 0; last.e.DStep; n++ {
+		if n >= dstepLimit {
+			return failed, fmt.Errorf("d_step starting at %q did not finish after %d steps", cex.CommandText(e.e), dstepLimit)
+		}
+		p := last.proc
+		loc := s.c.layout.ReadPC(s.next, p)
+		var chosen *cEdge
+		var texts []string
+		for _, oi := range s.c.procs[p].out[loc] {
+			o := &s.c.procs[p].edge[oi]
+			texts = append(texts, cex.CommandText(o.e))
+			if o.rv {
+				return failed, fmt.Errorf("rendezvous inside d_step (%q) is not executable in this engine version", cex.CommandText(o.e))
+			}
+			ok, err := s.enabled(o, s.next)
+			if err != nil {
+				return failed, err
+			}
+			if ok {
+				chosen = o
+				break
+			}
+		}
+		if chosen == nil {
+			return failed, fmt.Errorf("block in d_step seq: %s is not executable inside the d_step starting at %q", strings.Join(texts, " | "), cex.CommandText(e.e))
+		}
+		if chosen.assert != nil && failed == nil {
+			ok, err := chosen.assert.Truth(s.next)
+			if err != nil {
+				return failed, err
+			}
+			if !ok {
+				failed = chosen
+			}
+		}
+		if err := s.apply(chosen, nil); err != nil {
+			return failed, err
+		}
+		last = chosen
+	}
+	return failed, nil
+}
+
+// apply performs one edge (with its rendezvous partner) on s.next.
+func (s *search) apply(e, partner *cEdge) error {
+	l := s.c.layout
+	st := s.next
+	l.WritePC(st, e.proc, e.e.To)
+	excl := 0
 	if e.e.Atomic {
-		s.next[l.Excl] = byte(e.proc + 1)
-	} else {
-		s.next[l.Excl] = 0
+		excl = e.proc + 1
+	}
+	if partner != nil {
+		l.WritePC(st, partner.proc, partner.e.To)
+		if partner.e.Atomic {
+			excl = partner.proc + 1
+		}
+	}
+	st[l.Excl] = byte(excl)
+	if r := e.run; r != nil {
+		target := &s.c.m.Processes[r.proc]
+		if l.ReadPC(st, r.proc) != target.Initial {
+			return fmt.Errorf("run: process %s is already running in step %q", target.Name, cex.CommandText(e.e))
+		}
+		for i, a := range r.args {
+			v, err := a.Eval(st)
+			if err != nil {
+				return err
+			}
+			if err := s.store1(r.params[i], v, e); err != nil {
+				return err
+			}
+		}
+		l.WritePC(st, r.proc, r.entry)
+	}
+	if e.send != nil {
+		vals := make([]int64, len(e.send.args))
+		for i, a := range e.send.args {
+			v, err := a.Eval(st)
+			if err != nil {
+				return err
+			}
+			vals[i] = v
+		}
+		if partner == nil {
+			l.ChanPush(st, e.send.ch, vals)
+		} else {
+			for f, a := range partner.recv.args {
+				if err := s.bind(a, vals[f], partner); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	if e.recv != nil {
+		for f, a := range e.recv.args {
+			if err := s.bind(a, l.ChanField(st, e.recv.ch, 0, f), e); err != nil {
+				return err
+			}
+		}
+		l.ChanPop(st, e.recv.ch)
 	}
 	for _, a := range e.effect {
 		slot := a.slot
 		if a.index != nil {
-			i, err := a.index.Eval(s.next)
+			i, err := a.index.Eval(st)
 			if err != nil {
 				return err
 			}
@@ -445,16 +876,43 @@ func (s *search) fire(e *cEdge) error {
 			}
 			slot = slot.At(int(i))
 		}
-		v, err := a.value.Eval(s.next)
+		v, err := a.value.Eval(st)
 		if err != nil {
 			return err
 		}
-		if !slot.InDomain(v) {
-			return fmt.Errorf("domain overflow: %s = %d leaves [%d, %d]%s in step %q",
-				slot.Name(), v, slot.Min, slot.Max, domainNote(slot), cex.CommandText(e.e))
+		if err := s.store1(slot, v, e); err != nil {
+			return err
 		}
-		slot.Write(s.next, v)
 	}
+	return nil
+}
+
+// bind writes a received field into the receive argument's variable.
+func (s *search) bind(a cRecvArg, v int64, e *cEdge) error {
+	if a.slot == nil {
+		return nil
+	}
+	slot := a.slot
+	if a.index != nil {
+		i, err := a.index.Eval(s.next)
+		if err != nil {
+			return err
+		}
+		if i < 0 || i >= int64(slot.Var.Len) {
+			return fmt.Errorf("index %d out of range for %s[%d]", i, slot.Var.Name, slot.Var.Len)
+		}
+		slot = slot.At(int(i))
+	}
+	return s.store1(slot, v, e)
+}
+
+// store1 writes v into slot after the domain check.
+func (s *search) store1(slot *ir.Slot, v int64, e *cEdge) error {
+	if !slot.InDomain(v) {
+		return fmt.Errorf("domain overflow: %s = %d leaves [%d, %d]%s in step %q",
+			slot.Name(), v, slot.Min, slot.Max, domainNote(slot), cex.CommandText(e.e))
+	}
+	slot.Write(s.next, v)
 	return nil
 }
 
@@ -465,9 +923,12 @@ func domainNote(sl *ir.Slot) string {
 	return " (" + string(sl.Var.Type) + " domain)"
 }
 
+// ---- property checks ------------------------------------------------------------
+
 // checkState evaluates invariants and reach conditions on a newly stored
 // state; path is the run that reaches it.
 func (s *search) checkState(state []byte, path func() *cex.Trace) error {
+	s.c.layout.Timeout = false
 	for _, ip := range s.c.invs {
 		if s.res.Outcomes[ip.i].Status != "" {
 			continue
@@ -557,9 +1018,42 @@ func (s *search) store() (int, bool, bool) {
 	return idx, isNew, true
 }
 
+func partnerCode(m move) int32 {
+	if m.partner == nil {
+		return -1
+	}
+	return int32(m.partner.proc<<16 | m.partner.idx)
+}
+
+func (s *search) ref(proc, edge, part int32) cex.Ref {
+	r := cex.Ref{Proc: int(proc), Edge: int(edge)}
+	if part >= 0 {
+		r.PartnerProc, r.PartnerEdge, r.HasPartner = int(part>>16), int(part&0xffff), true
+	}
+	return r
+}
+
 // ---- DFS --------------------------------------------------------------------
 
-const frameBytes = 32
+const frameBytes = 48
+
+// intermediate reports whether state is inside an atomic sequence whose
+// holder can move (pan does not store such states).
+func (s *search) intermediate(state []byte) (bool, error) {
+	ex := state[s.c.layout.Excl]
+	if ex == 0 {
+		return false, nil
+	}
+	return s.hasEnabled(int(ex)-1, state)
+}
+
+// stateOf returns the state a frame refers to.
+func (s *search) stateOf(f *frame) []byte {
+	if f.idx < 0 {
+		return s.tmp[-int(f.idx)-1]
+	}
+	return s.visited.Get(int(f.idx))
+}
 
 func (s *search) dfs() {
 	l := s.c.layout
@@ -567,9 +1061,9 @@ func (s *search) dfs() {
 	s.cur = make([]byte, l.Size)
 	s.next = make([]byte, l.Size)
 	idx0, _ := s.visited.Add(init)
-	s.stack = append(s.stack, frame{idx: int32(idx0), proc: -1, viaProc: -1, viaEdge: -1})
+	s.stack = append(s.stack, frame{idx: int32(idx0), proc: -1, viaProc: -1, viaEdge: -1, viaPart: -1, rv: -1})
 	copy(s.cur, init)
-	curIdx := idx0
+	curIdx := int32(idx0)
 	s.res.MaxDepth = 0
 
 	pathToTop := func() *cex.Trace { return s.dfsPath(nil, nil) }
@@ -579,11 +1073,11 @@ func (s *search) dfs() {
 
 	for len(s.stack) > 0 && s.stop == "" {
 		top := &s.stack[len(s.stack)-1]
-		if int(top.idx) != curIdx {
-			copy(s.cur, s.visited.Get(int(top.idx)))
-			curIdx = int(top.idx)
+		if top.idx != curIdx {
+			copy(s.cur, s.stateOf(top))
+			curIdx = top.idx
 		}
-		e, ok, err := s.nextEnabled(top, s.cur)
+		m, ok, err := s.nextEnabled(top, s.cur)
 		if err != nil {
 			s.fail(err.Error(), pathToTop())
 			break
@@ -592,30 +1086,51 @@ func (s *search) dfs() {
 			if top.enabled == 0 && !s.allTerminated(s.cur) {
 				s.deadlockAt(pathToTop)
 			}
+			if top.idx < 0 {
+				s.tmp = s.tmp[:len(s.tmp)-1]
+			}
 			s.stack = s.stack[:len(s.stack)-1]
 			continue
 		}
 		top.enabled++
 		s.res.Transitions++
-		// Guard held: compute the successor (effect), then evaluate the
-		// assert in the source state. A failed assert's witness ends with
-		// this step and shows the successor as its final state.
-		if err := s.fire(e); err != nil {
-			s.fail(err.Error(), s.dfsPath(e, s.next))
+		// Guard held: compute the successor; the assert of each edge taken
+		// is evaluated in the state just before it. A failed assert's
+		// witness ends with this step and shows the successor as its final
+		// state.
+		failed, err := s.fire(m)
+		if err != nil {
+			s.fail(err.Error(), s.dfsPath(&m, s.next))
 			break
 		}
-		if e.assert != nil {
-			ok, err := e.assert.Truth(s.cur)
-			if err != nil {
-				s.fail(err.Error(), pathToTop())
+		if failed != nil {
+			s.assertFailed(failed, func() *cex.Trace { return s.dfsPath(&m, s.next) })
+			if s.stop != "" {
 				break
 			}
-			if !ok {
-				s.assertFailed(e, func() *cex.Trace { return s.dfsPath(e, s.next) })
-				if s.stop != "" {
-					break
-				}
+		}
+		depth := len(s.stack) // transitions from the initial state to next
+		inter, err := s.intermediate(s.next)
+		if err != nil {
+			s.fail(err.Error(), s.dfsPath(&m, s.next))
+			break
+		}
+		if inter {
+			// Inside an atomic sequence: expand, do not store.
+			s.res.AtomicSteps++
+			if !s.checkBudgets(int64(len(s.stack))*frameBytes + int64(len(s.tmp))*int64(l.Size)) {
+				break
 			}
+			if s.opt.Budget.MaxDepth > 0 && depth > s.opt.Budget.MaxDepth {
+				s.truncated++
+				continue
+			}
+			if depth > s.res.MaxDepth {
+				s.res.MaxDepth = depth
+			}
+			s.tmp = append(s.tmp, append([]byte(nil), s.next...))
+			s.stack = append(s.stack, frame{idx: -int32(len(s.tmp)), proc: -1, viaProc: int32(m.e.proc), viaEdge: int32(m.e.idx), viaPart: partnerCode(m), rv: -1})
+			continue
 		}
 		idx, isNew, allowed := s.store()
 		if !allowed {
@@ -625,7 +1140,7 @@ func (s *search) dfs() {
 			continue
 		}
 		s.res.States = s.visited.Len()
-		pathToNext := func() *cex.Trace { return s.dfsPath(e, s.next) }
+		pathToNext := func() *cex.Trace { return s.dfsPath(&m, s.next) }
 		if err := s.checkState(s.next, pathToNext); err != nil {
 			s.fail(err.Error(), pathToNext())
 			break
@@ -633,10 +1148,9 @@ func (s *search) dfs() {
 		if s.stop != "" {
 			break
 		}
-		if !s.checkBudgets(int64(len(s.stack)) * frameBytes) {
+		if !s.checkBudgets(int64(len(s.stack))*frameBytes + int64(len(s.tmp))*int64(l.Size)) {
 			break
 		}
-		depth := len(s.stack) // transitions from the initial state to next
 		if s.opt.Budget.MaxDepth > 0 && depth > s.opt.Budget.MaxDepth {
 			s.truncated++
 			continue
@@ -644,36 +1158,45 @@ func (s *search) dfs() {
 		if depth > s.res.MaxDepth {
 			s.res.MaxDepth = depth
 		}
-		s.stack = append(s.stack, frame{idx: int32(idx), proc: -1, viaProc: int32(e.proc), viaEdge: int32(e.idx)})
+		s.stack = append(s.stack, frame{idx: int32(idx), proc: -1, viaProc: int32(m.e.proc), viaEdge: int32(m.e.idx), viaPart: partnerCode(m), rv: -1})
 	}
 	s.res.States = s.visited.Len()
-	s.res.MemBytes = s.visited.Bytes() + int64(cap(s.stack))*frameBytes
+	s.res.MemBytes = s.visited.Bytes() + int64(cap(s.stack))*frameBytes + int64(len(s.tmp))*int64(l.Size)
 	if s.stop == "" && len(s.stack) == 0 {
 		s.stop = "complete"
 	}
 }
 
 // dfsPath renders the run along the stack, optionally extended by one more
-// edge into state last.
-func (s *search) dfsPath(extra *cEdge, last []byte) *cex.Trace {
+// move into state last.
+func (s *search) dfsPath(extra *move, last []byte) *cex.Trace {
 	var states [][]byte
 	var refs []cex.Ref
-	for i, f := range s.stack {
-		states = append(states, append([]byte(nil), s.visited.Get(int(f.idx))...))
+	for i := range s.stack {
+		f := &s.stack[i]
+		states = append(states, append([]byte(nil), s.stateOf(f)...))
 		if i > 0 {
-			refs = append(refs, cex.Ref{Proc: int(f.viaProc), Edge: int(f.viaEdge)})
+			refs = append(refs, s.ref(f.viaProc, f.viaEdge, f.viaPart))
 		}
 	}
 	if extra != nil {
 		states = append(states, append([]byte(nil), last...))
-		refs = append(refs, cex.Ref{Proc: extra.proc, Edge: extra.idx})
+		refs = append(refs, s.ref(int32(extra.e.proc), int32(extra.e.idx), partnerCode(*extra)))
 	}
 	return cex.Build(s.c.layout, states, refs)
 }
 
 // ---- BFS --------------------------------------------------------------------
 
-const bfsBytesPerState = 16
+const bfsBytesPerState = 40
+
+// bfsNode is an intermediate atomic state being expanded depth-first
+// inside a BFS step.
+type bfsNode struct {
+	state []byte
+	f     frame
+	chain []cex.Ref
+}
 
 func (s *search) bfs() {
 	l := s.c.layout
@@ -682,8 +1205,7 @@ func (s *search) bfs() {
 	s.next = make([]byte, l.Size)
 	s.visited.Add(init)
 	s.parent = append(s.parent, -1)
-	s.viaP = append(s.viaP, -1)
-	s.viaE = append(s.viaE, -1)
+	s.chains = append(s.chains, nil)
 	s.depth = append(s.depth, 0)
 
 	pathTo := func(idx int) func() *cex.Trace { return func() *cex.Trace { return s.bfsPath(idx, nil, nil) } }
@@ -693,7 +1215,6 @@ func (s *search) bfs() {
 
 	head := 0
 	for head < s.visited.Len() && s.stop == "" {
-		copy(s.cur, s.visited.Get(head))
 		d := int(s.depth[head])
 		if s.opt.Budget.MaxDepth > 0 && d > s.opt.Budget.MaxDepth {
 			s.truncated++ // stored (by its parent) but not expanded, as in DFS
@@ -703,37 +1224,51 @@ func (s *search) bfs() {
 		if d > s.res.MaxDepth {
 			s.res.MaxDepth = d
 		}
-		f := frame{proc: -1}
-		for s.stop == "" {
-			e, ok, err := s.nextEnabled(&f, s.cur)
+		// Depth-first over the intermediate atomic states hanging off head;
+		// the stored successors get head as parent and the chain of moves.
+		nodes := []bfsNode{{state: append([]byte(nil), s.visited.Get(head)...), f: frame{proc: -1, rv: -1}}}
+		for len(nodes) > 0 && s.stop == "" {
+			n := &nodes[len(nodes)-1]
+			copy(s.cur, n.state)
+			m, ok, err := s.nextEnabled(&n.f, s.cur)
 			if err != nil {
-				s.fail(err.Error(), pathTo(head)())
+				s.fail(err.Error(), s.bfsPath(head, n.chain, nil))
 				break
 			}
 			if !ok {
-				if f.enabled == 0 && !s.allTerminated(s.cur) {
+				if len(nodes) == 1 && n.f.enabled == 0 && !s.allTerminated(s.cur) {
 					s.deadlockAt(pathTo(head))
 				}
-				break
+				nodes = nodes[:len(nodes)-1]
+				continue
 			}
-			f.enabled++
+			n.f.enabled++
 			s.res.Transitions++
-			if err := s.fire(e); err != nil {
-				s.fail(err.Error(), s.bfsPath(head, e, s.next))
+			chain := append(append([]cex.Ref(nil), n.chain...), s.ref(int32(m.e.proc), int32(m.e.idx), partnerCode(m)))
+			failed, err := s.fire(m)
+			if err != nil {
+				s.fail(err.Error(), s.bfsPath(head, chain, s.next))
 				break
 			}
-			if e.assert != nil {
-				ok, err := e.assert.Truth(s.cur)
-				if err != nil {
-					s.fail(err.Error(), pathTo(head)())
+			if failed != nil {
+				s.assertFailed(failed, func() *cex.Trace { return s.bfsPath(head, chain, s.next) })
+				if s.stop != "" {
 					break
 				}
-				if !ok {
-					s.assertFailed(e, func() *cex.Trace { return s.bfsPath(head, e, s.next) })
-					if s.stop != "" {
-						break
-					}
+			}
+			inter, err := s.intermediate(s.next)
+			if err != nil {
+				s.fail(err.Error(), s.bfsPath(head, chain, s.next))
+				break
+			}
+			if inter {
+				s.res.AtomicSteps++
+				if len(nodes) > dstepLimit {
+					s.budget(fmt.Sprintf("depth budget exhausted: an atomic sequence exceeds %d steps", dstepLimit))
+					break
 				}
+				nodes = append(nodes, bfsNode{state: append([]byte(nil), s.next...), f: frame{proc: -1, rv: -1}, chain: chain})
+				continue
 			}
 			idx, isNew, allowed := s.store()
 			if !allowed {
@@ -743,9 +1278,8 @@ func (s *search) bfs() {
 				continue
 			}
 			s.parent = append(s.parent, int32(head))
-			s.viaP = append(s.viaP, int32(e.proc))
-			s.viaE = append(s.viaE, int32(e.idx))
-			s.depth = append(s.depth, int32(d+1))
+			s.chains = append(s.chains, chain)
+			s.depth = append(s.depth, int32(d+len(chain)))
 			s.res.States = s.visited.Len()
 			if err := s.checkState(s.next, pathTo(idx)); err != nil {
 				s.fail(err.Error(), pathTo(idx)())
@@ -764,26 +1298,42 @@ func (s *search) bfs() {
 	}
 }
 
-// bfsPath renders the shortest run to state idx (via parent links),
-// optionally extended by one edge into last.
-func (s *search) bfsPath(idx int, extra *cEdge, last []byte) *cex.Trace {
-	var chain []int
+// bfsPath renders the shortest run to stored state idx (via parent links,
+// replaying each chain of moves to recover intermediate atomic states),
+// optionally extended by more moves (extra) into last.
+func (s *search) bfsPath(idx int, extra []cex.Ref, last []byte) *cex.Trace {
+	var order []int
 	for i := idx; i >= 0; i = int(s.parent[i]) {
-		chain = append(chain, i)
+		order = append(order, i)
 	}
-	var states [][]byte
+	states := [][]byte{append([]byte(nil), s.visited.Get(order[len(order)-1])...)}
 	var refs []cex.Ref
-	for k := len(chain) - 1; k >= 0; k-- {
-		i := chain[k]
-		states = append(states, append([]byte(nil), s.visited.Get(i)...))
-		if k < len(chain)-1 {
-			refs = append(refs, cex.Ref{Proc: int(s.viaP[i]), Edge: int(s.viaE[i])})
+	saveCur, saveNext := append([]byte(nil), s.cur...), append([]byte(nil), s.next...)
+	replay := func(chain []cex.Ref, final []byte) {
+		for k, r := range chain {
+			refs = append(refs, r)
+			if k == len(chain)-1 && final != nil {
+				states = append(states, append([]byte(nil), final...))
+				return
+			}
+			copy(s.cur, states[len(states)-1])
+			m := move{e: &s.c.procs[r.Proc].edge[r.Edge]}
+			if r.HasPartner {
+				m.partner = &s.c.procs[r.PartnerProc].edge[r.PartnerEdge]
+			}
+			s.fire(m) // deterministic replay; errors were reported when first taken
+			states = append(states, append([]byte(nil), s.next...))
 		}
 	}
-	if extra != nil {
-		states = append(states, append([]byte(nil), last...))
-		refs = append(refs, cex.Ref{Proc: extra.proc, Edge: extra.idx})
+	for k := len(order) - 2; k >= 0; k-- {
+		i := order[k]
+		replay(s.chains[i], s.visited.Get(i))
 	}
+	if len(extra) > 0 {
+		replay(extra, last)
+	}
+	copy(s.cur, saveCur)
+	copy(s.next, saveNext)
 	return cex.Build(s.c.layout, states, refs)
 }
 

@@ -18,6 +18,14 @@ import (
 //	eq ne lt le gt ge    Args[0], Args[1]      Int × Int → Bool
 //	not              Args[0]                   Bool → Bool
 //	and or           Args[0], Args[1]          Bool × Bool → Bool
+//	len              Var (a channel)           kind Int: messages in the buffer
+//	timeout          —                         kind Bool: true only while the
+//	                                           explorer evaluates the timeout
+//	                                           alternatives of a state, i.e.
+//	                                           when no process has an enabled
+//	                                           edge whose guard is free of it
+//	pc               Value (a process index)   kind Int: the control location
+//	                                           of that process
 //
 // bit/bool variables are integers 0/1 (Promela convention); where a Bool is
 // required, an Int operand is accepted and read as "non-zero". Where an Int
@@ -68,8 +76,31 @@ func And(xs ...*Expr) *Expr {
 	return e
 }
 
+// Len is the buffer length of channel name; Timeout and PC are the two
+// system-level reads (see the op table).
+func Len(name string) *Expr { return &Expr{Op: "len", Var: name} }
+func Timeout() *Expr        { return &Expr{Op: "timeout"} }
+func PC(proc int) *Expr     { return &Expr{Op: "pc", Value: int64(proc)} }
+
+// Uses reports whether e mentions op anywhere.
+func (e *Expr) Uses(op string) bool {
+	if e == nil {
+		return false
+	}
+	if e.Op == op {
+		return true
+	}
+	for _, a := range e.Args {
+		if a.Uses(op) {
+			return true
+		}
+	}
+	return false
+}
+
 var arity = map[string]int{
 	"const": 0, "var": 0, "index": 1,
+	"len": 0, "timeout": 0, "pc": 0,
 	"neg": 1, "not": 1,
 	"add": 2, "sub": 2, "mul": 2, "div": 2, "mod": 2,
 	"eq": 2, "ne": 2, "lt": 2, "le": 2, "gt": 2, "ge": 2,
@@ -80,6 +111,10 @@ var arity = map[string]int{
 type Scope interface {
 	// LookupVar returns the declaration of name, or nil.
 	LookupVar(name string) *Var
+	// LookupChan returns the channel named name, or nil.
+	LookupChan(name string) *Channel
+	// ProcessCount is the number of processes (for the pc op).
+	ProcessCount() int
 }
 
 // Check type-checks e against scope and returns its kind.
@@ -96,6 +131,18 @@ func Check(e *Expr, scope Scope) (Kind, error) {
 	}
 	switch e.Op {
 	case "const":
+		return KInt, nil
+	case "timeout":
+		return KBool, nil
+	case "len":
+		if scope.LookupChan(e.Var) == nil {
+			return KInt, fmt.Errorf("undeclared channel %q", e.Var)
+		}
+		return KInt, nil
+	case "pc":
+		if e.Value < 0 || e.Value >= int64(scope.ProcessCount()) {
+			return KInt, fmt.Errorf("pc of process %d: no such process", e.Value)
+		}
 		return KInt, nil
 	case "var", "index":
 		v := scope.LookupVar(e.Var)
@@ -139,6 +186,12 @@ func (e *Expr) String() string {
 		return e.Var
 	case "index":
 		return e.Var + "[" + e.Args[0].String() + "]"
+	case "len":
+		return "len(" + e.Var + ")"
+	case "timeout":
+		return "timeout"
+	case "pc":
+		return "pc(" + strconv.FormatInt(e.Value, 10) + ")"
 	case "neg":
 		return "-" + paren(e.Args[0])
 	case "not":
@@ -178,6 +231,8 @@ type Compiled struct {
 	slot *Slot // for var/index: the first slot of the variable
 	args []*Compiled
 	text string
+	l    *Layout // for len (channel offset), pc and timeout
+	ch   int     // for len: channel index
 }
 
 // Compile resolves e against layout within process proc (-1 for global
@@ -193,9 +248,12 @@ func (l *Layout) Compile(e *Expr, proc int) (*Compiled, error) {
 }
 
 func (l *Layout) compile(e *Expr, proc int) *Compiled {
-	c := &Compiled{op: e.Op, val: e.Value, text: e.String()}
+	c := &Compiled{op: e.Op, val: e.Value, text: e.String(), l: l}
 	if e.Op == "var" || e.Op == "index" {
 		c.slot = l.Resolve(e.Var, proc)
+	}
+	if e.Op == "len" {
+		c.ch, _ = l.ChanIndex(e.Var)
 	}
 	for _, a := range e.Args {
 		c.args = append(c.args, l.compile(a, proc))
@@ -210,6 +268,12 @@ func (c *Compiled) Eval(state []byte) (int64, error) {
 		return c.val, nil
 	case "var":
 		return c.slot.Read(state), nil
+	case "len":
+		return int64(c.l.ChanLen(state, c.ch)), nil
+	case "timeout":
+		return b2i(c.l.Timeout), nil
+	case "pc":
+		return int64(c.l.ReadPC(state, int(c.val))), nil
 	case "index":
 		i, err := c.args[0].Eval(state)
 		if err != nil {

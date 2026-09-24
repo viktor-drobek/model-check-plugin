@@ -10,17 +10,22 @@ Feature: G1 Promela subset — chapter 2–3 models through the Promela frontend
   - a *rejection* is a JSON `{"error": {kind, status, path, message}}` on stdout with
     exit code 2; its status is always `not-executed`; kinds are `syntax`, `semantic`
     and `outside-subset`. Nothing that is rejected has been executed.
-  - `invalid-model` is produced only by execution: domain overflow, index out of
-    range, division by zero, blocking inside `d_step`. The two sets — rejected before
-    execution, misbehaving during execution — are disjoint and together cover every
-    input that yields no ordinary verdict.
+  - `invalid-model` is produced only by execution, when a step of the model cannot be
+    carried out: domain overflow, index out of range, division by zero, blocking
+    inside `d_step`, a `d_step` that does not finish, `run` of a process that is
+    already running. So every input is in exactly one of two classes: rejected
+    (exit 2, status `not-executed`, never a report) or accepted (exit 0, a report
+    whose statuses come from the 11 §14 vocabulary; `invalid-model` can occur only
+    there).
   - the *state count* is pan's "states, stored" with `-c0`, which does not stop at the
     first error; `mcd check --sweep` is the matching mode (the search does not stop
     when every property is decided). The pan numbers quoted here were produced by
     SPIN 6.5.2 with the flags above on 2026-09-24.
   - `else` is enabled in a state iff no other edge out of the same control location is
-    enabled; `timeout` is enabled iff no process has an enabled edge whose guard does
-    not mention `timeout`. Both are evaluated by the explorer, not precomputed.
+    enabled; `timeout` is true in a state iff no edge of any process is enabled when
+    `timeout` is taken as false (SPIN's rule: the timeout alternatives are tried only
+    after everything else has failed). Both are evaluated by the explorer, not
+    precomputed.
   - Process instances are named `<proctype>:<pid>` with SPIN's pid order (`active`
     and `init` in textual order, then `run`-created); locals are qualified as
     `<proctype>:<pid>.<name>`.
@@ -67,7 +72,7 @@ Feature: G1 Promela subset — chapter 2–3 models through the Promela frontend
     And the state count is 8
 
   Scenario Outline: state counts equal pan -c0 and the error class agrees (chapters 2–3, inside the subset)
-    Given the Promela model "<model>" from the corpus
+    Given the Promela model "<file>" from the corpus
     When I execute "mcd check --promela <model> --sweep --no-timing"
     Then the command exits with 0
     And the search is complete
@@ -75,7 +80,7 @@ Feature: G1 Promela subset — chapter 2–3 models through the Promela frontend
     And the pan error class is "<class>"
 
     Examples:
-      | model                    | states | class               |
+      | file                     | states | class               |
       | CH2/mutex_flaw.pml       | 429    | assertion violated  |
       | CH2/peterson.pml         | 74     | no error            |
       | CH2/prodcons.pml         | 6      | no error            |
@@ -122,7 +127,8 @@ Feature: G1 Promela subset — chapter 2–3 models through the Promela frontend
     Then the command exits with 0
     And property "deadlock" is "violated" with evidence "exhaustive"
     And the counterexample of "deadlock" contains the step "name!msgtype(124)"
-    And the counterexample of "deadlock" ends with "B:1.state" equal to 124
+    And the step "name!msgtype(124)" of the counterexample of "deadlock" has the partner "name?msgtype(state)" in process "B:1"
+    And the counterexample of "deadlock" contains the step "-end-"
 
   Scenario: local variables are qualified by the process instance in the counterexample
     Given the Promela file "testdata/promela/local-assert.pml"
@@ -158,8 +164,11 @@ Feature: G1 Promela subset — chapter 2–3 models through the Promela frontend
     And the rejection mentions "simple1.pr"
     And the rejection mentions "line 1"
 
-  Scenario Outline: every construct outside the MVP subset is named with its line
-    Given the Promela model "<model>" from the corpus
+  Scenario Outline: every construct outside the subset the engine accepts is named with its line
+    # The engine's subset is plan 14 §5.2 narrowed in one place: `run` is accepted
+    # only as a straight-line statement of init (static instantiation); see
+    # steps/g1-confirmation.md §5 for the deviation and its consequence for K2.
+    Given the Promela model "<file>" from the corpus
     When I execute "mcd parse --promela <model>"
     Then the command exits with 2
     And the rejection has kind "outside-subset" and status "not-executed"
@@ -167,7 +176,7 @@ Feature: G1 Promela subset — chapter 2–3 models through the Promela frontend
     And the rejection mentions "line <line>"
 
     Examples:
-      | model               | construct                    | line |
+      | file                | construct                    | line |
       | CH3/inline.pml      | inline                       | 1    |
       | CH3/typedef.pml     | typedef                      | 1    |
       | CH3/toggle.pml      | provided                     | 4    |
@@ -244,13 +253,13 @@ Feature: G1 Promela subset — chapter 2–3 models through the Promela frontend
   @spin
   Scenario Outline: pandiff agrees with pan on verdict, error class and state count
     Given spin is installed
-    And the Promela model "<model>" from the corpus
+    And the Promela model "<file>" from the corpus
     When I run pandiff on the model
     Then pandiff reports agreement on the verdict, the error class and the state count
     And pandiff reports the statement table of every proctype as matching pan -d
 
     Examples:
-      | model                   |
+      | file                    |
       | CH2/mutex_flaw.pml      |
       | CH2/peterson.pml        |
       | CH2/prodcons.pml        |
