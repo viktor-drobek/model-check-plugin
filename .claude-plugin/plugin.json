@@ -1,0 +1,7 @@
+{
+  "name": "model-check",
+  "version": "0.1.0",
+  "description": "Model checking skill with a built-in explicit-state engine (mcd) exposed over MCP: parse, simulate, check, explain, lint, estimate, manifest.",
+  "skills": "./skills",
+  "mcpServers": "./.mcp.json"
+}

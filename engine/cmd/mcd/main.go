@@ -9,5 +9,5 @@ import (
 )
 
 func main() {
-	os.Exit(cli.Run(os.Args[1:], os.Stdout, os.Stderr))
+	os.Exit(dispatch(os.Args[1:], cli.Run)) // `mcd serve` → serve.go (MCP server); everything else → cli.Run
 }

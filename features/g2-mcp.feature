@@ -86,7 +86,7 @@ Feature: G2 — MCP server with the seven tools, session directory, budgets
   Scenario: mc_parse reads a file only if the server allows its prefix
     When I call "mc_parse" with the file path "testdata/petri/petrinet1.json" of kind "petri"
     Then the call is an error whose message mentions "--allow-read"
-    And the error message mentions "inline"
+    And the tool error message also mentions "inline"
 
   Scenario: mc_parse reads a file under an allowed prefix
     Given the server was started with --allow-read "testdata"
@@ -116,16 +116,16 @@ Feature: G2 — MCP server with the seven tools, session directory, budgets
     Given a session in which the IR "testdata/ir/counters-10-5.json" was parsed
     When I call "mc_check" in that session with the model's own properties and budget states 100, depth 0, ms 0, memory_mb 0
     Then the call is not an error
-    And the answer property "safe" has status "inconclusive" with evidence "bounded"
+    And the answer property "deadlock" has status "inconclusive" with evidence "bounded"
     And the answer says the search is not complete
-    And the reason of "safe" names the exhausted resource "states"
+    And the reason of "deadlock" names the exhausted resource "states"
     And the applied budget has states 100
 
   Scenario: a tiny depth budget names depth as the exhausted resource
     Given a session in which the IR "testdata/ir/counters-10-5.json" was parsed
     When I call "mc_check" in that session with the model's own properties and budget states 0, depth 5, ms 0, memory_mb 0
-    Then the answer property "safe" has status "inconclusive" with evidence "bounded"
-    And the reason of "safe" names the exhausted resource "depth"
+    Then the answer property "deadlock" has status "inconclusive" with evidence "bounded"
+    And the reason of "deadlock" names the exhausted resource "depth"
 
   Scenario: a client budget above the server ceiling is clamped and the answer says so
     Given a session in which the Petri net "testdata/petri/petrinet1.json" was parsed
@@ -151,8 +151,8 @@ Feature: G2 — MCP server with the seven tools, session directory, budgets
       | live | <kind> | p6   |
     Then the call is not an error
     And the answer property "live" has status "not-executed" with evidence "unknown"
-    And the reason of "live" mentions "<step>"
-    And the reason of "live" mentions "<capability>"
+    And the answer reason of "live" mentions "<step>"
+    And the answer reason of "live" mentions "<capability>"
 
     Examples:
       | kind     | step | capability   |
@@ -245,14 +245,27 @@ Feature: G2 — MCP server with the seven tools, session directory, budgets
     Given a session in which the Petri net "testdata/petri/petrinet1.json" was parsed
     When I call "mc_simulate" in that session with seed 7, 20 steps and mode "random", twice
     Then the two simulation answers are identical except for the trace path
-    And the simulation stopped because of "deadlock"
+    # A random walk on petrinet1 either runs into the deadlock or uses up its
+    # steps in the t1, t2, t3 cycle; which one depends on the seed.
+    And the simulation stopped because of one of "deadlock, steps"
     And the simulation trace file is inside the session directory
 
+  # After t1 the marking is p2=1 p4=1; t2 fires; then t4 needs p4, which t2
+  # consumed, so the run stops there with t3 (init/2) the only enabled edge.
   Scenario: a guided simulation follows the edge ids and stops when an edge is not enabled
+    Given a session in which the Petri net "testdata/petri/petrinet1.json" was parsed
+    When I call "mc_simulate" in that session guided by the edges "t1, t2, t4"
+    Then the simulation took 2 steps with summary "t1, t2"
+    And the simulation stopped because of one of "edge not enabled"
+    And the simulation names the enabled edges at the stop as "init/2"
+
+  # A deadlock reached under guidance is reported as a deadlock, not as "edge
+  # not enabled": the stronger fact wins.
+  Scenario: a guided simulation that reaches the deadlock says so
     Given a session in which the Petri net "testdata/petri/petrinet1.json" was parsed
     When I call "mc_simulate" in that session guided by the edges "t1, t4, t2"
     Then the simulation took 2 steps with summary "t1, t4"
-    And the simulation stopped because of "edge not enabled"
+    And the simulation stopped because of one of "deadlock"
     And the simulation names the enabled edges at the stop as ""
 
   # --- mc_lint_property ---------------------------------------------------------
