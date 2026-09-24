@@ -29,10 +29,13 @@ const (
 	StatusInconclusive = "inconclusive"
 )
 
-// Evidence values (11 §14): exhaustive iff the whole reachable graph was
-// visited; bounded iff the search stopped on a budget. A run that stops at
-// the first violation is still exhaustive evidence *for the violation* — the
-// counterexample is a proof — so status violated carries evidence exhaustive.
+// Evidence values (11 §14). Exhaustive: the result rests on an exact search —
+// for verified, the whole reachable graph was visited; for violated, the
+// witness is an exact run of the model, so stopping at the first violation
+// loses nothing about the verdict. Bounded: a budget stopped the search
+// before either held, so the verdict is inconclusive. Result.Complete says
+// separately whether the sweep covered the whole graph, because a violated
+// run may also have been cut short (ContinueAfterViolation plus a budget).
 const (
 	EvidenceExhaustive = "exhaustive"
 	EvidenceBounded    = "bounded"
@@ -52,19 +55,23 @@ type Step struct {
 
 // Result is the deterministic part of a run: no timings, no memory figures.
 type Result struct {
-	Model       string `json:"model"`
-	Status      string `json:"status"`
-	Evidence    string `json:"evidence"`
-	Reason      string `json:"reason,omitempty"`    // for inconclusive
-	Violation   string `json:"violation,omitempty"` // deadlock | assertion
-	Statement   string `json:"statement,omitempty"` // violated assertion text
-	Witness     []Step `json:"witness,omitempty"`
-	FinalState  string `json:"final_state,omitempty"`
-	FinalVars   []Var  `json:"final_vars,omitempty"`
-	States      int    `json:"states_stored"`
-	Transitions int    `json:"transitions"`
-	MaxDepth    int    `json:"max_depth"`
-	Violations  int    `json:"violations_seen"`
+	Model      string `json:"model"`
+	Status     string `json:"status"`
+	Evidence   string `json:"evidence"`
+	Reason     string `json:"reason,omitempty"`    // for inconclusive
+	Violation  string `json:"violation,omitempty"` // deadlock | assertion
+	Statement  string `json:"statement,omitempty"` // violated assertion text
+	Witness    []Step `json:"witness,omitempty"`
+	FinalState string `json:"final_state,omitempty"`
+	FinalVars  []Var  `json:"final_vars,omitempty"`
+	// Complete is true when the search visited the whole reachable graph, so
+	// that States is the size of the graph. False when a budget stopped the
+	// search or when the run stopped at the first violation.
+	Complete    bool `json:"complete"`
+	States      int  `json:"states_stored"`
+	Transitions int  `json:"transitions"`
+	MaxDepth    int  `json:"max_depth"`
+	Violations  int  `json:"violations_seen"`
 }
 
 // Stats is the non-deterministic part: timing and memory.
@@ -73,6 +80,11 @@ type Stats struct {
 	StatesPerSec float64
 	StateLen     int
 	BudgetHit    bool
+	// Visited is the set of stored states, returned so that a measurement
+	// harness can hold it alive across a GC and read the retained heap.
+	Visited Visited
+	// PeakStack is the largest number of DFS frames held at once.
+	PeakStack int
 }
 
 // JSON renders the result deterministically (fixed field order, no maps).
@@ -121,7 +133,7 @@ func Explore(m Model, opt Options) (*Result, *Stats) {
 		visited = newMapVisited(1024)
 	}
 	res := &Result{Model: m.Name(), Status: StatusVerified, Evidence: EvidenceExhaustive}
-	stats := &Stats{StateLen: len(init)}
+	stats := &Stats{StateLen: len(init), Visited: visited}
 
 	successors := func(s []byte) []edge {
 		var out []edge
@@ -203,6 +215,8 @@ func Explore(m Model, opt Options) (*Result, *Stats) {
 			break
 		}
 	}
+	res.Complete = len(stack) == 0 && !stats.BudgetHit
+	stats.PeakStack = res.MaxDepth
 	stats.Elapsed = time.Since(start)
 	if stats.Elapsed > 0 {
 		stats.StatesPerSec = float64(res.States) / stats.Elapsed.Seconds()

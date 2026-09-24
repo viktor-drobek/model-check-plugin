@@ -33,31 +33,38 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(2)
 	}
-	// Measure heap growth attributable to the run: GC before, read, run, GC
-	// after, read. HeapAlloc delta over stored states is the bytes/state
-	// figure; the DFS stack is freed at return so it is excluded on purpose
-	// (peak RSS includes it).
+	// Memory: GC before the run and read HeapAlloc; run; drop everything but
+	// the visited set; GC again and read HeapAlloc. The delta is the memory
+	// retained by the stored states (comparable to pan's "actual memory
+	// usage for states"). The DFS stack is transient and shows up only in
+	// peak RSS and in the "peak heap" figure taken right after the run.
 	debug.SetGCPercent(100)
 	runtime.GC()
-	var before, after runtime.MemStats
+	var before, peak, after runtime.MemStats
 	runtime.ReadMemStats(&before)
 	res, st := spike.Explore(m, spike.Options{
 		CompactSet: *compact, ContinueAfterViolation: *cont,
 		MaxStates: *maxStates, Timeout: *timeout,
 	})
+	runtime.ReadMemStats(&peak)
+	visited := st.Visited
+	st.Visited = nil
+	runtime.GC()
 	runtime.ReadMemStats(&after)
-	runtime.KeepAlive(res)
+	runtime.KeepAlive(visited)
 
 	if *asJSON {
 		os.Stdout.Write(res.JSON())
 	}
-	heapDelta := int64(after.HeapAlloc) - int64(before.HeapAlloc)
+	retained := int64(after.HeapAlloc) - int64(before.HeapAlloc)
+	peakHeap := int64(peak.HeapAlloc) - int64(before.HeapAlloc)
 	fmt.Printf("model=%s status=%s evidence=%s violation=%s states=%d transitions=%d depth=%d\n",
 		res.Model, res.Status, res.Evidence, res.Violation, res.States, res.Transitions, res.MaxDepth)
 	fmt.Printf("elapsed=%s states/s=%.0f state_len=%d set=%s\n",
 		st.Elapsed.Round(time.Millisecond), st.StatesPerSec, st.StateLen, setName(*compact))
-	fmt.Printf("heap_alloc_delta=%d bytes/state=%.1f total_alloc=%d sys=%d peak_rss_kb=%d\n",
-		heapDelta, float64(heapDelta)/float64(res.States), after.TotalAlloc-before.TotalAlloc, after.Sys, vmHWM())
+	fmt.Printf("retained_visited=%d bytes/state=%.1f peak_heap_unGCd=%d (%.1f/state) total_alloc=%d peak_rss_kb=%d\n",
+		retained, float64(retained)/float64(res.States), peakHeap, float64(peakHeap)/float64(res.States),
+		after.TotalAlloc-before.TotalAlloc, vmHWM())
 }
 
 func setName(compact bool) string {

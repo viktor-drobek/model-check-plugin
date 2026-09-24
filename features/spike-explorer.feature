@@ -4,16 +4,24 @@
 # that its measurements can be trusted.
 #
 # Exit criterion (14 §9, Spike row): measurements obtained; G0–G4 estimates
-# re-estimated from them; go/continue decision recorded. Scenarios 1–3 make the
-# engine trustworthy enough to measure; scenario 4 is the throughput floor the
-# measurement is taken on. The estimates and the decision live in
-# steps/spike-confirmation.md, not in code.
+# re-estimated from them; go/continue decision recorded. The correctness
+# scenarios (petrinet1, mutex_flaw, determinism) give the grounds for trusting
+# the measured engine: agreement with the oracle on two corpus models is
+# evidence of correctness on those models, not a proof in general. The
+# synthetic-model scenario is the throughput floor the measurement is taken
+# on. The estimates and the decision live in steps/spike-confirmation.md, not
+# in code.
 #
-# Vocabulary: status is from 11 §14 (verified / violated / inconclusive);
-# evidence is exhaustive when the whole reachable graph was visited.
+# Vocabulary: status is from 11 §14 (verified / violated / inconclusive).
+# Evidence "exhaustive" means the result rests on an exact search: for
+# "verified" the whole reachable graph was visited; for "violated" the witness
+# is an exact run of the model. Evidence "bounded" means a budget stopped the
+# search before either held.
 # "deadlock" in this spike means: a reachable state with no enabled transition.
-# Every hard-coded model has only non-terminating processes, so this coincides
-# with SPIN's "invalid end state" for exactly these models and no others.
+# The hard-coded models have only non-terminating processes and no end labels,
+# so on these models this coincides with SPIN's "invalid end state"; in general
+# the two differ (SPIN accepts states where every process sits on an end label
+# or has terminated), and the product engine must implement the general rule.
 
 Feature: Spike explorer — calibration engine on hard-coded models
 
@@ -86,3 +94,12 @@ Feature: Spike explorer — calibration engine on hard-coded models
     Then the status is "inconclusive" with reason "state budget exhausted"
     And the evidence is "bounded"
     And the number of stored states is 1000
+    And the report says the search is not complete
+
+  Scenario: a violation found before the budget runs out is reported, and the partial sweep is marked
+    Given the spike explorer with a budget of 300 states and 60 seconds
+    And the hard-coded model "mutex_flaw" with two user processes
+    When I run the explorer continuing after violations
+    Then the status is "violated" with violation kind "assertion"
+    And the number of stored states is 300
+    And the report says the search is not complete

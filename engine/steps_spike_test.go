@@ -177,6 +177,12 @@ func registerSpikeSteps(sc *godog.ScenarioContext) {
 		}
 		return nil
 	})
+	sc.Step(`^the report says the search is not complete$`, func() error {
+		if w.res.Complete {
+			return fmt.Errorf("report claims a complete search")
+		}
+		return nil
+	})
 	sc.Step(`^both JSON reports are byte-identical$`, func() error {
 		if len(w.reports) != 2 {
 			return fmt.Errorf("have %d reports", len(w.reports))

@@ -26,6 +26,9 @@ func TestPetrinet1Deadlock(t *testing.T) {
 	// Full sweep (pan -c0 semantics): 6 markings, matching pan's 8 stored
 	// minus the 2 initialisation states of the Promela init process.
 	full, _ := Explore(m, Options{ContinueAfterViolation: true})
+	if !full.Complete || res.Complete {
+		t.Errorf("complete flags: full=%v first-stop=%v", full.Complete, res.Complete)
+	}
 	if full.States != 6 {
 		t.Errorf("states=%d, want 6", full.States)
 	}
@@ -113,6 +116,12 @@ func TestBudgetIsInconclusive(t *testing.T) {
 	mx, _ := Explore(NewMutexFlaw(), Options{MaxStates: 100000})
 	if mx.Status != StatusViolated {
 		t.Errorf("mutex_flaw: %s", mx.Status)
+	}
+	// Violation found, then budget hit while continuing: violated stands,
+	// but the sweep is marked incomplete.
+	part, _ := Explore(NewMutexFlaw(), Options{MaxStates: 300, ContinueAfterViolation: true})
+	if part.Status != StatusViolated || part.Complete || part.States != 300 {
+		t.Errorf("partial sweep: %s complete=%v states=%d", part.Status, part.Complete, part.States)
 	}
 }
 
