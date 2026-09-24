@@ -2,7 +2,10 @@
 # "E1/E3/E5 pass assertions; baseline without skill does not". That half needs a
 # running engine and MCP server (G0–G2) and is deferred; the scenarios below fix
 # the machine-checkable shape of the skill package that does not depend on the
-# engine: SKILL.md, references/, assets/, evals/evals.json with prompts only.
+# engine: SKILL.md, references/, assets/, evals/evals.json. The alignment half
+# (features/g3-align.feature) later replaced the sketch schema by a copy of the
+# engine's and filled the assertions; the three scenarios marked "(aligned)" were
+# rewritten there and then, the rest is unchanged.
 #
 # Paths are relative to model-check-plugin/skills/model-check/ unless stated.
 # Notes are in ../model-check-skill-notes/ relative to model-check-plugin/.
@@ -151,20 +154,20 @@ Feature: G3 skill package — documentation half
       | budget      |
       | evidence    |
 
-  Scenario: Petri-net JSON schema is valid and forbids inhibitor arcs by construction
+  Scenario: Petri-net JSON schema is valid and admits inhibitor arcs only to reject them (aligned)
     Then "assets/petri-net.schema.json" parses as JSON
     And the schema declares "$schema" as JSON Schema draft 2020-12
     And the schema defines "places" items with an integer "initial" and an optional integer "capacity" defaulting to 255
-    And the schema defines "transitions" items with "inputs" and "outputs" arcs whose "multiplicity" has minimum 1
+    And the schema defines "transitions" items with "inputs" and "outputs" arcs whose "weight" has minimum 1
     And every object in the schema sets "additionalProperties" to false
-    And the schema contains no key or enum value mentioning "inhibitor"
+    And the schema's only key mentioning "inhibitor" is the arc flag whose description says the engine rejects it
 
   # ------------------------------------------------------------------ evals
-  Scenario: evals.json holds the six plan §8.2 prompts without assertions yet
+  Scenario: evals.json holds the six plan §8.2 prompts with assertions (aligned)
     Then "evals/evals.json" parses as JSON
     And "evals/evals.json" has "skill_name" equal to "model-check"
     And "evals/evals.json" has exactly 6 evals with ids 1 to 6
-    And every eval in "evals/evals.json" has a non-empty "prompt" and an empty assertions list
+    And every eval in "evals/evals.json" has a non-empty "prompt" and a non-empty "assertions" list
     And "evals/fixtures/README.md" exists
     And "evals/fixtures/README.md" explains that fixtures reference corpus paths and hashes instead of copying files
-    And no file under "evals/fixtures" other than "README.md" exists
+    And no file under "evals/fixtures" is a copy of a file under "Promela - examples"
