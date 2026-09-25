@@ -14,10 +14,18 @@
 #   The host of record is named in steps/g6-confirmation.md §1.
 #
 #   "with Go absent from PATH" — the sandbox of A6 (plan §12): a copy of
-#   model-check-plugin/ in a temporary directory, PATH stripped of every entry
-#   holding a `go` executable, GOROOT/GOTOOLCHAIN unset. It simulates a machine
-#   that never had a Go toolchain; it is not a fresh operating system, and the
-#   scenarios say only what that sandbox shows.
+#   model-check-plugin/ in a temporary directory, run with a PATH that holds
+#   every ordinary utility of this machine and no Go tool (`go`, `gofmt`,
+#   `gccgo`), and with GOROOT/GOTOOLCHAIN/GOPATH/GOFLAGS removed from the
+#   environment. Whole PATH directories are NOT dropped: /usr/bin carries `go`
+#   and `uname` alike, so dropping it would test a machine without coreutils
+#   instead of a machine without Go. It simulates a machine that never had a Go
+#   toolchain; it is not a fresh operating system, and the scenarios say only
+#   what that sandbox shows.
+#
+#   "a clean build output directory" — a fresh temporary directory passed to
+#   build.sh with --out. The committed engine/bin is left alone by the test run,
+#   so its SHA256SUMS keeps describing the release build rather than a test one.
 #
 #   "exactly one server registration" — counted from what a client actually
 #   reads: the plugin's declared MCP sources (plugin.json `mcpServers` and any
@@ -36,31 +44,30 @@ Feature: G6 packaging, install validation and description triggering
 
   # ------------------------------------------------------------- build.sh
   Scenario: build.sh produces a binary for every listed platform, each with a SHA256SUMS entry
-    Given a clean "engine/bin" directory
-    When the build script "build.sh" is run with version "0.1.0-g6-test"
+    Given a clean build output directory
+    When the build script "build.sh" is run into it with version "0.1.0-g6-test"
     Then the script exits with code 0
-    And "engine/bin" contains a binary for each of these platforms:
+    And the output directory contains a binary for each of these platforms:
       | goos    | goarch |
       | linux   | amd64  |
       | linux   | arm64  |
       | darwin  | amd64  |
       | darwin  | arm64  |
       | windows | amd64  |
-    And every binary in "engine/bin" has an entry in "engine/bin/SHA256SUMS" whose digest matches the file
-    And "engine/bin/SHA256SUMS" has no entry for a file that is absent
-    And every binary was built with CGO_ENABLED=0 according to the build record
+    And every file in the output directory has an entry in "SHA256SUMS" whose digest matches it
+    And "SHA256SUMS" has no entry for a file that is absent
+    And the build record says the build used CGO_ENABLED=0
 
   Scenario: mcd version reports the version the build embedded
-    Given a clean "engine/bin" directory
-    When the build script "build.sh" is run with version "0.1.0-g6-test"
+    Given a clean build output directory
+    When the build script "build.sh" is run into it with version "0.1.0-g6-test"
     Then running the host binary with argument "version" prints "0.1.0-g6-test"
-    And the version recorded in "engine/bin/BUILD-INFO.json" is "0.1.0-g6-test"
+    And the version recorded in "BUILD-INFO.json" is "0.1.0-g6-test"
 
   Scenario: the host binary is selected without asking the caller which platform it is on
-    Given a clean "engine/bin" directory
-    When the build script "build.sh" is run with version "0.1.0-g6-test"
+    Given the packaged plugin directory
     Then the command in ".mcp.json" resolves, on this host, to an executable file under the plugin directory
-    And running that command with argument "version" prints "0.1.0-g6-test"
+    And running that command with argument "version" prints the version recorded in "engine/bin/BUILD-INFO.json"
 
   # -------------------------------------------------- install validation (A6)
   Scenario: the packaged plugin serves its seven tools with Go absent from PATH
@@ -78,7 +85,7 @@ Feature: G6 packaging, install validation and description triggering
       | mc_manifest       |
       | mc_parse          |
       | mc_simulate       |
-    And no Go compiler was invoked during the run
+    And no Go toolchain was reachable from the environment the server ran in
 
   Scenario: one mc_check round-trip succeeds inside the Go-less sandbox
     Given a sandbox copy of the plugin in a temporary directory

@@ -1,0 +1,142 @@
+[
+  {
+    "id": "t01",
+    "query": "у меня два процесса дерутся за мьютекс, можешь доказать что они не зайдут одновременно в критическую секцию? файл в CH2/mutex_flaw.pml",
+    "should_trigger": true,
+    "lang": "ru",
+    "why": "mutual exclusion stated as a property to prove, concrete Promela file"
+  },
+  {
+    "id": "t02",
+    "query": "can this handshake deadlock if the ack is lost? the protocol is in CH3/alternatingbit.pml",
+    "should_trigger": true,
+    "lang": "en",
+    "why": "deadlock question about a protocol model, concrete file"
+  },
+  {
+    "id": "t03",
+    "query": "у меня сеть Петри: места p1..p6, переходы t1..t6 с дугами как в схеме. переведи её во что-нибудь проверяемое и скажи, может ли она зависнуть",
+    "should_trigger": true,
+    "lang": "ru",
+    "why": "Petri net given as input, hang/liveness asked — plan §2.2 branch"
+  },
+  {
+    "id": "t04",
+    "query": "prove that the shared counter in internal/worker/counter.pml can never go negative when two writers run concurrently",
+    "should_trigger": true,
+    "lang": "en",
+    "why": "invariant over a concurrent model, 'prove ... never'"
+  },
+  {
+    "id": "t05",
+    "query": "проверь, что телефонный коммутатор из CH14/version1 не может навсегда застрять в состоянии Busy",
+    "should_trigger": true,
+    "lang": "ru",
+    "why": "liveness / non-progress on a corpus model"
+  },
+  {
+    "id": "t06",
+    "query": "I have a leader election protocol in CH9/leader.pml — does exactly one leader eventually get elected, or can the election run forever?",
+    "should_trigger": true,
+    "lang": "en",
+    "why": "eventuality property, LTL <>[]oneLeader in the corpus"
+  },
+  {
+    "id": "t07",
+    "query": "запиши свойство «каждый запрос рано или поздно обслуживается» формулой LTL и проверь её на моей модели в server.pml, с допущением справедливости и без него",
+    "should_trigger": true,
+    "lang": "ru",
+    "why": "LTL + fairness, explicitly asks to check"
+  },
+  {
+    "id": "t08",
+    "query": "two of our services take locks A and B in the opposite order; here is the pseudocode — can they end up waiting for each other forever?",
+    "should_trigger": true,
+    "lang": "en",
+    "why": "deadlock question with the system described in words (plan §7.2 step 2, A7)"
+  },
+  {
+    "id": "t09",
+    "query": "мой вариант алгоритма взаимного исключения нарушает безопасность, а peterson.pml — нет. дай контрпример, который показывает, где ломается мой",
+    "should_trigger": true,
+    "lang": "ru",
+    "why": "counterexample requested for a safety violation"
+  },
+  {
+    "id": "t10",
+    "query": "is AG EF idle true for the switch model in CH14/version1, or can it reach a state from which idle is unreachable?",
+    "should_trigger": true,
+    "lang": "en",
+    "why": "CTL formula on a model — must not be silently rewritten to LTL"
+  },
+  {
+    "id": "n01",
+    "query": "write unit tests for my concurrent queue in internal/queue/queue.go, including a few goroutine stress tests",
+    "should_trigger": false,
+    "lang": "en",
+    "why": "unit tests for concurrent code — testing, not model checking (plan §8.2 near-miss list)"
+  },
+  {
+    "id": "n02",
+    "query": "запусти go test -race ./internal/worker и объясни, что именно нашёл детектор гонок",
+    "should_trigger": false,
+    "lang": "ru",
+    "why": "race detector run on real code"
+  },
+  {
+    "id": "n03",
+    "query": "help me finish this Coq proof that my merge function is correct — the Gallina file is proofs/Merge.v",
+    "should_trigger": false,
+    "lang": "en",
+    "why": "single-function theorem proving, no concurrent state space"
+  },
+  {
+    "id": "n04",
+    "query": "SPIN собирается медленно и pan съедает 6 ГБ на моей машине — как ускорить сборку и уменьшить расход памяти самой программы?",
+    "should_trigger": false,
+    "lang": "ru",
+    "why": "SPIN's own performance as a program, not a property of a model"
+  },
+  {
+    "id": "n05",
+    "query": "draw me a Petri net diagram of our order pipeline for tomorrow's slides — just the picture, no analysis",
+    "should_trigger": false,
+    "lang": "en",
+    "why": "drawing a net without analysing it"
+  },
+  {
+    "id": "n06",
+    "query": "что такое model checking и чем оно отличается от тестирования? нужен короткий обзор на две минуты для лекции",
+    "should_trigger": false,
+    "lang": "ru",
+    "why": "general question about what model checking is — no model, no property to decide"
+  },
+  {
+    "id": "n07",
+    "query": "add Promela syntax highlighting to my editor config and make .pml files open with it",
+    "should_trigger": false,
+    "lang": "en",
+    "why": "tooling around Promela files, nothing to verify"
+  },
+  {
+    "id": "n08",
+    "query": "профилируй мой Go-сервис: он проводит 80 % времени в сборщике мусора, найди, где столько аллокаций",
+    "should_trigger": false,
+    "lang": "ru",
+    "why": "performance profiling of real code"
+  },
+  {
+    "id": "n09",
+    "query": "refactor this state machine class to use an enum instead of magic strings, and keep the tests passing",
+    "should_trigger": false,
+    "lang": "en",
+    "why": "a state machine appears, but the task is a refactor"
+  },
+  {
+    "id": "n10",
+    "query": "переведи главу про never claims из документации SPIN на русский, сохранив примеры кода",
+    "should_trigger": false,
+    "lang": "ru",
+    "why": "translation of documentation that mentions never claims"
+  }
+]
