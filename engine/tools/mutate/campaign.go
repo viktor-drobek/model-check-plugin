@@ -27,10 +27,17 @@ import (
 //	                           invalid-model, an incomplete search, a tool error)
 //	                           or the original itself did not agree
 //
-// Detection rate = (i) / ((i) + (iii)): of the mutants that moved a verdict,
-// the share on which the engine moved with pan rather than away from it.
-// (ii) is deliberately outside the ratio — a mutant that changes no verdict
-// is evidence about the mutant, not about the engine.
+// Two different numbers, which must never share a name (steps/k3-logika.md,
+// finding 1):
+//
+//   - agreement rate on verdict-moving mutants = (i) / ((i) + (iii)): of the
+//     mutants that moved a verdict, the share on which the engine moved WITH
+//     pan rather than away from it. (ii) is deliberately outside this ratio —
+//     a mutant that changes no verdict is evidence about the mutant, not
+//     about the engine.
+//   - share of detected mutants = (i) / all mutants: what plan §8.1 calls
+//     "доля обнаруженных мутантов" if read literally. It is far lower, and it
+//     measures the operators at least as much as the engine.
 const (
 	ClassDetected   = "(i) detected"
 	ClassEquivalent = "(ii) verdict-equivalent"
@@ -99,14 +106,24 @@ func (c Counts) Total() int {
 	return c.Detected + c.Equivalent + c.Disagreement + c.NotComparabl
 }
 
-// Rate is (i)/((i)+(iii)); ok is false when the denominator is 0, in which
-// case there is no rate to report rather than a rate of 0 or 1.
+// Rate is the agreement rate on verdict-moving mutants, (i)/((i)+(iii)); ok
+// is false when the denominator is 0, in which case there is no rate to
+// report rather than a rate of 0 or 1.
 func (c Counts) Rate() (rate float64, ok bool) {
 	den := c.Detected + c.Disagreement
 	if den == 0 {
 		return 0, false
 	}
 	return float64(c.Detected) / float64(den), true
+}
+
+// DetectedShare is (i) over all mutants — the literal reading of plan §8.1's
+// "share of detected mutants", reported beside Rate and never in place of it.
+func (c Counts) DetectedShare() (share float64, ok bool) {
+	if c.Total() == 0 {
+		return 0, false
+	}
+	return float64(c.Detected) / float64(c.Total()), true
 }
 
 // Disagreement is one class-(iii) finding, ready to be pasted into a bug
@@ -670,10 +687,14 @@ func (r *Results) Markdown() string {
 	fmt.Fprintf(&b, "| (iv) not comparable | %d |\n", r.Counts.NotComparabl)
 	fmt.Fprintf(&b, "| total | %d |\n\n", r.Counts.Total())
 	if rate, ok := r.Counts.Rate(); ok {
-		fmt.Fprintf(&b, "Detection rate = (i)/((i)+(iii)) = %d/%d = **%.3f**.\n\n",
+		fmt.Fprintf(&b, "Agreement rate on verdict-moving mutants = (i)/((i)+(iii)) = %d/%d = **%.3f**.\n",
 			r.Counts.Detected, r.Counts.Detected+r.Counts.Disagreement, rate)
 	} else {
-		fmt.Fprintf(&b, "Detection rate: undefined — no mutant moved a verdict on either side.\n\n")
+		fmt.Fprintf(&b, "Agreement rate on verdict-moving mutants: undefined — no mutant moved a verdict on either side.\n")
+	}
+	if share, ok := r.Counts.DetectedShare(); ok {
+		fmt.Fprintf(&b, "Share of detected mutants = (i)/all = %d/%d = **%.3f** — a different number, reported so that\nthe two are not confused: it measures the choice of operators at least as much as the engine.\n\n",
+			r.Counts.Detected, r.Counts.Total(), share)
 	}
 	fmt.Fprintf(&b, "## Per model\n\n| model | mutants | (i) | (ii) | (iii) | (iv) | baseline |\n|---|---|---|---|---|---|---|\n")
 	for _, m := range r.Models {

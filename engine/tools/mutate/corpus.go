@@ -96,5 +96,21 @@ func SubsetCampaign() []ModelSpec {
 			Note: "carries a never claim, so there is no safety run"},
 		spec("App_C/petrinet1", safety...),
 		spec("App_C/petrinet2", safety...),
+		// Admitted by the Promela v1 subset of step G5 (commit 14be7a9),
+		// which landed while K3 was measuring: `inline`, `typedef`,
+		// `provided`, a channel inside a message, and `run` outside `init`.
+		// G1 §3.1 had recorded all of these as outside-subset. They are added
+		// here rather than left out, because the share of §2.3 is computed
+		// over the differential set and leaving newly available Holzmann
+		// models out of it would flatter that share.
+		{Path: "CH2/prodcons2.pml", Checks: safety, Note: "v1 (G5): inline"},
+		{Path: "CH3/inline.pml", Checks: safety, Note: "v1 (G5): inline"},
+		{Path: "CH3/inline2.pml", Checks: safety, Note: "v1 (G5): inline"},
+		{Path: "CH3/typedef.pml", Checks: safety, Note: "v1 (G5): typedef"},
+		{Path: "CH3/toggle.pml", Checks: safety, Note: "v1 (G5): provided"},
+		{Path: "CH3/rendezvous2.pml", Checks: safety, Note: "v1 (G5): a channel inside a message"},
+		{Path: "CH3/wc.pml", Checks: safety, Note: "v1 (G5); pan itself errors on the uninitialised STDIN channel, so the model stays outside the differential set"},
+		{Path: "CH3/splurge.pml", Checks: safety, Note: "v1 (G5): run outside init; pan aborts on its process limit, so the model stays outside the differential set"},
+		{Path: "CH3/splurge2.pml", Checks: safety, Note: "v1 (G5): run outside init; pan aborts on its process limit"},
 	}
 }

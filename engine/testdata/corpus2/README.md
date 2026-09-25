@@ -26,9 +26,23 @@ annotation prose that OCR glued onto the end of a listing is dropped and
 quoted verbatim in the header. Every file starts with a comment citing the
 exact source line range, which can be checked with `sed -n '<range>p'`.
 
-Because nothing was repaired, many listings are *meant* to be rejected: they
-are teaching examples of what goes wrong, or fragments with `...` in place of
-a body. That is the point. Plan §2.3 says models the parser rejects count as
+This claim is not left on trust. `TestCorpus2FidelityToSource` (in
+`engine/steps_k3_test.go`) re-derives it mechanically for every listing: after
+the documented repairs and with all whitespace removed, the listing must be
+obtainable from the cited markdown lines **by deleting characters only**.
+Deletions are expected — that is what dropping a slide annotation is — but an
+insertion would mean a token had been invented or altered, and the test fails
+on one. All 55 listings pass: 44 are an exact substring of their source, 11 a
+subsequence because the dropped annotation sits between two joined pieces. One
+weakness is worth stating: Karpov's files are compared with digits ignored,
+because the printed line numbers were removed as the line-break markers they
+are, so a changed digit there would escape the test.
+
+Because nothing was repaired, many listings cannot be model-checked at all:
+some are teaching examples of what goes wrong, others are fragments with `...`
+in place of a body. (Saying they were "meant to be rejected" would put an
+intent on the authors that the sources do not state; what can be said is that
+they are not complete models.) That is the point. Plan §2.3 says models the parser rejects count as
 tests of rejection and are not dropped from the accounting silently, so the
 table below carries every listing, including the ones SPIN itself refuses.
 
@@ -55,7 +69,7 @@ table below carries every listing, including the ones SPIN itself refuses.
         -preamble testdata/corpus2/README-intro.md \
         -md testdata/corpus2/README.md -json /tmp/corpus2.json
 
-Measured with `mcd 0.1.0-g0 (ir mcd-ir/1, report mcd-report/1)` and `Spin Version 6.5.2 -- 6 December 2019` on 2026-09-25T19:43:59Z.
+Measured with `mcd 0.1.0-g0 (ir mcd-ir/1, report mcd-report/1)` and `Spin Version 6.5.2 -- 6 December 2019` on 2026-09-25T22:26:06Z.
 
 | file | source lines | constructs | engine | pan | agree? |
 |---|---|---|---|---|---|
@@ -64,14 +78,14 @@ Measured with `mcd 0.1.0-g0 (ir mcd-ir/1, report mcd-report/1)` and `Spin Versio
 | `karpov/03-state-race.pml` | 3905-3905 | run | parsed | accepted | yes (engine violated/56, pan violated/56) |
 | `karpov/04-state-race-atomic.pml` | 3911-3911 | atomic, run | parsed | accepted | yes (engine violated/9, pan violated/9) |
 | `karpov/05-weak-fairness-p-q.pml` | 4359-4359 | active | parsed | accepted | yes (engine verified/18, pan verified/18) |
-| `karpov/06-transfer-protocol.pml` | 4665-4671 | chan, chan param, mtype, atomic, run | outside-subset — construct outside subset: channel-typed variable (local channels and channel variables are outside the subset; declare channels globally) (06-transfer-protocol.… | accepted | — |
-| `karpov/07-par-protocol.pml` | 4691-4733 | chan, rendezvous, mtype | outside-subset — construct outside subset: uninitialised channel (channel c1 has no [capacity] of { … }) (07-par-protocol.pml, line 11) | rejected — spin: m.pml:28, Error: undeclared variable: qoto	saw 'an identifier' near 'q3' | | — |
+| `karpov/06-transfer-protocol.pml` | 4665-4671 | chan, chan param, mtype, atomic, run | parsed | accepted | yes (engine violated/3, pan violated/3) |
+| `karpov/07-par-protocol.pml` | 4691-4733 | chan, rendezvous, mtype | syntax — expected ";" or "->" after a statement, got q3 (07-par-protocol.pml, line 28) | rejected — spin: m.pml:28, Error: undeclared variable: qoto	saw 'an identifier' near 'q3' | | — |
 | `karpov/08-two-phase-commit.pml` | 4763-4769 | chan, rendezvous, chan param, mtype, run, assert, directives | syntax — unexpected > in expression (08-two-phase-commit.pml, line 44) | rejected — spin: m.pml:10, Error: syntax error	saw '',' = 44' | spin: m.pml:26, Error: undeclared variable: Pchan	saw 'operator: ?' | | — |
 | `karpov/09-mutual-exclusion-exercise.pml` | 4825-4825 | active, assert | syntax — expected a name, got [ (09-mutual-exclusion-exercise.pml, line 9) | rejected — spin: m.pml:9, Error: syntax error	saw ''[' = 91' | spin: m.pml:9, Error: no runable process | | — |
 | `karpov/10-needham-schroeder-alice.pml` | 5259-5297 | chan, rendezvous, chan array, mtype, typedef, active, non-ASCII identifier | syntax — unexpected character "â" (10-needham-schroeder-alice.pml, line 31) | rejected — spin: m.pml:24, Error: undeclared variable: partnerA	saw 'operator: =' | | — |
 | `karpov/11-needham-schroeder-intruder.pml` | 5317-5323 | active, non-ASCII identifier | syntax — unexpected character "Ð" (11-needham-schroeder-intruder.pml, line 21) | rejected — spin: m.pml:12, Error: undeclared variable: network	saw 'operator: ?' | | — |
 | `lectures/01-run-irun-init.pml` | 2287-2287 | run, printf | syntax — unterminated character constant (01-run-irun-init.pml, line 8) | rejected — spin: m.pml:8, Error: character quote missing: ' | | — |
-| `lectures/02-provided-toggle.pml` | 2333-2333 | provided, active, printf | outside-subset — construct outside subset: provided (plan 14 §5.2: v1 (G5)) (02-provided-toggle.pml, line 9) | accepted | — |
+| `lectures/02-provided-toggle.pml` | 2333-2333 | provided, active, printf | parsed | accepted | yes (engine verified/6, pan verified/6) |
 | `lectures/03-assert-invariant.pml` | 2457-2457 | active, assert | parsed | accepted | yes (engine verified/3, pan verified/3) |
 | `lectures/04-executability-run-b.pml` | 2467-2467 | run, printf | syntax — unterminated character constant (04-executability-run-b.pml, line 15) | rejected — spin: m.pml:15, Error: character quote missing: ' | | — |
 | `lectures/05-producer-consumer-turn.pml` | 2495-2495 | mtype, active, printf | syntax — unterminated character constant (05-producer-consumer-turn.pml, line 12) | rejected — spin: m.pml:12, Error: character quote missing: ' | | — |
@@ -82,7 +96,7 @@ Measured with `mcd 0.1.0-g0 (ir mcd-ir/1, report mcd-report/1)` and `Spin Versio
 | `lectures/10-peterson.pml` | 2619-2619 | mtype, active, assert | parsed | accepted | yes (engine verified/110, pan verified/110) |
 | `lectures/11-lamport-variant.pml` | 2635-2635 | active, array, assert | parsed | accepted | not comparable (engine invalid-model/11, pan violated/117) |
 | `lectures/12-semaphore-rendezvous.pml` | 2776-2776 | chan, rendezvous, chan param, mtype, active | parsed | accepted | yes (engine verified/6, pan verified/6) |
-| `lectures/13-type-ranges-tryme.pml` | 2901-2901 | chan, chan param, mtype, active | outside-subset — construct outside subset: channel-typed variable (local channels and channel variables are outside the subset; declare channels globally) (13-type-ranges-tryme.… | rejected — spin: m.pml:14, Error: invalid use of chan name statement separator | | — |
+| `lectures/13-type-ranges-tryme.pml` | 2901-2901 | chan, chan param, mtype, active | parsed | rejected — spin: m.pml:14, Error: invalid use of chan name statement separator | | — |
 | `lectures/14-variable-scope.pml` | 2925-2925 | active, printf | syntax — unterminated character constant (14-variable-scope.pml, line 15) | rejected — spin: m.pml:10, Error: redeclaration of 'y' statement separator | | — |
 | `lectures/15-cpp-macros.pml` | 2956-2956 | chan, mtype, atomic, active, directives | semantic — a constant is required here (15-cpp-macros.pml, line 8) | rejected — spin: m.pml:8, Error: syntax error	saw 'an identifier' near 'MAXQ' | spin: m.pml:15, Error: syntax error | spin: m.pml:15, Error: no runable process | | — |
 | `lectures/16-abp-two-slot.pml` | 3177-3189 | chan, chan param, mtype, active, eval | outside-subset — construct outside subset: eval (plan 14 §5.2: not in the corpus, outside the subset) (16-abp-two-slot.pml, line 19) | rejected — spin: m.pml:35, Error: syntax error | | — |
@@ -102,7 +116,7 @@ Measured with `mcd 0.1.0-g0 (ir mcd-ir/1, report mcd-report/1)` and `Spin Versio
 | `lectures/30-nonprogress-x.pml` | 4602-4602 | active | parsed | accepted | yes (engine verified/2, pan verified/2) |
 | `lectures/31-nonprogress-xy.pml` | 4660-4660 | active | parsed | accepted | yes (engine verified/4, pan verified/4) |
 | `lectures/32-progress-label-xy.pml` | 4692-4692 | progress label, active | parsed | accepted | yes (engine verified/16, pan verified/16) |
-| `lectures/33-leader-election.pml` | 4719-4719 | chan, chan array, chan param, mtype, atomic, run, directives | outside-subset — construct outside subset: array of channels (outside the subset) (33-leader-election.pml, line 15) | rejected — spin: m.pml:21, Error: syntax error	saw '293' | spin: error, m.pml:21, bad node type 0 (.m) | | — |
+| `lectures/33-leader-election.pml` | 4719-4719 | chan, chan array, chan param, mtype, atomic, run, directives | syntax — unexpected . in expression (33-leader-election.pml, line 21) | rejected — spin: m.pml:21, Error: syntax error	saw '293' | spin: error, m.pml:21, bad node type 0 (.m) | | — |
 | `lectures/34-abp-lossy.pml` | 4793-4805 | chan, chan param, mtype, progress label, active, timeout, eval | outside-subset — construct outside subset: eval (plan 14 §5.2: not in the corpus, outside the subset) (34-abp-lossy.pml, line 18) | rejected — spin: m.pml:33, Error: syntax error	saw ''{' = 123' | spin: m.pml:36, Error: syntax error	saw 'keyword: do' near 'do' | | — |
 | `lectures/35-abp-lossy-progress.pml` | 4837-4837 | mtype, progress label, active, eval | outside-subset — construct outside subset: eval (plan 14 §5.2: not in the corpus, outside the subset) (35-abp-lossy-progress.pml, line 22) | rejected — spin: m.pml:10, Error: undeclared variable: from_s	saw 'operator: ?' | | — |
 | `lectures/36-mutex-trace-proc-a.pml` | 4978-4978 | active, printf | syntax — unterminated character constant (36-mutex-trace-proc-a.pml, line 13) | rejected — spin: m.pml:13, Error: character quote missing: ' | | — |
@@ -115,4 +129,4 @@ Measured with `mcd 0.1.0-g0 (ir mcd-ir/1, report mcd-report/1)` and `Spin Versio
 | `lectures/43-collatz-never-always-p.pml` | 6542-6542 | never claim, accept label, active, directives | parsed | accepted | yes (engine verified/1, pan verified/1) |
 | `lectures/44-collatz-never-gf-p.pml` | 6586-6586 | never claim, accept label, active, directives | parsed | accepted | yes (engine violated/2, pan violated/2) |
 
-55 listings: 19 in the differential set, 2 refused by the frontend as outside the subset while SPIN accepts them, 33 refused by SPIN itself, 1 otherwise not comparable.
+55 listings: 21 in the differential set, 0 refused by the frontend as outside the subset while SPIN accepts them, 33 refused by SPIN itself, 1 otherwise not comparable.

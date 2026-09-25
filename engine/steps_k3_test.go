@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -585,7 +586,7 @@ func registerK3Steps(sc *godog.ScenarioContext) {
 		return nil
 	})
 
-	sc.Step(`^the detection rate equals \(i\) divided by \(i\) plus \(iii\) over the recorded counts$`, func() error {
+	sc.Step(`^the agreement rate equals \(i\) divided by \(i\) plus \(iii\) over the recorded counts$`, func() error {
 		res, err := k3results(w.listing)
 		if err != nil {
 			return err
@@ -615,6 +616,40 @@ func registerK3Steps(sc *godog.ScenarioContext) {
 		want := float64(c.Detected) / float64(c.Detected+c.Disagreement)
 		if rate != want {
 			return fmt.Errorf("rate %v, want %v", rate, want)
+		}
+		return nil
+	})
+
+	sc.Step(`^the share of detected mutants is reported separately as \(i\) over all mutants$`, func() error {
+		res, err := k3results(w.listing)
+		if err != nil {
+			return err
+		}
+		share, ok := res.Counts.DetectedShare()
+		if !ok {
+			return fmt.Errorf("no mutants: there is no share to report")
+		}
+		want := float64(res.Counts.Detected) / float64(res.Counts.Total())
+		if share != want {
+			return fmt.Errorf("share %v, want %v", share, want)
+		}
+		// The two numbers must be different quantities, not the same one
+		// under two names (steps/k3-logika.md, finding 1): the report has to
+		// print both, and the denominators must differ whenever some mutant
+		// did not move a verdict.
+		rate, rateOK := res.Counts.Rate()
+		if rateOK && res.Counts.Equivalent+res.Counts.NotComparabl > 0 && rate == share {
+			return fmt.Errorf("the agreement rate and the detected share came out equal (%v) although %d mutants moved no verdict: one of the two denominators is wrong",
+				rate, res.Counts.Equivalent+res.Counts.NotComparabl)
+		}
+		md, err := os.ReadFile(filepath.Join("..", "steps", "k3-mutation-report.md"))
+		if err != nil {
+			return err
+		}
+		for _, want := range []string{"Agreement rate on verdict-moving mutants", "Share of detected mutants"} {
+			if !bytes.Contains(md, []byte(want)) {
+				return fmt.Errorf("the report does not print %q", want)
+			}
 		}
 		return nil
 	})
@@ -793,4 +828,141 @@ func TestK3MutatorOnCorpus(t *testing.T) {
 			}
 		}
 	}
+}
+
+// TestCorpus2FidelityToSource checks the one claim the second corpus rests on
+// (plan 14 §2.3, and the README of testdata/corpus2): the extraction
+// reconstructed OCR line breaks and changed NOTHING else. The check is
+// mechanical and does not trust the extraction's own report.
+//
+// Method: strip the header comment, decode the HTML entities and markdown
+// escapes the README records, remove all whitespace from both the listing and
+// the markdown lines it cites, and verify that the listing is a SUBSEQUENCE of
+// the source — that is, that it can be obtained from the cited text by
+// deleting characters only. Deletions are expected and documented (the slide
+// annotation glued onto the end of a listing, and the gaps between joined
+// pieces); an INSERTION would mean a token was invented or altered, and that
+// is what this test forbids.
+//
+// Karpov's listings carry printed line numbers, which the extraction removed
+// as the line-break markers they are; digits are therefore ignored for those
+// files, which makes the check weaker for them and is stated as such here and
+// in steps/k3-logika.md.
+func TestCorpus2FidelityToSource(t *testing.T) {
+	const booksDir = "../../books-md"
+	if _, err := os.Stat(booksDir); err != nil {
+		t.Skip("books-md not present")
+	}
+	files, err := k3listings(k3Corpus2, ".pml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(files) == 0 {
+		t.Fatal("no listings under " + k3Corpus2)
+	}
+	header := regexp.MustCompile(`(?s)^/\*.*?\*/\n`)
+	source := regexp.MustCompile(`\* Source: (\S+), lines? (\d+)(?:-(\d+))?`)
+	anyNum := regexp.MustCompile(`\b\d{3,4}\b`)
+	cache := map[string][]string{}
+	for _, name := range files {
+		raw, err := os.ReadFile(filepath.Join(k3Corpus2, name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		text := string(raw)
+		head := header.FindString(text)
+		if head == "" {
+			t.Errorf("%s: no header comment", name)
+			continue
+		}
+		m := source.FindStringSubmatch(head)
+		if m == nil {
+			t.Errorf("%s: the header does not cite a source line range", name)
+			continue
+		}
+		path := filepath.Join("..", "..", m[1])
+		lines, ok := cache[path]
+		if !ok {
+			data, err := os.ReadFile(path)
+			if err != nil {
+				t.Errorf("%s: %v", name, err)
+				continue
+			}
+			lines = strings.Split(string(data), "\n")
+			cache[path] = lines
+		}
+		// Every line the header cites: the range, plus the duplicate and
+		// joined-piece line numbers it lists after "Source:".
+		want := map[int]bool{}
+		from, _ := strconv.Atoi(m[2])
+		to := from
+		if m[3] != "" {
+			to, _ = strconv.Atoi(m[3])
+		}
+		for n := from; n <= to; n++ {
+			want[n] = true
+		}
+		if i := strings.Index(head, "Source:"); i >= 0 {
+			for _, s := range anyNum.FindAllString(head[i:], -1) {
+				if n, err := strconv.Atoi(s); err == nil {
+					want[n] = true
+				}
+			}
+		}
+		nums := make([]int, 0, len(want))
+		for n := range want {
+			nums = append(nums, n)
+		}
+		sort.Ints(nums)
+		var src strings.Builder
+		for _, n := range nums {
+			if n >= 1 && n <= len(lines) {
+				src.WriteString(lines[n-1])
+				src.WriteByte(' ')
+			}
+		}
+		dropDigits := strings.HasPrefix(name, "karpov/")
+		body := k3normalise(strings.TrimPrefix(text, head), dropDigits)
+		cited := k3normalise(src.String(), dropDigits)
+		if body == "" {
+			t.Errorf("%s: empty listing", name)
+			continue
+		}
+		if !k3isSubsequence(body, cited) {
+			t.Errorf("%s: the listing is not obtainable from %s lines %v by deleting characters — "+
+				"something was inserted or altered", name, m[1], nums)
+		}
+	}
+}
+
+// k3normalise applies the documented repairs and removes all whitespace, so
+// that only the sequence of non-blank characters is compared.
+func k3normalise(s string, dropDigits bool) string {
+	r := strings.NewReplacer(
+		"&amp;", "&", "&gt;", ">", "&lt;", "<", "&quot;", `"`, "&#39;", "'", `\_`, "_",
+	)
+	s = r.Replace(s)
+	var b strings.Builder
+	for _, c := range s {
+		switch {
+		case c == ' ' || c == '\t' || c == '\n' || c == '\r':
+		case dropDigits && c >= '0' && c <= '9':
+		default:
+			b.WriteRune(c)
+		}
+	}
+	return b.String()
+}
+
+// k3isSubsequence reports whether every rune of need appears in have, in
+// order. Deletions from have are allowed; an insertion into need is not.
+func k3isSubsequence(need, have string) bool {
+	n := []rune(need)
+	i := 0
+	for _, c := range have {
+		if i < len(n) && n[i] == c {
+			i++
+		}
+	}
+	return i == len(n)
 }

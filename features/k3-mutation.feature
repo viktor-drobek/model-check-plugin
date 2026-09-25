@@ -56,9 +56,18 @@ Feature: K3 — mutation tests and the second corpus (checkpoint measurements)
     when errors > 0, `verified` when errors = 0 with a completed search.
     `invalid-model`, `inconclusive`, a frontend rejection, or an incomplete pan
     search are not verdicts.
-  - classes of a mutant (per check, then the mutant takes the class of its
-    checks: (iii) if any check is (iii), else (iv) if any check is (iv), else
-    (i) if any check is (i), else (ii)):
+  - classes of a mutant. The division is in TWO steps, on two different
+    grounds, and is written that way on purpose: a flat list of four would
+    suggest one ground where there are two.
+    Step 1 — is the check comparable at all? Both sides must have produced a
+    verdict, and the original must have agreed with itself. If not:
+      (iv)  not comparable — the engine rejects the mutant (outside subset,
+            syntax), SPIN rejects it, the engine says `invalid-model` (domain
+            overflow, which pan wraps silently — a documented policy difference,
+            G1 §4 rule 10), either search is incomplete, or the ORIGINAL model
+            already disagreed, which is reported separately and not charged to
+            the mutant.
+    Step 2 — for a comparable check, how did the two verdicts move?
       (i)   detected — the verdict changed against the original for BOTH the
             engine and pan, and the two mutant verdicts are the same
       (ii)  verdict-equivalent — the verdict is unchanged for both (this says
@@ -66,13 +75,15 @@ Feature: K3 — mutation tests and the second corpus (checkpoint measurements)
             and that sub-split is reported)
       (iii) DISAGREEMENT — the engine and pan give different verdicts on the
             mutant, or one changed its verdict and the other did not
-      (iv)  not comparable — the engine rejects the mutant (outside subset,
-            syntax), SPIN rejects it, the engine says `invalid-model` (domain
-            overflow, which pan wraps silently — a documented policy difference,
-            G1 §4 rule 10), or either search is incomplete
-  - detection rate = (i) / ((i) + (iii)), on the mutants whose verdict changed
-    for at least one side; the raw counts of all four classes are reported with
-    it, and every (iii) is listed with the mutant path and both verdicts.
+    A mutant takes the class of its checks: (iii) if any check is (iii), else
+    (iv) if any check is (iv), else (i) if any check is (i), else (ii).
+  - agreement rate on verdict-moving mutants = (i) / ((i) + (iii)). This is
+    NOT "the share of mutants detected": that would be (i) / all mutants, and
+    it is reported as its own number. The two must not be given the same name.
+    (ii) is deliberately outside the ratio — a mutant that moves no verdict is
+    evidence about the mutant, not about the engine. The raw counts of all four
+    classes are reported with both numbers, and every (iii) is listed with the
+    mutant path and both verdicts.
   - differential set (plan §2.3): the models on which the engine and pan were
     both run and compared (state count, verdict, class; or a triple). The share
     of second-corpus models is |corpus2 ∩ set| / |set|. A corpus2 listing the
@@ -168,15 +179,15 @@ Feature: K3 — mutation tests and the second corpus (checkpoint measurements)
     # What the frontend actually does (measured): identifiers are ASCII-only, so the
     # first cyrillic byte is a lexical error of kind "syntax", not an outside-subset
     # rejection with a construct name. Recorded for G5 in steps/k3-confirmation.md.
-    Given the corpus2 listing "karpov/01-mutex-p1.pml"
+    Given the corpus2 listing "karpov/01-mutual-exclusion-p1.pml"
     When I run "mcd parse" on the corpus2 listing
     Then it is rejected with kind "syntax" and status "not-executed"
-    And the rejection message mentions "unexpected character"
+    And the K3 rejection message mentions "unexpected character"
 
   @spin
   Scenario: SPIN 6.5.2 also rejects the cyrillic process name
     Given spin and gcc are available for K3
-    And the corpus2 listing "karpov/01-mutex-p1.pml"
+    And the corpus2 listing "karpov/01-mutual-exclusion-p1.pml"
     Then spin -a rejects the corpus2 listing with a syntax error
 
   Scenario: the corpus2 README accounts for every listing
@@ -192,5 +203,6 @@ Feature: K3 — mutation tests and the second corpus (checkpoint measurements)
     Given the K3 mutation results "steps/k3-mutation-results.json"
     Then every mutant of class "(iii)" records a mutant path, the engine verdict and the pan verdict
     And every mutant of class "(i)" records a changed verdict for both the engine and pan
-    And the detection rate equals (i) divided by (i) plus (iii) over the recorded counts
+    And the agreement rate equals (i) divided by (i) plus (iii) over the recorded counts
+    And the share of detected mutants is reported separately as (i) over all mutants
     And the report "steps/k3-mutation-report.md" names every mutant of class "(iii)"

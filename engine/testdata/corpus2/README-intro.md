@@ -24,9 +24,23 @@ annotation prose that OCR glued onto the end of a listing is dropped and
 quoted verbatim in the header. Every file starts with a comment citing the
 exact source line range, which can be checked with `sed -n '<range>p'`.
 
-Because nothing was repaired, many listings are *meant* to be rejected: they
-are teaching examples of what goes wrong, or fragments with `...` in place of
-a body. That is the point. Plan §2.3 says models the parser rejects count as
+This claim is not left on trust. `TestCorpus2FidelityToSource` (in
+`engine/steps_k3_test.go`) re-derives it mechanically for every listing: after
+the documented repairs and with all whitespace removed, the listing must be
+obtainable from the cited markdown lines **by deleting characters only**.
+Deletions are expected — that is what dropping a slide annotation is — but an
+insertion would mean a token had been invented or altered, and the test fails
+on one. All 55 listings pass: 44 are an exact substring of their source, 11 a
+subsequence because the dropped annotation sits between two joined pieces. One
+weakness is worth stating: Karpov's files are compared with digits ignored,
+because the printed line numbers were removed as the line-break markers they
+are, so a changed digit there would escape the test.
+
+Because nothing was repaired, many listings cannot be model-checked at all:
+some are teaching examples of what goes wrong, others are fragments with `...`
+in place of a body. (Saying they were "meant to be rejected" would put an
+intent on the authors that the sources do not state; what can be said is that
+they are not complete models.) That is the point. Plan §2.3 says models the parser rejects count as
 tests of rejection and are not dropped from the accounting silently, so the
 table below carries every listing, including the ones SPIN itself refuses.
 

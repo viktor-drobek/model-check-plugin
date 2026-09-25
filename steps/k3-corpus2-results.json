@@ -1,0 +1,926 @@
+{
+  "engine": "mcd 0.1.0-g0 (ir mcd-ir/1, report mcd-report/1)",
+  "spin": "Spin Version 6.5.2 -- 6 December 2019",
+  "started": "2026-09-25T22:26:06Z",
+  "listings": [
+    {
+      "file": "karpov/01-mutual-exclusion-p1.pml",
+      "source_lines": "3677-3683",
+      "constructs": [
+        "atomic",
+        "non-ASCII identifier"
+      ],
+      "engine": "syntax",
+      "engine_note": "unexpected character \"Ð\" (01-mutual-exclusion-p1.pml, line 8)",
+      "pan": "rejected",
+      "pan_note": "spin: m.pml:8, Error: syntax error\tsaw ''\\' = 92' | spin: m.pml:10, Error: syntax error\tsaw 'an identifier' near 'm1' | spin: m.pml:9, Error: no runable process…",
+      "agree": "—"
+    },
+    {
+      "file": "karpov/02-inc-dec-reset-check.pml",
+      "source_lines": "3737-3743",
+      "constructs": [
+        "atomic",
+        "run",
+        "assert"
+      ],
+      "engine": "syntax",
+      "engine_note": "unexpected x at the top level (expected a declaration, proctype, init or never) (02-inc-dec-reset-check.pml, line 8)",
+      "pan": "rejected",
+      "pan_note": "spin: m.pml:8, Error: syntax error\tsaw 'an identifier' | spin: m.pml:11, Error: undeclared variable: x\tsaw 'operator: \u003c' |",
+      "agree": "—"
+    },
+    {
+      "file": "karpov/03-state-race.pml",
+      "source_lines": "3905-3905",
+      "constructs": [
+        "run"
+      ],
+      "engine": "parsed",
+      "pan": "accepted",
+      "differential": {
+        "check": "safety",
+        "engine": "violated",
+        "pan": "violated",
+        "engine_states": 56,
+        "pan_states": 56,
+        "pan_class": "invalid end state"
+      },
+      "agree": "yes"
+    },
+    {
+      "file": "karpov/04-state-race-atomic.pml",
+      "source_lines": "3911-3911",
+      "constructs": [
+        "atomic",
+        "run"
+      ],
+      "engine": "parsed",
+      "pan": "accepted",
+      "differential": {
+        "check": "safety",
+        "engine": "violated",
+        "pan": "violated",
+        "engine_states": 9,
+        "pan_states": 9,
+        "pan_class": "invalid end state"
+      },
+      "agree": "yes"
+    },
+    {
+      "file": "karpov/05-weak-fairness-p-q.pml",
+      "source_lines": "4359-4359",
+      "constructs": [
+        "active"
+      ],
+      "engine": "parsed",
+      "pan": "accepted",
+      "differential": {
+        "check": "safety",
+        "engine": "verified",
+        "pan": "verified",
+        "engine_states": 18,
+        "pan_states": 18,
+        "pan_class": "no error"
+      },
+      "agree": "yes"
+    },
+    {
+      "file": "karpov/06-transfer-protocol.pml",
+      "source_lines": "4665-4671",
+      "constructs": [
+        "chan",
+        "chan param",
+        "mtype",
+        "atomic",
+        "run"
+      ],
+      "engine": "parsed",
+      "pan": "accepted",
+      "differential": {
+        "check": "safety",
+        "engine": "violated",
+        "pan": "violated",
+        "engine_states": 3,
+        "pan_states": 3,
+        "pan_class": "invalid end state"
+      },
+      "agree": "yes"
+    },
+    {
+      "file": "karpov/07-par-protocol.pml",
+      "source_lines": "4691-4733",
+      "constructs": [
+        "chan",
+        "rendezvous",
+        "mtype"
+      ],
+      "engine": "syntax",
+      "engine_note": "expected \";\" or \"-\u003e\" after a statement, got q3 (07-par-protocol.pml, line 28)",
+      "pan": "rejected",
+      "pan_note": "spin: m.pml:28, Error: undeclared variable: qoto\tsaw 'an identifier' near 'q3' |",
+      "agree": "—"
+    },
+    {
+      "file": "karpov/08-two-phase-commit.pml",
+      "source_lines": "4763-4769",
+      "constructs": [
+        "chan",
+        "rendezvous",
+        "chan param",
+        "mtype",
+        "run",
+        "assert",
+        "directives"
+      ],
+      "engine": "syntax",
+      "engine_note": "unexpected \u003e in expression (08-two-phase-commit.pml, line 44)",
+      "pan": "rejected",
+      "pan_note": "spin: m.pml:10, Error: syntax error\tsaw '',' = 44' | spin: m.pml:26, Error: undeclared variable: Pchan\tsaw 'operator: ?' |",
+      "agree": "—"
+    },
+    {
+      "file": "karpov/09-mutual-exclusion-exercise.pml",
+      "source_lines": "4825-4825",
+      "constructs": [
+        "active",
+        "assert"
+      ],
+      "engine": "syntax",
+      "engine_note": "expected a name, got [ (09-mutual-exclusion-exercise.pml, line 9)",
+      "pan": "rejected",
+      "pan_note": "spin: m.pml:9, Error: syntax error\tsaw ''[' = 91' | spin: m.pml:9, Error: no runable process |",
+      "agree": "—"
+    },
+    {
+      "file": "karpov/10-needham-schroeder-alice.pml",
+      "source_lines": "5259-5297",
+      "constructs": [
+        "chan",
+        "rendezvous",
+        "chan array",
+        "mtype",
+        "typedef",
+        "active",
+        "non-ASCII identifier"
+      ],
+      "engine": "syntax",
+      "engine_note": "unexpected character \"â\" (10-needham-schroeder-alice.pml, line 31)",
+      "pan": "rejected",
+      "pan_note": "spin: m.pml:24, Error: undeclared variable: partnerA\tsaw 'operator: =' |",
+      "agree": "—"
+    },
+    {
+      "file": "karpov/11-needham-schroeder-intruder.pml",
+      "source_lines": "5317-5323",
+      "constructs": [
+        "active",
+        "non-ASCII identifier"
+      ],
+      "engine": "syntax",
+      "engine_note": "unexpected character \"Ð\" (11-needham-schroeder-intruder.pml, line 21)",
+      "pan": "rejected",
+      "pan_note": "spin: m.pml:12, Error: undeclared variable: network\tsaw 'operator: ?' |",
+      "agree": "—"
+    },
+    {
+      "file": "lectures/01-run-irun-init.pml",
+      "source_lines": "2287-2287",
+      "constructs": [
+        "run",
+        "printf"
+      ],
+      "engine": "syntax",
+      "engine_note": "unterminated character constant (01-run-irun-init.pml, line 8)",
+      "pan": "rejected",
+      "pan_note": "spin: m.pml:8, Error: character quote missing: ' |",
+      "agree": "—"
+    },
+    {
+      "file": "lectures/02-provided-toggle.pml",
+      "source_lines": "2333-2333",
+      "constructs": [
+        "provided",
+        "active",
+        "printf"
+      ],
+      "engine": "parsed",
+      "pan": "accepted",
+      "differential": {
+        "check": "safety",
+        "engine": "verified",
+        "pan": "verified",
+        "engine_states": 6,
+        "pan_states": 6,
+        "pan_class": "no error"
+      },
+      "agree": "yes"
+    },
+    {
+      "file": "lectures/03-assert-invariant.pml",
+      "source_lines": "2457-2457",
+      "constructs": [
+        "active",
+        "assert"
+      ],
+      "engine": "parsed",
+      "pan": "accepted",
+      "differential": {
+        "check": "safety",
+        "engine": "verified",
+        "pan": "verified",
+        "engine_states": 3,
+        "pan_states": 3,
+        "pan_class": "no error"
+      },
+      "agree": "yes"
+    },
+    {
+      "file": "lectures/04-executability-run-b.pml",
+      "source_lines": "2467-2467",
+      "constructs": [
+        "run",
+        "printf"
+      ],
+      "engine": "syntax",
+      "engine_note": "unterminated character constant (04-executability-run-b.pml, line 15)",
+      "pan": "rejected",
+      "pan_note": "spin: m.pml:15, Error: character quote missing: ' |",
+      "agree": "—"
+    },
+    {
+      "file": "lectures/05-producer-consumer-turn.pml",
+      "source_lines": "2495-2495",
+      "constructs": [
+        "mtype",
+        "active",
+        "printf"
+      ],
+      "engine": "syntax",
+      "engine_note": "unterminated character constant (05-producer-consumer-turn.pml, line 12)",
+      "pan": "rejected",
+      "pan_note": "spin: m.pml:12, Error: character quote missing: ' |",
+      "agree": "—"
+    },
+    {
+      "file": "lectures/06-consumer-do-variant.pml",
+      "source_lines": "2509-2509",
+      "constructs": [
+        "active",
+        "printf"
+      ],
+      "engine": "syntax",
+      "engine_note": "unterminated character constant (06-consumer-do-variant.pml, line 9)",
+      "pan": "rejected",
+      "pan_note": "spin: m.pml:8, Error: undeclared variable: turn\tsaw 'operator: ==' |",
+      "agree": "—"
+    },
+    {
+      "file": "lectures/07-consumer-if-goto-variant.pml",
+      "source_lines": "2515-2515",
+      "constructs": [
+        "active",
+        "printf"
+      ],
+      "engine": "syntax",
+      "engine_note": "unterminated character constant (07-consumer-if-goto-variant.pml, line 10)",
+      "pan": "rejected",
+      "pan_note": "spin: m.pml:9, Error: undeclared variable: turn\tsaw 'operator: ==' |",
+      "agree": "—"
+    },
+    {
+      "file": "lectures/08-mutex-busy-flag.pml",
+      "source_lines": "2543-2543",
+      "constructs": [
+        "atomic",
+        "run",
+        "active",
+        "assert",
+        "printf"
+      ],
+      "engine": "syntax",
+      "engine_note": "unexpected character \"\\\\\" (08-mutex-busy-flag.pml, line 13)",
+      "pan": "rejected",
+      "pan_note": "m.pml:13:37: warning: missing terminating ' character |    13 |     printf(P%d in critical section\\n',i); |       |                                     ^ | spin…",
+      "agree": "—"
+    },
+    {
+      "file": "lectures/09-mutex-two-flags.pml",
+      "source_lines": "2569-2569",
+      "constructs": [
+        "active",
+        "assert",
+        "printf"
+      ],
+      "engine": "parsed",
+      "pan": "accepted",
+      "differential": {
+        "check": "safety",
+        "engine": "violated",
+        "pan": "violated",
+        "engine_states": 88,
+        "pan_states": 88,
+        "pan_class": "invalid end state"
+      },
+      "agree": "yes"
+    },
+    {
+      "file": "lectures/10-peterson.pml",
+      "source_lines": "2619-2619",
+      "constructs": [
+        "mtype",
+        "active",
+        "assert"
+      ],
+      "engine": "parsed",
+      "pan": "accepted",
+      "differential": {
+        "check": "safety",
+        "engine": "verified",
+        "pan": "verified",
+        "engine_states": 110,
+        "pan_states": 110,
+        "pan_class": "no error"
+      },
+      "agree": "yes"
+    },
+    {
+      "file": "lectures/11-lamport-variant.pml",
+      "source_lines": "2635-2635",
+      "constructs": [
+        "active",
+        "array",
+        "assert"
+      ],
+      "engine": "parsed",
+      "pan": "accepted",
+      "differential": {
+        "check": "safety",
+        "engine": "invalid-model",
+        "pan": "violated",
+        "engine_states": 11,
+        "pan_states": 117,
+        "pan_class": "assertion violated",
+        "note": "index 2 out of range for turn[2]"
+      },
+      "agree": "not comparable"
+    },
+    {
+      "file": "lectures/12-semaphore-rendezvous.pml",
+      "source_lines": "2776-2776",
+      "constructs": [
+        "chan",
+        "rendezvous",
+        "chan param",
+        "mtype",
+        "active"
+      ],
+      "engine": "parsed",
+      "pan": "accepted",
+      "differential": {
+        "check": "safety",
+        "engine": "verified",
+        "pan": "verified",
+        "engine_states": 6,
+        "pan_states": 6,
+        "pan_class": "no error"
+      },
+      "agree": "yes"
+    },
+    {
+      "file": "lectures/13-type-ranges-tryme.pml",
+      "source_lines": "2901-2901",
+      "constructs": [
+        "chan",
+        "chan param",
+        "mtype",
+        "active"
+      ],
+      "engine": "parsed",
+      "pan": "rejected",
+      "pan_note": "spin: m.pml:14, Error: invalid use of chan name statement separator |",
+      "agree": "—"
+    },
+    {
+      "file": "lectures/14-variable-scope.pml",
+      "source_lines": "2925-2925",
+      "constructs": [
+        "active",
+        "printf"
+      ],
+      "engine": "syntax",
+      "engine_note": "unterminated character constant (14-variable-scope.pml, line 15)",
+      "pan": "rejected",
+      "pan_note": "spin: m.pml:10, Error: redeclaration of 'y' statement separator |",
+      "agree": "—"
+    },
+    {
+      "file": "lectures/15-cpp-macros.pml",
+      "source_lines": "2956-2956",
+      "constructs": [
+        "chan",
+        "mtype",
+        "atomic",
+        "active",
+        "directives"
+      ],
+      "engine": "semantic",
+      "engine_note": "a constant is required here (15-cpp-macros.pml, line 8)",
+      "pan": "rejected",
+      "pan_note": "spin: m.pml:8, Error: syntax error\tsaw 'an identifier' near 'MAXQ' | spin: m.pml:15, Error: syntax error | spin: m.pml:15, Error: no runable process |",
+      "agree": "—"
+    },
+    {
+      "file": "lectures/16-abp-two-slot.pml",
+      "source_lines": "3177-3189",
+      "constructs": [
+        "chan",
+        "chan param",
+        "mtype",
+        "active",
+        "eval"
+      ],
+      "engine": "outside-subset",
+      "engine_note": "construct outside subset: eval (plan 14 §5.2: not in the corpus, outside the subset) (16-abp-two-slot.pml, line 19)",
+      "pan": "rejected",
+      "pan_note": "spin: m.pml:35, Error: syntax error |",
+      "agree": "—"
+    },
+    {
+      "file": "lectures/17-eq-abstract-domain.pml",
+      "source_lines": "3339-3339",
+      "constructs": [
+        "mtype"
+      ],
+      "engine": "syntax",
+      "engine_note": "unexpected m at the top level (expected a declaration, proctype, init or never) (17-eq-abstract-domain.pml, line 8)",
+      "pan": "rejected",
+      "pan_note": "spin: m.pml:8, Error: syntax error\tsaw 'an identifier' | spin: m.pml:10, Error: syntax error\tsaw 'data typename' near 'byte' | spin: m.pml:8, Error: no runable …",
+      "agree": "—"
+    },
+    {
+      "file": "lectures/18-abstraction-do-else-init.pml",
+      "source_lines": "4016-4016",
+      "constructs": [
+        "run",
+        "printf"
+      ],
+      "engine": "syntax",
+      "engine_note": "unterminated character constant (18-abstraction-do-else-init.pml, line 9)",
+      "pan": "rejected",
+      "pan_note": "spin: m.pml:9, Error: character quote missing: ' |",
+      "agree": "—"
+    },
+    {
+      "file": "lectures/19-abstraction-mtype-inline.pml",
+      "source_lines": "4050-4050",
+      "constructs": [
+        "mtype",
+        "inline",
+        "run",
+        "printf"
+      ],
+      "engine": "syntax",
+      "engine_note": "unterminated character constant (19-abstraction-mtype-inline.pml, line 11)",
+      "pan": "rejected",
+      "pan_note": "spin: m.pml:11, Error: character quote missing: ' |",
+      "agree": "—"
+    },
+    {
+      "file": "lectures/20-busywait-do-loop.pml",
+      "source_lines": "4260-4260",
+      "constructs": [
+        "active"
+      ],
+      "engine": "syntax",
+      "engine_note": "expected a name, got { (20-busywait-do-loop.pml, line 8)",
+      "pan": "rejected",
+      "pan_note": "spin: m.pml:8, Error: syntax error\tsaw ''{' = 123' | spin: m.pml:8, Error: no runable process |",
+      "agree": "—"
+    },
+    {
+      "file": "lectures/21-blocking-expression.pml",
+      "source_lines": "4268-4268",
+      "constructs": [
+        "active"
+      ],
+      "engine": "syntax",
+      "engine_note": "expected a name, got { (21-blocking-expression.pml, line 8)",
+      "pan": "rejected",
+      "pan_note": "spin: m.pml:8, Error: syntax error\tsaw ''{' = 123' | spin: m.pml:8, Error: no runable process |",
+      "agree": "—"
+    },
+    {
+      "file": "lectures/22-rendezvous-call-return.pml",
+      "source_lines": "4306-4306",
+      "constructs": [
+        "chan",
+        "rendezvous",
+        "chan param",
+        "active"
+      ],
+      "engine": "syntax",
+      "engine_note": "expected \"{\", got bit (22-rendezvous-call-return.pml, line 6)",
+      "pan": "rejected",
+      "pan_note": "spin: m.pml:6, Error: syntax error\tsaw 'data typename' near 'bit' | spin: m.pml:7, Error: syntax error\tsaw 'data typename' near 'bit' | spin: m.pml:12, Error: u…",
+      "agree": "—"
+    },
+    {
+      "file": "lectures/23-assert-race.pml",
+      "source_lines": "4472-4472",
+      "constructs": [
+        "active",
+        "assert"
+      ],
+      "engine": "parsed",
+      "pan": "accepted",
+      "differential": {
+        "check": "safety",
+        "engine": "violated",
+        "pan": "violated",
+        "engine_states": 7,
+        "pan_states": 7,
+        "pan_class": "assertion violated"
+      },
+      "agree": "yes"
+    },
+    {
+      "file": "lectures/24-assert-race-atomic.pml",
+      "source_lines": "4494-4494",
+      "constructs": [
+        "atomic",
+        "active",
+        "assert"
+      ],
+      "engine": "syntax",
+      "engine_note": "expected \"{\", got ( (24-assert-race-atomic.pml, line 10)",
+      "pan": "rejected",
+      "pan_note": "spin: m.pml:10, Error: syntax error\tsaw ''(' = 40' | spin: m.pml:10, Error: syntax error\tsaw '')' = 41' | spin: m.pml:15, Error: syntax error\tsaw ''(' = 40' | s…",
+      "agree": "—"
+    },
+    {
+      "file": "lectures/25-semaphore-invariant-assert.pml",
+      "source_lines": "4510-4516",
+      "constructs": [
+        "chan",
+        "rendezvous",
+        "chan param",
+        "mtype",
+        "active",
+        "assert"
+      ],
+      "engine": "parsed",
+      "pan": "accepted",
+      "differential": {
+        "check": "safety",
+        "engine": "verified",
+        "pan": "verified",
+        "engine_states": 12,
+        "pan_states": 12,
+        "pan_class": "no error"
+      },
+      "agree": "yes"
+    },
+    {
+      "file": "lectures/26-semaphore-invariant-loop.pml",
+      "source_lines": "4534-4540",
+      "constructs": [
+        "chan",
+        "rendezvous",
+        "chan param",
+        "mtype",
+        "active",
+        "assert"
+      ],
+      "engine": "parsed",
+      "pan": "accepted",
+      "differential": {
+        "check": "safety",
+        "engine": "verified",
+        "pan": "verified",
+        "engine_states": 4,
+        "pan_states": 4,
+        "pan_class": "no error"
+      },
+      "agree": "yes"
+    },
+    {
+      "file": "lectures/27-semaphore-invariant-dstep.pml",
+      "source_lines": "4554-4560",
+      "constructs": [
+        "chan",
+        "rendezvous",
+        "chan param",
+        "mtype",
+        "d_step",
+        "active",
+        "assert"
+      ],
+      "engine": "parsed",
+      "pan": "accepted",
+      "differential": {
+        "check": "safety",
+        "engine": "verified",
+        "pan": "verified",
+        "engine_states": 4,
+        "pan_states": 4,
+        "pan_class": "no error"
+      },
+      "agree": "yes"
+    },
+    {
+      "file": "lectures/28-semaphore-end-labels.pml",
+      "source_lines": "4576-4576",
+      "constructs": [
+        "chan",
+        "rendezvous",
+        "chan param",
+        "mtype",
+        "end label",
+        "active"
+      ],
+      "engine": "parsed",
+      "pan": "accepted",
+      "differential": {
+        "check": "safety",
+        "engine": "verified",
+        "pan": "verified",
+        "engine_states": 4,
+        "pan_states": 4,
+        "pan_class": "no error"
+      },
+      "agree": "yes"
+    },
+    {
+      "file": "lectures/29-semaphore-progress-label.pml",
+      "source_lines": "4590-4590",
+      "constructs": [
+        "chan",
+        "rendezvous",
+        "chan param",
+        "mtype",
+        "progress label",
+        "active"
+      ],
+      "engine": "parsed",
+      "pan": "accepted",
+      "differential": {
+        "check": "safety",
+        "engine": "verified",
+        "pan": "verified",
+        "engine_states": 4,
+        "pan_states": 4,
+        "pan_class": "no error"
+      },
+      "agree": "yes"
+    },
+    {
+      "file": "lectures/30-nonprogress-x.pml",
+      "source_lines": "4602-4602",
+      "constructs": [
+        "active"
+      ],
+      "engine": "parsed",
+      "pan": "accepted",
+      "differential": {
+        "check": "safety",
+        "engine": "verified",
+        "pan": "verified",
+        "engine_states": 2,
+        "pan_states": 2,
+        "pan_class": "no error"
+      },
+      "agree": "yes"
+    },
+    {
+      "file": "lectures/31-nonprogress-xy.pml",
+      "source_lines": "4660-4660",
+      "constructs": [
+        "active"
+      ],
+      "engine": "parsed",
+      "pan": "accepted",
+      "differential": {
+        "check": "safety",
+        "engine": "verified",
+        "pan": "verified",
+        "engine_states": 4,
+        "pan_states": 4,
+        "pan_class": "no error"
+      },
+      "agree": "yes"
+    },
+    {
+      "file": "lectures/32-progress-label-xy.pml",
+      "source_lines": "4692-4692",
+      "constructs": [
+        "progress label",
+        "active"
+      ],
+      "engine": "parsed",
+      "pan": "accepted",
+      "differential": {
+        "check": "safety",
+        "engine": "verified",
+        "pan": "verified",
+        "engine_states": 16,
+        "pan_states": 16,
+        "pan_class": "no error"
+      },
+      "agree": "yes"
+    },
+    {
+      "file": "lectures/33-leader-election.pml",
+      "source_lines": "4719-4719",
+      "constructs": [
+        "chan",
+        "chan array",
+        "chan param",
+        "mtype",
+        "atomic",
+        "run",
+        "directives"
+      ],
+      "engine": "syntax",
+      "engine_note": "unexpected . in expression (33-leader-election.pml, line 21)",
+      "pan": "rejected",
+      "pan_note": "spin: m.pml:21, Error: syntax error\tsaw '293' | spin: error, m.pml:21, bad node type 0 (.m) |",
+      "agree": "—"
+    },
+    {
+      "file": "lectures/34-abp-lossy.pml",
+      "source_lines": "4793-4805",
+      "constructs": [
+        "chan",
+        "chan param",
+        "mtype",
+        "progress label",
+        "active",
+        "timeout",
+        "eval"
+      ],
+      "engine": "outside-subset",
+      "engine_note": "construct outside subset: eval (plan 14 §5.2: not in the corpus, outside the subset) (34-abp-lossy.pml, line 18)",
+      "pan": "rejected",
+      "pan_note": "spin: m.pml:33, Error: syntax error\tsaw ''{' = 123' | spin: m.pml:36, Error: syntax error\tsaw 'keyword: do' near 'do' |",
+      "agree": "—"
+    },
+    {
+      "file": "lectures/35-abp-lossy-progress.pml",
+      "source_lines": "4837-4837",
+      "constructs": [
+        "mtype",
+        "progress label",
+        "active",
+        "eval"
+      ],
+      "engine": "outside-subset",
+      "engine_note": "construct outside subset: eval (plan 14 §5.2: not in the corpus, outside the subset) (35-abp-lossy-progress.pml, line 22)",
+      "pan": "rejected",
+      "pan_note": "spin: m.pml:10, Error: undeclared variable: from_s\tsaw 'operator: ?' |",
+      "agree": "—"
+    },
+    {
+      "file": "lectures/36-mutex-trace-proc-a.pml",
+      "source_lines": "4978-4978",
+      "constructs": [
+        "active",
+        "printf"
+      ],
+      "engine": "syntax",
+      "engine_note": "unterminated character constant (36-mutex-trace-proc-a.pml, line 13)",
+      "pan": "rejected",
+      "pan_note": "spin: m.pml:13, Error: character quote missing: ' |",
+      "agree": "—"
+    },
+    {
+      "file": "lectures/37-invariant-not-p-or-not-q.pml",
+      "source_lines": "5004-5004",
+      "constructs": [
+        "active",
+        "assert"
+      ],
+      "engine": "semantic",
+      "engine_note": "undeclared variable p (37-invariant-not-p-or-not-q.pml, line 7)",
+      "pan": "rejected",
+      "pan_note": "spin: m.pml:7, Error: undeclared variable: p\tsaw 'operator: ||' |",
+      "agree": "—"
+    },
+    {
+      "file": "lectures/38-invariant-p-then-q.pml",
+      "source_lines": "5010-5010",
+      "constructs": [
+        "active",
+        "assert"
+      ],
+      "engine": "semantic",
+      "engine_note": "undeclared variable p (38-invariant-p-then-q.pml, line 7)",
+      "pan": "rejected",
+      "pan_note": "spin: m.pml:8, Error: undeclared variable: p statement separator near 'do' |",
+      "agree": "—"
+    },
+    {
+      "file": "lectures/39-never-control-labels.pml",
+      "source_lines": "5124-5124",
+      "constructs": [
+        "chan",
+        "rendezvous",
+        "chan param",
+        "mtype",
+        "never claim",
+        "active",
+        "assert",
+        "remote label ref"
+      ],
+      "engine": "syntax",
+      "engine_note": "expected \";\" or \"-\u003e\" after a statement, got @ (39-never-control-labels.pml, line 10)",
+      "pan": "rejected",
+      "pan_note": "spin: m.pml:10, Error: undeclared variable: user\tsaw '@' |",
+      "agree": "—"
+    },
+    {
+      "file": "lectures/40-runner-else-break.pml",
+      "source_lines": "5130-5130",
+      "constructs": [
+        "active"
+      ],
+      "engine": "syntax",
+      "engine_note": "unexpected . in expression (40-runner-else-break.pml, line 8)",
+      "pan": "rejected",
+      "pan_note": "spin: m.pml:8, Error: syntax error\tsaw '293' | spin: m.pml:10, Error: syntax error\tsaw 'keyword: od' near 'od' | spin: error, m.pml:8, bad node type 0 (.m) |",
+      "agree": "—"
+    },
+    {
+      "file": "lectures/41-runner-end-label.pml",
+      "source_lines": "5136-5136",
+      "constructs": [
+        "active"
+      ],
+      "engine": "syntax",
+      "engine_note": "unexpected . in expression (41-runner-end-label.pml, line 8)",
+      "pan": "rejected",
+      "pan_note": "spin: m.pml:8, Error: syntax error\tsaw '293' | spin: m.pml:10, Error: syntax error\tsaw 'keyword: od' near 'od' | spin: error, m.pml:8, bad node type 0 (.m) |",
+      "agree": "—"
+    },
+    {
+      "file": "lectures/42-collatz-base.pml",
+      "source_lines": "6481-6481",
+      "constructs": [
+        "active"
+      ],
+      "engine": "parsed",
+      "pan": "accepted",
+      "differential": {
+        "check": "safety",
+        "engine": "violated",
+        "pan": "violated",
+        "engine_states": 1,
+        "pan_states": 1,
+        "pan_class": "invalid end state"
+      },
+      "agree": "yes"
+    },
+    {
+      "file": "lectures/43-collatz-never-always-p.pml",
+      "source_lines": "6542-6542",
+      "constructs": [
+        "never claim",
+        "accept label",
+        "active",
+        "directives"
+      ],
+      "engine": "parsed",
+      "pan": "accepted",
+      "differential": {
+        "check": "acceptance (pan -a)",
+        "engine": "verified",
+        "pan": "verified",
+        "engine_states": 1,
+        "pan_states": 1,
+        "pan_class": "no error"
+      },
+      "agree": "yes"
+    },
+    {
+      "file": "lectures/44-collatz-never-gf-p.pml",
+      "source_lines": "6586-6586",
+      "constructs": [
+        "never claim",
+        "accept label",
+        "active",
+        "directives"
+      ],
+      "engine": "parsed",
+      "pan": "accepted",
+      "differential": {
+        "check": "acceptance (pan -a)",
+        "engine": "violated",
+        "pan": "violated",
+        "engine_states": 2,
+        "pan_states": 2,
+        "pan_class": "acceptance cycle"
+      },
+      "agree": "yes"
+    }
+  ]
+}

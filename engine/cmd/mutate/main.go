@@ -53,6 +53,8 @@ func main() {
 		os.Exit(run(os.Args[2:]))
 	case "corpus2":
 		os.Exit(corpus2(os.Args[2:]))
+	case "render":
+		os.Exit(render(os.Args[2:]))
 	default:
 		usage()
 		os.Exit(2)
@@ -60,7 +62,7 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: mutate (gen|run|corpus2) [flags] …")
+	fmt.Fprintln(os.Stderr, "usage: mutate (gen|run|corpus2|render) [flags] …")
 	fmt.Fprintln(os.Stderr, "operators:", strings.Join(operatorNames(), ", "))
 }
 
@@ -236,6 +238,41 @@ func corpus2(args []string) int {
 	if *mdOut != "" {
 		if err := os.WriteFile(*mdOut, []byte(md), 0o644); err != nil {
 			fmt.Fprintln(os.Stderr, "mutate corpus2:", err)
+			return 1
+		}
+	}
+	fmt.Print(md)
+	return 0
+}
+
+// render re-renders the Markdown report from a recorded results file, so that
+// a change to the wording of the report does not require a 25-minute rerun of
+// the whole campaign.
+func render(args []string) int {
+	fs := flag.NewFlagSet("mutate render", flag.ContinueOnError)
+	in := fs.String("json", "", "results JSON written by `mutate run` (required)")
+	mdOut := fs.String("md", "", "write the report as Markdown to this file")
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+	if *in == "" {
+		fmt.Fprintln(os.Stderr, "mutate render: -json is required")
+		return 2
+	}
+	data, err := os.ReadFile(*in)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "mutate render:", err)
+		return 1
+	}
+	var res mutate.Results
+	if err := json.Unmarshal(data, &res); err != nil {
+		fmt.Fprintln(os.Stderr, "mutate render:", err)
+		return 1
+	}
+	md := res.Markdown()
+	if *mdOut != "" {
+		if err := os.WriteFile(*mdOut, []byte(md), 0o644); err != nil {
+			fmt.Fprintln(os.Stderr, "mutate render:", err)
 			return 1
 		}
 	}
