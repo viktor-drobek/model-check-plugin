@@ -107,6 +107,14 @@ func TestDifferentialCorpus(t *testing.T) {
 		"../model-check-plugin/engine/testdata/promela/atomic-t6.pml",
 		"../model-check-plugin/engine/testdata/promela/atomic-at.pml",
 	}
+	// Every remaining corpus file the frontend accepts and whose verdict a
+	// plain `pan -c0` can answer. A model with a never claim or accept
+	// labels is not here: plain pan does not look for acceptance cycles, so
+	// the two sides would be answering different questions — those files are
+	// compared by the differential triples of G4 (`pandiff -mode a`,
+	// TestDifferentialTriples). The rest of the exclusions are named in
+	// steps/g5-confirmation.md §3.2.
+	//
 	// Unlocked by the v1 subset of G5. CH15/client_server.pml predates
 	// SPIN 6, where `return` became a reserved word: without the rename
 	// `spin -a` refuses the file, so both sides get the same rename and
@@ -133,6 +141,14 @@ func TestDifferentialCorpus(t *testing.T) {
 		{file: "CH3/typedef.pml"},
 		{file: "CH3/toggle.pml"},
 		{file: "CH3/rendezvous2.pml"},
+		{file: "CH4/dijkstra.pml"},
+		{file: "CH4/dijkstra_progress.pml"},
+		{file: "CH4/fair.pml"},
+		{file: "CH4/true.pml"},
+		{file: "CH4/false.pml"},
+		{file: "CH8/example.pml"},
+		{file: "CH9/merging.pml"},
+		{file: "CH14/v14_4.pml"},
 		{file: "CH5/pathfinder.pml"},
 		{file: "CH5/diskhead.pml"},
 		{file: "CH9/leader.pml", stmtExempt: true},

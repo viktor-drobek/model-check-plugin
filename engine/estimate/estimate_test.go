@@ -147,7 +147,7 @@ func TestRunOnACompleteModel(t *testing.T) {
 	if !res.Complete || res.StatesVisited != 5 {
 		t.Fatalf("complete=%v states=%d, want a complete graph of 5 states", res.Complete, res.StatesVisited)
 	}
-	want := []Level{{0, 1}, {1, 2}, {2, 3}, {3, 4}, {4, 5}}
+	want := []Level{{Depth: 0, States: 1}, {Depth: 1, States: 2}, {Depth: 2, States: 3}, {Depth: 3, States: 4}, {Depth: 4, States: 5}}
 	if len(res.Growth.PerLevel) != len(want) {
 		t.Fatalf("levels %v, want %v", res.Growth.PerLevel, want)
 	}
