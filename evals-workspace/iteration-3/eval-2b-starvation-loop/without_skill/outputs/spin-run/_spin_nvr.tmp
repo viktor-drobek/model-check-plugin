@@ -1,0 +1,7 @@
+never eventually_done {    /* !(<> (done)) */
+accept_init:
+T0_init:
+	do
+	:: (! ((done))) -> goto T0_init
+	od;
+}

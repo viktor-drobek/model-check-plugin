@@ -1,0 +1,48 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0-g0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "promela",
+      "path": "Promela - examples/CH3/alternatingbit.pml",
+      "sha256": "09006d65d6619931809544f074da440a9f3758e7715d7cc7493657164267698d"
+    }
+  ],
+  "model": {
+    "name": "alternatingbit",
+    "state_bytes": 9,
+    "processes": 2,
+    "variables": 0
+  },
+  "search": {
+    "mode": "dfs",
+    "budget": {
+      "states": 1000000,
+      "depth": 1000000,
+      "time_ms": 60000,
+      "mem_bytes": 1073741824
+    },
+    "stop": "complete",
+    "complete": true
+  },
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 8,
+        "transitions": 8,
+        "depth": 7,
+        "memory_bytes_est": 25216
+      },
+      "complete": true
+    }
+  ]
+}

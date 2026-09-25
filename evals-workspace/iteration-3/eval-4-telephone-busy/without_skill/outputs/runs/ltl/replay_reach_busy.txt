@@ -1,0 +1,27 @@
+ltl p1_switch_not_stuck_busy: ! (<> ([] ((switch[1]@Busy))))
+ltl p2_sub_not_stuck_busy: ! (<> ([] ((subscriber[0]@Busy))))
+ltl p3_busy_unreachable: [] (! ((switch[1]@Busy)))
+starting claim 4
+Never claim moves to line 26	[(1)]
+  2:	proc  0 (subscriber:1) version1.pml:9 (state 1)	[tpc!offhook]
+  3:	proc  1 (switch:1) version1.pml:21 (state 1)	[tpc?offhook]
+              MSC: dialtone
+  5:	proc  1 (switch:1) version1.pml:21 (state 2)	[printf('MSC: dialtone\\n')]
+  7:	proc  0 (subscriber:1) version1.pml:12 (state 2)	[tpc!digits]
+  8:	proc  1 (switch:1) version1.pml:25 (state 6)	[tpc?digits]
+              MSC: notone
+ 10:	proc  1 (switch:1) version1.pml:25 (state 7)	[printf('MSC: notone\\n')]
+              MSC: ringtone
+ 12:	proc  1 (switch:1) version1.pml:30 (state 14)	[printf('MSC: ringtone\\n')]
+              MSC: busytone
+ 14:	proc  1 (switch:1) version1.pml:35 (state 20)	[printf('MSC: busytone\\n')]
+spin: _spin_nvr.tmp:25, Error: assertion violated
+spin: text of failed assertion: assert(!(!(!((switch[1]._p==Busy)))))
+Never claim moves to line 25	[assert(!(!(!((switch[1]._p==Busy)))))]
+spin: trail ends after 15 steps
+#processes: 2
+		Busy = 0
+ 15:	proc  1 (switch:1) version1.pml:39 (state 26)
+ 15:	proc  0 (subscriber:1) version1.pml:11 (state 6)
+ 15:	proc  - (p3_busy_unreachable:1) _spin_nvr.tmp:24 (state 6)
+2 processes created

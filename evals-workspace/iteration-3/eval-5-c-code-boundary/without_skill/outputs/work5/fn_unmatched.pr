@@ -1,0 +1,10 @@
+c_code { int x = 0; }
+c_track "&x" "sizeof(int)" "UnMatched"
+active proctype p()
+{
+   do
+   :: c_code { x++; }
+   :: break
+   od;
+   assert(c_expr { x != 5 })
+}

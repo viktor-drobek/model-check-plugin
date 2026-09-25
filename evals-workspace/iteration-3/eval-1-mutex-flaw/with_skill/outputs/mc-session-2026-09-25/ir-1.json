@@ -1,0 +1,846 @@
+{
+  "schema": "mcd-ir/1",
+  "name": "mutex_flaw",
+  "globals": [
+    {
+      "name": "cnt",
+      "type": "byte",
+      "origin": {
+        "file": "Promela - examples/CH2/mutex_flaw.pml",
+        "line": 1,
+        "name": "cnt"
+      }
+    },
+    {
+      "name": "x",
+      "type": "byte",
+      "origin": {
+        "file": "Promela - examples/CH2/mutex_flaw.pml",
+        "line": 2,
+        "name": "x"
+      }
+    },
+    {
+      "name": "y",
+      "type": "byte",
+      "origin": {
+        "file": "Promela - examples/CH2/mutex_flaw.pml",
+        "line": 2,
+        "name": "y"
+      }
+    },
+    {
+      "name": "z",
+      "type": "byte",
+      "origin": {
+        "file": "Promela - examples/CH2/mutex_flaw.pml",
+        "line": 2,
+        "name": "z"
+      }
+    }
+  ],
+  "processes": [
+    {
+      "name": "user:0",
+      "locals": [
+        {
+          "name": "me",
+          "type": "byte",
+          "init": [
+            1
+          ],
+          "origin": {
+            "file": "Promela - examples/CH2/mutex_flaw.pml",
+            "line": 4,
+            "name": "me"
+          }
+        }
+      ],
+      "locations": [
+        {
+          "name": "L1",
+          "origin": {
+            "file": "Promela - examples/CH2/mutex_flaw.pml",
+            "line": 5,
+            "name": "L1"
+          }
+        },
+        {
+          "name": "L2",
+          "origin": {
+            "file": "Promela - examples/CH2/mutex_flaw.pml",
+            "line": 6,
+            "name": "L2"
+          }
+        },
+        {
+          "name": "L3",
+          "origin": {
+            "file": "Promela - examples/CH2/mutex_flaw.pml",
+            "line": 10,
+            "name": "L3"
+          }
+        },
+        {
+          "name": "L4",
+          "origin": {
+            "file": "Promela - examples/CH2/mutex_flaw.pml",
+            "line": 11,
+            "name": "L4"
+          }
+        },
+        {
+          "name": "L5",
+          "origin": {
+            "file": "Promela - examples/CH2/mutex_flaw.pml",
+            "line": 15,
+            "name": "L5"
+          }
+        },
+        {
+          "name": "L6",
+          "origin": {
+            "file": "Promela - examples/CH2/mutex_flaw.pml",
+            "line": 16,
+            "name": "L6"
+          }
+        },
+        {
+          "name": "L7",
+          "origin": {
+            "file": "Promela - examples/CH2/mutex_flaw.pml",
+            "line": 22,
+            "name": "L7"
+          }
+        },
+        {},
+        {}
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 1,
+          "effect": [
+            {
+              "var": "x",
+              "value": {
+                "op": "var",
+                "var": "me"
+              }
+            }
+          ],
+          "text": "x = me",
+          "origin": {
+            "file": "Promela - examples/CH2/mutex_flaw.pml",
+            "line": 5,
+            "name": "x = me"
+          }
+        },
+        {
+          "from": 1,
+          "to": 0,
+          "guard": {
+            "op": "and",
+            "args": [
+              {
+                "op": "ne",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "y"
+                  },
+                  {
+                    "op": "const"
+                  }
+                ]
+              },
+              {
+                "op": "ne",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "y"
+                  },
+                  {
+                    "op": "var",
+                    "var": "me"
+                  }
+                ]
+              }
+            ]
+          },
+          "text": "(y != 0 && y != me)",
+          "origin": {
+            "file": "Promela - examples/CH2/mutex_flaw.pml",
+            "line": 7,
+            "name": "(y != 0 && y != me)"
+          }
+        },
+        {
+          "from": 1,
+          "to": 2,
+          "guard": {
+            "op": "or",
+            "args": [
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "y"
+                  },
+                  {
+                    "op": "const"
+                  }
+                ]
+              },
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "y"
+                  },
+                  {
+                    "op": "var",
+                    "var": "me"
+                  }
+                ]
+              }
+            ]
+          },
+          "text": "(y == 0 || y == me)",
+          "origin": {
+            "file": "Promela - examples/CH2/mutex_flaw.pml",
+            "line": 8,
+            "name": "(y == 0 || y == me)"
+          }
+        },
+        {
+          "from": 2,
+          "to": 3,
+          "effect": [
+            {
+              "var": "z",
+              "value": {
+                "op": "var",
+                "var": "me"
+              }
+            }
+          ],
+          "text": "z = me",
+          "origin": {
+            "file": "Promela - examples/CH2/mutex_flaw.pml",
+            "line": 10,
+            "name": "z = me"
+          }
+        },
+        {
+          "from": 3,
+          "to": 0,
+          "guard": {
+            "op": "ne",
+            "args": [
+              {
+                "op": "var",
+                "var": "x"
+              },
+              {
+                "op": "var",
+                "var": "me"
+              }
+            ]
+          },
+          "text": "(x != me)",
+          "origin": {
+            "file": "Promela - examples/CH2/mutex_flaw.pml",
+            "line": 12,
+            "name": "(x != me)"
+          }
+        },
+        {
+          "from": 3,
+          "to": 4,
+          "guard": {
+            "op": "eq",
+            "args": [
+              {
+                "op": "var",
+                "var": "x"
+              },
+              {
+                "op": "var",
+                "var": "me"
+              }
+            ]
+          },
+          "text": "(x == me)",
+          "origin": {
+            "file": "Promela - examples/CH2/mutex_flaw.pml",
+            "line": 13,
+            "name": "(x == me)"
+          }
+        },
+        {
+          "from": 4,
+          "to": 5,
+          "effect": [
+            {
+              "var": "y",
+              "value": {
+                "op": "var",
+                "var": "me"
+              }
+            }
+          ],
+          "text": "y = me",
+          "origin": {
+            "file": "Promela - examples/CH2/mutex_flaw.pml",
+            "line": 15,
+            "name": "y = me"
+          }
+        },
+        {
+          "from": 5,
+          "to": 0,
+          "guard": {
+            "op": "ne",
+            "args": [
+              {
+                "op": "var",
+                "var": "z"
+              },
+              {
+                "op": "var",
+                "var": "me"
+              }
+            ]
+          },
+          "text": "(z != me)",
+          "origin": {
+            "file": "Promela - examples/CH2/mutex_flaw.pml",
+            "line": 17,
+            "name": "(z != me)"
+          }
+        },
+        {
+          "from": 5,
+          "to": 6,
+          "guard": {
+            "op": "eq",
+            "args": [
+              {
+                "op": "var",
+                "var": "z"
+              },
+              {
+                "op": "var",
+                "var": "me"
+              }
+            ]
+          },
+          "text": "(z == me)",
+          "origin": {
+            "file": "Promela - examples/CH2/mutex_flaw.pml",
+            "line": 18,
+            "name": "(z == me)"
+          }
+        },
+        {
+          "from": 6,
+          "to": 7,
+          "effect": [
+            {
+              "var": "cnt",
+              "value": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "cnt"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "cnt++",
+          "origin": {
+            "file": "Promela - examples/CH2/mutex_flaw.pml",
+            "line": 22,
+            "name": "cnt++"
+          }
+        },
+        {
+          "from": 7,
+          "to": 8,
+          "assert": {
+            "op": "eq",
+            "args": [
+              {
+                "op": "var",
+                "var": "cnt"
+              },
+              {
+                "op": "const",
+                "value": 1
+              }
+            ]
+          },
+          "text": "assert(cnt == 1)",
+          "origin": {
+            "file": "Promela - examples/CH2/mutex_flaw.pml",
+            "line": 23,
+            "name": "assert(cnt == 1)"
+          }
+        },
+        {
+          "from": 8,
+          "to": 0,
+          "effect": [
+            {
+              "var": "cnt",
+              "value": {
+                "op": "sub",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "cnt"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "cnt--",
+          "origin": {
+            "file": "Promela - examples/CH2/mutex_flaw.pml",
+            "line": 24,
+            "name": "cnt--"
+          }
+        }
+      ],
+      "origin": {
+        "file": "Promela - examples/CH2/mutex_flaw.pml",
+        "line": 3,
+        "name": "user"
+      }
+    },
+    {
+      "name": "user:1",
+      "locals": [
+        {
+          "name": "me",
+          "type": "byte",
+          "init": [
+            2
+          ],
+          "origin": {
+            "file": "Promela - examples/CH2/mutex_flaw.pml",
+            "line": 4,
+            "name": "me"
+          }
+        }
+      ],
+      "locations": [
+        {
+          "name": "L1",
+          "origin": {
+            "file": "Promela - examples/CH2/mutex_flaw.pml",
+            "line": 5,
+            "name": "L1"
+          }
+        },
+        {
+          "name": "L2",
+          "origin": {
+            "file": "Promela - examples/CH2/mutex_flaw.pml",
+            "line": 6,
+            "name": "L2"
+          }
+        },
+        {
+          "name": "L3",
+          "origin": {
+            "file": "Promela - examples/CH2/mutex_flaw.pml",
+            "line": 10,
+            "name": "L3"
+          }
+        },
+        {
+          "name": "L4",
+          "origin": {
+            "file": "Promela - examples/CH2/mutex_flaw.pml",
+            "line": 11,
+            "name": "L4"
+          }
+        },
+        {
+          "name": "L5",
+          "origin": {
+            "file": "Promela - examples/CH2/mutex_flaw.pml",
+            "line": 15,
+            "name": "L5"
+          }
+        },
+        {
+          "name": "L6",
+          "origin": {
+            "file": "Promela - examples/CH2/mutex_flaw.pml",
+            "line": 16,
+            "name": "L6"
+          }
+        },
+        {
+          "name": "L7",
+          "origin": {
+            "file": "Promela - examples/CH2/mutex_flaw.pml",
+            "line": 22,
+            "name": "L7"
+          }
+        },
+        {},
+        {}
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 1,
+          "effect": [
+            {
+              "var": "x",
+              "value": {
+                "op": "var",
+                "var": "me"
+              }
+            }
+          ],
+          "text": "x = me",
+          "origin": {
+            "file": "Promela - examples/CH2/mutex_flaw.pml",
+            "line": 5,
+            "name": "x = me"
+          }
+        },
+        {
+          "from": 1,
+          "to": 0,
+          "guard": {
+            "op": "and",
+            "args": [
+              {
+                "op": "ne",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "y"
+                  },
+                  {
+                    "op": "const"
+                  }
+                ]
+              },
+              {
+                "op": "ne",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "y"
+                  },
+                  {
+                    "op": "var",
+                    "var": "me"
+                  }
+                ]
+              }
+            ]
+          },
+          "text": "(y != 0 && y != me)",
+          "origin": {
+            "file": "Promela - examples/CH2/mutex_flaw.pml",
+            "line": 7,
+            "name": "(y != 0 && y != me)"
+          }
+        },
+        {
+          "from": 1,
+          "to": 2,
+          "guard": {
+            "op": "or",
+            "args": [
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "y"
+                  },
+                  {
+                    "op": "const"
+                  }
+                ]
+              },
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "y"
+                  },
+                  {
+                    "op": "var",
+                    "var": "me"
+                  }
+                ]
+              }
+            ]
+          },
+          "text": "(y == 0 || y == me)",
+          "origin": {
+            "file": "Promela - examples/CH2/mutex_flaw.pml",
+            "line": 8,
+            "name": "(y == 0 || y == me)"
+          }
+        },
+        {
+          "from": 2,
+          "to": 3,
+          "effect": [
+            {
+              "var": "z",
+              "value": {
+                "op": "var",
+                "var": "me"
+              }
+            }
+          ],
+          "text": "z = me",
+          "origin": {
+            "file": "Promela - examples/CH2/mutex_flaw.pml",
+            "line": 10,
+            "name": "z = me"
+          }
+        },
+        {
+          "from": 3,
+          "to": 0,
+          "guard": {
+            "op": "ne",
+            "args": [
+              {
+                "op": "var",
+                "var": "x"
+              },
+              {
+                "op": "var",
+                "var": "me"
+              }
+            ]
+          },
+          "text": "(x != me)",
+          "origin": {
+            "file": "Promela - examples/CH2/mutex_flaw.pml",
+            "line": 12,
+            "name": "(x != me)"
+          }
+        },
+        {
+          "from": 3,
+          "to": 4,
+          "guard": {
+            "op": "eq",
+            "args": [
+              {
+                "op": "var",
+                "var": "x"
+              },
+              {
+                "op": "var",
+                "var": "me"
+              }
+            ]
+          },
+          "text": "(x == me)",
+          "origin": {
+            "file": "Promela - examples/CH2/mutex_flaw.pml",
+            "line": 13,
+            "name": "(x == me)"
+          }
+        },
+        {
+          "from": 4,
+          "to": 5,
+          "effect": [
+            {
+              "var": "y",
+              "value": {
+                "op": "var",
+                "var": "me"
+              }
+            }
+          ],
+          "text": "y = me",
+          "origin": {
+            "file": "Promela - examples/CH2/mutex_flaw.pml",
+            "line": 15,
+            "name": "y = me"
+          }
+        },
+        {
+          "from": 5,
+          "to": 0,
+          "guard": {
+            "op": "ne",
+            "args": [
+              {
+                "op": "var",
+                "var": "z"
+              },
+              {
+                "op": "var",
+                "var": "me"
+              }
+            ]
+          },
+          "text": "(z != me)",
+          "origin": {
+            "file": "Promela - examples/CH2/mutex_flaw.pml",
+            "line": 17,
+            "name": "(z != me)"
+          }
+        },
+        {
+          "from": 5,
+          "to": 6,
+          "guard": {
+            "op": "eq",
+            "args": [
+              {
+                "op": "var",
+                "var": "z"
+              },
+              {
+                "op": "var",
+                "var": "me"
+              }
+            ]
+          },
+          "text": "(z == me)",
+          "origin": {
+            "file": "Promela - examples/CH2/mutex_flaw.pml",
+            "line": 18,
+            "name": "(z == me)"
+          }
+        },
+        {
+          "from": 6,
+          "to": 7,
+          "effect": [
+            {
+              "var": "cnt",
+              "value": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "cnt"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "cnt++",
+          "origin": {
+            "file": "Promela - examples/CH2/mutex_flaw.pml",
+            "line": 22,
+            "name": "cnt++"
+          }
+        },
+        {
+          "from": 7,
+          "to": 8,
+          "assert": {
+            "op": "eq",
+            "args": [
+              {
+                "op": "var",
+                "var": "cnt"
+              },
+              {
+                "op": "const",
+                "value": 1
+              }
+            ]
+          },
+          "text": "assert(cnt == 1)",
+          "origin": {
+            "file": "Promela - examples/CH2/mutex_flaw.pml",
+            "line": 23,
+            "name": "assert(cnt == 1)"
+          }
+        },
+        {
+          "from": 8,
+          "to": 0,
+          "effect": [
+            {
+              "var": "cnt",
+              "value": {
+                "op": "sub",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "cnt"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "cnt--",
+          "origin": {
+            "file": "Promela - examples/CH2/mutex_flaw.pml",
+            "line": 24,
+            "name": "cnt--"
+          }
+        }
+      ],
+      "origin": {
+        "file": "Promela - examples/CH2/mutex_flaw.pml",
+        "line": 3,
+        "name": "user"
+      }
+    }
+  ],
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)"
+    },
+    {
+      "id": "assert",
+      "kind": "assert",
+      "text": "no assert statement fails (SPIN: assertion violations)"
+    }
+  ],
+  "origin": {
+    "file": "Promela - examples/CH2/mutex_flaw.pml",
+    "name": "mutex_flaw"
+  }
+}

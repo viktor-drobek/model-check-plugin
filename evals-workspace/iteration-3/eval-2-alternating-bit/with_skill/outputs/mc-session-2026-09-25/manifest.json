@@ -1,0 +1,127 @@
+{
+  "note": "Assembled BY HAND. The plugin's MCP server was not registered in this session, so mc_manifest could not be called; the fields below were copied from each report's `engine`, `inputs` and `search` sections (engine-tools.md §4, CLI stand-ins). Seeds and per-call start/end times have no CLI counterpart: every run was made with --no-timing so that the reports are byte-for-byte reproducible, and no simulation (which is the only thing that would carry a seed) was run.",
+  "session_id": "mc-session-2026-09-25",
+  "created": "2026-09-25",
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0-g0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1",
+    "binary": "/tmp/mcd",
+    "layer": "CLI (no MCP server registered)"
+  },
+  "inputs": [
+    {
+      "kind": "promela",
+      "role": "the user's model, read in place, never copied into this directory",
+      "path": "Promela - examples/CH3/alternatingbit.pml",
+      "sha256": "09006d65d6619931809544f074da440a9f3758e7715d7cc7493657164267698d"
+    },
+    {
+      "kind": "promela",
+      "role": "derived: ghost variables added so that per-message delivery is expressible (declared model change)",
+      "path": "mc-session-2026-09-25/model/alternatingbit-ghost.pml",
+      "sha256": "2ba2a514405fb672a2272ba6df4523199726eec7b8271e955373867c32135d0a"
+    },
+    {
+      "kind": "promela",
+      "role": "derived: sensitivity experiment, one frame may be lost; NOT the user's model",
+      "path": "mc-session-2026-09-25/model/alternatingbit-lossy.pml",
+      "sha256": "34e1706f8247a4c27a4c81f44452ee53aa9efb2bd7febbc0098347900113fbae"
+    }
+  ],
+  "calls": [
+    {
+      "n": 1,
+      "tool": "mcd parse (mc_parse)",
+      "command": "/tmp/mcd parse --promela 'Promela - examples/CH3/alternatingbit.pml'",
+      "outcome": "ok (exit 0)",
+      "warnings": [],
+      "artifacts": ["ir/ir-1.json (sha256 fb9871dca01414e4511a9055f9ddfd1f60cbf9512c7e1d521f3186ffc6e1ef58)"]
+    },
+    {
+      "n": 2,
+      "tool": "mcd check (pilot budget, mc_estimate stand-in)",
+      "command": "/tmp/mcd check --no-timing --promela 'Promela - examples/CH3/alternatingbit.pml' --ltl '[] (nempty(to_rcvr) -> <> empty(to_rcvr))' --budget-states 4",
+      "params": {"search": "dfs", "fairness": "none", "budget_applied": {"states": 4, "depth": 1000000, "time_ms": 60000, "mem_bytes": 1073741824}},
+      "outcome": "ok (exit 0) — both properties inconclusive/bounded, as intended for a pilot",
+      "artifacts": ["reports/check-0-pilot.json (sha256 0a68b39c3d2cb10b7106d5ff1e7cbfe51d5aeb5921acf1492d082feb9dcde942)"]
+    },
+    {
+      "n": 3,
+      "tool": "mcd check (baseline: only the frontend's own properties)",
+      "command": "/tmp/mcd check --no-timing --promela 'Promela - examples/CH3/alternatingbit.pml'",
+      "params": {"search": "dfs", "fairness": "none", "budget_applied": {"states": 1000000, "depth": 1000000, "time_ms": 60000, "mem_bytes": 1073741824}},
+      "outcome": "ok (exit 0) — deadlock verified/exhaustive, 8 states, 8 transitions, depth 7",
+      "artifacts": ["reports/check-1-baseline.json (sha256 fba29fedc0b4f395a4052bc287355972f942db6bffa75ac37c774ad258cad97e)"]
+    },
+    {
+      "n": 4,
+      "tool": "mcd check (main run, no fairness)",
+      "command": "/tmp/mcd check --no-timing --promela 'Promela - examples/CH3/alternatingbit.pml' --ltl '[] (nempty(to_rcvr) -> <> empty(to_rcvr))' --ltl '[] (nempty(to_sndr) -> <> empty(to_sndr))' --ltl '[]<> nempty(to_rcvr)' --ltl '[] (len(to_rcvr) <= 1)' --ltl '[] (len(to_sndr) <= 1)' --fairness none",
+      "params": {"search": "dfs", "fairness": "none", "budget_applied": {"states": 1000000, "depth": 1000000, "time_ms": 60000, "mem_bytes": 1073741824}},
+      "outcome": "ok (exit 0) — all six properties verified/exhaustive, complete",
+      "artifacts": ["reports/check-2-ltl-none.json (sha256 291025fcfe6ede1ef883bb23019f4c631c5bc09869d7e5af1e967e0bbb7da944)"]
+    },
+    {
+      "n": 5,
+      "tool": "mcd check (the same properties under weak fairness)",
+      "command": "/tmp/mcd check --no-timing --promela 'Promela - examples/CH3/alternatingbit.pml' --ltl '[] (nempty(to_rcvr) -> <> empty(to_rcvr))' --ltl '[] (nempty(to_sndr) -> <> empty(to_sndr))' --ltl '[]<> nempty(to_rcvr)' --fairness weak",
+      "params": {"search": "dfs", "fairness": "weak", "budget_applied": {"states": 1000000, "depth": 1000000, "time_ms": 60000, "mem_bytes": 1073741824}},
+      "outcome": "ok (exit 0) — same verdicts, larger products (14/12/26 states)",
+      "artifacts": ["reports/check-3-ltl-weak.json (sha256 0ee5eb8c4a17b325d5056632d028ada0631e8c7f010a6da711f2a67026d9a002)"]
+    },
+    {
+      "n": 6,
+      "tool": "mcd check (non-vacuity witness, reachability asked backwards)",
+      "command": "/tmp/mcd check --no-timing --promela 'Promela - examples/CH3/alternatingbit.pml' --ltl '[] empty(to_rcvr)' --fairness none",
+      "params": {"search": "dfs", "fairness": "none"},
+      "outcome": "ok (exit 0) — ltl1 violated/exhaustive: the counterexample IS the witness that messages are really sent and delivered",
+      "artifacts": ["reports/check-4-sanity-reach.json (sha256 5f4f0d78c74604ec085cf21c89df7668078a1f2f14d8e3e6fd08306828d488c4)"]
+    },
+    {
+      "n": 7,
+      "tool": "mcd parse (ghost model)",
+      "command": "/tmp/mcd parse --promela mc-session-2026-09-25/model/alternatingbit-ghost.pml",
+      "outcome": "ok (exit 0), no warnings",
+      "artifacts": ["ir/ir-2-ghost.json (sha256 33c14d1b9fbdfa414a9c4073f15f2e399acc175111d23081969078eef5487d19)"]
+    },
+    {
+      "n": 8,
+      "tool": "mcd check (per-message delivery on the ghost model, fairness none)",
+      "command": "/tmp/mcd check --no-timing --promela mc-session-2026-09-25/model/alternatingbit-ghost.pml --ltl '[] (pend1 == 1 -> <> pend1 == 0)' --ltl '[] (pend0 == 1 -> <> pend0 == 0)' --ltl '([]<> got1 == 1) && ([]<> got1 == 0)' --ltl '([]<> got0 == 1) && ([]<> got0 == 0)' --ltl '[] (pend1 + pend0 <= 1)' --fairness none",
+      "params": {"search": "dfs", "fairness": "none"},
+      "outcome": "ok (exit 0) — all six verified/exhaustive, complete; 16 model states",
+      "artifacts": ["reports/check-5-ghost-none.json (sha256 027f5cb8aa2c3276bbdc18eaff307ca5997089343c3e6329844e1581c84dd37b)"]
+    },
+    {
+      "n": 9,
+      "tool": "mcd check (the same, fairness weak)",
+      "command": "… --fairness weak",
+      "params": {"search": "dfs", "fairness": "weak"},
+      "outcome": "ok (exit 0) — same verdicts",
+      "artifacts": ["reports/check-5-ghost-weak.json (sha256 9523ec18041e1b6746c57eba08a592146943b5a2d6612c8e8fd73a57c3a0b2b2)"]
+    },
+    {
+      "n": 10,
+      "tool": "mcd check (sensitivity: lossy variant, BFS for the shortest safety trace)",
+      "command": "/tmp/mcd check --no-timing --bfs --promela mc-session-2026-09-25/model/alternatingbit-lossy.pml --ltl '[] (pend1 == 1 -> <> pend1 == 0)' --fairness none",
+      "params": {"search": "bfs", "fairness": "none"},
+      "outcome": "ok (exit 0) — deadlock violated (2 steps), delivery violated (stutter lasso)",
+      "artifacts": ["reports/check-6-lossy.json (sha256 bbc57f286a457e90cd1b4840a1b220266c61d73570ccbc96baa35231227a22b2)"]
+    },
+    {
+      "n": 11,
+      "tool": "mcd check (--sweep: state count of the whole graph, as pan -c0)",
+      "command": "/tmp/mcd check --no-timing --sweep --promela 'Promela - examples/CH3/alternatingbit.pml'",
+      "outcome": "ok (exit 0) — 8 states, 8 transitions; byte-for-byte identical to call 3 (determinism check, same sha256)",
+      "artifacts": ["reports/check-7-sweep.json (sha256 fba29fedc0b4f395a4052bc287355972f942db6bffa75ac37c774ad258cad97e)"]
+    }
+  ],
+  "not_available_in_this_session": [
+    "mc_simulate — no CLI equivalent; the sanity walk of SKILL.md step 5 was replaced by the non-vacuity run (call 6), whose counterexample is a concrete 14-step run of the model",
+    "mc_lint_property — no CLI equivalent; the properties were classified by hand against references/properties-ltl-ctl.md. The engine's own `temporal` records (atoms, stutter_invariant, negated formula) were used to check that classification",
+    "mc_estimate — replaced by the pilot budget run (call 2)",
+    "mc_explain — the CLI report carries the same steps, loop and final_state; the loop_note sentences in the report were written by hand"
+  ]
+}

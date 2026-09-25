@@ -719,14 +719,17 @@ func registerG3Steps(sc *godog.ScenarioContext) {
 		}
 		return nil
 	})
-	sc.Step(`^"([^"]+)" says that the flag "([^"]+)" arrives with "([^"]+)"$`, func(rel, flag, step string) error {
-		return statesRule(rel, regexp.MustCompile(`(?i)`+regexp.QuoteMeta(flag)+`[^\n]{0,80}arrives with `+step), "the flag "+flag+" arrives with "+step)
+	// G1 and G2 are built, so these read as facts, not as arrivals: the three
+	// steps replace "arrives with G1/G2" and "until then the CLI is the only
+	// path" (steps/g3-evals-logika.md, finding 10).
+	sc.Step(`^"([^"]+)" says that the flag "([^"]+)" is built in "([^"]+)"$`, func(rel, flag, step string) error {
+		return statesRule(rel, regexp.MustCompile(`(?i)`+regexp.QuoteMeta(flag)+`[^\n]{0,80}is built[^\n]{0,20}`+step), "the flag "+flag+" is built in "+step)
 	})
-	sc.Step(`^"([^"]+)" says that the MCP layer arrives with "([^"]+)"$`, func(rel, step string) error {
-		return statesRule(rel, phrase(`(?i)MCP[^.]{0,60}arrives? with `+step), "the MCP layer arrives with "+step)
+	sc.Step(`^"([^"]+)" says that the MCP layer is built in "([^"]+)"$`, func(rel, step string) error {
+		return statesRule(rel, phrase(`(?i)MCP layer is built,? `+step), "the MCP layer is built in "+step)
 	})
-	sc.Step(`^"([^"]+)" says that until then the CLI is the only path$`, func(rel string) error {
-		return statesRule(rel, phrase(`(?i)until then[^.]{0,40}CLI[^.]{0,30}only path`), "until then the CLI is the only path")
+	sc.Step(`^"([^"]+)" says that the CLI and the MCP layer reach the same engine$`, func(rel string) error {
+		return statesRule(rel, phrase(`(?i)CLI and the MCP layer reach the same engine`), "the CLI and the MCP layer reach the same engine")
 	})
 	sc.Step(`^"([^"]+)" does not call the report fields illustrative$`, func(rel string) error {
 		s, err := read(rel)
@@ -967,22 +970,6 @@ func registerG3Steps(sc *godog.ScenarioContext) {
 			}
 		}
 		return nil
-	})
-	sc.Step(`^the eval with id (\d+) has "runnable_from" equal to "([^"]+)"$`, func(id int, want string) error {
-		_, list, err := evals()
-		if err != nil {
-			return err
-		}
-		for _, e := range list {
-			if v, _ := skillcheck.Get(e, "id"); v == float64(id) {
-				r, _ := skillcheck.Get(e, "runnable_from")
-				if r != want {
-					return fmt.Errorf("eval %d runnable_from = %v, want %q", id, r, want)
-				}
-				return nil
-			}
-		}
-		return fmt.Errorf("no eval with id %d", id)
 	})
 	sc.Step(`^"([^"]+)" explains that fixtures reference corpus paths and hashes instead of copying files$`, func(rel string) error {
 		s, err := read(rel)
@@ -1289,15 +1276,28 @@ func registerG3Steps(sc *godog.ScenarioContext) {
 		}
 		return nil
 	})
+	// The workspace directory of one eval: eval-<id>-<name>, unless the eval
+	// names its own in `dir` (E2b is a variant of eval 2 and lives in
+	// eval-2b-starvation-loop, where "2b" is not an id).
 	evalDir := func(workspace string, id int) (string, error) {
-		entries, err := os.ReadDir(filepath.Join(w.pluginDir, workspace))
+		base := filepath.Join(w.pluginDir, workspace)
+		if e, err := findEval(id); err == nil {
+			if own, _ := e["dir"].(string); own != "" {
+				p := filepath.Join(base, own)
+				if st, err := os.Stat(p); err == nil && st.IsDir() {
+					return p, nil
+				}
+				return "", fmt.Errorf("eval %d names dir %q, which is not a directory under %s", id, own, workspace)
+			}
+		}
+		entries, err := os.ReadDir(base)
 		if err != nil {
 			return "", err
 		}
 		prefix := fmt.Sprintf("eval-%d-", id)
 		for _, e := range entries {
 			if e.IsDir() && strings.HasPrefix(e.Name(), prefix) {
-				return filepath.Join(w.pluginDir, workspace, e.Name()), nil
+				return filepath.Join(base, e.Name()), nil
 			}
 		}
 		return "", fmt.Errorf("no directory %s* under %s", prefix, workspace)
@@ -1621,17 +1621,37 @@ func registerG3Steps(sc *godog.ScenarioContext) {
 		}
 		return nil
 	})
-	sc.Step(`^"([^"]+)" says that property kinds ltl, progress and ctl are not-executed until G4 or G5$`, func(rel string) error {
-		return statesRule(rel, regexp.MustCompile("(?is)`ltl`[^\n]{0,40}`progress`[^\n]{0,40}`ctl`[^\n]{0,120}`not-executed`[^\n]{0,300}G[45]"), "ltl, progress and ctl are not-executed until G4/G5")
+	sc.Step(`^"([^"]+)" says that property kind ctl is not-executed until G5$`, func(rel string) error {
+		return statesRule(rel, phrase("(?is)`ctl`[^.]{0,200}`not-executed`[^.]{0,200}G5|(?is)`not-executed`[^.]{0,120}`ctl`[^.]{0,200}G5"), "the property kind ctl is not-executed until G5")
 	})
 	sc.Step(`^"([^"]+)" states that an absent or zero MCP budget field means the server default$`, func(rel string) error {
 		return statesRule(rel, phrase("(?i)absent or zero[^.]{0,60}server default"), "an absent or zero budget field means the server default")
 	})
-	sc.Step(`^"([^"]+)" says that the CLI budget unification arrives with G4$`, func(rel string) error {
-		return statesRule(rel, phrase("(?is)CLI budget unification[^.]{0,80}arrives with G4"), "the CLI budget unification arrives with G4")
+	sc.Step(`^"([^"]+)" says that the budget rule is the same in the CLI and in MCP$`, func(rel string) error {
+		return statesRule(rel, phrase("(?is)budget rule is[^.]{0,40}identical in the CLI and in MCP|(?is)budget rule[^.]{0,60}the same in both layers"), "the budget rule is the same in the CLI and in MCP")
 	})
-	sc.Step(`^"([^"]+)" says that mcd serve in this build does not link the Promela frontend$`, func(rel string) error {
-		return statesRule(rel, phrase("(?is)`mcd serve` does not link the Promela frontend"), "mcd serve in this build does not link the Promela frontend")
+	sc.Step(`^"([^"]+)" says that --unlimited exists in the CLI only$`, func(rel string) error {
+		return statesRule(rel, phrase("(?is)`--unlimited`[^.]{0,120}CLI only|(?is)CLI only[^.]{0,120}`--unlimited`|(?is)`--unlimited`[^.]{0,120}no MCP (counterpart|equivalent)"), "--unlimited exists in the CLI only")
+	})
+	sc.Step(`^"([^"]+)" says that mcd serve links the Promela frontend$`, func(rel string) error {
+		if err := statesRule(rel, phrase("(?is)`mcd serve` links the Promela frontend"), "mcd serve links the Promela frontend"); err != nil {
+			return err
+		}
+		// and the old sentence must be gone, not merely contradicted elsewhere
+		body, err := read(rel)
+		if err != nil {
+			return err
+		}
+		if phrase("(?is)does not link the Promela frontend").MatchString(body) {
+			return fmt.Errorf("%s still says that mcd serve does not link the Promela frontend", rel)
+		}
+		return nil
+	})
+	sc.Step(`^"([^"]+)" says that fairness strong gives not-executed$`, func(rel string) error {
+		return statesRule(rel, phrase("(?is)(`fairness: ?strong`|`fairness` `?strong`?|fairness: strong|`--fairness strong`|strong[^.]{0,20})[^.]{0,200}`not-executed`"), "fairness strong gives not-executed")
+	})
+	sc.Step(`^"([^"]+)" says that the MCP examples were copied from the recorded session$`, func(rel string) error {
+		return statesRule(rel, phrase("(?is)copied from one hand-driven stdio session|(?is)were copied from[^.]{0,80}recorded[^.]{0,40}session"), "the MCP examples were copied from the recorded session")
 	})
 	sc.Step(`^"([^"]+)" says that Promela input goes through the promela field of mc_parse or through "([^"]+)"$`, func(rel, cliForm string) error {
 		if err := statesRule(rel, phrase("(?is)Promela input goes through the `promela` field of `mc_parse`"), "Promela input goes through the promela field of mc_parse"); err != nil {
@@ -1643,6 +1663,326 @@ func registerG3Steps(sc *godog.ScenarioContext) {
 		}
 		if !strings.Contains(s, cliForm) {
 			return fmt.Errorf("%s does not mention %q", rel, cliForm)
+		}
+		return nil
+	})
+
+	// ------------------------------------- reference wording added in G4
+	sc.Step(`^"([^"]+)" says that fairness is reported as an assumption and not as a fact about the system$`, func(rel string) error {
+		return statesRule(rel, phrase("(?is)[Ff]airness is reported as an assumption, never as a fact about the system"), "fairness is reported as an assumption and not as a fact about the system")
+	})
+	sc.Step(`^"([^"]+)" says that alternatingbit is lock-step so its delivery does not depend on fairness$`, func(rel string) error {
+		return statesRule(rel, phrase("(?is)lock-?step[^.]{0,400}without any fairness assumption|(?is)lock-?step[^.]{0,400}does not depend on the fairness setting"), "alternatingbit is lock-step so its delivery does not depend on fairness")
+	})
+	sc.Step(`^"([^"]+)" says that loop.start is the 1-based index of the first loop step$`, func(rel string) error {
+		return statesRule(rel, phrase("(?is)`loop.start` is the 1-based index of the first step of the cycle"), "loop.start is the 1-based index of the first loop step")
+	})
+	sc.Step(`^"([^"]+)" says how to read a stuttering process in a lasso$`, func(rel string) error {
+		body, err := read(rel)
+		if err != nil {
+			return err
+		}
+		// Both reasons for a `-` step must be distinguished: the stutter
+		// extension of a stopped system and the weak-fairness null step.
+		for _, re := range []*regexp.Regexp{
+			phrase("(?is)[Rr]eading a stuttering process in a lasso"),
+			phrase("(?is)stutter extension"),
+			phrase("(?is)[Ww]eak-fairness bookkeeping|(?is)null step[^.]{0,200}fairness"),
+		} {
+			if !re.MatchString(body) {
+				return fmt.Errorf("%s does not say how to read a stuttering process in a lasso (missing %s)", rel, re)
+			}
+		}
+		return nil
+	})
+	sc.Step(`^"([^"]+)" says that a formula with X gives stutter_invariant false$`, func(rel string) error {
+		return statesRule(rel, phrase("(?is)`stutter_invariant`[\\s\\S]{0,300}`false` exactly when the formula uses `X`"), "a formula with X gives stutter_invariant false")
+	})
+	sc.Step(`^"([^"]+)" says that the engine checks asserts over the whole state space while pan -a checks them in claim scope$`, func(rel string) error {
+		body, err := read(rel)
+		if err != nil {
+			return err
+		}
+		for _, re := range []*regexp.Regexp{
+			phrase("(?is)`pan -a` evaluates `assert` statements only while a claim is in scope"),
+			phrase("(?is)checks the model's `assert` statements over the\\s+\\*\\*whole\\*\\*\\s+state space"),
+		} {
+			if !re.MatchString(body) {
+				return fmt.Errorf("%s does not contrast the engine's assert scope with pan -a (missing %s)", rel, re)
+			}
+		}
+		return nil
+	})
+	sc.Step(`^"([^"]+)" says that a claim reaching its end is a violation on a finite prefix$`, func(rel string) error {
+		return statesRule(rel, phrase("(?is)claim reaching its end is a violation on a finite prefix"), "a claim reaching its end is a violation on a finite prefix")
+	})
+	sc.Step(`^"([^"]+)" says that label atoms are not accepted by this build$`, func(rel string) error {
+		return statesRule(rel, phrase("(?is)Control-label atoms \\(`proc@label`, `proc\\[i\\]@label`\\) are not accepted by this\\s+build"), "label atoms are not accepted by this build")
+	})
+	sc.Step(`^"([^"]+)" says that the progress property is added when the model has progress labels$`, func(rel string) error {
+		return statesRule(rel, phrase("(?is)`progress` property is added automatically when the model has progress\\s+labels"), "the progress property is added when the model has progress labels")
+	})
+	sc.Step(`^"([^"]+)" says that a states or depth budget stop is bounded and a time or memory stop is unknown$`, func(rel string) error {
+		return statesRule(rel, phrase("(?is)\\*\\*states\\*\\* or \\*\\*depth\\*\\* stop is[^.]{0,20}`bounded`[^§]{0,600}\\*\\*time\\*\\* or \\*\\*memory\\*\\* stop is `unknown`"), "a states or depth budget stop is bounded and a time or memory stop is unknown")
+	})
+	sc.Step(`^"([^"]+)" says that ltl results carry evidence exhaustive after the G4 oracle$`, func(rel string) error {
+		return statesRule(rel, phrase("(?is)LTL results therefore\\s+carry the ordinary evidence levels"), "ltl results carry the ordinary evidence levels after the G4 oracle")
+	})
+	sc.Step(`^"([^"]+)" says that ctl is not-executed until G5$`, func(rel string) error {
+		return statesRule(rel, phrase("(?is)`ctl`[^.]{0,200}`not-executed`[^.]{0,200}G5|(?is)`not-executed`[^.]{0,120}`ctl`[^.]{0,200}G5|(?is)`ctl` property comes back `not-executed`"), "ctl is not-executed until G5")
+	})
+	// The same check as "no file under X is a copy of …", but over the evals
+	// workspace set by the Given step instead of a path inside the skill.
+	sc.Step(`^no file under the workspace is a copy of a file under "([^"]+)"$`, func(corpusRel string) error {
+		corpus, err := hashesUnder(filepath.Join(w.repoDir, corpusRel))
+		if err != nil {
+			return err
+		}
+		files, err := skillcheck.WalkFiles(w.workDir)
+		if err != nil {
+			return err
+		}
+		for _, rel := range files {
+			h, err := fileSHA256(filepath.Join(w.workDir, rel))
+			if err != nil {
+				return err
+			}
+			if orig, dup := corpus[h]; dup {
+				return fmt.Errorf("%s is a copy of %s/%s", rel, corpusRel, orig)
+			}
+		}
+		return nil
+	})
+	sc.Step(`^"([^"]+)" says that strong fairness is unsupported$`, func(rel string) error {
+		return statesRule(rel, phrase("(?is)\\*\\*strong fairness is unsupported\\*\\*"), "strong fairness is unsupported")
+	})
+
+	// ----------------------------------------- evals.json fields (stage 3)
+	sc.Step(`^the eval with id (\d+) has "([^"]+)" equal to (\d+)$`, func(id int, field string, want int) error {
+		e, err := findEval(id)
+		if err != nil {
+			return err
+		}
+		got, _ := e[field].(float64)
+		if int(got) != want {
+			return fmt.Errorf("eval %d: %s = %v, want %d", id, field, e[field], want)
+		}
+		return nil
+	})
+	sc.Step(`^the eval with id (\d+) has "([^"]+)" equal to "([^"]+)"$`, func(id int, field, want string) error {
+		e, err := findEval(id)
+		if err != nil {
+			return err
+		}
+		if got := fmt.Sprint(e[field]); got != want {
+			return fmt.Errorf("eval %d: %s = %q, want %q", id, field, got, want)
+		}
+		return nil
+	})
+
+	// --------------------------------- temporal goldens through the CLI
+	runLTL := func(base, model, formula, fairness string, want int) error {
+		args := strings.Fields(base)[1:]
+		args = append(args, model, "--ltl", formula, "--fairness", fairness)
+		var stdout, stderr bytes.Buffer
+		if code := cli.Run(args, &stdout, &stderr); code != want {
+			return fmt.Errorf("%v exited %d, want %d; stderr: %s; stdout: %.300s", args, code, want, stderr.String(), stdout.String())
+		}
+		var doc map[string]any
+		if err := json.Unmarshal(stdout.Bytes(), &doc); err != nil {
+			return fmt.Errorf("stdout is not JSON: %v", err)
+		}
+		w.report = doc
+		w.property = nil
+		return nil
+	}
+	sc.Step(`^running "([^"]+)" on the repository file "([^"]+)" with the ltl formula "([^"]+)" and fairness "([^"]+)" exits (\d+)$`, func(base, rel, formula, fairness string, want int) error {
+		return runLTL(base, filepath.Join(w.repoDir, rel), formula, fairness, want)
+	})
+	sc.Step(`^running "([^"]+)" on the engine test model "([^"]+)" with the ltl formula "([^"]+)" and fairness "([^"]+)" exits (\d+)$`, func(base, name, formula, fairness string, want int) error {
+		return runLTL(base, filepath.Join(w.pluginDir, "engine", "testdata", "promela", name), formula, fairness, want)
+	})
+	temporal := func() (map[string]any, error) {
+		if w.property == nil {
+			return nil, fmt.Errorf("no property selected")
+		}
+		t, _ := w.property["temporal"].(map[string]any)
+		if t == nil {
+			return nil, fmt.Errorf("property %v has no temporal record", w.property["id"])
+		}
+		return t, nil
+	}
+	sc.Step(`^that property's temporal record has fairness "([^"]+)" and stutter_invariant (true|false)$`, func(fairness, stutter string) error {
+		t, err := temporal()
+		if err != nil {
+			return err
+		}
+		if fmt.Sprint(t["fairness"]) != fairness {
+			return fmt.Errorf("temporal.fairness = %v, want %s", t["fairness"], fairness)
+		}
+		if got, _ := t["stutter_invariant"].(bool); got != (stutter == "true") {
+			return fmt.Errorf("temporal.stutter_invariant = %v, want %s", t["stutter_invariant"], stutter)
+		}
+		return nil
+	})
+	sc.Step(`^that property's temporal record has source "([^"]+)" and claim "([^"]+)"$`, func(source, claim string) error {
+		t, err := temporal()
+		if err != nil {
+			return err
+		}
+		if fmt.Sprint(t["source"]) != source || fmt.Sprint(t["claim"]) != claim {
+			return fmt.Errorf("temporal source/claim = %v/%v, want %s/%s", t["source"], t["claim"], source, claim)
+		}
+		return nil
+	})
+	sc.Step(`^that property's counters show (\d+) states$`, func(states int) error {
+		if w.property == nil {
+			return fmt.Errorf("no property selected")
+		}
+		counters, _ := w.property["counters"].(map[string]any)
+		if got, _ := counters["states"].(float64); int(got) != states {
+			return fmt.Errorf("counters.states = %v, want %d", counters["states"], states)
+		}
+		return nil
+	})
+	cexLoop := func() (map[string]any, []any, error) {
+		if w.property == nil {
+			return nil, nil, fmt.Errorf("no property selected")
+		}
+		cex, _ := w.property["counterexample"].(map[string]any)
+		if cex == nil {
+			return nil, nil, fmt.Errorf("property %v has no counterexample", w.property["id"])
+		}
+		loop, _ := cex["loop"].(map[string]any)
+		if loop == nil {
+			return nil, nil, fmt.Errorf("property %v has a counterexample without a loop", w.property["id"])
+		}
+		steps, _ := cex["steps"].([]any)
+		return loop, steps, nil
+	}
+	sc.Step(`^that property's counterexample has a loop starting at step (\d+) of (\d+) steps$`, func(start, n int) error {
+		loop, _, err := cexLoop()
+		if err != nil {
+			return err
+		}
+		gotStart, _ := loop["start"].(float64)
+		gotSteps, _ := loop["steps"].(float64)
+		if int(gotStart) != start || int(gotSteps) != n {
+			return fmt.Errorf("loop = {start: %v, steps: %v}, want {start: %d, steps: %d}", loop["start"], loop["steps"], start, n)
+		}
+		return nil
+	})
+	sc.Step(`^that property's counterexample has a loop of (\d+) steps$`, func(n int) error {
+		loop, _, err := cexLoop()
+		if err != nil {
+			return err
+		}
+		if got, _ := loop["steps"].(float64); int(got) != n {
+			return fmt.Errorf("loop.steps = %v, want %d", loop["steps"], n)
+		}
+		return nil
+	})
+	sc.Step(`^every loop step of that property is by process "([^"]+)" or by the claim$`, func(proc string) error {
+		loop, steps, err := cexLoop()
+		if err != nil {
+			return err
+		}
+		start, _ := loop["start"].(float64)
+		n, _ := loop["steps"].(float64)
+		if int(start)+int(n)-1 > len(steps) {
+			return fmt.Errorf("loop {start %v, steps %v} exceeds the %d recorded steps", loop["start"], loop["steps"], len(steps))
+		}
+		for i := int(start) - 1; i < int(start)-1+int(n); i++ {
+			sm, _ := steps[i].(map[string]any)
+			got := fmt.Sprint(sm["process"])
+			if got != proc && !strings.HasPrefix(got, "never:") && got != "np_" {
+				return fmt.Errorf("loop step %d is by process %q, want %q or the claim", i+1, got, proc)
+			}
+		}
+		return nil
+	})
+	sc.Step(`^that property's reason names "([^"]+)" as enabled throughout the loop and never moving$`, func(proc string) error {
+		if w.property == nil {
+			return fmt.Errorf("no property selected")
+		}
+		reason := fmt.Sprint(w.property["reason"])
+		want := proc + " is enabled throughout the loop and never moves"
+		if !strings.Contains(reason, want) {
+			return fmt.Errorf("reason %q does not say %q", reason, want)
+		}
+		return nil
+	})
+
+	// ------------------------------------------- the recorded MCP session
+	pluginFile := func(rel string) (string, error) {
+		b, err := os.ReadFile(filepath.Join(w.pluginDir, rel))
+		if err != nil {
+			return "", err
+		}
+		return string(b), nil
+	}
+	jsonBlocks := func(rel string) ([]any, error) {
+		body, err := pluginFile(rel)
+		if err != nil {
+			return nil, err
+		}
+		var out []any
+		for _, m := range jsonBlockRe.FindAllStringSubmatch(body, -1) {
+			var v any
+			if err := json.Unmarshal([]byte(m[1]), &v); err != nil {
+				continue // a deliberately truncated block; the file says so
+			}
+			out = append(out, v)
+		}
+		if len(out) == 0 {
+			return nil, fmt.Errorf("%s has no parsable json block", rel)
+		}
+		return out, nil
+	}
+	sc.Step(`^the plugin file "([^"]+)" contains a json block with "([^"]+)" equal to "([^"]+)"$`, func(rel, key, want string) error {
+		blocks, err := jsonBlocks(rel)
+		if err != nil {
+			return err
+		}
+		for _, b := range blocks {
+			if got, ok := skillcheck.Get(b, key); ok && fmt.Sprint(got) == want {
+				return nil
+			}
+		}
+		return fmt.Errorf("%s has no json block with %q = %q", rel, key, want)
+	})
+	sc.Step(`^the plugin file "([^"]+)" contains a json block that has the keys "([^"]+)", "([^"]+)" and "([^"]+)"$`, func(rel, a, b, c string) error {
+		blocks, err := jsonBlocks(rel)
+		if err != nil {
+			return err
+		}
+		for _, blk := range blocks {
+			m, _ := blk.(map[string]any)
+			if m == nil {
+				continue
+			}
+			_, okA := m[a]
+			_, okB := m[b]
+			_, okC := m[c]
+			if okA && okB && okC {
+				return nil
+			}
+		}
+		return fmt.Errorf("%s has no json block with the keys %q, %q and %q", rel, a, b, c)
+	})
+	sc.Step(`^the plugin file "([^"]+)" mentions each of:$`, func(rel string, t *godog.Table) error {
+		body, err := pluginFile(rel)
+		if err != nil {
+			return err
+		}
+		var missing []string
+		for _, p := range tableColumn(t) {
+			if !strings.Contains(body, p) {
+				missing = append(missing, p)
+			}
+		}
+		if len(missing) > 0 {
+			return fmt.Errorf("%s does not mention: %v", rel, missing)
 		}
 		return nil
 	})

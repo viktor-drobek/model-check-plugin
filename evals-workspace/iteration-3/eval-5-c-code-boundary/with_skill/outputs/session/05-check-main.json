@@ -1,0 +1,64 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0-g0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "promela",
+      "path": "model/simple1-rewrite.pml",
+      "sha256": "8dbf0034f98f0678a49b528e9ddd8bb450a3ce50043f9cd7c8e5ebae145f33ab"
+    }
+  ],
+  "model": {
+    "name": "simple1-rewrite",
+    "state_bytes": 6,
+    "processes": 1,
+    "variables": 1
+  },
+  "search": {
+    "mode": "dfs",
+    "budget": {
+      "states": 1000000,
+      "depth": 1000000,
+      "time_ms": 60000,
+      "mem_bytes": 1073741824
+    },
+    "stop": "complete",
+    "complete": true
+  },
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 8,
+        "transitions": 7,
+        "depth": 4,
+        "time_ms": 0,
+        "memory_bytes_est": 25152
+      },
+      "complete": true
+    },
+    {
+      "id": "assert",
+      "kind": "assert",
+      "text": "no assert statement fails (SPIN: assertion violations)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 8,
+        "transitions": 7,
+        "depth": 4,
+        "time_ms": 0,
+        "memory_bytes_est": 25152
+      },
+      "complete": true
+    }
+  ]
+}

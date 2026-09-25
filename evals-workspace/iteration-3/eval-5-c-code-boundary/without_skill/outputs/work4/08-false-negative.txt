@@ -1,0 +1,11 @@
+########## fn_notrack ##########
+	assertion violations	+
+State-vector 12 byte, depth reached 2, errors: 0
+        3 states, stored
+    0.000	equivalent memory usage for states (stored*(State-vector + overhead))
+########## fn_track ##########
+pan:1: assertion violated ( x != 5 ) (at depth 5)
+	assertion violations	+
+State-vector 20 byte, depth reached 9999, errors: 1
+    29985 states, stored
+    1.373	equivalent memory usage for states (stored*(State-vector + overhead))

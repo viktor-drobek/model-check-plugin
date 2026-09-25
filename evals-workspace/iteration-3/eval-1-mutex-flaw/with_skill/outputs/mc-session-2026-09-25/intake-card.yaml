@@ -1,0 +1,106 @@
+# Intake card — CH2/mutex_flaw.pml, 2026-09-25
+# Filled from the user's request: «Два процесса не должны одновременно попадать
+# в критическую секцию. Проверь эту модель: Promela - examples/CH2/mutex_flaw.pml».
+# The user was not available for questions, so every value that would normally have
+# been asked for is marked ASSUMPTION (labelled default for a teaching example,
+# SKILL.md step 1). No business-critical assumption was filled silently.
+
+system:
+  name: "mutex_flaw — two-process mutual-exclusion attempt with three shared variables"
+  boundary: "the two instances of `active [2] proctype user()` and the global byte variables cnt, x, y, z"
+  environment: "none outside the model; the only external agent is the scheduler, which is unconstrained (ASSUMPTION: arbitrary interleaving, no priorities)"
+  excluded:
+    - "the code of the critical section itself (modelled only as cnt++/cnt--)"
+    - "any real memory model: reads and writes of x, y, z are assumed atomic and sequentially consistent (ASSUMPTION)"
+  relation_to_implementation: "hand-written abstract model taken verbatim from the corpus; no implementation is named by the user, so no conformance argument exists"
+
+state:
+  variables:
+    - "cnt : byte, 0..255 — number of processes currently inside the critical section; the observable of the requirement"
+    - "x, y, z : byte — the algorithm's three shared 'claim' variables, value 0 or the id (1/2) of the claiming process"
+    - "user:0.me, user:1.me : byte — local constant _pid + 1, i.e. 1 and 2"
+  processes:
+    - "user:0 (me = 1), user:1 (me = 2) — identical code, locations L1..L7"
+  channels: []
+  initial_states: "cnt = x = y = z = 0; both processes at L1; user:0.me = 1, user:1.me = 2 (single initial state)"
+  observables:
+    - "cnt == 2 → two processes in the critical section at once → violation of mutual exclusion"
+    - "cnt == 1 → the critical section is entered at all (sanity/reachability)"
+
+transitions:
+  semantics: "interleaving; one executable statement of one process per step; no channels, no rendezvous"
+  atomic_step: "one Promela statement (assignment or guard). ASSUMPTION: the model contains no atomic/d_step, so every read and write of x, y, z interleaves — this is the granularity the question about mutual exclusion is asked at"
+  terminal_states: "none: both processes loop forever via `goto L1`; a state with nothing executable would be a deadlock (no end labels in the model)"
+  nondeterminism: "the scheduler only (which of the two enabled processes moves next); the if-options are deterministic complements of each other"
+
+properties:
+  - id: P1
+    wording: "Два процесса не должны одновременно попадать в критическую секцию"
+    class: safety
+    logic: "assert (the model's own assert(cnt == 1), added automatically by the frontend)"
+    extension: untimed
+    formula: "assert(cnt == 1) at line 23"
+    atoms: ["cnt == 1"]
+    expected_evidence: "finite trace"
+    sanity_companion: "P4"
+  - id: P2
+    wording: "the same requirement as a global invariant over all reachable states"
+    class: safety
+    logic: LTL
+    extension: untimed
+    formula: "[] (cnt <= 1)"
+    atoms: ["cnt <= 1"]
+    expected_evidence: "finite bad prefix (the engine returns it inside a lasso, see report §8)"
+    sanity_companion: "P4"
+  - id: P3
+    wording: "the model must not be able to stop (no deadlock) — not asked by the user, added by the frontend and read anyway"
+    class: safety
+    logic: deadlock
+    extension: untimed
+    formula: "engine property kind `deadlock`"
+    atoms: []
+    expected_evidence: "finite trace"
+    sanity_companion: ""
+  - id: P4
+    wording: "sanity: is the critical section reachable at all? (guards against a vacuous mutual-exclusion result)"
+    class: reachability
+    logic: "LTL, asked backwards: `[] !(cnt == 1)` — a violation IS the witness"
+    extension: untimed
+    formula: "[] !(cnt == 1)"
+    atoms: ["cnt == 1"]
+    expected_evidence: "finite prefix reaching cnt == 1"
+    sanity_companion: ""
+
+assumptions:
+  scheduler: "ASSUMPTION: arbitrary interleaving, no fairness, no priorities — the standard reading of Promela's semantics"
+  delivery: "not applicable (no channels)"
+  failures: "none modelled"
+  environment_inputs: "none"
+  bounds:
+    - "exactly 2 processes (`active [2]`); the result says nothing about 3 or more"
+    - "cnt, x, y, z are `byte` (0..255); cnt reaches at most 2 here, so no overflow occurs"
+
+fairness:
+  required: "none"
+  justification: "all four properties are safety/reachability: their verdicts are invariant under any fairness assumption, because a finite counterexample stays a counterexample and fairness only removes infinite runs. Fairness was therefore neither needed nor used."
+  confirmed_by_user: false
+
+backend:
+  engine: mcd
+  search_mode: "bfs for the main run (shortest safety counterexample), dfs for the LTL run"
+  reductions: none
+
+budget:
+  time: "60 000 ms (default)"
+  states: "1 000 000 (default)"
+  depth: "1 000 000 (default)"
+  memory: "1024 MiB (default)"
+  repeats: 1
+
+evidence:
+  expected: exhaustive
+  goal: "exhaustive result (the user asks whether the requirement holds, not for one bug)"
+
+artefacts:
+  may_store_models_and_traces: true   # ASSUMPTION: corpus teaching model, no business data
+  contains_secrets_or_personal_data: "no — a textbook model"

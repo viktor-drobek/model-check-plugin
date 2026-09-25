@@ -1,0 +1,143 @@
+# Intake card (FR-001, FR-002) — "Телефон не может зависнуть в состоянии Busy?"
+# Corpus model: Promela - examples/CH14/version1
+# NOTE: the user was not available for questions. Every value marked ASSUMPTION
+# below is a default I chose and did not confirm with anyone; each of them is
+# repeated in section 2 of the report.
+
+system:
+  name: "POTS switch, CH14/version1 (Holzmann, fig. 13.4/13.5) — outgoing calls only"
+  boundary: "two processes: subscriber (the telephone set) and switch (the exchange), coupled by one rendezvous channel tpc"
+  environment: "none outside the two processes; the called party / remote exchange is NOT modelled — the comment `no remote hang up` at Connect says so explicitly"
+  excluded:
+    - "remote switch, SS7 signalling (iam/acm/anm/rel/rlc) — added only in CH14/version2 and version3"
+    - "called-party hang-up, network release, Zombie states — version2/version3"
+    - "incoming calls (the header says 'outgoing calls only')"
+    - "time: no clocks, no timers, no ring timeout"
+  relation_to_implementation: "hand-written abstract model from a textbook; no real exchange is behind it. Nothing here is a statement about any implementation."
+
+state:
+  variables: []           # the corpus model has NO variables at all (report's model.variables = 0)
+  processes:
+    - "subscriber: labels Idle, Busy"
+    - "switch: labels Idle, Dial, Wait, Connect, Busy"
+  channels:
+    - "tpc, capacity 0 (rendezvous), one mtype field, values offhook/digits/onhook"
+  initial_states: "subscriber at Idle, switch at Idle, tpc empty (rendezvous has no buffer). Exactly one initial state."
+  observables:
+    - "ASSUMPTION: 'the telephone is in Busy' is read primarily as 'proctype switch is at label Busy' (busy tone), and secondarily as 'proctype subscriber is at label Busy' (handset off-hook). Both readings were checked separately, because the user wrote «телефон» but gave «модель коммутатора»."
+    - "the engine does not accept control-label atoms (proc@label), so each reading needed a declared change to the model — see the Model section of the report"
+
+transitions:
+  semantics: "interleaving of two processes; the only synchronisation is the rendezvous on tpc (sender and receiver move in one step)"
+  atomic_step: "one Promela statement of one process. printf is a step without effect (engine warning: 8 printf statements kept as no-op steps)"
+  terminal_states: "none are intended — both processes loop forever; there is no `end` label and no process terminates. Any state with nothing enabled would be an invalid end state (a deadlock)."
+  nondeterminism: "scheduler (which process moves), the subscriber's choice between digits and onhook at Busy, and the switch's own choice at Wait (ringtone vs busytone) and at Connect (busytone vs notone)"
+
+properties:
+  - id: P0
+    wording: "«зависнуть» in the hard sense — the system stops altogether"
+    class: safety
+    logic: deadlock
+    extension: untimed
+    formula: "engine property kind `deadlock` (no invalid end state)"
+    atoms: []
+    expected_evidence: "finite trace"
+    sanity_companion: "none needed"
+  - id: P1
+    wording: "sanity: does the switch reach Busy at all?"
+    class: reachability
+    logic: LTL (asked backwards)
+    extension: untimed
+    formula: "[] (sw != BUSY)  — a `violated` result IS the witness that Busy is reachable"
+    atoms: ["sw == 4 (switch at label Busy, shadow variable)"]
+    expected_evidence: "lasso / finite witness"
+    sanity_companion: "self"
+  - id: P2
+    wording: "«Телефон не может зависнуть в состоянии Busy» — the switch always leaves Busy again"
+    class: liveness
+    logic: LTL
+    extension: untimed
+    formula: "[] ((sw == BUSY) -> <> (sw != BUSY))"
+    atoms: ["sw == 4", "sw != 4"]
+    expected_evidence: "lasso if violated"
+    sanity_companion: "P1"
+  - id: P3
+    wording: "stronger reading: the call always ends and the switch keeps taking new calls"
+    class: liveness
+    logic: LTL
+    extension: untimed
+    formula: "[] <> (sw == IDLE)"
+    atoms: ["sw == 0"]
+    expected_evidence: "lasso if violated"
+    sanity_companion: "P1"
+  - id: P4
+    wording: "sanity: does the subscriber reach Busy (off-hook) at all?"
+    class: reachability
+    logic: LTL (asked backwards)
+    extension: untimed
+    formula: "[] (sub_busy == 0)"
+    atoms: ["sub_busy == 0"]
+    expected_evidence: "lasso / finite witness"
+    sanity_companion: "self"
+  - id: P5
+    wording: "second reading: the handset does not stay off-hook (label Busy) forever"
+    class: liveness
+    logic: LTL
+    extension: untimed
+    formula: "[] ((sub_busy == 1) -> <> (sub_busy == 0))"
+    atoms: ["sub_busy == 1", "sub_busy == 0"]
+    expected_evidence: "lasso if violated"
+    sanity_companion: "P4"
+  - id: P6
+    wording: "the same question without any formula: no infinite run in which the switch never returns to Idle"
+    class: liveness
+    logic: progress
+    extension: untimed
+    formula: "engine property kind `progress` (non-progress cycle search, SPIN pan -l), progress label on the switch's Idle"
+    atoms: ["the progress label itself"]
+    expected_evidence: "lasso if violated"
+    sanity_companion: "P1"
+  - id: P7
+    wording: "the same, with the progress label on the subscriber's Idle"
+    class: liveness
+    logic: progress
+    extension: untimed
+    formula: "engine property kind `progress`, progress label on the subscriber's Idle"
+    atoms: ["the progress label itself"]
+    expected_evidence: "lasso if violated"
+    sanity_companion: "P4"
+
+assumptions:
+  scheduler: "ASSUMPTION: arbitrary interleaving, no fairness assumed (fairness none) for the primary runs; every run was repeated with fairness weak"
+  delivery: "rendezvous — no loss, no duplication, no reordering, no buffering. This is the corpus model's own choice."
+  failures: "none modelled"
+  environment_inputs: "the subscriber's own nondeterministic choice (digits / onhook) is the only input; there is no called party"
+  bounds:
+    - "channel tpc capacity 0 (rendezvous) — from the model"
+    - "exactly 2 processes, fixed — from the model"
+    - "no data variables in the corpus model; the two variables of the rewrite are bounded (byte 0..4, bit)"
+
+fairness:
+  required: "none"
+  justification: "not needed: every liveness property already came back `verified` with fairness `none`. The runs with fairness `weak` were made only to show that the result does not depend on the setting. Strong fairness is not supported by the engine (FR-008) and was not needed, because no counterexample had to be excluded."
+  confirmed_by_user: false
+
+backend:
+  engine: mcd                  # CLI (the plugin's MCP server is not registered in this session)
+  search_mode: dfs             # one BFS cross-check on P1
+  reductions: none             # unreduced search
+
+budget:
+  time: "60000 ms (default)"
+  states: "1000000 (default); one deliberate pilot run at 5 states"
+  depth: "1000000 (default)"
+  memory: "1024 MiB (default)"
+  repeats: 1
+
+evidence:
+  expected: exhaustive
+  goal: "exhaustive result (the state space is tiny: 9 states for the corpus model)"
+
+artefacts:
+  may_store_models_and_traces: true   # ASSUMPTION: the model is a published textbook example, no business data
+  contains_secrets_or_personal_data: "no"

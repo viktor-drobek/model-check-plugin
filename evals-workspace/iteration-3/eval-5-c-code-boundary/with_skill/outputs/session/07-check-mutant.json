@@ -1,0 +1,120 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0-g0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "promela",
+      "path": "model/simple1-mutant-assert5.pml",
+      "sha256": "9e955f0f4e6363abe5bab63e279b99ec9b1dcc5aa041a85cac5aaeaf01cbbc61"
+    }
+  ],
+  "model": {
+    "name": "simple1-mutant-assert5",
+    "state_bytes": 6,
+    "processes": 1,
+    "variables": 1
+  },
+  "search": {
+    "mode": "bfs",
+    "budget": {
+      "states": 1000000,
+      "depth": 1000000,
+      "time_ms": 60000,
+      "mem_bytes": 1073741824
+    },
+    "stop": "complete",
+    "complete": true
+  },
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 8,
+        "transitions": 7,
+        "depth": 4,
+        "time_ms": 0,
+        "memory_bytes_est": 24960
+      },
+      "complete": true
+    },
+    {
+      "id": "assert",
+      "kind": "assert",
+      "text": "no assert statement fails (SPIN: assertion violations)",
+      "status": "violated",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 8,
+        "transitions": 7,
+        "depth": 4,
+        "time_ms": 0,
+        "memory_bytes_est": 24960
+      },
+      "complete": true,
+      "counterexample": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "simple:0",
+            "command": "x = 2",
+            "changes": [
+              {
+                "var": "x",
+                "before": 0,
+                "after": 2
+              }
+            ],
+            "origin": {
+              "file": "model/simple1-mutant-assert5.pml",
+              "line": 22,
+              "name": "x = 2"
+            }
+          },
+          {
+            "index": 2,
+            "process": "simple:0",
+            "command": "x = x * 3",
+            "changes": [
+              {
+                "var": "x",
+                "before": 2,
+                "after": 6
+              }
+            ],
+            "origin": {
+              "file": "model/simple1-mutant-assert5.pml",
+              "line": 25,
+              "name": "x = x * 3"
+            }
+          },
+          {
+            "index": 3,
+            "process": "simple:0",
+            "command": "assert(x == 5)",
+            "origin": {
+              "file": "model/simple1-mutant-assert5.pml",
+              "line": 25,
+              "name": "assert(x == 5)"
+            }
+          }
+        ],
+        "final_state": [
+          {
+            "var": "x",
+            "value": 6
+          }
+        ],
+        "summary": "x = 2, x = x * 3, assert(x == 5)"
+      },
+      "reason": "assert(x == 5) fails in the last step of the counterexample"
+    }
+  ]
+}

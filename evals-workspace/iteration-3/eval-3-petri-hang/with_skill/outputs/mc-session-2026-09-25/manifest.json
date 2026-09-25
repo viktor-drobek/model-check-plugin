@@ -1,0 +1,143 @@
+{
+  "note": "Assembled BY HAND from the CLI reports: the plugin's MCP server is not registered in this session, so mc_manifest was not available (engine-tools.md §4, CLI stand-ins). Versions, input hashes and budgets are copied from the reports; command lines and wall-clock time are recorded here by the author of the report; seeds have no counterpart (no mc_simulate on the CLI).",
+  "session_id": "mc-session-2026-09-25 (hand-made session directory, engine-tools.md §9)",
+  "created": "2026-09-25T19:21Z (UTC)",
+  "host": "linux/aarch64",
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0-g0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1",
+    "binary": "/tmp/mcd (pre-built for this session; not rebuilt)",
+    "version_string": "mcd 0.1.0-g0 (ir mcd-ir/1, report mcd-report/1)",
+    "note": "the version string says g0, but this build carries the G4 flags --ltl, --progress, --fairness and --unlimited; the LTL runs below were executed by it"
+  },
+  "server": null,
+  "inputs": [
+    {
+      "kind": "petri",
+      "source": "petrinet.json",
+      "sha256": "71124a8d22ec43a8e0ff1e1cc444296afb99145db764a0c5386db501de3ddf51",
+      "path": "mc-session-2026-09-25/petrinet.json"
+    },
+    {
+      "kind": "ir",
+      "source": "ir.json (mcd parse --petri petrinet.json)",
+      "sha256": "2bb1d3ab8b846863fa069e677927c312cef5c644be90c8eeb2e38098c3ef4b44",
+      "path": "mc-session-2026-09-25/ir.json"
+    },
+    {
+      "kind": "ir",
+      "source": "ir-props.json (ir.json + seven authored reach properties)",
+      "sha256": "0934c7f4b6a45723b49511e991f1b3f8a9ee5c2771fdd3017d9597ad33d64dc4",
+      "path": "mc-session-2026-09-25/ir-props.json"
+    }
+  ],
+  "calls": [
+    {
+      "n": 1,
+      "tool": "mcd parse (mc_parse)",
+      "command": "/tmp/mcd parse --petri petrinet.json",
+      "outcome": "ok",
+      "exit_code": 0,
+      "artifacts": ["ir.json"],
+      "warnings": "none (stderr empty; the report carries no `warnings` entries)"
+    },
+    {
+      "n": 2,
+      "tool": "mcd check (mc_estimate stand-in: pilot budget)",
+      "command": "/tmp/mcd check --no-timing --petri petrinet.json --budget-states 50",
+      "params": {"search": "dfs", "fairness": "none", "budget_applied": {"states": 50, "depth": 1000000, "time_ms": 60000, "mem_bytes": 1073741824}},
+      "outcome": "ok",
+      "exit_code": 0,
+      "artifacts": ["check-1-pilot.json"]
+    },
+    {
+      "n": 3,
+      "tool": "mcd check (target budget, DFS)",
+      "command": "/tmp/mcd check --no-timing --petri petrinet.json",
+      "params": {"search": "dfs", "fairness": "none", "budget_applied": {"states": 1000000, "depth": 1000000, "time_ms": 60000, "mem_bytes": 1073741824}},
+      "outcome": "ok",
+      "exit_code": 0,
+      "artifacts": ["check-2-dfs.json"]
+    },
+    {
+      "n": 4,
+      "tool": "mcd check (BFS, shortest counterexample)",
+      "command": "/tmp/mcd check --no-timing --bfs --petri petrinet.json",
+      "params": {"search": "bfs", "fairness": "none"},
+      "outcome": "ok",
+      "exit_code": 0,
+      "artifacts": ["check-3-bfs.json"]
+    },
+    {
+      "n": 5,
+      "tool": "mcd check (--sweep, whole graph as pan -c0)",
+      "command": "/tmp/mcd check --no-timing --sweep --petri petrinet.json",
+      "params": {"search": "dfs", "fairness": "none"},
+      "outcome": "ok",
+      "exit_code": 0,
+      "artifacts": ["check-4-sweep.json"]
+    },
+    {
+      "n": 6,
+      "tool": "mcd check (authored reach properties)",
+      "command": "/tmp/mcd check --no-timing --ir ir-props.json",
+      "params": {"search": "dfs", "fairness": "none"},
+      "outcome": "ok",
+      "exit_code": 0,
+      "artifacts": ["check-5-reach.json"]
+    },
+    {
+      "n": 7,
+      "tool": "mcd check (LTL: is the hang inevitable?)",
+      "command": "/tmp/mcd check --no-timing --petri petrinet.json --ltl '<> (p2 > 0 && p5 > 0)'",
+      "params": {"search": "dfs", "fairness": "none"},
+      "outcome": "ok",
+      "exit_code": 0,
+      "artifacts": ["check-6-ltl-inevitable.json"]
+    },
+    {
+      "n": 8,
+      "tool": "mcd check (LTL: the hang as a safety formula)",
+      "command": "/tmp/mcd check --no-timing --petri petrinet.json --ltl '[] !(p2 > 0 && p5 > 0)'",
+      "params": {"search": "dfs", "fairness": "none"},
+      "outcome": "ok",
+      "exit_code": 0,
+      "artifacts": ["check-7-ltl-never.json"]
+    },
+    {
+      "n": 9,
+      "tool": "mcd check (fairness sensitivity run)",
+      "command": "/tmp/mcd check --no-timing --petri petrinet.json --ltl '<> (p2 > 0 && p5 > 0)' --fairness weak",
+      "params": {"search": "dfs", "fairness": "weak"},
+      "outcome": "ok",
+      "exit_code": 0,
+      "artifacts": ["check-8-ltl-inevitable-weakfair.json"]
+    },
+    {
+      "n": 10,
+      "tool": "mcd check (CTL boundary probe)",
+      "command": "/tmp/mcd check --no-timing --petri petrinet.json --ltl 'AG EF (p1 > 0)'",
+      "outcome": "error",
+      "exit_code": 2,
+      "error": "rejected input, kind `ltl`: \"property ltl1: formula: atom AG: undeclared variable \\\"AG\\\" (at offset 0)\" — the CLI has no CTL path; a `ctl` property is `not-executed` until G5",
+      "artifacts": ["ctl-attempt-rejection.json"]
+    },
+    {
+      "n": 11,
+      "tool": "wall-clock measurement (no mc_manifest available)",
+      "command": "/usr/bin/time -f '%e s, %M KB max RSS' /tmp/mcd check --petri petrinet.json",
+      "outcome": "ok",
+      "result": "0.01 s, 19092 KB max RSS; the report's per-property time_ms is 0",
+      "artifacts": ["timing.txt"]
+    }
+  ],
+  "not_available_on_this_layer": [
+    "mc_simulate — no CLI equivalent; the random sanity walk of SKILL.md step 5 was skipped and this is said in the report",
+    "mc_lint_property — no CLI equivalent; the properties were classified by hand against references/properties-ltl-ctl.md",
+    "mc_estimate — replaced by the pilot run with --budget-states 50 (call 2)",
+    "mc_explain — replaced by reading counterexample.steps / .loop / .final_state in the reports; the loop_note sentence is written by hand",
+    "mc_manifest — this file"
+  ]
+}

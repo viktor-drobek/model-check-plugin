@@ -1,0 +1,303 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0-g0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "promela",
+      "path": "Promela - examples/CH14/version1",
+      "sha256": "acdfcacad083c29ff47cba18de2fb84ec784e9e064e0b64c435497e07121ec3b"
+    }
+  ],
+  "model": {
+    "name": "version1",
+    "state_bytes": 4,
+    "processes": 2,
+    "variables": 0
+  },
+  "search": {
+    "mode": "dfs",
+    "budget": {
+      "states": 1000000,
+      "depth": 1000000,
+      "time_ms": 60000,
+      "mem_bytes": 1073741824
+    },
+    "stop": "complete",
+    "complete": true
+  },
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 9,
+        "transitions": 12,
+        "depth": 7,
+        "memory_bytes_est": 25152
+      },
+      "complete": true
+    },
+    {
+      "id": "progress",
+      "kind": "progress",
+      "text": "no non-progress cycle: every infinite run visits a progress label infinitely often (SPIN: pan -l)",
+      "status": "violated",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 9,
+        "transitions": 10,
+        "depth": 8,
+        "memory_bytes_est": 25746
+      },
+      "complete": false,
+      "counterexample": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "np_",
+            "command": "(np_) -> goto np_1",
+            "location": "np_1",
+            "origin": {
+              "name": "np_: no process at a progress label"
+            }
+          },
+          {
+            "index": 2,
+            "process": "subscriber:0",
+            "command": "tpc!offhook",
+            "location": "Busy",
+            "origin": {
+              "file": "Promela - examples/CH14/version1",
+              "line": 9,
+              "name": "tpc!offhook"
+            },
+            "partner": {
+              "process": "switch:1",
+              "command": "tpc?offhook",
+              "origin": {
+                "file": "Promela - examples/CH14/version1",
+                "line": 21,
+                "name": "tpc?offhook"
+              }
+            }
+          },
+          {
+            "index": 3,
+            "process": "np_",
+            "command": "(np_) -> goto np_1",
+            "location": "np_1",
+            "origin": {
+              "name": "np_: no process at a progress label"
+            }
+          },
+          {
+            "index": 4,
+            "process": "switch:1",
+            "command": "printf(\"MSC: dialtone\\n\")",
+            "location": "Dial",
+            "origin": {
+              "file": "Promela - examples/CH14/version1",
+              "line": 21,
+              "name": "printf(\"MSC: dialtone\\n\")"
+            }
+          },
+          {
+            "index": 5,
+            "process": "np_",
+            "command": "(np_) -> goto np_1",
+            "location": "np_1",
+            "origin": {
+              "name": "np_: no process at a progress label"
+            }
+          },
+          {
+            "index": 6,
+            "process": "subscriber:0",
+            "command": "tpc!digits",
+            "location": "Busy",
+            "origin": {
+              "file": "Promela - examples/CH14/version1",
+              "line": 12,
+              "name": "tpc!digits"
+            },
+            "partner": {
+              "process": "switch:1",
+              "command": "tpc?digits",
+              "origin": {
+                "file": "Promela - examples/CH14/version1",
+                "line": 25,
+                "name": "tpc?digits"
+              }
+            }
+          },
+          {
+            "index": 7,
+            "process": "np_",
+            "command": "(np_) -> goto np_1",
+            "location": "np_1",
+            "origin": {
+              "name": "np_: no process at a progress label"
+            }
+          },
+          {
+            "index": 8,
+            "process": "switch:1",
+            "command": "printf(\"MSC: notone\\n\")",
+            "location": "Wait",
+            "origin": {
+              "file": "Promela - examples/CH14/version1",
+              "line": 25,
+              "name": "printf(\"MSC: notone\\n\")"
+            }
+          },
+          {
+            "index": 9,
+            "process": "np_",
+            "command": "(np_) -> goto np_1",
+            "location": "np_1",
+            "origin": {
+              "name": "np_: no process at a progress label"
+            }
+          },
+          {
+            "index": 10,
+            "process": "switch:1",
+            "command": "printf(\"MSC: ringtone\\n\")",
+            "location": "Connect",
+            "origin": {
+              "file": "Promela - examples/CH14/version1",
+              "line": 30,
+              "name": "printf(\"MSC: ringtone\\n\")"
+            }
+          },
+          {
+            "index": 11,
+            "process": "np_",
+            "command": "(np_) -> goto np_1",
+            "location": "np_1",
+            "origin": {
+              "name": "np_: no process at a progress label"
+            }
+          },
+          {
+            "index": 12,
+            "process": "switch:1",
+            "command": "printf(\"MSC: busytone\\n\")",
+            "location": "Busy",
+            "origin": {
+              "file": "Promela - examples/CH14/version1",
+              "line": 35,
+              "name": "printf(\"MSC: busytone\\n\")"
+            }
+          },
+          {
+            "index": 13,
+            "process": "np_",
+            "command": "(np_) -> goto np_1",
+            "location": "np_1",
+            "origin": {
+              "name": "np_: no process at a progress label"
+            }
+          },
+          {
+            "index": 14,
+            "process": "subscriber:0",
+            "command": "tpc!onhook",
+            "location": "Idle",
+            "origin": {
+              "file": "Promela - examples/CH14/version1",
+              "line": 13,
+              "name": "tpc!onhook"
+            },
+            "partner": {
+              "process": "switch:1",
+              "command": "tpc?onhook",
+              "origin": {
+                "file": "Promela - examples/CH14/version1",
+                "line": 39,
+                "name": "tpc?onhook"
+              }
+            }
+          },
+          {
+            "index": 15,
+            "process": "np_",
+            "command": "(np_) -> goto np_1",
+            "location": "np_1",
+            "origin": {
+              "name": "np_: no process at a progress label"
+            }
+          },
+          {
+            "index": 16,
+            "process": "switch:1",
+            "command": "printf(\"MSC: notone\\n\")",
+            "location": "Idle",
+            "origin": {
+              "file": "Promela - examples/CH14/version1",
+              "line": 39,
+              "name": "printf(\"MSC: notone\\n\")"
+            }
+          },
+          {
+            "index": 17,
+            "process": "np_",
+            "command": "(np_) -> goto np_1",
+            "location": "np_1",
+            "origin": {
+              "name": "np_: no process at a progress label"
+            }
+          },
+          {
+            "index": 18,
+            "process": "subscriber:0",
+            "command": "tpc!offhook",
+            "location": "Busy",
+            "origin": {
+              "file": "Promela - examples/CH14/version1",
+              "line": 9,
+              "name": "tpc!offhook"
+            },
+            "partner": {
+              "process": "switch:1",
+              "command": "tpc?offhook",
+              "origin": {
+                "file": "Promela - examples/CH14/version1",
+                "line": 21,
+                "name": "tpc?offhook"
+              }
+            }
+          }
+        ],
+        "final_state": null,
+        "final_channels": [
+          {
+            "chan": "tpc",
+            "messages": []
+          }
+        ],
+        "summary": "(np_) -> goto np_1, tpc!offhook; loop: (np_) -> goto np_1, printf(\"MSC: dialtone\\n\"), (np_) -> goto np_1, tpc!digits, (np_) -> goto np_1, printf(\"MSC: notone\\n\"), (np_) -> goto np_1, printf(\"MSC: ringtone\\n\"), (np_) -> goto np_1, printf(\"MSC: busytone\\n\"), (np_) -> goto np_1, tpc!onhook, (np_) -> goto np_1, printf(\"MSC: notone\\n\"), (np_) -> goto np_1, tpc!offhook",
+        "loop": {
+          "start": 3,
+          "steps": 16
+        }
+      },
+      "reason": "non-progress cycle: the loop of the counterexample visits no progress label, so the model can run forever without progress (SPIN pan -l: non-progress cycle)",
+      "temporal": {
+        "source": "np",
+        "fairness": "none",
+        "claim": "np_"
+      }
+    }
+  ],
+  "warnings": [
+    "printf: 8 statement(s) kept as no-op steps so that state counts match SPIN; their output is not produced"
+  ]
+}

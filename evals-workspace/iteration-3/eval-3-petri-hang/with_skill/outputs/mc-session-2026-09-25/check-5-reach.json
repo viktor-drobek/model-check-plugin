@@ -1,0 +1,614 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0-g0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "ir",
+      "path": "ir-props.json",
+      "sha256": "0934c7f4b6a45723b49511e991f1b3f8a9ee5c2771fdd3017d9597ad33d64dc4"
+    }
+  ],
+  "model": {
+    "name": "user-net",
+    "state_bytes": 8,
+    "processes": 1,
+    "variables": 6
+  },
+  "search": {
+    "mode": "dfs",
+    "budget": {
+      "states": 1000000,
+      "depth": 1000000,
+      "time_ms": 60000,
+      "mem_bytes": 1073741824
+    },
+    "stop": "complete",
+    "complete": true
+  },
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "hang (Holzmann §8.10): a reachable marking in which no transition is enabled",
+      "status": "violated",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 6,
+        "transitions": 8,
+        "depth": 2,
+        "memory_bytes_est": 24896
+      },
+      "complete": true,
+      "counterexample": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "init",
+            "command": "t1",
+            "changes": [
+              {
+                "var": "p1",
+                "before": 1,
+                "after": 0
+              },
+              {
+                "var": "p2",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "location": "do",
+            "origin": {
+              "file": "petrinet.json",
+              "name": "t1"
+            }
+          },
+          {
+            "index": 2,
+            "process": "init",
+            "command": "t4",
+            "changes": [
+              {
+                "var": "p4",
+                "before": 1,
+                "after": 0
+              },
+              {
+                "var": "p5",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "location": "do",
+            "origin": {
+              "file": "petrinet.json",
+              "name": "t4"
+            }
+          }
+        ],
+        "final_state": [
+          {
+            "var": "p1",
+            "value": 0
+          },
+          {
+            "var": "p2",
+            "value": 1
+          },
+          {
+            "var": "p3",
+            "value": 0
+          },
+          {
+            "var": "p4",
+            "value": 0
+          },
+          {
+            "var": "p5",
+            "value": 1
+          },
+          {
+            "var": "p6",
+            "value": 0
+          }
+        ],
+        "summary": "t1, t4"
+      },
+      "reason": "deadlock: no transition is enabled and not every process is terminated (at an end label or without outgoing edges)"
+    },
+    {
+      "id": "safe",
+      "kind": "invariant",
+      "text": "safe (Holzmann §8.10): every place holds at most one token in every reachable marking",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 6,
+        "transitions": 8,
+        "depth": 2,
+        "memory_bytes_est": 24896
+      },
+      "complete": true
+    },
+    {
+      "id": "reach_m0_initial",
+      "kind": "reach",
+      "text": "reachability of marking p1=1 p2=0 p3=0 p4=1 p5=0 p6=0",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 6,
+        "transitions": 8,
+        "depth": 2,
+        "memory_bytes_est": 24896
+      },
+      "complete": true,
+      "witness": {
+        "steps": null,
+        "final_state": [
+          {
+            "var": "p1",
+            "value": 1
+          },
+          {
+            "var": "p2",
+            "value": 0
+          },
+          {
+            "var": "p3",
+            "value": 0
+          },
+          {
+            "var": "p4",
+            "value": 1
+          },
+          {
+            "var": "p5",
+            "value": 0
+          },
+          {
+            "var": "p6",
+            "value": 0
+          }
+        ],
+        "summary": ""
+      },
+      "reason": "a reachable state satisfies (((((p1 == 1) && (p2 == 0)) && (p3 == 0)) && (p4 == 1)) && (p5 == 0)) && (p6 == 0); see the witness"
+    },
+    {
+      "id": "reach_m1_after_t1",
+      "kind": "reach",
+      "text": "reachability of marking p1=0 p2=1 p3=0 p4=1 p5=0 p6=0",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 6,
+        "transitions": 8,
+        "depth": 2,
+        "memory_bytes_est": 24896
+      },
+      "complete": true,
+      "witness": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "init",
+            "command": "t1",
+            "changes": [
+              {
+                "var": "p1",
+                "before": 1,
+                "after": 0
+              },
+              {
+                "var": "p2",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "location": "do",
+            "origin": {
+              "file": "petrinet.json",
+              "name": "t1"
+            }
+          }
+        ],
+        "final_state": [
+          {
+            "var": "p1",
+            "value": 0
+          },
+          {
+            "var": "p2",
+            "value": 1
+          },
+          {
+            "var": "p3",
+            "value": 0
+          },
+          {
+            "var": "p4",
+            "value": 1
+          },
+          {
+            "var": "p5",
+            "value": 0
+          },
+          {
+            "var": "p6",
+            "value": 0
+          }
+        ],
+        "summary": "t1"
+      },
+      "reason": "a reachable state satisfies (((((p1 == 0) && (p2 == 1)) && (p3 == 0)) && (p4 == 1)) && (p5 == 0)) && (p6 == 0); see the witness"
+    },
+    {
+      "id": "reach_m2_after_t1t2",
+      "kind": "reach",
+      "text": "reachability of marking p1=0 p2=0 p3=1 p4=0 p5=0 p6=0",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 6,
+        "transitions": 8,
+        "depth": 2,
+        "memory_bytes_est": 24896
+      },
+      "complete": true,
+      "witness": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "init",
+            "command": "t1",
+            "changes": [
+              {
+                "var": "p1",
+                "before": 1,
+                "after": 0
+              },
+              {
+                "var": "p2",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "location": "do",
+            "origin": {
+              "file": "petrinet.json",
+              "name": "t1"
+            }
+          },
+          {
+            "index": 2,
+            "process": "init",
+            "command": "t2",
+            "changes": [
+              {
+                "var": "p2",
+                "before": 1,
+                "after": 0
+              },
+              {
+                "var": "p3",
+                "before": 0,
+                "after": 1
+              },
+              {
+                "var": "p4",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "location": "do",
+            "origin": {
+              "file": "petrinet.json",
+              "name": "t2"
+            }
+          }
+        ],
+        "final_state": [
+          {
+            "var": "p1",
+            "value": 0
+          },
+          {
+            "var": "p2",
+            "value": 0
+          },
+          {
+            "var": "p3",
+            "value": 1
+          },
+          {
+            "var": "p4",
+            "value": 0
+          },
+          {
+            "var": "p5",
+            "value": 0
+          },
+          {
+            "var": "p6",
+            "value": 0
+          }
+        ],
+        "summary": "t1, t2"
+      },
+      "reason": "a reachable state satisfies (((((p1 == 0) && (p2 == 0)) && (p3 == 1)) && (p4 == 0)) && (p5 == 0)) && (p6 == 0); see the witness"
+    },
+    {
+      "id": "reach_m3_hang",
+      "kind": "reach",
+      "text": "reachability of marking p1=0 p2=1 p3=0 p4=0 p5=1 p6=0",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 6,
+        "transitions": 8,
+        "depth": 2,
+        "memory_bytes_est": 24896
+      },
+      "complete": true,
+      "witness": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "init",
+            "command": "t1",
+            "changes": [
+              {
+                "var": "p1",
+                "before": 1,
+                "after": 0
+              },
+              {
+                "var": "p2",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "location": "do",
+            "origin": {
+              "file": "petrinet.json",
+              "name": "t1"
+            }
+          },
+          {
+            "index": 2,
+            "process": "init",
+            "command": "t4",
+            "changes": [
+              {
+                "var": "p4",
+                "before": 1,
+                "after": 0
+              },
+              {
+                "var": "p5",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "location": "do",
+            "origin": {
+              "file": "petrinet.json",
+              "name": "t4"
+            }
+          }
+        ],
+        "final_state": [
+          {
+            "var": "p1",
+            "value": 0
+          },
+          {
+            "var": "p2",
+            "value": 1
+          },
+          {
+            "var": "p3",
+            "value": 0
+          },
+          {
+            "var": "p4",
+            "value": 0
+          },
+          {
+            "var": "p5",
+            "value": 1
+          },
+          {
+            "var": "p6",
+            "value": 0
+          }
+        ],
+        "summary": "t1, t4"
+      },
+      "reason": "a reachable state satisfies (((((p1 == 0) && (p2 == 1)) && (p3 == 0)) && (p4 == 0)) && (p5 == 1)) && (p6 == 0); see the witness"
+    },
+    {
+      "id": "reach_m4_after_t4",
+      "kind": "reach",
+      "text": "reachability of marking p1=1 p2=0 p3=0 p4=0 p5=1 p6=0",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 6,
+        "transitions": 8,
+        "depth": 2,
+        "memory_bytes_est": 24896
+      },
+      "complete": true,
+      "witness": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "init",
+            "command": "t4",
+            "changes": [
+              {
+                "var": "p4",
+                "before": 1,
+                "after": 0
+              },
+              {
+                "var": "p5",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "location": "do",
+            "origin": {
+              "file": "petrinet.json",
+              "name": "t4"
+            }
+          }
+        ],
+        "final_state": [
+          {
+            "var": "p1",
+            "value": 1
+          },
+          {
+            "var": "p2",
+            "value": 0
+          },
+          {
+            "var": "p3",
+            "value": 0
+          },
+          {
+            "var": "p4",
+            "value": 0
+          },
+          {
+            "var": "p5",
+            "value": 1
+          },
+          {
+            "var": "p6",
+            "value": 0
+          }
+        ],
+        "summary": "t4"
+      },
+      "reason": "a reachable state satisfies (((((p1 == 1) && (p2 == 0)) && (p3 == 0)) && (p4 == 0)) && (p5 == 1)) && (p6 == 0); see the witness"
+    },
+    {
+      "id": "reach_m5_after_t4t5",
+      "kind": "reach",
+      "text": "reachability of marking p1=0 p2=0 p3=0 p4=0 p5=0 p6=1",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 6,
+        "transitions": 8,
+        "depth": 2,
+        "memory_bytes_est": 24896
+      },
+      "complete": true,
+      "witness": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "init",
+            "command": "t4",
+            "changes": [
+              {
+                "var": "p4",
+                "before": 1,
+                "after": 0
+              },
+              {
+                "var": "p5",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "location": "do",
+            "origin": {
+              "file": "petrinet.json",
+              "name": "t4"
+            }
+          },
+          {
+            "index": 2,
+            "process": "init",
+            "command": "t5",
+            "changes": [
+              {
+                "var": "p1",
+                "before": 1,
+                "after": 0
+              },
+              {
+                "var": "p5",
+                "before": 1,
+                "after": 0
+              },
+              {
+                "var": "p6",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "location": "do",
+            "origin": {
+              "file": "petrinet.json",
+              "name": "t5"
+            }
+          }
+        ],
+        "final_state": [
+          {
+            "var": "p1",
+            "value": 0
+          },
+          {
+            "var": "p2",
+            "value": 0
+          },
+          {
+            "var": "p3",
+            "value": 0
+          },
+          {
+            "var": "p4",
+            "value": 0
+          },
+          {
+            "var": "p5",
+            "value": 0
+          },
+          {
+            "var": "p6",
+            "value": 1
+          }
+        ],
+        "summary": "t4, t5"
+      },
+      "reason": "a reachable state satisfies (((((p1 == 0) && (p2 == 0)) && (p3 == 0)) && (p4 == 0)) && (p5 == 0)) && (p6 == 1); see the witness"
+    },
+    {
+      "id": "reach_other_dead",
+      "kind": "reach",
+      "text": "reachability of a dead marking (no transition enabled) different from p2=1,p5=1",
+      "status": "violated",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 6,
+        "transitions": 8,
+        "depth": 2,
+        "memory_bytes_est": 24896
+      },
+      "complete": true,
+      "reason": "no reachable state satisfies ((((p1 == 0) && (p3 == 0)) && (p4 == 0)) && (p6 == 0)) && (!((p2 == 1) && (p5 == 1))) (complete search)"
+    }
+  ]
+}

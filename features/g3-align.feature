@@ -35,9 +35,11 @@ Feature: G3 skill package — alignment with the G0 engine
       | --bfs              |
       | --no-timing        |
     And "references/engine-tools.md" describes exit codes 0, 1 and 2 each with a meaning
-    And "references/engine-tools.md" says that the flag "--promela" arrives with "G1"
-    And "references/engine-tools.md" says that the MCP layer arrives with "G2"
-    And "references/engine-tools.md" says that until then the CLI is the only path
+    # Amended in G3 evals stage 3: G1 and G2 are built, so the reference states
+    # facts, not arrivals (steps/g3-evals-logika.md, finding 10).
+    And "references/engine-tools.md" says that the flag "--promela" is built in "G1"
+    And "references/engine-tools.md" says that the MCP layer is built in "G2"
+    And "references/engine-tools.md" says that the CLI and the MCP layer reach the same engine
 
   Scenario: The engine-tools reference uses the report's real field names
     Then "references/engine-tools.md" mentions each of:

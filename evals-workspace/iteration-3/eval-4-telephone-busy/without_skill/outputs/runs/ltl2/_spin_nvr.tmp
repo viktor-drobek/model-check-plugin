@@ -1,0 +1,31 @@
+never p4_busy_implies_sub_busy {    /* !([] ((! ((switch[1]@Busy))) || ((subscriber[0]@Busy)))) */
+T0_init:
+	do
+	:: atomic { (! (((! ((switch[1]@Busy))) || ((subscriber[0]@Busy))))) -> assert(!(! (((! ((switch[1]@Busy))) || ((subscriber[0]@Busy)))))) }
+	:: (1) -> goto T0_init
+	od;
+accept_all:
+	skip
+}
+never p5_busy_leads_to_free {    /* !([] ((! ((switch[1]@Busy))) || (<> (! ((switch[1]@Busy)))))) */
+T0_init:
+	do
+	:: (! ((! ((switch[1]@Busy))))) -> goto accept_S4
+	:: (1) -> goto T0_init
+	od;
+accept_S4:
+	do
+	:: (! ((! ((switch[1]@Busy))))) -> goto accept_S4
+	od;
+}
+never p6_idle_inf_often {    /* !([] (<> ((switch[1]@Idle)))) */
+T0_init:
+	do
+	:: (! (((switch[1]@Idle)))) -> goto accept_S4
+	:: (1) -> goto T0_init
+	od;
+accept_S4:
+	do
+	:: (! (((switch[1]@Idle)))) -> goto accept_S4
+	od;
+}

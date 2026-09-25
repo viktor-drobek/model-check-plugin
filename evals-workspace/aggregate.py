@@ -5,7 +5,8 @@ Layout read (one run per configuration, the layout grader.py and the
 Cucumber steps use):
 
   <iteration>/
-    eval-<id>-<name>/
+    eval-<id>-<name>/          (or the eval's own `dir`, e.g. eval-2b-…, whose
+                                id is then read from eval_metadata.json)
       eval_metadata.json          {"eval_id", "eval_name", "prompt", ...}
       timing.json                 {"with_skill": {"tokens", "duration_s", "tool_uses"},
                                    "without_skill": {...}}
@@ -60,16 +61,36 @@ def load_json(path):
         return json.load(fh)
 
 
+def dir_eval_id(path):
+    """The eval id of one eval directory, or None when it has none.
+
+    The directory is normally named eval-<id>-<name>, but an eval may carry a
+    `dir` of its own (E2b is `eval-2b-starvation-loop`, a variant of eval 2).
+    Then the id comes from eval_metadata.json, which every graded run has; a
+    directory with neither is not an eval directory and is skipped.
+    """
+    name = os.path.basename(path.rstrip(os.sep))
+    try:
+        return int(name.split("-")[1])
+    except (IndexError, ValueError):
+        pass
+    meta_path = os.path.join(path, "eval_metadata.json")
+    if os.path.exists(meta_path):
+        eval_id = load_json(meta_path).get("eval_id")
+        if isinstance(eval_id, int):
+            return eval_id
+    return None
+
+
 def eval_dirs(iteration):
-    """eval-* directories sorted by numeric id."""
+    """eval-* directories sorted by eval id."""
     out = []
-    for name in os.listdir(iteration):
+    for name in sorted(os.listdir(iteration)):
         path = os.path.join(iteration, name)
         if not (name.startswith("eval-") and os.path.isdir(path)):
             continue
-        try:
-            eval_id = int(name.split("-")[1])
-        except (IndexError, ValueError):
+        eval_id = dir_eval_id(path)
+        if eval_id is None:
             continue
         out.append((eval_id, path))
     return [p for _, p in sorted(out)]
@@ -93,7 +114,7 @@ def load_run(eval_dir, configuration):
     passed = sum(1 for e in expectations if e["passed"])
     eval_id = meta.get("eval_id", grading.get("eval_id"))
     if eval_id is None:
-        eval_id = int(os.path.basename(eval_dir).split("-")[1])
+        eval_id = dir_eval_id(eval_dir)
     return {
         "eval_id": eval_id,
         "eval_name": meta.get("eval_name") or grading.get("eval_name") or os.path.basename(eval_dir),

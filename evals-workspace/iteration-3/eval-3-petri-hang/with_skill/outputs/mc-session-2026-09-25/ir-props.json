@@ -1,0 +1,1393 @@
+{
+  "schema": "mcd-ir/1",
+  "name": "user-net",
+  "globals": [
+    {
+      "name": "p1",
+      "type": "byte",
+      "init": [
+        1
+      ],
+      "origin": {
+        "file": "petrinet.json",
+        "name": "p1"
+      }
+    },
+    {
+      "name": "p2",
+      "type": "byte",
+      "origin": {
+        "file": "petrinet.json",
+        "name": "p2"
+      }
+    },
+    {
+      "name": "p3",
+      "type": "byte",
+      "origin": {
+        "file": "petrinet.json",
+        "name": "p3"
+      }
+    },
+    {
+      "name": "p4",
+      "type": "byte",
+      "init": [
+        1
+      ],
+      "origin": {
+        "file": "petrinet.json",
+        "name": "p4"
+      }
+    },
+    {
+      "name": "p5",
+      "type": "byte",
+      "origin": {
+        "file": "petrinet.json",
+        "name": "p5"
+      }
+    },
+    {
+      "name": "p6",
+      "type": "byte",
+      "origin": {
+        "file": "petrinet.json",
+        "name": "p6"
+      }
+    }
+  ],
+  "processes": [
+    {
+      "name": "init",
+      "locations": [
+        {
+          "name": "do"
+        }
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 0,
+          "guard": {
+            "op": "gt",
+            "args": [
+              {
+                "op": "var",
+                "var": "p1"
+              },
+              {
+                "op": "const"
+              }
+            ]
+          },
+          "effect": [
+            {
+              "var": "p1",
+              "value": {
+                "op": "sub",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p1"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            {
+              "var": "p2",
+              "value": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p2"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "t1",
+          "origin": {
+            "file": "petrinet.json",
+            "name": "t1"
+          }
+        },
+        {
+          "from": 0,
+          "to": 0,
+          "guard": {
+            "op": "and",
+            "args": [
+              {
+                "op": "gt",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p2"
+                  },
+                  {
+                    "op": "const"
+                  }
+                ]
+              },
+              {
+                "op": "gt",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p4"
+                  },
+                  {
+                    "op": "const"
+                  }
+                ]
+              }
+            ]
+          },
+          "effect": [
+            {
+              "var": "p2",
+              "value": {
+                "op": "sub",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p2"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            {
+              "var": "p4",
+              "value": {
+                "op": "sub",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p4"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            {
+              "var": "p3",
+              "value": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p3"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "t2",
+          "origin": {
+            "file": "petrinet.json",
+            "name": "t2"
+          }
+        },
+        {
+          "from": 0,
+          "to": 0,
+          "guard": {
+            "op": "gt",
+            "args": [
+              {
+                "op": "var",
+                "var": "p3"
+              },
+              {
+                "op": "const"
+              }
+            ]
+          },
+          "effect": [
+            {
+              "var": "p3",
+              "value": {
+                "op": "sub",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p3"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            {
+              "var": "p1",
+              "value": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p1"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            {
+              "var": "p4",
+              "value": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p4"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "t3",
+          "origin": {
+            "file": "petrinet.json",
+            "name": "t3"
+          }
+        },
+        {
+          "from": 0,
+          "to": 0,
+          "guard": {
+            "op": "gt",
+            "args": [
+              {
+                "op": "var",
+                "var": "p4"
+              },
+              {
+                "op": "const"
+              }
+            ]
+          },
+          "effect": [
+            {
+              "var": "p4",
+              "value": {
+                "op": "sub",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p4"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            {
+              "var": "p5",
+              "value": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p5"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "t4",
+          "origin": {
+            "file": "petrinet.json",
+            "name": "t4"
+          }
+        },
+        {
+          "from": 0,
+          "to": 0,
+          "guard": {
+            "op": "and",
+            "args": [
+              {
+                "op": "gt",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p1"
+                  },
+                  {
+                    "op": "const"
+                  }
+                ]
+              },
+              {
+                "op": "gt",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p5"
+                  },
+                  {
+                    "op": "const"
+                  }
+                ]
+              }
+            ]
+          },
+          "effect": [
+            {
+              "var": "p1",
+              "value": {
+                "op": "sub",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p1"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            {
+              "var": "p5",
+              "value": {
+                "op": "sub",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p5"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            {
+              "var": "p6",
+              "value": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p6"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "t5",
+          "origin": {
+            "file": "petrinet.json",
+            "name": "t5"
+          }
+        },
+        {
+          "from": 0,
+          "to": 0,
+          "guard": {
+            "op": "gt",
+            "args": [
+              {
+                "op": "var",
+                "var": "p6"
+              },
+              {
+                "op": "const"
+              }
+            ]
+          },
+          "effect": [
+            {
+              "var": "p6",
+              "value": {
+                "op": "sub",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p6"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            {
+              "var": "p4",
+              "value": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p4"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            {
+              "var": "p1",
+              "value": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p1"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "t6",
+          "origin": {
+            "file": "petrinet.json",
+            "name": "t6"
+          }
+        }
+      ],
+      "origin": {
+        "file": "petrinet.json",
+        "name": "user-net"
+      }
+    }
+  ],
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "hang (Holzmann §8.10): a reachable marking in which no transition is enabled",
+      "origin": {
+        "file": "petrinet.json",
+        "name": "hang"
+      }
+    },
+    {
+      "id": "safe",
+      "kind": "invariant",
+      "expr": {
+        "op": "and",
+        "args": [
+          {
+            "op": "and",
+            "args": [
+              {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "and",
+                    "args": [
+                      {
+                        "op": "and",
+                        "args": [
+                          {
+                            "op": "le",
+                            "args": [
+                              {
+                                "op": "var",
+                                "var": "p1"
+                              },
+                              {
+                                "op": "const",
+                                "value": 1
+                              }
+                            ]
+                          },
+                          {
+                            "op": "le",
+                            "args": [
+                              {
+                                "op": "var",
+                                "var": "p2"
+                              },
+                              {
+                                "op": "const",
+                                "value": 1
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "op": "le",
+                        "args": [
+                          {
+                            "op": "var",
+                            "var": "p3"
+                          },
+                          {
+                            "op": "const",
+                            "value": 1
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "op": "le",
+                    "args": [
+                      {
+                        "op": "var",
+                        "var": "p4"
+                      },
+                      {
+                        "op": "const",
+                        "value": 1
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "le",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p5"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "op": "le",
+            "args": [
+              {
+                "op": "var",
+                "var": "p6"
+              },
+              {
+                "op": "const",
+                "value": 1
+              }
+            ]
+          }
+        ]
+      },
+      "text": "safe (Holzmann §8.10): every place holds at most one token in every reachable marking",
+      "origin": {
+        "file": "petrinet.json",
+        "name": "safe"
+      }
+    },
+    {
+      "id": "reach_m0_initial",
+      "kind": "reach",
+      "expr": {
+        "op": "and",
+        "args": [
+          {
+            "op": "and",
+            "args": [
+              {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "and",
+                    "args": [
+                      {
+                        "op": "and",
+                        "args": [
+                          {
+                            "op": "eq",
+                            "args": [
+                              {
+                                "op": "var",
+                                "var": "p1"
+                              },
+                              {
+                                "op": "const",
+                                "value": 1
+                              }
+                            ]
+                          },
+                          {
+                            "op": "eq",
+                            "args": [
+                              {
+                                "op": "var",
+                                "var": "p2"
+                              },
+                              {
+                                "op": "const",
+                                "value": 0
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "op": "eq",
+                        "args": [
+                          {
+                            "op": "var",
+                            "var": "p3"
+                          },
+                          {
+                            "op": "const",
+                            "value": 0
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "op": "eq",
+                    "args": [
+                      {
+                        "op": "var",
+                        "var": "p4"
+                      },
+                      {
+                        "op": "const",
+                        "value": 1
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p5"
+                  },
+                  {
+                    "op": "const",
+                    "value": 0
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "op": "eq",
+            "args": [
+              {
+                "op": "var",
+                "var": "p6"
+              },
+              {
+                "op": "const",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "text": "reachability of marking p1=1 p2=0 p3=0 p4=1 p5=0 p6=0"
+    },
+    {
+      "id": "reach_m1_after_t1",
+      "kind": "reach",
+      "expr": {
+        "op": "and",
+        "args": [
+          {
+            "op": "and",
+            "args": [
+              {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "and",
+                    "args": [
+                      {
+                        "op": "and",
+                        "args": [
+                          {
+                            "op": "eq",
+                            "args": [
+                              {
+                                "op": "var",
+                                "var": "p1"
+                              },
+                              {
+                                "op": "const",
+                                "value": 0
+                              }
+                            ]
+                          },
+                          {
+                            "op": "eq",
+                            "args": [
+                              {
+                                "op": "var",
+                                "var": "p2"
+                              },
+                              {
+                                "op": "const",
+                                "value": 1
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "op": "eq",
+                        "args": [
+                          {
+                            "op": "var",
+                            "var": "p3"
+                          },
+                          {
+                            "op": "const",
+                            "value": 0
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "op": "eq",
+                    "args": [
+                      {
+                        "op": "var",
+                        "var": "p4"
+                      },
+                      {
+                        "op": "const",
+                        "value": 1
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p5"
+                  },
+                  {
+                    "op": "const",
+                    "value": 0
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "op": "eq",
+            "args": [
+              {
+                "op": "var",
+                "var": "p6"
+              },
+              {
+                "op": "const",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "text": "reachability of marking p1=0 p2=1 p3=0 p4=1 p5=0 p6=0"
+    },
+    {
+      "id": "reach_m2_after_t1t2",
+      "kind": "reach",
+      "expr": {
+        "op": "and",
+        "args": [
+          {
+            "op": "and",
+            "args": [
+              {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "and",
+                    "args": [
+                      {
+                        "op": "and",
+                        "args": [
+                          {
+                            "op": "eq",
+                            "args": [
+                              {
+                                "op": "var",
+                                "var": "p1"
+                              },
+                              {
+                                "op": "const",
+                                "value": 0
+                              }
+                            ]
+                          },
+                          {
+                            "op": "eq",
+                            "args": [
+                              {
+                                "op": "var",
+                                "var": "p2"
+                              },
+                              {
+                                "op": "const",
+                                "value": 0
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "op": "eq",
+                        "args": [
+                          {
+                            "op": "var",
+                            "var": "p3"
+                          },
+                          {
+                            "op": "const",
+                            "value": 1
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "op": "eq",
+                    "args": [
+                      {
+                        "op": "var",
+                        "var": "p4"
+                      },
+                      {
+                        "op": "const",
+                        "value": 0
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p5"
+                  },
+                  {
+                    "op": "const",
+                    "value": 0
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "op": "eq",
+            "args": [
+              {
+                "op": "var",
+                "var": "p6"
+              },
+              {
+                "op": "const",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "text": "reachability of marking p1=0 p2=0 p3=1 p4=0 p5=0 p6=0"
+    },
+    {
+      "id": "reach_m3_hang",
+      "kind": "reach",
+      "expr": {
+        "op": "and",
+        "args": [
+          {
+            "op": "and",
+            "args": [
+              {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "and",
+                    "args": [
+                      {
+                        "op": "and",
+                        "args": [
+                          {
+                            "op": "eq",
+                            "args": [
+                              {
+                                "op": "var",
+                                "var": "p1"
+                              },
+                              {
+                                "op": "const",
+                                "value": 0
+                              }
+                            ]
+                          },
+                          {
+                            "op": "eq",
+                            "args": [
+                              {
+                                "op": "var",
+                                "var": "p2"
+                              },
+                              {
+                                "op": "const",
+                                "value": 1
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "op": "eq",
+                        "args": [
+                          {
+                            "op": "var",
+                            "var": "p3"
+                          },
+                          {
+                            "op": "const",
+                            "value": 0
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "op": "eq",
+                    "args": [
+                      {
+                        "op": "var",
+                        "var": "p4"
+                      },
+                      {
+                        "op": "const",
+                        "value": 0
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p5"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "op": "eq",
+            "args": [
+              {
+                "op": "var",
+                "var": "p6"
+              },
+              {
+                "op": "const",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "text": "reachability of marking p1=0 p2=1 p3=0 p4=0 p5=1 p6=0"
+    },
+    {
+      "id": "reach_m4_after_t4",
+      "kind": "reach",
+      "expr": {
+        "op": "and",
+        "args": [
+          {
+            "op": "and",
+            "args": [
+              {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "and",
+                    "args": [
+                      {
+                        "op": "and",
+                        "args": [
+                          {
+                            "op": "eq",
+                            "args": [
+                              {
+                                "op": "var",
+                                "var": "p1"
+                              },
+                              {
+                                "op": "const",
+                                "value": 1
+                              }
+                            ]
+                          },
+                          {
+                            "op": "eq",
+                            "args": [
+                              {
+                                "op": "var",
+                                "var": "p2"
+                              },
+                              {
+                                "op": "const",
+                                "value": 0
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "op": "eq",
+                        "args": [
+                          {
+                            "op": "var",
+                            "var": "p3"
+                          },
+                          {
+                            "op": "const",
+                            "value": 0
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "op": "eq",
+                    "args": [
+                      {
+                        "op": "var",
+                        "var": "p4"
+                      },
+                      {
+                        "op": "const",
+                        "value": 0
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p5"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "op": "eq",
+            "args": [
+              {
+                "op": "var",
+                "var": "p6"
+              },
+              {
+                "op": "const",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "text": "reachability of marking p1=1 p2=0 p3=0 p4=0 p5=1 p6=0"
+    },
+    {
+      "id": "reach_m5_after_t4t5",
+      "kind": "reach",
+      "expr": {
+        "op": "and",
+        "args": [
+          {
+            "op": "and",
+            "args": [
+              {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "and",
+                    "args": [
+                      {
+                        "op": "and",
+                        "args": [
+                          {
+                            "op": "eq",
+                            "args": [
+                              {
+                                "op": "var",
+                                "var": "p1"
+                              },
+                              {
+                                "op": "const",
+                                "value": 0
+                              }
+                            ]
+                          },
+                          {
+                            "op": "eq",
+                            "args": [
+                              {
+                                "op": "var",
+                                "var": "p2"
+                              },
+                              {
+                                "op": "const",
+                                "value": 0
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "op": "eq",
+                        "args": [
+                          {
+                            "op": "var",
+                            "var": "p3"
+                          },
+                          {
+                            "op": "const",
+                            "value": 0
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "op": "eq",
+                    "args": [
+                      {
+                        "op": "var",
+                        "var": "p4"
+                      },
+                      {
+                        "op": "const",
+                        "value": 0
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p5"
+                  },
+                  {
+                    "op": "const",
+                    "value": 0
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "op": "eq",
+            "args": [
+              {
+                "op": "var",
+                "var": "p6"
+              },
+              {
+                "op": "const",
+                "value": 1
+              }
+            ]
+          }
+        ]
+      },
+      "text": "reachability of marking p1=0 p2=0 p3=0 p4=0 p5=0 p6=1"
+    },
+    {
+      "id": "reach_other_dead",
+      "kind": "reach",
+      "expr": {
+        "op": "and",
+        "args": [
+          {
+            "op": "and",
+            "args": [
+              {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "and",
+                    "args": [
+                      {
+                        "op": "eq",
+                        "args": [
+                          {
+                            "op": "var",
+                            "var": "p1"
+                          },
+                          {
+                            "op": "const",
+                            "value": 0
+                          }
+                        ]
+                      },
+                      {
+                        "op": "eq",
+                        "args": [
+                          {
+                            "op": "var",
+                            "var": "p3"
+                          },
+                          {
+                            "op": "const",
+                            "value": 0
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "op": "eq",
+                    "args": [
+                      {
+                        "op": "var",
+                        "var": "p4"
+                      },
+                      {
+                        "op": "const",
+                        "value": 0
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "eq",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "p6"
+                  },
+                  {
+                    "op": "const",
+                    "value": 0
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "op": "not",
+            "args": [
+              {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "eq",
+                    "args": [
+                      {
+                        "op": "var",
+                        "var": "p2"
+                      },
+                      {
+                        "op": "const",
+                        "value": 1
+                      }
+                    ]
+                  },
+                  {
+                    "op": "eq",
+                    "args": [
+                      {
+                        "op": "var",
+                        "var": "p5"
+                      },
+                      {
+                        "op": "const",
+                        "value": 1
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "text": "reachability of a dead marking (no transition enabled) different from p2=1,p5=1"
+    }
+  ],
+  "origin": {
+    "file": "petrinet.json",
+    "name": "user-net"
+  }
+}

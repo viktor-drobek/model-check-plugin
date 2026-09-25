@@ -1,0 +1,32 @@
+warning: only one claim defined, -N ignored
+pan:1: assertion violated  !( !((cnt<=1))) (at depth 100)
+pan: wrote mutex_flaw_ltl.pml.trail
+
+(Spin Version 6.5.2 -- 6 December 2019)
+Warning: Search not completed
+	+ Partial Order Reduction
+
+Full statespace search for:
+	never claim         	+ (mutex)
+	assertion violations	+ (if within scope of claim)
+	acceptance   cycles 	+ (fairness disabled)
+	invalid end states	- (disabled by never claim)
+
+State-vector 36 byte, depth reached 101, errors: 1
+      183 states, stored
+      145 states, matched
+      328 transitions (= stored+matched)
+        0 atomic steps
+hash conflicts:         0 (resolved)
+
+Stats on memory usage (in Megabytes):
+    0.011	equivalent memory usage for states (stored*(State-vector + overhead))
+    0.289	actual memory usage for states
+  128.000	memory used for hash table (-w24)
+    5.341	memory used for DFS stack (-m100000)
+  133.536	total actual memory usage
+
+
+
+pan: elapsed time 0.11 seconds
+pan: rate 1663.6364 states/second

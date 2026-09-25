@@ -1,0 +1,49 @@
+{
+  "eval_id": 1,
+  "eval_name": "mutex-invariant-violated",
+  "run": "without_skill",
+  "passed_count": 3,
+  "total": 8,
+  "expectations": [
+    {
+      "text": "The mutual-exclusion property is reported with status violated",
+      "passed": false,
+      "evidence": "pattern '\\\\bviolated\\\\b' not found"
+    },
+    {
+      "text": "The evidence level exhaustive is stated",
+      "passed": false,
+      "evidence": "pattern '\\\\bexhaustive\\\\b' not found"
+    },
+    {
+      "text": "The counterexample is decoded through the model's labels L1–L4",
+      "passed": true,
+      "evidence": "matched 'L1' at 905"
+    },
+    {
+      "text": "The counterexample shows both users at label L7 (the critical section)",
+      "passed": true,
+      "evidence": "matched 'L7' at 775"
+    },
+    {
+      "text": "The cause is classified as a system (algorithm) defect",
+      "passed": false,
+      "evidence": "pattern '(?i)system defect|algorithm (is|itself is) wrong|дефект (системы|алгоритма)|ошибка (в )?алгоритм' not found"
+    },
+    {
+      "text": "The engine was invoked (CLI or MCP), not reasoned around",
+      "passed": false,
+      "evidence": "pattern 'mcd check|mc_check' not found"
+    },
+    {
+      "text": "The engine version and input hash (manifest) are quoted",
+      "passed": false,
+      "evidence": "pattern '(?i)(sha256|sha-256)[^\\\\n]{0,40}[0-9a-f]{16}|0\\\\.1\\\\.0-g\\\\d|mcd \\\\d+\\\\.\\\\d+' not found"
+    },
+    {
+      "text": "No forbidden phrasing (no errors / proved / system is correct)",
+      "passed": true,
+      "evidence": "pattern '(?i)\\\\bno errors\\\\b|\\\\bproved\\\\b|\\\\bproven\\\\b|ошибок нет|доказано|system is correct|система корректна' absent"
+    }
+  ]
+}

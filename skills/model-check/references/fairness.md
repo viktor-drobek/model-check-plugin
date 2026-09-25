@@ -10,7 +10,8 @@ value zero when no fair path); `model-check-skill-notes/03-karpov-model-checking
 гл. 6 (fairness that "proves" by forbidding traces); `model-check-skill-notes/10-cross-book-synthesis.md`
 §9; `model-check-skill-notes/14-skill-building-plan.md` §4.2 (weak fairness by the
 copies method, strong fairness not supported); `model-check-skill-notes/11-skill-requirements.md`
-§4 q. 9, §6 step 7, §7.3, FR-008, AC-05.
+§4 q. 9, §6 step 7, §7.3, FR-008, AC-05. Engine as built: `engine/explore/cycle.go`
+(the copies construction, the null step), `steps/g4-confirmation.md` §1, §3.
 
 ## 1. Definitions (05 гл. 3)
 
@@ -40,18 +41,42 @@ statement about those states becomes vacuously true (05 гл. 3; 08 гл. 3: the
 value of a formula is zero where no fair path exists). Always ask whether a fair
 path exists before reading a `verified` liveness result.
 
-## 2. What the engine supports
+## 2. What the engine supports (as built in G4)
 
-Weak fairness is supported, in the sense of SPIN's `pan -f`: **process-level weak
-fairness** — every process that is continuously executable from some point on
+**Weak fairness is supported**, in the sense of SPIN's `pan -f`: **process-level
+weak fairness** — every process that is continuously executable from some point on
 executes infinitely often. It is implemented by the method of copies (n + 2 copies
-of the property automaton in the product, plan §4.2), applies to LTL properties and
-to non-progress (`progress`-label) search, and is switched on per `mc_check` call by
-the `fairness` input (`none` or `weak`).
+of the product, one per process plus two bookkeeping copies, plan §4.2), applies to
+`ltl` properties and to the non-progress (`progress`-label) search, and is asked for
+per run: `fairness: weak` in `mc_check`, `--fairness weak` on the CLI. Default:
+`none`.
 
-Strong fairness is not supported by the engine. There is no search mode for it, and
-the skill must say so whenever the user's argument needs it (§5 below tells you what
-can still be said).
+A weakly fair counterexample may contain steps of a process written `-`. That is a
+**null step** of the copies construction: it advances the fairness bookkeeping
+without any process moving. Drop it when you present the trace, and never describe
+it to the user as an action of the system (`counterexamples.md` §2a).
+
+**Strong fairness is not supported by the engine.** There is no search mode for it.
+`fairness: strong` / `--fairness strong` is nevertheless accepted, and the engine
+answers with a *result*, not an error: status `not-executed`, evidence `unknown`,
+and a `reason` that names FR-008 and says only weak fairness is implemented. What
+the skill must do with that:
+
+- report the status the engine gave — `not-executed`, never a silent downgrade to
+  the weak-fairness run;
+- say in the report that the question the user asked (strong fairness) was **not
+  answered by a search**, and say which question was;
+- run `none` and `weak` as well, and use §4 to say what the weak result does and
+  does not imply about strong fairness;
+- if the argument really needs strong fairness, model it explicitly (§5, step 4).
+
+**Fairness is reported as an assumption, never as a fact about the system.** The
+engine has no way to know whether the scheduler of the real system is weakly fair;
+`fairness: weak` only removes paths from the model's set of runs. So a fair result
+is written "under the assumption of weak process fairness, P holds on model M", and
+the assumption goes into the report's assumptions section and the manifest — not
+into a footnote, and not into the verdict word. A liveness result whose report does
+not name its fairness setting is unreadable (`engine-tools.md` §7, step 5).
 
 Two more limits, both consequences of the definition above:
 
@@ -60,11 +85,13 @@ Two more limits, both consequences of the definition above:
   still forever pick the same alternative (07 лекция 6). If the requirement needs
   fair choice among branches, model it explicitly (a counter, a turn variable) and
   say so.
-- CTL properties are checked **without fairness**; fairness in CTL changes the
-  domain of the path quantifiers (05 гл. 6) and the engine's CTL has no such switch.
-  A CTL liveness result therefore includes unfair paths; if the user wanted fair
-  paths, the property must be moved to LTL with weak fairness, or reported as
-  fairness-free.
+- CTL is not executed by this build at all (`ctl` → `not-executed` until G5), so
+  the question "with which fairness was the CTL property checked?" has no answer
+  here. When CTL arrives, fairness in CTL changes the domain of the path quantifiers
+  (05 гл. 6) and is a separate mechanism from the copies construction; do not
+  promise it. A branching requirement that also needs fairness must today be moved
+  to LTL with `fairness: weak`, with the change of meaning stated
+  (`properties-ltl-ctl.md` §3), or reported as `not-executed`.
 
 ## 3. Protocol for every liveness property (07 лекция 6; 10 §9; 11 §6 step 7)
 
@@ -77,8 +104,11 @@ Two more limits, both consequences of the definition above:
    channel that loses every message forever is often *realistic* for a safety
    argument and unrealistic for a liveness argument — the user has to say which.
 4. If the justification is weak fairness (a continuously enabled process is
-   eventually scheduled), rerun with `fairness: weak`. Report **both** results, as
-   two different statements about two different sets of paths (AC-05).
+   eventually scheduled), rerun with `fairness: weak` (`--fairness weak`). Report
+   **both** results, as two different statements about two different sets of paths
+   (AC-05). The engine helps with step 2: when a lasso is found under `fairness:
+   none`, `reason` already names the processes that move in the loop and the ones
+   that are enabled throughout it and never move.
 5. If only strong fairness would exclude the loop (the starved process is enabled
    infinitely often but not continuously — typically a process waiting on a
    condition that flickers), go to §5.
@@ -134,6 +164,33 @@ Fairness can make a liveness property true for the wrong reason:
   from `mc_lint_property` catch the unreachable-antecedent case; the fairness case
   you catch by comparing runs with and without fairness.
 
+## 6a. Two models that show both outcomes (run them before you explain fairness)
+
+`engine/testdata/promela/starvation.pml` — process `A` flips its own bit forever,
+process `B` has one statement, `done = 1`. `<> done` under the three settings:
+
+| run | result |
+|---|---|
+| `mcd check --promela starvation.pml --ltl '<> done' --fairness none` | `violated`, evidence `exhaustive`; lasso with `loop.start` 3 and 4 loop steps in which only `A:0` and the claim move; `reason`: "`B:1` is enabled throughout the loop and never moves (the loop is not weakly fair; rerun with fairness weak to exclude such runs)" |
+| the same with `--fairness weak` | `verified`, evidence `exhaustive`, complete — the loop above is no longer a run of the fair model |
+| the same with `--fairness strong` | `not-executed`, evidence `unknown`, reason FR-008 (§2) |
+
+That is the whole shape of a fairness argument in three runs, and it is the one to
+show a user: the property did not become true, the set of paths became smaller.
+
+`Promela - examples/CH3/alternatingbit.pml` is the opposite case and the more
+instructive one: it is lock-step, so its delivery does not depend on the fairness
+setting. Its sender and receiver alternate in **lock-step**: after every
+send exactly one statement of the other process is enabled, so no process can be
+starved by any scheduling at all. Delivery there is `verified` with evidence
+`exhaustive` **without any fairness assumption** (and again, with a larger product,
+under `fairness: weak`) — `pan` agrees. Do not add a fairness assumption to that
+model: it changes nothing, and reporting it as a premise of the result claims the
+result needs it. It also does not: the honest sentence is "the result does not
+depend on the fairness setting, because the model is lock-step". Note what that
+model *does not* contain — message loss, retransmission, timeouts — which is where
+the real alternating-bit protocol's liveness question lives; see §7.
+
 ## 7. Corpus models to keep in mind
 
 - `CH4/fair.pml`, `CH4/fair_accept.pml`, `CH4/pcval.pml` — the SPIN book's micro-models
@@ -147,5 +204,9 @@ Fairness can make a liveness property true for the wrong reason:
   without a `progress` label: non-progress is a property of the labels you place,
   and fairness changes which cycles count.
 - `CH3/alternatingbit.pml` (eval E2) — "every message is delivered" is a liveness
-  claim; the fairness question is asked before the run, and the report shows the
-  result with and without the assumption as different results.
+  claim, so the fairness question is asked before the run; but the answer for *this*
+  file is that the assumption is not needed (§6a). The trap to avoid is carrying the
+  verdict from the file to the protocol: the corpus model has lossless channels and
+  no retransmission, and the alternating-bit protocol exists precisely to survive
+  loss. A `verified` here is a statement about a lock-step handshake, not about the
+  protocol; say which, in the report.

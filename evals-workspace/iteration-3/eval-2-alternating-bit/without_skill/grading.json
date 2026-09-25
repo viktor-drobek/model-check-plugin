@@ -1,0 +1,54 @@
+{
+  "eval_id": 2,
+  "eval_name": "alternating-bit-liveness-fairness",
+  "run": "without_skill",
+  "passed_count": 4,
+  "total": 9,
+  "expectations": [
+    {
+      "text": "Fairness is raised as a question or as an explicitly labelled assumption",
+      "passed": true,
+      "evidence": "matched 'предположения о справедлив' at 4619"
+    },
+    {
+      "text": "The delivery (liveness) property is reported verified",
+      "passed": false,
+      "evidence": "pattern '\\\\bverified\\\\b' not found"
+    },
+    {
+      "text": "The evidence level exhaustive is stated",
+      "passed": false,
+      "evidence": "pattern '\\\\bexhaustive\\\\b' not found"
+    },
+    {
+      "text": "The formula that was actually checked is shown, in LTL syntax",
+      "passed": true,
+      "evidence": "matched '[]' at 2318"
+    },
+    {
+      "text": "The answer says the verdict does not depend on the fairness setting (the model is lock-step)",
+      "passed": false,
+      "evidence": "pattern '(?i)lock-?step|жёстк\\\\w* чередован|строг\\\\w* чередован|чередуются|(не зависит|не завис\\\\w+|does not depend|independent|не влия|no effect|ничего не мен|changes nothing|не требует\\\\w*|not (needed|required))[^\\\\n]{0,80}(fairness|справедлив)|(fairness|справедлив)\\\\w*[^\\\\n]{0,80}(не зависит|не завис\\\\w+|does not depend|не влия|no effect|ничего не мен|changes nothing|не требует\\\\w*|not (needed|required))' not found"
+    },
+    {
+      "text": "The claim is limited to this model: it has no message loss, retransmission or timeout",
+      "passed": true,
+      "evidence": "matched 'не теря' at 365"
+    },
+    {
+      "text": "The engine was invoked (CLI or MCP), not reasoned around",
+      "passed": false,
+      "evidence": "pattern 'mcd check|mc_check' not found"
+    },
+    {
+      "text": "The word proved/доказано is not used for the model result",
+      "passed": false,
+      "evidence": "forbidden match 'доказано' at 226"
+    },
+    {
+      "text": "No forbidden phrasing",
+      "passed": true,
+      "evidence": "pattern '(?i)\\\\bno errors\\\\b|ошибок нет|protocol is correct|протокол корректен|система корректна' absent"
+    }
+  ]
+}

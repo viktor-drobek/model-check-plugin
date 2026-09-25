@@ -1,0 +1,58 @@
+starting claim 1
+spin: couldn't find claim 1 (ignored)
+  2:	proc  1 (user:1) mutex_flaw_prog.pml:5 (state 1)	[x = me]
+		x = 2
+  4:	proc  1 (user:1) mutex_flaw_prog.pml:8 (state 4)	[(((y==0)||(y==me)))]
+  6:	proc  1 (user:1) mutex_flaw_prog.pml:10 (state 7)	[z = me]
+		z = 2
+  8:	proc  1 (user:1) mutex_flaw_prog.pml:13 (state 10)	[((x==me))]
+ 10:	proc  0 (user:1) mutex_flaw_prog.pml:5 (state 1)	[x = me]
+		x = 1
+ 12:	proc  0 (user:1) mutex_flaw_prog.pml:8 (state 4)	[(((y==0)||(y==me)))]
+ 14:	proc  1 (user:1) mutex_flaw_prog.pml:15 (state 13)	[y = me]
+		y = 2
+ 16:	proc  0 (user:1) mutex_flaw_prog.pml:10 (state 7)	[z = me]
+		z = 1
+ 18:	proc  1 (user:1) mutex_flaw_prog.pml:17 (state 14)	[((z!=me))]
+ 20:	proc  1 (user:1) mutex_flaw_prog.pml:5 (state 1)	[x = me]
+		x = 2
+ 22:	proc  1 (user:1) mutex_flaw_prog.pml:8 (state 4)	[(((y==0)||(y==me)))]
+ 24:	proc  1 (user:1) mutex_flaw_prog.pml:10 (state 7)	[z = me]
+		z = 2
+ 26:	proc  0 (user:1) mutex_flaw_prog.pml:12 (state 8)	[((x!=me))]
+ 28:	proc  0 (user:1) mutex_flaw_prog.pml:5 (state 1)	[x = me]
+		x = 1
+  <<<<<START OF CYCLE>>>>>
+ 30:	proc  1 (user:1) mutex_flaw_prog.pml:12 (state 8)	[((x!=me))]
+ 32:	proc  1 (user:1) mutex_flaw_prog.pml:5 (state 1)	[x = me]
+		x = 2
+ 34:	proc  1 (user:1) mutex_flaw_prog.pml:8 (state 4)	[(((y==0)||(y==me)))]
+ 36:	proc  0 (user:1) mutex_flaw_prog.pml:7 (state 2)	[(((y!=0)&&(y!=me)))]
+ 38:	proc  1 (user:1) mutex_flaw_prog.pml:10 (state 7)	[z = me]
+ 40:	proc  0 (user:1) mutex_flaw_prog.pml:5 (state 1)	[x = me]
+		x = 1
+ 42:	proc  0 (user:1) mutex_flaw_prog.pml:7 (state 2)	[(((y!=0)&&(y!=me)))]
+ 44:	proc  1 (user:1) mutex_flaw_prog.pml:12 (state 8)	[((x!=me))]
+ 46:	proc  1 (user:1) mutex_flaw_prog.pml:5 (state 1)	[x = me]
+		x = 2
+ 48:	proc  1 (user:1) mutex_flaw_prog.pml:8 (state 4)	[(((y==0)||(y==me)))]
+ 50:	proc  0 (user:1) mutex_flaw_prog.pml:5 (state 1)	[x = me]
+		x = 1
+ 52:	proc  1 (user:1) mutex_flaw_prog.pml:10 (state 7)	[z = me]
+ 54:	proc  0 (user:1) mutex_flaw_prog.pml:7 (state 2)	[(((y!=0)&&(y!=me)))]
+ 56:	proc  1 (user:1) mutex_flaw_prog.pml:12 (state 8)	[((x!=me))]
+ 58:	proc  1 (user:1) mutex_flaw_prog.pml:5 (state 1)	[x = me]
+		x = 2
+ 60:	proc  1 (user:1) mutex_flaw_prog.pml:8 (state 4)	[(((y==0)||(y==me)))]
+ 62:	proc  1 (user:1) mutex_flaw_prog.pml:10 (state 7)	[z = me]
+ 64:	proc  0 (user:1) mutex_flaw_prog.pml:5 (state 1)	[x = me]
+		x = 1
+spin: trail ends after 64 steps
+#processes: 2
+		cnt = 0
+		x = 1
+		y = 2
+		z = 2
+ 64:	proc  1 (user:1) mutex_flaw_prog.pml:11 (state 11)
+ 64:	proc  0 (user:1) mutex_flaw_prog.pml:6 (state 5)
+2 processes created

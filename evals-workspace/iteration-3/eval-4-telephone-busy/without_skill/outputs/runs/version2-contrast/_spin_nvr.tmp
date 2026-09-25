@@ -1,0 +1,22 @@
+never v2_switch_not_stuck_busy {    /* !(! (<> ([] ((switch_ss7[1]@Busy))))) */
+T0_init:
+	do
+	:: (((switch_ss7[1]@Busy))) -> goto accept_S4
+	:: (1) -> goto T0_init
+	od;
+accept_S4:
+	do
+	:: (((switch_ss7[1]@Busy))) -> goto accept_S4
+	od;
+}
+never v2_idle_inf_often {    /* !([] (<> ((switch_ss7[1]@Idle)))) */
+T0_init:
+	do
+	:: (! (((switch_ss7[1]@Idle)))) -> goto accept_S4
+	:: (1) -> goto T0_init
+	od;
+accept_S4:
+	do
+	:: (! (((switch_ss7[1]@Idle)))) -> goto accept_S4
+	od;
+}

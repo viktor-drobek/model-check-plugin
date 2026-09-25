@@ -1,0 +1,209 @@
+{
+  "eval_id": 4,
+  "eval_name": "telephone-busy-liveness",
+  "iteration": 3,
+  "date": "2026-09-25",
+  "prompt": "Телефон не может зависнуть в состоянии Busy? Модель коммутатора: Promela - examples/CH14/version1",
+  "expected_output": "Requirement classified as liveness. The model as written has no variables and no progress labels, and control-label atoms are not accepted by the engine, so the requirement cannot be written as a formula over `Busy` directly: the route is a `progress` label placed in a rewrite (declared as a change to the model) and the `progress` property the Promela frontend then adds by itself. Fairness raised; a status from the vocabulary with an evidence level; a bare `--progress` run on the model as written is read as \"no progress labels have been placed\", not as a finding.",
+  "fixture": "Promela - examples/CH14/version1",
+  "runnable_from": "G4",
+  "engine": "mcd 0.1.0-g0 built from model-check-plugin/engine at the G4 commit 85aa78e (go build -o /tmp/mcd ./cmd/mcd); the binary carries the G4 flags --ltl/--progress/--fairness/--unlimited although its version string still says 0.1.0-g0",
+  "protocol": {
+    "executor": "one general-purpose subagent per configuration, all twelve launched in parallel, same model as the coordinating session",
+    "with_skill": "prompt + repository root + output directory + path of skills/model-check/SKILL.md ('follow it literally, including the references') + path of the built binary /tmp/mcd; told that the MCP server is not registered (CLI fallback of SKILL.md step 3) and not to run SPIN",
+    "without_skill": "prompt + repository root + output directory only (as in iterations 1 and 2); SPIN was not forbidden and every baseline used it",
+    "mcp": "not exercised by the runs: an MCP server cannot be registered into a subagent's session dynamically. The MCP path was exercised once by hand instead — steps/g3-evals3-mcp-session.md",
+    "questions": "the user is not available; both configurations were told to record an explicitly labelled assumption instead of asking",
+    "grading": "evals-workspace/grader.py over outputs/answer.md and the outputs directory; assertions from skills/model-check/evals/evals.json",
+    "timing": "tokens, duration and tool uses copied from the Agent task-completion notifications; no other measurement"
+  },
+  "removed_after_run": {
+    "without_skill": {
+      "files": [
+        "outputs/model/version1.pml",
+        "outputs/runs/ltl/pan.t",
+        "outputs/runs/ltl/pan.h",
+        "outputs/runs/ltl/version1.pml",
+        "outputs/runs/ltl/pan.c",
+        "outputs/runs/ltl/pan.m",
+        "outputs/runs/ltl/pan.b",
+        "outputs/runs/ltl/pan.p",
+        "outputs/runs/version2-contrast/pan.t",
+        "outputs/runs/version2-contrast/pan.h",
+        "outputs/runs/version2-contrast/version2.pml",
+        "outputs/runs/version2-contrast/pan.c",
+        "outputs/runs/version2-contrast/pan.m",
+        "outputs/runs/version2-contrast/pan.b",
+        "outputs/runs/version2-contrast/pan.p",
+        "outputs/runs/ltl2/pan.t",
+        "outputs/runs/ltl2/pan.h",
+        "outputs/runs/ltl2/version1.pml",
+        "outputs/runs/ltl2/pan.c",
+        "outputs/runs/ltl2/pan.m",
+        "outputs/runs/ltl2/pan.b",
+        "outputs/runs/ltl2/pan.p",
+        "outputs/runs/safety/pan.t",
+        "outputs/runs/safety/pan.h",
+        "outputs/runs/safety/version1.pml",
+        "outputs/runs/safety/pan.c",
+        "outputs/runs/safety/pan.m",
+        "outputs/runs/safety/pan.b",
+        "outputs/runs/safety/pan.p",
+        "outputs/runs/np/pan.t",
+        "outputs/runs/np/pan.h",
+        "outputs/runs/np/version1.pml",
+        "outputs/runs/np/pan.c",
+        "outputs/runs/np/pan.m",
+        "outputs/runs/np/pan.b",
+        "outputs/runs/np/pan.p"
+      ],
+      "reason": "verbatim copies of corpus files (plan 14 §2.1 licence note: the corpus is referenced by path and SHA-256, never copied) and SPIN-generated C sources / compiled pan binaries; removed by the coordinator AFTER grading, which for every eval of this iteration reads outputs/answer.md (and, for E3, the Petri JSON the run itself wrote)",
+      "detail": [
+        {
+          "path": "outputs/model/version1.pml",
+          "reason": "verbatim copy of Promela - examples/CH14/version1"
+        },
+        {
+          "path": "outputs/runs/ltl/pan.t",
+          "reason": "SPIN-generated C source or compiled pan binary (23318 bytes)"
+        },
+        {
+          "path": "outputs/runs/ltl/pan.h",
+          "reason": "SPIN-generated C source or compiled pan binary (18224 bytes)"
+        },
+        {
+          "path": "outputs/runs/ltl/version1.pml",
+          "reason": "verbatim copy of Promela - examples/CH14/version1"
+        },
+        {
+          "path": "outputs/runs/ltl/pan.c",
+          "reason": "SPIN-generated C source or compiled pan binary (337749 bytes)"
+        },
+        {
+          "path": "outputs/runs/ltl/pan.m",
+          "reason": "SPIN-generated C source or compiled pan binary (14422 bytes)"
+        },
+        {
+          "path": "outputs/runs/ltl/pan.b",
+          "reason": "SPIN-generated C source or compiled pan binary (1220 bytes)"
+        },
+        {
+          "path": "outputs/runs/ltl/pan.p",
+          "reason": "SPIN-generated C source or compiled pan binary (56176 bytes)"
+        },
+        {
+          "path": "outputs/runs/version2-contrast/pan.t",
+          "reason": "SPIN-generated C source or compiled pan binary (27899 bytes)"
+        },
+        {
+          "path": "outputs/runs/version2-contrast/pan.h",
+          "reason": "SPIN-generated C source or compiled pan binary (18353 bytes)"
+        },
+        {
+          "path": "outputs/runs/version2-contrast/version2.pml",
+          "reason": "verbatim copy of Promela - examples/CH14/version2"
+        },
+        {
+          "path": "outputs/runs/version2-contrast/pan.c",
+          "reason": "SPIN-generated C source or compiled pan binary (340188 bytes)"
+        },
+        {
+          "path": "outputs/runs/version2-contrast/pan.m",
+          "reason": "SPIN-generated C source or compiled pan binary (38544 bytes)"
+        },
+        {
+          "path": "outputs/runs/version2-contrast/pan.b",
+          "reason": "SPIN-generated C source or compiled pan binary (3863 bytes)"
+        },
+        {
+          "path": "outputs/runs/version2-contrast/pan.p",
+          "reason": "SPIN-generated C source or compiled pan binary (56176 bytes)"
+        },
+        {
+          "path": "outputs/runs/ltl2/pan.t",
+          "reason": "SPIN-generated C source or compiled pan binary (23382 bytes)"
+        },
+        {
+          "path": "outputs/runs/ltl2/pan.h",
+          "reason": "SPIN-generated C source or compiled pan binary (18222 bytes)"
+        },
+        {
+          "path": "outputs/runs/ltl2/version1.pml",
+          "reason": "verbatim copy of Promela - examples/CH14/version1"
+        },
+        {
+          "path": "outputs/runs/ltl2/pan.c",
+          "reason": "SPIN-generated C source or compiled pan binary (337763 bytes)"
+        },
+        {
+          "path": "outputs/runs/ltl2/pan.m",
+          "reason": "SPIN-generated C source or compiled pan binary (14618 bytes)"
+        },
+        {
+          "path": "outputs/runs/ltl2/pan.b",
+          "reason": "SPIN-generated C source or compiled pan binary (1218 bytes)"
+        },
+        {
+          "path": "outputs/runs/ltl2/pan.p",
+          "reason": "SPIN-generated C source or compiled pan binary (56176 bytes)"
+        },
+        {
+          "path": "outputs/runs/safety/pan.t",
+          "reason": "SPIN-generated C source or compiled pan binary (20492 bytes)"
+        },
+        {
+          "path": "outputs/runs/safety/pan.h",
+          "reason": "SPIN-generated C source or compiled pan binary (16514 bytes)"
+        },
+        {
+          "path": "outputs/runs/safety/version1.pml",
+          "reason": "verbatim copy of Promela - examples/CH14/version1"
+        },
+        {
+          "path": "outputs/runs/safety/pan.c",
+          "reason": "SPIN-generated C source or compiled pan binary (332549 bytes)"
+        },
+        {
+          "path": "outputs/runs/safety/pan.m",
+          "reason": "SPIN-generated C source or compiled pan binary (7411 bytes)"
+        },
+        {
+          "path": "outputs/runs/safety/pan.b",
+          "reason": "SPIN-generated C source or compiled pan binary (842 bytes)"
+        },
+        {
+          "path": "outputs/runs/safety/pan.p",
+          "reason": "SPIN-generated C source or compiled pan binary (56176 bytes)"
+        },
+        {
+          "path": "outputs/runs/np/pan.t",
+          "reason": "SPIN-generated C source or compiled pan binary (20492 bytes)"
+        },
+        {
+          "path": "outputs/runs/np/pan.h",
+          "reason": "SPIN-generated C source or compiled pan binary (16514 bytes)"
+        },
+        {
+          "path": "outputs/runs/np/version1.pml",
+          "reason": "verbatim copy of Promela - examples/CH14/version1"
+        },
+        {
+          "path": "outputs/runs/np/pan.c",
+          "reason": "SPIN-generated C source or compiled pan binary (332549 bytes)"
+        },
+        {
+          "path": "outputs/runs/np/pan.m",
+          "reason": "SPIN-generated C source or compiled pan binary (7411 bytes)"
+        },
+        {
+          "path": "outputs/runs/np/pan.b",
+          "reason": "SPIN-generated C source or compiled pan binary (842 bytes)"
+        },
+        {
+          "path": "outputs/runs/np/pan.p",
+          "reason": "SPIN-generated C source or compiled pan binary (56176 bytes)"
+        }
+      ]
+    }
+  }
+}

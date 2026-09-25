@@ -1,0 +1,37 @@
+pan: ltl formula p2_sub_not_stuck_busy
+
+(Spin Version 6.5.2 -- 6 December 2019)
+	+ Partial Order Reduction
+
+Full statespace search for:
+	never claim         	+ (p2_sub_not_stuck_busy)
+	assertion violations	+ (if within scope of claim)
+	acceptance   cycles 	+ (fairness disabled)
+	invalid end states	- (disabled by never claim)
+
+State-vector 44 byte, depth reached 19, errors: 0
+       16 states, stored (23 visited)
+       22 states, matched
+       45 transitions (= visited+matched)
+        0 atomic steps
+hash conflicts:         0 (resolved)
+
+Stats on memory usage (in Megabytes):
+    0.001	equivalent memory usage for states (stored*(State-vector + overhead))
+    0.285	actual memory usage for states
+  128.000	memory used for hash table (-w24)
+    5.341	memory used for DFS stack (-m100000)
+  133.536	total actual memory usage
+
+
+unreached in proctype subscriber
+	version1.pml:15, state 8, "-end-"
+	(1 of 8 states)
+unreached in proctype switch
+	version1.pml:40, state 29, "-end-"
+	(1 of 29 states)
+unreached in claim p2_sub_not_stuck_busy
+	_spin_nvr.tmp:21, state 13, "-end-"
+	(1 of 13 states)
+
+pan: elapsed time 0 seconds

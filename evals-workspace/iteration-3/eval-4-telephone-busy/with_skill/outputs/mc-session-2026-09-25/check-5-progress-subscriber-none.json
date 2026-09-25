@@ -1,0 +1,71 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0-g0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "promela",
+      "path": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-progress-subscriber.pml",
+      "sha256": "ba471c2e882e4b3a37b2cfd4f43bf19f0ecf0d6c3838278082cd801f774be686"
+    }
+  ],
+  "model": {
+    "name": "version1-progress-subscriber",
+    "state_bytes": 4,
+    "processes": 2,
+    "variables": 0
+  },
+  "search": {
+    "mode": "dfs",
+    "budget": {
+      "states": 1000000,
+      "depth": 1000000,
+      "time_ms": 60000,
+      "mem_bytes": 1073741824
+    },
+    "stop": "complete",
+    "complete": true
+  },
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 9,
+        "transitions": 12,
+        "depth": 7,
+        "memory_bytes_est": 25152
+      },
+      "complete": true
+    },
+    {
+      "id": "progress",
+      "kind": "progress",
+      "text": "no non-progress cycle: every infinite run visits a progress label infinitely often (SPIN: pan -l)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 16,
+        "transitions": 37,
+        "depth": 7,
+        "memory_bytes_est": 25248
+      },
+      "complete": true,
+      "reason": "no non-progress cycle: every cycle of the complete product visits a progress label (SPIN pan -l)",
+      "temporal": {
+        "source": "np",
+        "fairness": "none",
+        "claim": "np_"
+      }
+    }
+  ],
+  "warnings": [
+    "printf: 8 statement(s) kept as no-op steps so that state counts match SPIN; their output is not produced"
+  ]
+}

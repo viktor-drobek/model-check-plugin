@@ -1,0 +1,1743 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0-g0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "promela",
+      "path": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+      "sha256": "cd37e760ee9a3dd3532b1bc115b823c89ed859c73152ed39f4ca4f9ebd032ae6"
+    }
+  ],
+  "model": {
+    "name": "version1-obs",
+    "state_bytes": 6,
+    "processes": 2,
+    "variables": 2
+  },
+  "search": {
+    "mode": "dfs",
+    "budget": {
+      "states": 1000000,
+      "depth": 1000000,
+      "time_ms": 60000,
+      "mem_bytes": 1073741824
+    },
+    "stop": "complete",
+    "complete": true
+  },
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 14,
+        "transitions": 20,
+        "depth": 9,
+        "memory_bytes_est": 25792
+      },
+      "complete": true
+    },
+    {
+      "id": "ltl1",
+      "kind": "ltl",
+      "text": "[] (sw != BUSY)",
+      "status": "violated",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 44,
+        "transitions": 52,
+        "depth": 42,
+        "memory_bytes_est": 29912
+      },
+      "complete": false,
+      "counterexample": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 2,
+            "process": "subscriber:0",
+            "command": "tpc!offhook",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 36,
+              "name": "tpc!offhook"
+            },
+            "partner": {
+              "process": "switch:1",
+              "command": "tpc?offhook",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+                "line": 49,
+                "name": "tpc?offhook"
+              }
+            }
+          },
+          {
+            "index": 3,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 4,
+            "process": "subscriber:0",
+            "command": "sub_busy = 1",
+            "changes": [
+              {
+                "var": "sub_busy",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "location": "Busy",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 37,
+              "name": "sub_busy = 1"
+            }
+          },
+          {
+            "index": 5,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 6,
+            "process": "switch:1",
+            "command": "sw = 1",
+            "changes": [
+              {
+                "var": "sw",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "location": "Dial",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 49,
+              "name": "sw = 1"
+            }
+          },
+          {
+            "index": 7,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 8,
+            "process": "subscriber:0",
+            "command": "tpc!digits",
+            "location": "Busy",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 40,
+              "name": "tpc!digits"
+            },
+            "partner": {
+              "process": "switch:1",
+              "command": "tpc?digits",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+                "line": 53,
+                "name": "tpc?digits"
+              }
+            }
+          },
+          {
+            "index": 9,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 10,
+            "process": "switch:1",
+            "command": "sw = 2",
+            "changes": [
+              {
+                "var": "sw",
+                "before": 1,
+                "after": 2
+              }
+            ],
+            "location": "Wait",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 53,
+              "name": "sw = 2"
+            }
+          },
+          {
+            "index": 11,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 12,
+            "process": "switch:1",
+            "command": "sw = 3",
+            "changes": [
+              {
+                "var": "sw",
+                "before": 2,
+                "after": 3
+              }
+            ],
+            "location": "Connect",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 58,
+              "name": "sw = 3"
+            }
+          },
+          {
+            "index": 13,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 14,
+            "process": "switch:1",
+            "command": "sw = 4",
+            "changes": [
+              {
+                "var": "sw",
+                "before": 3,
+                "after": 4
+              }
+            ],
+            "location": "Busy",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 63,
+              "name": "sw = 4"
+            }
+          },
+          {
+            "index": 15,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 16,
+            "process": "subscriber:0",
+            "command": "tpc!onhook",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 41,
+              "name": "tpc!onhook"
+            },
+            "partner": {
+              "process": "switch:1",
+              "command": "tpc?onhook",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+                "line": 67,
+                "name": "tpc?onhook"
+              }
+            }
+          },
+          {
+            "index": 17,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 18,
+            "process": "subscriber:0",
+            "command": "sub_busy = 0",
+            "changes": [
+              {
+                "var": "sub_busy",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "location": "Idle",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 41,
+              "name": "sub_busy = 0"
+            }
+          },
+          {
+            "index": 19,
+            "process": "never:ltl1",
+            "command": "(!(sw != 4)) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(!(sw != 4))"
+            }
+          },
+          {
+            "index": 20,
+            "process": "switch:1",
+            "command": "sw = 0",
+            "changes": [
+              {
+                "var": "sw",
+                "before": 4,
+                "after": 0
+              }
+            ],
+            "location": "Idle",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 67,
+              "name": "sw = 0"
+            }
+          },
+          {
+            "index": 21,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 0 -> 1, leaving an accepting state)"
+          },
+          {
+            "index": 22,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 23,
+            "process": "subscriber:0",
+            "command": "tpc!offhook",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 36,
+              "name": "tpc!offhook"
+            },
+            "partner": {
+              "process": "switch:1",
+              "command": "tpc?offhook",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+                "line": 49,
+                "name": "tpc?offhook"
+              }
+            }
+          },
+          {
+            "index": 24,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 25,
+            "process": "subscriber:0",
+            "command": "sub_busy = 1",
+            "changes": [
+              {
+                "var": "sub_busy",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "location": "Busy",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 37,
+              "name": "sub_busy = 1"
+            }
+          },
+          {
+            "index": 26,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 27,
+            "process": "switch:1",
+            "command": "sw = 1",
+            "changes": [
+              {
+                "var": "sw",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "location": "Dial",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 49,
+              "name": "sw = 1"
+            }
+          },
+          {
+            "index": 28,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 3 -> 0, every process has moved or been blocked once)"
+          },
+          {
+            "index": 29,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 0 -> 1, leaving an accepting state)"
+          },
+          {
+            "index": 30,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 31,
+            "process": "subscriber:0",
+            "command": "tpc!digits",
+            "location": "Busy",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 40,
+              "name": "tpc!digits"
+            },
+            "partner": {
+              "process": "switch:1",
+              "command": "tpc?digits",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+                "line": 53,
+                "name": "tpc?digits"
+              }
+            }
+          },
+          {
+            "index": 32,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 33,
+            "process": "switch:1",
+            "command": "sw = 2",
+            "changes": [
+              {
+                "var": "sw",
+                "before": 1,
+                "after": 2
+              }
+            ],
+            "location": "Wait",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 53,
+              "name": "sw = 2"
+            }
+          },
+          {
+            "index": 34,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 3 -> 0, every process has moved or been blocked once)"
+          },
+          {
+            "index": 35,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 0 -> 1, leaving an accepting state)"
+          },
+          {
+            "index": 36,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 1 -> 2, process subscriber:0 is blocked)"
+          },
+          {
+            "index": 37,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 38,
+            "process": "switch:1",
+            "command": "sw = 3",
+            "changes": [
+              {
+                "var": "sw",
+                "before": 2,
+                "after": 3
+              }
+            ],
+            "location": "Connect",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 58,
+              "name": "sw = 3"
+            }
+          },
+          {
+            "index": 39,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 3 -> 0, every process has moved or been blocked once)"
+          },
+          {
+            "index": 40,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 0 -> 1, leaving an accepting state)"
+          },
+          {
+            "index": 41,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 1 -> 2, process subscriber:0 is blocked)"
+          },
+          {
+            "index": 42,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 43,
+            "process": "switch:1",
+            "command": "sw = 4",
+            "changes": [
+              {
+                "var": "sw",
+                "before": 3,
+                "after": 4
+              }
+            ],
+            "location": "Busy",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 63,
+              "name": "sw = 4"
+            }
+          },
+          {
+            "index": 44,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 3 -> 0, every process has moved or been blocked once)"
+          },
+          {
+            "index": 45,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 0 -> 1, leaving an accepting state)"
+          },
+          {
+            "index": 46,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 47,
+            "process": "subscriber:0",
+            "command": "tpc!onhook",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 41,
+              "name": "tpc!onhook"
+            },
+            "partner": {
+              "process": "switch:1",
+              "command": "tpc?onhook",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+                "line": 67,
+                "name": "tpc?onhook"
+              }
+            }
+          },
+          {
+            "index": 48,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 49,
+            "process": "switch:1",
+            "command": "sw = 0",
+            "changes": [
+              {
+                "var": "sw",
+                "before": 4,
+                "after": 0
+              }
+            ],
+            "location": "Idle",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 67,
+              "name": "sw = 0"
+            }
+          },
+          {
+            "index": 50,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 3 -> 0, every process has moved or been blocked once)"
+          },
+          {
+            "index": 51,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 0 -> 1, leaving an accepting state)"
+          },
+          {
+            "index": 52,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 53,
+            "process": "subscriber:0",
+            "command": "sub_busy = 0",
+            "changes": [
+              {
+                "var": "sub_busy",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "location": "Idle",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 41,
+              "name": "sub_busy = 0"
+            }
+          },
+          {
+            "index": 54,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 55,
+            "process": "subscriber:0",
+            "command": "tpc!offhook",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 36,
+              "name": "tpc!offhook"
+            },
+            "partner": {
+              "process": "switch:1",
+              "command": "tpc?offhook",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+                "line": 49,
+                "name": "tpc?offhook"
+              }
+            }
+          },
+          {
+            "index": 56,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 3 -> 0, every process has moved or been blocked once)"
+          },
+          {
+            "index": 57,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 0 -> 1, leaving an accepting state)"
+          },
+          {
+            "index": 58,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 59,
+            "process": "switch:1",
+            "command": "sw = 1",
+            "changes": [
+              {
+                "var": "sw",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "location": "Dial",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 49,
+              "name": "sw = 1"
+            }
+          },
+          {
+            "index": 60,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 61,
+            "process": "subscriber:0",
+            "command": "sub_busy = 1",
+            "changes": [
+              {
+                "var": "sub_busy",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "location": "Busy",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 37,
+              "name": "sub_busy = 1"
+            }
+          },
+          {
+            "index": 62,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 63,
+            "process": "subscriber:0",
+            "command": "tpc!digits",
+            "location": "Busy",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 40,
+              "name": "tpc!digits"
+            },
+            "partner": {
+              "process": "switch:1",
+              "command": "tpc?digits",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+                "line": 53,
+                "name": "tpc?digits"
+              }
+            }
+          },
+          {
+            "index": 64,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 3 -> 0, every process has moved or been blocked once)"
+          },
+          {
+            "index": 65,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 0 -> 1, leaving an accepting state)"
+          },
+          {
+            "index": 66,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 1 -> 2, process subscriber:0 is blocked)"
+          }
+        ],
+        "final_state": [
+          {
+            "var": "sw",
+            "value": 1
+          },
+          {
+            "var": "sub_busy",
+            "value": 1
+          }
+        ],
+        "final_channels": [
+          {
+            "chan": "tpc",
+            "messages": []
+          }
+        ],
+        "summary": "(1) -> goto T0_init, tpc!offhook, (1) -> goto T0_init, sub_busy = 1, (1) -> goto T0_init, sw = 1, (1) -> goto T0_init, tpc!digits, (1) -> goto T0_init, sw = 2, (1) -> goto T0_init, sw = 3, (1) -> goto T0_init, sw = 4, (1) -> goto T0_init, tpc!onhook, (1) -> goto T0_init, sub_busy = 0, (!(sw != 4)) -> goto accept_S1, sw = 0, (weak fairness: no process moves; copy 0 -> 1, leaving an accepting state), (1) -> goto accept_S1, tpc!offhook, (1) -> goto accept_S1, sub_busy = 1, (1) -> goto accept_S1, sw = 1, (weak fairness: no process moves; copy 3 -> 0, every process has moved or been blocked once), (weak fairness: no process moves; copy 0 -> 1, leaving an accepting state), (1) -> goto accept_S1, tpc!digits; loop: (1) -> goto accept_S1, sw = 2, (weak fairness: no process moves; copy 3 -> 0, every process has moved or been blocked once), (weak fairness: no process moves; copy 0 -> 1, leaving an accepting state), (weak fairness: no process moves; copy 1 -> 2, process subscriber:0 is blocked), (1) -> goto accept_S1, sw = 3, (weak fairness: no process moves; copy 3 -> 0, every process has moved or been blocked once), (weak fairness: no process moves; copy 0 -> 1, leaving an accepting state), (weak fairness: no process moves; copy 1 -> 2, process subscriber:0 is blocked), (1) -> goto accept_S1, sw = 4, (weak fairness: no process moves; copy 3 -> 0, every process has moved or been blocked once), (weak fairness: no process moves; copy 0 -> 1, leaving an accepting state), (1) -> goto accept_S1, tpc!onhook, (1) -> goto accept_S1, sw = 0, (weak fairness: no process moves; copy 3 -> 0, every process has moved or been blocked once), (weak fairness: no process moves; copy 0 -> 1, leaving an accepting state), (1) -> goto accept_S1, sub_busy = 0, (1) -> goto accept_S1, tpc!offhook, (weak fairness: no process moves; copy 3 -> 0, every process has moved or been blocked once), (weak fairness: no process moves; copy 0 -> 1, leaving an accepting state), (1) -> goto accept_S1, sw = 1, (1) -> goto accept_S1, sub_busy = 1, (1) -> goto accept_S1, tpc!digits, (weak fairness: no process moves; copy 3 -> 0, every process has moved or been blocked once), (weak fairness: no process moves; copy 0 -> 1, leaving an accepting state), (weak fairness: no process moves; copy 1 -> 2, process subscriber:0 is blocked)",
+        "loop": {
+          "start": 32,
+          "steps": 35
+        }
+      },
+      "reason": "acceptance cycle: the loop of the counterexample passes through an accept state of the automaton for !([] (sw != BUSY)) infinitely often, so the run satisfies the negated property (SPIN pan -a: acceptance cycle)",
+      "temporal": {
+        "source": "formula",
+        "formula": "[] (sw != BUSY)",
+        "negated": "!([] (sw != BUSY))",
+        "atoms": [
+          "sw != 4"
+        ],
+        "stutter_invariant": true,
+        "automaton_states": 2,
+        "automaton_transitions": 3,
+        "automaton_accepting": 1,
+        "fairness": "weak",
+        "claim": "never:ltl1"
+      }
+    },
+    {
+      "id": "ltl2",
+      "kind": "ltl",
+      "text": "[] ((sw == BUSY) -> <> (sw != BUSY))",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 24,
+        "transitions": 44,
+        "depth": 13,
+        "memory_bytes_est": 25968
+      },
+      "complete": true,
+      "reason": "no acceptance cycle in the complete product with the automaton for !([] ((sw == BUSY) -> <> (sw != BUSY))): no run satisfies the negated property; under weak fairness",
+      "temporal": {
+        "source": "formula",
+        "formula": "[] ((sw == BUSY) -> <> (sw != BUSY))",
+        "negated": "!([] ((sw == BUSY) -> <> (sw != BUSY)))",
+        "atoms": [
+          "sw == 4",
+          "sw != 4"
+        ],
+        "stutter_invariant": true,
+        "automaton_states": 2,
+        "automaton_transitions": 3,
+        "automaton_accepting": 1,
+        "fairness": "weak",
+        "claim": "never:ltl2"
+      }
+    },
+    {
+      "id": "ltl3",
+      "kind": "ltl",
+      "text": "[] <> (sw == IDLE)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 48,
+        "transitions": 127,
+        "depth": 13,
+        "memory_bytes_est": 26272
+      },
+      "complete": true,
+      "reason": "no acceptance cycle in the complete product with the automaton for !([] <> (sw == IDLE)): no run satisfies the negated property; under weak fairness",
+      "temporal": {
+        "source": "formula",
+        "formula": "[] <> (sw == IDLE)",
+        "negated": "!([] <> (sw == IDLE))",
+        "atoms": [
+          "sw == 0"
+        ],
+        "stutter_invariant": true,
+        "automaton_states": 2,
+        "automaton_transitions": 3,
+        "automaton_accepting": 1,
+        "fairness": "weak",
+        "claim": "never:ltl3"
+      }
+    },
+    {
+      "id": "ltl4",
+      "kind": "ltl",
+      "text": "[] (sub_busy == 0)",
+      "status": "violated",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 45,
+        "transitions": 54,
+        "depth": 42,
+        "memory_bytes_est": 29914
+      },
+      "complete": false,
+      "counterexample": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "never:ltl4",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 2,
+            "process": "subscriber:0",
+            "command": "tpc!offhook",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 36,
+              "name": "tpc!offhook"
+            },
+            "partner": {
+              "process": "switch:1",
+              "command": "tpc?offhook",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+                "line": 49,
+                "name": "tpc?offhook"
+              }
+            }
+          },
+          {
+            "index": 3,
+            "process": "never:ltl4",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 4,
+            "process": "subscriber:0",
+            "command": "sub_busy = 1",
+            "changes": [
+              {
+                "var": "sub_busy",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "location": "Busy",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 37,
+              "name": "sub_busy = 1"
+            }
+          },
+          {
+            "index": 5,
+            "process": "never:ltl4",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 6,
+            "process": "switch:1",
+            "command": "sw = 1",
+            "changes": [
+              {
+                "var": "sw",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "location": "Dial",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 49,
+              "name": "sw = 1"
+            }
+          },
+          {
+            "index": 7,
+            "process": "never:ltl4",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 8,
+            "process": "subscriber:0",
+            "command": "tpc!digits",
+            "location": "Busy",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 40,
+              "name": "tpc!digits"
+            },
+            "partner": {
+              "process": "switch:1",
+              "command": "tpc?digits",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+                "line": 53,
+                "name": "tpc?digits"
+              }
+            }
+          },
+          {
+            "index": 9,
+            "process": "never:ltl4",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 10,
+            "process": "switch:1",
+            "command": "sw = 2",
+            "changes": [
+              {
+                "var": "sw",
+                "before": 1,
+                "after": 2
+              }
+            ],
+            "location": "Wait",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 53,
+              "name": "sw = 2"
+            }
+          },
+          {
+            "index": 11,
+            "process": "never:ltl4",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 12,
+            "process": "switch:1",
+            "command": "sw = 3",
+            "changes": [
+              {
+                "var": "sw",
+                "before": 2,
+                "after": 3
+              }
+            ],
+            "location": "Connect",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 58,
+              "name": "sw = 3"
+            }
+          },
+          {
+            "index": 13,
+            "process": "never:ltl4",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 14,
+            "process": "switch:1",
+            "command": "sw = 4",
+            "changes": [
+              {
+                "var": "sw",
+                "before": 3,
+                "after": 4
+              }
+            ],
+            "location": "Busy",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 63,
+              "name": "sw = 4"
+            }
+          },
+          {
+            "index": 15,
+            "process": "never:ltl4",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 16,
+            "process": "subscriber:0",
+            "command": "tpc!onhook",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 41,
+              "name": "tpc!onhook"
+            },
+            "partner": {
+              "process": "switch:1",
+              "command": "tpc?onhook",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+                "line": 67,
+                "name": "tpc?onhook"
+              }
+            }
+          },
+          {
+            "index": 17,
+            "process": "never:ltl4",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 18,
+            "process": "switch:1",
+            "command": "sw = 0",
+            "changes": [
+              {
+                "var": "sw",
+                "before": 4,
+                "after": 0
+              }
+            ],
+            "location": "Idle",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 67,
+              "name": "sw = 0"
+            }
+          },
+          {
+            "index": 19,
+            "process": "never:ltl4",
+            "command": "(!(sub_busy == 0)) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(!(sub_busy == 0))"
+            }
+          },
+          {
+            "index": 20,
+            "process": "subscriber:0",
+            "command": "sub_busy = 0",
+            "changes": [
+              {
+                "var": "sub_busy",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "location": "Idle",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 41,
+              "name": "sub_busy = 0"
+            }
+          },
+          {
+            "index": 21,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 0 -> 1, leaving an accepting state)"
+          },
+          {
+            "index": 22,
+            "process": "never:ltl4",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 23,
+            "process": "subscriber:0",
+            "command": "tpc!offhook",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 36,
+              "name": "tpc!offhook"
+            },
+            "partner": {
+              "process": "switch:1",
+              "command": "tpc?offhook",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+                "line": 49,
+                "name": "tpc?offhook"
+              }
+            }
+          },
+          {
+            "index": 24,
+            "process": "never:ltl4",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 25,
+            "process": "subscriber:0",
+            "command": "sub_busy = 1",
+            "changes": [
+              {
+                "var": "sub_busy",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "location": "Busy",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 37,
+              "name": "sub_busy = 1"
+            }
+          },
+          {
+            "index": 26,
+            "process": "never:ltl4",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 27,
+            "process": "switch:1",
+            "command": "sw = 1",
+            "changes": [
+              {
+                "var": "sw",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "location": "Dial",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 49,
+              "name": "sw = 1"
+            }
+          },
+          {
+            "index": 28,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 3 -> 0, every process has moved or been blocked once)"
+          },
+          {
+            "index": 29,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 0 -> 1, leaving an accepting state)"
+          },
+          {
+            "index": 30,
+            "process": "never:ltl4",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 31,
+            "process": "subscriber:0",
+            "command": "tpc!digits",
+            "location": "Busy",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 40,
+              "name": "tpc!digits"
+            },
+            "partner": {
+              "process": "switch:1",
+              "command": "tpc?digits",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+                "line": 53,
+                "name": "tpc?digits"
+              }
+            }
+          },
+          {
+            "index": 32,
+            "process": "never:ltl4",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 33,
+            "process": "switch:1",
+            "command": "sw = 2",
+            "changes": [
+              {
+                "var": "sw",
+                "before": 1,
+                "after": 2
+              }
+            ],
+            "location": "Wait",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 53,
+              "name": "sw = 2"
+            }
+          },
+          {
+            "index": 34,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 3 -> 0, every process has moved or been blocked once)"
+          },
+          {
+            "index": 35,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 0 -> 1, leaving an accepting state)"
+          },
+          {
+            "index": 36,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 1 -> 2, process subscriber:0 is blocked)"
+          },
+          {
+            "index": 37,
+            "process": "never:ltl4",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 38,
+            "process": "switch:1",
+            "command": "sw = 3",
+            "changes": [
+              {
+                "var": "sw",
+                "before": 2,
+                "after": 3
+              }
+            ],
+            "location": "Connect",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 58,
+              "name": "sw = 3"
+            }
+          },
+          {
+            "index": 39,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 3 -> 0, every process has moved or been blocked once)"
+          },
+          {
+            "index": 40,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 0 -> 1, leaving an accepting state)"
+          },
+          {
+            "index": 41,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 1 -> 2, process subscriber:0 is blocked)"
+          },
+          {
+            "index": 42,
+            "process": "never:ltl4",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 43,
+            "process": "switch:1",
+            "command": "sw = 4",
+            "changes": [
+              {
+                "var": "sw",
+                "before": 3,
+                "after": 4
+              }
+            ],
+            "location": "Busy",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 63,
+              "name": "sw = 4"
+            }
+          },
+          {
+            "index": 44,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 3 -> 0, every process has moved or been blocked once)"
+          },
+          {
+            "index": 45,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 0 -> 1, leaving an accepting state)"
+          },
+          {
+            "index": 46,
+            "process": "never:ltl4",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 47,
+            "process": "subscriber:0",
+            "command": "tpc!onhook",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 41,
+              "name": "tpc!onhook"
+            },
+            "partner": {
+              "process": "switch:1",
+              "command": "tpc?onhook",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+                "line": 67,
+                "name": "tpc?onhook"
+              }
+            }
+          },
+          {
+            "index": 48,
+            "process": "never:ltl4",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 49,
+            "process": "switch:1",
+            "command": "sw = 0",
+            "changes": [
+              {
+                "var": "sw",
+                "before": 4,
+                "after": 0
+              }
+            ],
+            "location": "Idle",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 67,
+              "name": "sw = 0"
+            }
+          },
+          {
+            "index": 50,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 3 -> 0, every process has moved or been blocked once)"
+          },
+          {
+            "index": 51,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 0 -> 1, leaving an accepting state)"
+          },
+          {
+            "index": 52,
+            "process": "never:ltl4",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 53,
+            "process": "subscriber:0",
+            "command": "sub_busy = 0",
+            "changes": [
+              {
+                "var": "sub_busy",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "location": "Idle",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 41,
+              "name": "sub_busy = 0"
+            }
+          },
+          {
+            "index": 54,
+            "process": "never:ltl4",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 55,
+            "process": "subscriber:0",
+            "command": "tpc!offhook",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 36,
+              "name": "tpc!offhook"
+            },
+            "partner": {
+              "process": "switch:1",
+              "command": "tpc?offhook",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+                "line": 49,
+                "name": "tpc?offhook"
+              }
+            }
+          },
+          {
+            "index": 56,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 3 -> 0, every process has moved or been blocked once)"
+          },
+          {
+            "index": 57,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 0 -> 1, leaving an accepting state)"
+          },
+          {
+            "index": 58,
+            "process": "never:ltl4",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 59,
+            "process": "switch:1",
+            "command": "sw = 1",
+            "changes": [
+              {
+                "var": "sw",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "location": "Dial",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 49,
+              "name": "sw = 1"
+            }
+          },
+          {
+            "index": 60,
+            "process": "never:ltl4",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 61,
+            "process": "subscriber:0",
+            "command": "sub_busy = 1",
+            "changes": [
+              {
+                "var": "sub_busy",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "location": "Busy",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 37,
+              "name": "sub_busy = 1"
+            }
+          },
+          {
+            "index": 62,
+            "process": "never:ltl4",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 63,
+            "process": "subscriber:0",
+            "command": "tpc!digits",
+            "location": "Busy",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+              "line": 40,
+              "name": "tpc!digits"
+            },
+            "partner": {
+              "process": "switch:1",
+              "command": "tpc?digits",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+                "line": 53,
+                "name": "tpc?digits"
+              }
+            }
+          },
+          {
+            "index": 64,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 3 -> 0, every process has moved or been blocked once)"
+          },
+          {
+            "index": 65,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 0 -> 1, leaving an accepting state)"
+          },
+          {
+            "index": 66,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 1 -> 2, process subscriber:0 is blocked)"
+          }
+        ],
+        "final_state": [
+          {
+            "var": "sw",
+            "value": 1
+          },
+          {
+            "var": "sub_busy",
+            "value": 1
+          }
+        ],
+        "final_channels": [
+          {
+            "chan": "tpc",
+            "messages": []
+          }
+        ],
+        "summary": "(1) -> goto T0_init, tpc!offhook, (1) -> goto T0_init, sub_busy = 1, (1) -> goto T0_init, sw = 1, (1) -> goto T0_init, tpc!digits, (1) -> goto T0_init, sw = 2, (1) -> goto T0_init, sw = 3, (1) -> goto T0_init, sw = 4, (1) -> goto T0_init, tpc!onhook, (1) -> goto T0_init, sw = 0, (!(sub_busy == 0)) -> goto accept_S1, sub_busy = 0, (weak fairness: no process moves; copy 0 -> 1, leaving an accepting state), (1) -> goto accept_S1, tpc!offhook, (1) -> goto accept_S1, sub_busy = 1, (1) -> goto accept_S1, sw = 1, (weak fairness: no process moves; copy 3 -> 0, every process has moved or been blocked once), (weak fairness: no process moves; copy 0 -> 1, leaving an accepting state), (1) -> goto accept_S1, tpc!digits; loop: (1) -> goto accept_S1, sw = 2, (weak fairness: no process moves; copy 3 -> 0, every process has moved or been blocked once), (weak fairness: no process moves; copy 0 -> 1, leaving an accepting state), (weak fairness: no process moves; copy 1 -> 2, process subscriber:0 is blocked), (1) -> goto accept_S1, sw = 3, (weak fairness: no process moves; copy 3 -> 0, every process has moved or been blocked once), (weak fairness: no process moves; copy 0 -> 1, leaving an accepting state), (weak fairness: no process moves; copy 1 -> 2, process subscriber:0 is blocked), (1) -> goto accept_S1, sw = 4, (weak fairness: no process moves; copy 3 -> 0, every process has moved or been blocked once), (weak fairness: no process moves; copy 0 -> 1, leaving an accepting state), (1) -> goto accept_S1, tpc!onhook, (1) -> goto accept_S1, sw = 0, (weak fairness: no process moves; copy 3 -> 0, every process has moved or been blocked once), (weak fairness: no process moves; copy 0 -> 1, leaving an accepting state), (1) -> goto accept_S1, sub_busy = 0, (1) -> goto accept_S1, tpc!offhook, (weak fairness: no process moves; copy 3 -> 0, every process has moved or been blocked once), (weak fairness: no process moves; copy 0 -> 1, leaving an accepting state), (1) -> goto accept_S1, sw = 1, (1) -> goto accept_S1, sub_busy = 1, (1) -> goto accept_S1, tpc!digits, (weak fairness: no process moves; copy 3 -> 0, every process has moved or been blocked once), (weak fairness: no process moves; copy 0 -> 1, leaving an accepting state), (weak fairness: no process moves; copy 1 -> 2, process subscriber:0 is blocked)",
+        "loop": {
+          "start": 32,
+          "steps": 35
+        }
+      },
+      "reason": "acceptance cycle: the loop of the counterexample passes through an accept state of the automaton for !([] (sub_busy == 0)) infinitely often, so the run satisfies the negated property (SPIN pan -a: acceptance cycle)",
+      "temporal": {
+        "source": "formula",
+        "formula": "[] (sub_busy == 0)",
+        "negated": "!([] (sub_busy == 0))",
+        "atoms": [
+          "sub_busy == 0"
+        ],
+        "stutter_invariant": true,
+        "automaton_states": 2,
+        "automaton_transitions": 3,
+        "automaton_accepting": 1,
+        "fairness": "weak",
+        "claim": "never:ltl4"
+      }
+    },
+    {
+      "id": "ltl5",
+      "kind": "ltl",
+      "text": "[] ((sub_busy == 1) -> <> (sub_busy == 0))",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 49,
+        "transitions": 122,
+        "depth": 13,
+        "memory_bytes_est": 26274
+      },
+      "complete": true,
+      "reason": "no acceptance cycle in the complete product with the automaton for !([] ((sub_busy == 1) -> <> (sub_busy == 0))): no run satisfies the negated property; under weak fairness",
+      "temporal": {
+        "source": "formula",
+        "formula": "[] ((sub_busy == 1) -> <> (sub_busy == 0))",
+        "negated": "!([] ((sub_busy == 1) -> <> (sub_busy == 0)))",
+        "atoms": [
+          "sub_busy == 1",
+          "sub_busy == 0"
+        ],
+        "stutter_invariant": true,
+        "automaton_states": 2,
+        "automaton_transitions": 3,
+        "automaton_accepting": 1,
+        "fairness": "weak",
+        "claim": "never:ltl5"
+      }
+    }
+  ]
+}

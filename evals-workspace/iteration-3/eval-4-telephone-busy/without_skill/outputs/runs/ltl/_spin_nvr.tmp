@@ -1,0 +1,31 @@
+never p1_switch_not_stuck_busy {    /* !(! (<> ([] ((switch[1]@Busy))))) */
+T0_init:
+	do
+	:: (((switch[1]@Busy))) -> goto accept_S4
+	:: (1) -> goto T0_init
+	od;
+accept_S4:
+	do
+	:: (((switch[1]@Busy))) -> goto accept_S4
+	od;
+}
+never p2_sub_not_stuck_busy {    /* !(! (<> ([] ((subscriber[0]@Busy))))) */
+T0_init:
+	do
+	:: (((subscriber[0]@Busy))) -> goto accept_S4
+	:: (1) -> goto T0_init
+	od;
+accept_S4:
+	do
+	:: (((subscriber[0]@Busy))) -> goto accept_S4
+	od;
+}
+never p3_busy_unreachable {    /* !([] (! ((switch[1]@Busy)))) */
+T0_init:
+	do
+	:: atomic { (! ((! ((switch[1]@Busy))))) -> assert(!(! ((! ((switch[1]@Busy)))))) }
+	:: (1) -> goto T0_init
+	od;
+accept_all:
+	skip
+}

@@ -1,0 +1,23 @@
+Reachable markings: 6
+Arcs in the reachability graph: 8
+Max tokens in any reachable marking: 2
+Max tokens in a single place (boundedness k): 1
+
+All reachable markings:
+  (p1=1, p2=0, p3=0, p4=1, p5=0, p6=0)  enabled: ['t1', 't4']
+  (p1=0, p2=1, p3=0, p4=1, p5=0, p6=0)  enabled: ['t2', 't4']
+  (p1=1, p2=0, p3=0, p4=0, p5=1, p6=0)  enabled: ['t1', 't5']
+  (p1=0, p2=0, p3=1, p4=0, p5=0, p6=0)  enabled: ['t3']
+  (p1=0, p2=1, p3=0, p4=0, p5=1, p6=0)  enabled: NONE  <-- DEADLOCK
+  (p1=0, p2=0, p3=0, p4=0, p5=0, p6=1)  enabled: ['t6']
+
+Dead (deadlocked) markings: 1
+  (p1=0, p2=1, p3=0, p4=0, p5=1, p6=0)  via t1 -> t4  (length 2)
+
+Token-count change per transition (post-pre):
+  t1: +0
+  t2: -1
+  t3: +1
+  t4: +0
+  t5: -1
+  t6: +1

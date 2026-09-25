@@ -1,0 +1,197 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0-g0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "promela",
+      "path": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-ghost.pml",
+      "sha256": "2ba2a514405fb672a2272ba6df4523199726eec7b8271e955373867c32135d0a"
+    }
+  ],
+  "model": {
+    "name": "alternatingbit-ghost",
+    "state_bytes": 13,
+    "processes": 2,
+    "variables": 4
+  },
+  "search": {
+    "mode": "dfs",
+    "budget": {
+      "states": 1000000,
+      "depth": 1000000,
+      "time_ms": 60000,
+      "mem_bytes": 1073741824
+    },
+    "stop": "complete",
+    "complete": true
+  },
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 16,
+        "transitions": 28,
+        "depth": 27,
+        "memory_bytes_est": 27200
+      },
+      "complete": true
+    },
+    {
+      "id": "ltl1",
+      "kind": "ltl",
+      "text": "[] (pend1 == 1 -> <> pend1 == 0)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 18,
+        "transitions": 34,
+        "depth": 27,
+        "memory_bytes_est": 27236
+      },
+      "complete": true,
+      "reason": "no acceptance cycle in the complete product with the automaton for !([] (pend1 == 1 -> <> pend1 == 0)): no run satisfies the negated property",
+      "temporal": {
+        "source": "formula",
+        "formula": "[] (pend1 == 1 -> <> pend1 == 0)",
+        "negated": "!([] (pend1 == 1 -> <> pend1 == 0))",
+        "atoms": [
+          "pend1 == 1",
+          "pend1 == 0"
+        ],
+        "stutter_invariant": true,
+        "automaton_states": 2,
+        "automaton_transitions": 3,
+        "automaton_accepting": 1,
+        "fairness": "none",
+        "claim": "never:ltl1"
+      }
+    },
+    {
+      "id": "ltl2",
+      "kind": "ltl",
+      "text": "[] (pend0 == 1 -> <> pend0 == 0)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 18,
+        "transitions": 34,
+        "depth": 27,
+        "memory_bytes_est": 27236
+      },
+      "complete": true,
+      "reason": "no acceptance cycle in the complete product with the automaton for !([] (pend0 == 1 -> <> pend0 == 0)): no run satisfies the negated property",
+      "temporal": {
+        "source": "formula",
+        "formula": "[] (pend0 == 1 -> <> pend0 == 0)",
+        "negated": "!([] (pend0 == 1 -> <> pend0 == 0))",
+        "atoms": [
+          "pend0 == 1",
+          "pend0 == 0"
+        ],
+        "stutter_invariant": true,
+        "automaton_states": 2,
+        "automaton_transitions": 3,
+        "automaton_accepting": 1,
+        "fairness": "none",
+        "claim": "never:ltl2"
+      }
+    },
+    {
+      "id": "ltl3",
+      "kind": "ltl",
+      "text": "([]<> got1 == 1) && ([]<> got1 == 0)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 63,
+        "transitions": 187,
+        "depth": 34,
+        "memory_bytes_est": 27966
+      },
+      "complete": true,
+      "reason": "no acceptance cycle in the complete product with the automaton for !(([]<> got1 == 1) && ([]<> got1 == 0)): no run satisfies the negated property",
+      "temporal": {
+        "source": "formula",
+        "formula": "([]<> got1 == 1) && ([]<> got1 == 0)",
+        "negated": "!(([]<> got1 == 1) && ([]<> got1 == 0))",
+        "atoms": [
+          "got1 == 1",
+          "got1 == 0"
+        ],
+        "stutter_invariant": true,
+        "automaton_states": 7,
+        "automaton_transitions": 12,
+        "automaton_accepting": 2,
+        "fairness": "none",
+        "claim": "never:ltl3"
+      }
+    },
+    {
+      "id": "ltl4",
+      "kind": "ltl",
+      "text": "([]<> got0 == 1) && ([]<> got0 == 0)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 63,
+        "transitions": 187,
+        "depth": 41,
+        "memory_bytes_est": 30334
+      },
+      "complete": true,
+      "reason": "no acceptance cycle in the complete product with the automaton for !(([]<> got0 == 1) && ([]<> got0 == 0)): no run satisfies the negated property",
+      "temporal": {
+        "source": "formula",
+        "formula": "([]<> got0 == 1) && ([]<> got0 == 0)",
+        "negated": "!(([]<> got0 == 1) && ([]<> got0 == 0))",
+        "atoms": [
+          "got0 == 1",
+          "got0 == 0"
+        ],
+        "stutter_invariant": true,
+        "automaton_states": 7,
+        "automaton_transitions": 12,
+        "automaton_accepting": 2,
+        "fairness": "none",
+        "claim": "never:ltl4"
+      }
+    },
+    {
+      "id": "ltl5",
+      "kind": "ltl",
+      "text": "[] (pend1 + pend0 <= 1)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 16,
+        "transitions": 28,
+        "depth": 27,
+        "memory_bytes_est": 27232
+      },
+      "complete": true,
+      "reason": "no acceptance cycle in the complete product with the automaton for !([] (pend1 + pend0 <= 1)): no run satisfies the negated property",
+      "temporal": {
+        "source": "formula",
+        "formula": "[] (pend1 + pend0 <= 1)",
+        "negated": "!([] (pend1 + pend0 <= 1))",
+        "atoms": [
+          "(pend1 + pend0) <= 1"
+        ],
+        "stutter_invariant": true,
+        "automaton_states": 2,
+        "automaton_transitions": 3,
+        "automaton_accepting": 1,
+        "fairness": "none",
+        "claim": "never:ltl5"
+      }
+    }
+  ]
+}

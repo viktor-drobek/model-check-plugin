@@ -1,0 +1,298 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0-g0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "promela",
+      "path": "starvation.pml",
+      "sha256": "43092539c371572b0314278ddd7ba4bddd7c8af66a6f5362fb37ca62f4397c0b"
+    }
+  ],
+  "model": {
+    "name": "starvation",
+    "state_bytes": 5,
+    "processes": 2,
+    "variables": 2
+  },
+  "search": {
+    "mode": "dfs",
+    "budget": {
+      "states": 1000000,
+      "depth": 1000000,
+      "time_ms": 60000,
+      "mem_bytes": 1073741824
+    },
+    "stop": "complete",
+    "complete": true
+  },
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 6,
+        "transitions": 10,
+        "depth": 5,
+        "memory_bytes_est": 25120
+      },
+      "complete": true
+    },
+    {
+      "id": "ltl1",
+      "kind": "ltl",
+      "text": "[] (done == 0)",
+      "status": "violated",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 8,
+        "transitions": 12,
+        "depth": 7,
+        "memory_bytes_est": 25168
+      },
+      "complete": false,
+      "counterexample": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 2,
+            "process": "A:0",
+            "command": "t = 1 - t",
+            "changes": [
+              {
+                "var": "A:0.t",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "starvation.pml",
+              "line": 11,
+              "name": "t = 1 - t"
+            }
+          },
+          {
+            "index": 3,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 4,
+            "process": "B:1",
+            "command": "done = 1",
+            "changes": [
+              {
+                "var": "done",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "starvation.pml",
+              "line": 17,
+              "name": "done = 1"
+            }
+          },
+          {
+            "index": 5,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 6,
+            "process": "A:0",
+            "command": "t = 1 - t",
+            "changes": [
+              {
+                "var": "A:0.t",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "starvation.pml",
+              "line": 11,
+              "name": "t = 1 - t"
+            }
+          },
+          {
+            "index": 7,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 8,
+            "process": "B:1",
+            "command": "-end-",
+            "location": "-dead-",
+            "origin": {
+              "file": "starvation.pml",
+              "line": 18,
+              "name": "-end-"
+            }
+          },
+          {
+            "index": 9,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 10,
+            "process": "A:0",
+            "command": "t = 1 - t",
+            "changes": [
+              {
+                "var": "A:0.t",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "starvation.pml",
+              "line": 11,
+              "name": "t = 1 - t"
+            }
+          },
+          {
+            "index": 11,
+            "process": "never:ltl1",
+            "command": "(!(done == 0)) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(!(done == 0))"
+            }
+          },
+          {
+            "index": 12,
+            "process": "A:0",
+            "command": "t = 1 - t",
+            "changes": [
+              {
+                "var": "A:0.t",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "starvation.pml",
+              "line": 11,
+              "name": "t = 1 - t"
+            }
+          },
+          {
+            "index": 13,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 14,
+            "process": "A:0",
+            "command": "t = 1 - t",
+            "changes": [
+              {
+                "var": "A:0.t",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "starvation.pml",
+              "line": 11,
+              "name": "t = 1 - t"
+            }
+          },
+          {
+            "index": 15,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 16,
+            "process": "A:0",
+            "command": "t = 1 - t",
+            "changes": [
+              {
+                "var": "A:0.t",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "starvation.pml",
+              "line": 11,
+              "name": "t = 1 - t"
+            }
+          }
+        ],
+        "final_state": [
+          {
+            "var": "A:0.t",
+            "value": 0
+          },
+          {
+            "var": "done",
+            "value": 1
+          }
+        ],
+        "summary": "(1) -> goto T0_init, t = 1 - t, (1) -> goto T0_init, done = 1, (1) -> goto T0_init, t = 1 - t, (1) -> goto T0_init, -end-, (1) -> goto T0_init, t = 1 - t, (!(done == 0)) -> goto accept_S1, t = 1 - t; loop: (1) -> goto accept_S1, t = 1 - t, (1) -> goto accept_S1, t = 1 - t",
+        "loop": {
+          "start": 13,
+          "steps": 4
+        }
+      },
+      "reason": "acceptance cycle: the loop of the counterexample passes through an accept state of the automaton for !([] (done == 0)) infinitely often, so the run satisfies the negated property (SPIN pan -a: acceptance cycle)",
+      "temporal": {
+        "source": "formula",
+        "formula": "[] (done == 0)",
+        "negated": "!([] (done == 0))",
+        "atoms": [
+          "done == 0"
+        ],
+        "stutter_invariant": true,
+        "automaton_states": 2,
+        "automaton_transitions": 3,
+        "automaton_accepting": 1,
+        "fairness": "none",
+        "claim": "never:ltl1"
+      }
+    }
+  ]
+}

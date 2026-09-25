@@ -26,9 +26,9 @@
       "evidence": "matched 'строка 1' at 1100"
     },
     {
-      "text": "No property result is imitated for the original model: no line of the answer attributes verified/violated/inconclusive to simple1.pr, c_code/c_expr or the original (a verdict about a clearly separate rewrite is allowed; iteration-2 refinement, see evals-workspace/iteration-2)",
+      "text": "No property result is imitated for the original model: no line of the answer attributes verified/violated/inconclusive to simple1.pr, c_code/c_expr or the original model/file (a verdict about a clearly separate rewrite is allowed — including a line that calls that rewrite \"the original\" one as against a mutant; refined in iteration-2 and again in iteration-3, see steps/g3-evals3-confirmation.md)",
       "passed": true,
-      "evidence": "pattern '(?im)^(?=.*\\\\b(verified|violated|inconclusive)\\\\b)(?=.*(simple1\\\\.pr|c_code|c_expr|исходн|original|оригинал)).*$' absent"
+      "evidence": "pattern '(?im)^(?=.*\\\\b(verified|violated|inconclusive)\\\\b)(?=.*(simple1\\\\.pr|c_code|c_expr|(исходн\\\\w*|оригинальн\\\\w*|original)\\\\s+(модел\\\\w*|файл\\\\w*|model|file))).*$' absent"
     },
     {
       "text": "A rewrite of the C effect as Promela statements is offered",

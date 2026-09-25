@@ -1,0 +1,17 @@
+{
+  "eval_id": 7,
+  "iteration": 3,
+  "date": "2026-09-25",
+  "source": "Agent task-completion notifications of the two subagent runs (subagent_tokens, duration_ms, tool_uses); no other measurement",
+  "engine": "mcd 0.1.0-g0 (CLI path; the MCP server cannot be registered into a subagent session — the MCP path is exercised by hand in steps/g3-evals3-mcp-session.md)",
+  "with_skill": {
+    "tokens": 123462,
+    "duration_s": 322.91,
+    "tool_uses": 24
+  },
+  "without_skill": {
+    "tokens": 45705,
+    "duration_s": 72.364,
+    "tool_uses": 7
+  }
+}

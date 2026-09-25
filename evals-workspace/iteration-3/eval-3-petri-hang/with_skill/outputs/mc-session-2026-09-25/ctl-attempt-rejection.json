@@ -1,0 +1,7 @@
+{
+  "error": {
+    "kind": "ltl",
+    "status": "not-executed",
+    "message": "property ltl1: formula: atom AG: undeclared variable \"AG\" (at offset 0)"
+  }
+}

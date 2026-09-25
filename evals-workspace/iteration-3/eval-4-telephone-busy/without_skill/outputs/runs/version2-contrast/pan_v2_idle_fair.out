@@ -1,0 +1,31 @@
+pan: ltl formula v2_idle_inf_often
+pan:1: acceptance cycle (at depth 37)
+pan: wrote check_v2.pml.trail
+
+(Spin Version 6.5.2 -- 6 December 2019)
+Warning: Search not completed
+
+Full statespace search for:
+	never claim         	+ (v2_idle_inf_often)
+	assertion violations	+ (if within scope of claim)
+	acceptance   cycles 	+ (fairness enabled)
+	invalid end states	- (disabled by never claim)
+
+State-vector 60 byte, depth reached 47, errors: 1
+       31 states, stored (81 visited)
+       40 states, matched
+      121 transitions (= visited+matched)
+        0 atomic steps
+hash conflicts:         0 (resolved)
+
+Stats on memory usage (in Megabytes):
+    0.003	equivalent memory usage for states (stored*(State-vector + overhead))
+    0.279	actual memory usage for states
+  128.000	memory used for hash table (-w24)
+   10.681	memory used for DFS stack (-m200000)
+  138.877	total actual memory usage
+
+
+
+pan: elapsed time 0.06 seconds
+pan: rate      1350 states/second

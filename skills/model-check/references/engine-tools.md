@@ -1,4 +1,4 @@
-# Engine tools: the `mcd` CLI and the seven MCP tools (as built in G0–G2)
+# Engine tools: the `mcd` CLI and the seven MCP tools (as built in G0–G4)
 
 Sources: `model-check-skill-notes/14-skill-building-plan.md` §3 (three layers),
 §6 (tool table, status vocabulary, aggregation priority, `bounded`/`unknown` rule,
@@ -9,22 +9,28 @@ NFR-007. Engine as built: `model-check-plugin/engine/cli/cli.go` (commands, flag
 exit codes), `engine/report/report.go` (report schema `mcd-report/1`, rules of
 `report.Build`), `engine/mcp/*.go` (the seven tools, field names from the Go struct
 tags), `engine/cmd/mcd/serve.go` (`mcd serve`), `steps/g0-confirmation.md` §4,
-`steps/g1-confirmation.md` §1, `steps/g2-confirmation.md` §1, §4.
+`steps/g1-confirmation.md` §1, `steps/g2-confirmation.md` §1, §4,
+`steps/g4-confirmation.md` §7 (what G4 added to these interfaces). **Every MCP
+request and response quoted below was copied from one hand-driven stdio session,
+recorded in `steps/g3-evals3-mcp-session.md`** — not written from memory; when you
+need a shape this file abbreviates, read that file.
 
-Contents: 1 the CLI · 2 exit codes and rejections · 3 the MCP server (`mcd serve`) ·
+## Contents
+
+1 the CLI · 2 exit codes and rejections · 3 the MCP server (`mcd serve`) ·
 4 the seven tools · 5 the report (`mcd-report/1`) · 6 rules the engine enforces ·
 7 reading a response · 8 capability by build step · 9 session directory.
 
 The engine is one Go binary, `mcd`. Two layers reach it: the CLI (G0, Promela with
-G1) and the MCP server `mcd serve` (G2). Both return the same statuses, evidence
-levels and per-property records; the MCP layer wraps the report of §5 in the
-response shapes of §4 and keeps files in a session directory (§9). Which layer you
-use: the MCP tools when the plugin's server is registered in the session; otherwise
-the CLI. **In this build `mcd serve` does not link the Promela frontend**: `mc_parse`
-with `promela` answers `outcome: not-executed` ("promela frontend not available in
-this build … not linked into this server"), so Promela models go through
-`mcd parse --promela` / `mcd check --promela` until the server is wired (G4/G6);
-until then the CLI is the only path for Promela.
+G1, temporal properties with G4) and the MCP server `mcd serve` (G2). Both return
+the same statuses, evidence levels and per-property records; the MCP layer wraps the
+report of §5 in the response shapes of §4 and keeps files in a session directory
+(§9). Which layer you use: the MCP tools when the plugin's server is registered in
+the session; otherwise the CLI. **`mcd serve` links the Promela frontend**: since G4
+`mc_parse` with a `promela` field returns `outcome: "ir"` with the frontend's
+`warnings` (session file §1.1), so a Promela model can be verified entirely over
+MCP. The CLI remains the path when no server is registered, and it is the only layer
+with `--unlimited` (§1).
 
 ## 1. The CLI
 
@@ -32,8 +38,9 @@ until then the CLI is the only path for Promela.
 mcd parse   (--petri net.json | --ir model.json | --promela model.pml [-D NAME[=val]]…)
                                                                   → IR JSON on stdout
 mcd check   (--petri net.json | --ir model.json | --promela model.pml [-D …])
+            [--ltl 'formula']… [--progress] [--fairness none|weak|strong]
             [--budget-states N] [--budget-depth N] [--budget-ms N] [--budget-mem-mb N]
-            [--bfs] [--sweep] [--no-timing]                       → report JSON on stdout
+            [--unlimited] [--bfs] [--sweep] [--no-timing]         → report JSON on stdout
 mcd version                                      → "mcd <version> (ir <schema>, report <schema>)"
 mcd serve   [flags of §3]                        → MCP server on stdio
 ```
@@ -42,21 +49,28 @@ mcd serve   [flags of §3]                        → MCP server on stdio
 |---|---|---|
 | `--petri FILE` | Petri net JSON (`assets/petri-net.schema.json`, byte-for-byte the engine's `frontend/petri/schema.json`) | exactly one of `--petri` / `--ir` / `--promela` |
 | `--ir FILE` | IR JSON (`mcd-ir/1`), validated and re-emitted canonically | — |
-| `--promela FILE` | Promela text, the subset of `promela-subset.md` §1 (the flag `--promela` arrives with G1 — built) | — |
+| `--promela FILE` | Promela text, the subset of `promela-subset.md` §1 (the flag `--promela` is built, G1) | — |
 | `-D NAME` / `-D NAME=value` | preprocessor symbol, repeatable (`CH4/prop.pml` needs `-D PHI`) | none |
-| `--budget-states N` | stop after N stored states (0 = unlimited) | 1 000 000 |
-| `--budget-depth N` | states deeper than N transitions are stored and counted, not expanded (0 = unlimited) | 1 000 000 |
-| `--budget-ms N` | wall-clock limit in milliseconds (0 = unlimited) | 60 000 |
-| `--budget-mem-mb N` | limit on the engine's memory *estimate* in MiB (0 = unlimited) | 1024 |
+| `--ltl 'φ'` | an LTL formula in SPIN syntax (`[] <> X U V ! && \|\| -> <->`), repeatable; the properties are named `ltl1`, `ltl2`, … in the order given. Atoms are expressions over the model's variables and channels; object-like `#define`s of the model are expanded. A formula the parser refuses is an input rejection (§2, `kind: "ltl"`), not a property result | none |
+| `--progress` | search for non-progress cycles, SPIN's `pan -l`: adds a property `progress` checked against a synthesised `np_` automaton. The model's own `progress` labels decide which cycles count — a model *without* any progress label makes every cycle a non-progress cycle (`properties-ltl-ctl.md` §7) | off |
+| `--fairness none\|weak\|strong` | the fairness assumption for `ltl` and `progress` properties. `weak` is process-level weak fairness (`pan -f`, the n + 2 copies construction); `strong` is accepted and answered with `not-executed` (`fairness.md` §2) | `none` |
+| `--budget-states N` | stop after N stored states (absent or 0 = the default) | 1 000 000 |
+| `--budget-depth N` | states deeper than N transitions are stored and counted, not expanded (absent or 0 = the default) | 1 000 000 |
+| `--budget-ms N` | wall-clock limit in milliseconds (absent or 0 = the default) | 60 000 |
+| `--budget-mem-mb N` | limit on the engine's memory *estimate* in MiB (absent or 0 = the default) | 1024 |
+| `--ctl 'φ'`, `--estimate`, `--estimate-ms N`, `--target-depth N`, `--max-procs N` | **G5, being built as this file is written.** They are already in `mcd check -h` in this working tree, so a binary you build now has them: `--ctl` checks a CTL formula by graph labelling (properties `ctl1`, `ctl2`, …); `--estimate` prints the state-space growth estimate of plan §6 *instead of* checking properties, with `--estimate-ms` as its time limit and `--target-depth` as the depth it projects to; `--max-procs` bounds the instances per proctype a run may create. This file documents that they **exist**, and nothing about the shape of what they return: G5 is not closed, its confirmation is not written, and its report fields are not part of the skill's contract yet. Until it is, read the engine's own output rather than this paragraph, and keep treating `ctl` as the boundary §6 describes | — |
+| `--unlimited` | lift every budget; the report echoes 0 for the lifted limits. **CLI only** — there is no MCP equivalent, because a client must not be able to switch a server ceiling off (§3). Meant for differential runs against `pan`, not for a user's model | off |
 | `--bfs` | breadth-first search: shortest counterexample for safety and deadlock | DFS |
 | `--sweep` | keep searching after every property is decided — the state count of the whole graph, as `pan -c0`; needed when comparing counters with SPIN | stop when all properties are decided |
 | `--no-timing` | omit `time_ms` so two runs of the same input are byte-for-byte equal | timing included |
 
 The defaults are the "medium model" bounds of plan §12 A4 (`evidence-and-status.md`
-§5). Flag names are part of the skill's contract and stay stable. In the CLI a budget
-of 0 means *unlimited*; in MCP an absent or zero budget field means the *server
-default* (§3) — the CLI budget unification (0 = default, `--unlimited` explicit)
-arrives with G4, so until then read "0" by the layer you are on.
+§5). Flag names are part of the skill's contract and stay stable. **The budget rule
+is now identical in the CLI and in MCP** (G4 unified them): an absent or zero budget
+means the default, in both layers, and nothing a caller writes switches a limit off.
+Only the CLI can lift a budget, and only through the explicit `--unlimited`. Before
+G4 a CLI `0` meant *unlimited*; if you find that reading in an older report or note,
+it no longer holds.
 
 Rules that do not change with the layer: pass files by path, never interpolate model
 text into a shell line (11 §13); show the exact command line in the report's
@@ -77,8 +91,11 @@ The division is "is there a result document?" (`steps/g0-confirmation.md` §4, d
 | exit code 1 | no result: tool error — unreadable file, unknown flag or command, internal failure | nothing; the message is on stderr |
 | exit code 2 | no result: the input was rejected by a frontend — schema violation, Promela syntax/semantic error, construct outside the subset, invalid IR | `{"error": {"kind", "status", "path", "message"}}` |
 
-Rejection fields: `kind` is `schema`, `unsupported-input` or `ir` for Petri/IR input
-and `syntax`, `semantic` or `outside-subset` for Promela; `status` is always
+Rejection fields: `kind` is `schema`, `unsupported-input` or `ir` for Petri/IR input,
+`syntax`, `semantic` or `outside-subset` for Promela, and `ltl` for a formula the
+LTL parser refuses or whose atoms are not in the model's scope (G4: a bad `--ltl`
+is a rejected *input*, not a property verdict — the run produces no report at all);
+`status` is always
 `not-executed` (nothing rejected has been executed, so no verdict and no
 `invalid-model` can be claimed); `path` points into the input (`transitions[0].inputs[0].weight`,
 or `file:line:col` for Promela); `message` names the construct, file and line. Real
@@ -109,10 +126,12 @@ The plugin's `.mcp.json` starts it as `${CLAUDE_PLUGIN_ROOT}/engine/bin/mcd serv
 --max-states 5000000 --max-depth 5000000 --max-ms 300000 --max-memory-mb 2048
 --concurrency 2` (installation and the binary build belong to G6).
 
-**Budget rule (MCP).** `budget` has four optional fields `states`, `depth`, `ms`,
-`memory_mb`; an absent or zero field means the server default (the CLI defaults of §1,
-clamped into the ceilings); a value above the ceiling is clamped with a note. A client
-cannot switch a limit off. Three kinds of answer (NFR-007): a **tool error** (`isError`,
+**Budget rule (the same in both layers since G4).** `budget` has four optional
+fields `states`, `depth`, `ms`, `memory_mb`; an absent or zero field means the
+server default (the CLI defaults of §1, clamped into the ceilings), and an absent
+or zero CLI budget flag means the same default; a value above the ceiling is
+clamped with a note. A client cannot switch a limit off — `--unlimited`
+has no MCP counterpart by design. Three kinds of answer (NFR-007): a **tool error** (`isError`,
 text only — bad arguments, unknown kind, unknown session) is not a result; a
 **rejected input** is a structured answer `outcome: rejected` with `rejection`
 (`mc_parse`, `mc_check`) or an error prefixed `rejected input (<kind>):` (the other
@@ -122,18 +141,29 @@ tools); a **result** is a structured answer with `isError` false whatever the st
 
 | Tool | Input (JSON fields) | Output (JSON fields) | Call it when |
 |---|---|---|---|
-| `mc_parse` | exactly one of `promela` (text), `petri` (object), `ir` (object), `file` {`kind`, `path` under `--allow-read`}; `defines` {name: value}; `session_id` (omitted = new session) | `session_id`; `outcome` = `ir` \| `rejected` \| `not-executed`; `ir`, `ir_path` (session file `ir-N.json`), `origins` [{`element`, `file`, `line`, `name`}], `warnings`; `rejection` {`kind`, `construct`, `file`, `line`, `reason`}; `reason` for `not-executed` (frontend not linked — today: Promela) | always first; on every model change. `not-executed` here is a *parse outcome* (missing frontend), a homonym of the verification status |
-| `mc_check` | `session_id` or `ir`; `properties` [{`id`, `kind` ∈ invariant \| deadlock \| reach \| ltl \| ctl \| progress, `expr` (IR expression or a bare variable name), `text`}] — they **replace** the model's own properties when given, and the implicit `assert` is always added; `fairness` = none \| weak; `budget`; `search` = dfs \| bfs; `no_timing`; `aggregate` | `session_id`; `outcome` = `report` \| `rejected`; `report_path` (`check-N.json`, the full `mcd-report/1` of §5); `search` {`mode`, `budget_requested`, `budget_applied`, `budget_notes`, `stop`, `complete`}; `properties` [{`id`, `kind`, `text`, `status`, `evidence`, `complete`, `reason`, `counters`, `counterexample` / `witness` {`id`, `path`, `summary`, `steps`, `user_names`}}]; `warnings`; `aggregate` {`status`, `basis`} only when asked; `rejection` | the check itself; rerun with a larger budget after `inconclusive`. Kinds `ltl`, `progress`, `ctl` return `not-executed`, evidence `unknown`, with `reason` naming the capability and the step (G4 for `ltl`/`progress`, G5 for `ctl`) — until then they are boundaries, not results |
-| `mc_explain` | `session_id`, `counterexample_id` (from `counterexample.id` or `witness.id`) | `id`, `property_id`, `role` = counterexample \| witness, `path`, `prefix` [{`index`, `process`, `command`, `user_name`, `location`, `changes` [{var, before, after}], `origin`}], `loop` (empty until G4; `loop_note` says so), `final_state`, `summary`, `user_names` | every `violated`; before classifying the cause. A `../` or absolute id is refused (session guard) |
+| `mc_parse` | exactly one of `promela` (text), `petri` (object), `ir` (object), `file` {`kind`, `path` under `--allow-read`}; `defines` {name: value}; `session_id` (omitted = new session) | `session_id`; `outcome` = `ir` \| `rejected` \| `not-executed`; `ir`, `ir_path` (session file `ir-N.json`), `origins` [{`element`, `file`, `line`, `name`}], `warnings`; `rejection` {`kind`, `construct`, `file`, `line`, `reason`}; `reason` for `not-executed` (a frontend this server does not link) | always first; on every model change. Promela works here since G4 (`outcome: "ir"`; inline text gives `file: "inline"` in `origins`). `not-executed` here is a *parse outcome*, a homonym of the verification status |
+| `mc_check` | `session_id` or `ir`; `properties` [{`id`, `kind` ∈ invariant \| deadlock \| reach \| ltl \| ctl \| progress, `expr` (IR expression JSON or a bare variable name — state kinds only), **`formula`** (the SPIN-syntax LTL string; `ltl` takes `formula`, never `expr`), `text`}] — they **replace** the model's own properties when given, and the implicit `assert` is always added; `fairness` = none \| weak \| strong; `budget`; `search` = dfs \| bfs; `no_timing`; `aggregate` | `session_id`; `outcome` = `report` \| `rejected`; `report_path` (`check-N.json`, the full `mcd-report/1` of §5); `search` {`mode`, `budget_requested`, `budget_applied`, `budget_notes`, `stop`, `complete`}; `properties` [{`id`, `kind`, `text`, `status`, `evidence`, `complete`, `reason`, `counters`, `counterexample` / `witness` {`id`, `path`, `summary`, `steps`, `user_names`, and for a lasso `loop` {`start`, `steps`}}, **`temporal`** (§5.2)}]; `warnings`; `aggregate` {`status`, `basis`} only when asked; `rejection` (`kind: "ltl"` for a bad formula) | the check itself; rerun with a larger budget after `inconclusive`. `ltl` and `progress` are executed since G4. Kind `ctl` still returns `not-executed` with evidence `unknown` and `reason` naming G5 — a boundary, not a result. `fairness: "strong"` is accepted and answered with `not-executed` (`fairness.md` §2), which is a result: `isError` false, `outcome: "report"` |
+| `mc_explain` | `session_id`, `counterexample_id` (from `counterexample.id` or `witness.id`) | `id`, `property_id`, `role` = counterexample \| witness, `path`, `prefix` [{`index`, `process`, `command`, `user_name`, `location`, `changes` [{var, before, after}], `origin`}], `loop` (the same step shape; empty for a finite counterexample), `loop_note` (one sentence saying which step indices are the prefix and which are the loop, or that there is no loop), `final_state`, `summary`, `user_names` | every `violated`; before classifying the cause. A `../` or absolute id is refused (session guard). The split follows the report's `counterexample.loop.start`: steps before it are the prefix, the rest repeat forever (`counterexamples.md` §2a) |
 | `mc_simulate` | `session_id` or `ir`; `mode` = random \| guided; `seed` (same seed = same run), `steps` (default 100), `edges` for guided (`process/index`, the edge text, or the origin name) | `mode`, `seed`, `steps_taken`, `stopped` ∈ steps \| deadlock \| terminated \| edge not enabled \| edges exhausted \| assert failed \| invalid-model, `stop_reason`, `summary`, `trace_path` (`sim-N.json`), `trace` inline when ≤ 50 steps, `enabled_at_stop` | the sanity walk of step 5; never as evidence |
-| `mc_lint_property` | `session_id` or `ir`; `expr`; `kind` = invariant \| reach | `expr` as the engine reads it, `atoms` (first occurrence order), `undefined` (atoms that are not globals), `type_ok`/`type_error`, `class` = safety \| reachability (with `class_basis`), `x_free`, `temporal`, `constant` (vacuity candidate), `notes` | every state property before a check. Temporal kinds (`ltl`, `ctl`, `progress`) are refused with the step named — the manual classification of `properties-ltl-ctl.md` stands in, and the report says so |
+| `mc_lint_property` | `session_id` or `ir`; `expr` with `kind` = invariant \| reach, or `formula` with `kind` = `ltl` | `expr` as the engine reads it, `atoms` (first occurrence order), `undefined` (atoms that are not globals), `type_ok`/`type_error`, `class` = safety \| reachability (with `class_basis`), `x_free`, `temporal`, `constant` (vacuity candidate), `nnf`, `notes` | every property before a check. Since G4 `kind: "ltl"` is linted too: atoms, undefined atoms, `x_free`, the NNF, a syntactic safety/liveness class and a note when the antecedent of an implication may be vacuous. `ctl` and `progress` are still refused with the step named — the manual classification of `properties-ltl-ctl.md` stands in, and the report says so |
 | `mc_estimate` | `session_id` or `ir`; `ms` (default 1000, capped by the server) | `time_limit_ms`, `elapsed_ms`, `states_visited`, `transitions`, `depth_reached`, `complete`, `states_per_second`, `growth` {`per_level` [{depth, states}], `rate`, `rate_basis`}, `projection` {`evidence` = approximate \| exhaustive, `states_at_next_level`, `note`}, `note` ("not a verification result") | before choosing budget and mode. A bounded BFS by levels (G2 interface; the growth model of plan §9 is G5) |
 | `mc_manifest` | `session_id` | `path` (`manifest.json`), `manifest` {`session_id`, `created`, `engine` {name, version, ir_schema, report_schema, mcp_schema}, `server` {`default_budget`, `ceiling`, `concurrency`, `allow_read`}, `inputs` [{kind, source, sha256, path}], `calls` [{n, tool, started, duration_ms, outcome = ok \| error, error, params {search, fairness, budget_applied, seed, steps, mode, time_limit_ms}, artifacts}]} | every report (FR-012, NFR-002) |
 
+**Adding your own properties without the server.** `mc_check`'s `properties` list
+has no CLI flag, but it is not the only way in. The CLI reads a *property list from
+the IR*: run `mcd parse` on the model, append records to the IR's `properties` array
+— `{"id", "kind", "expr"}` for `invariant` and `reach` (an IR expression object:
+`{"op": "ge", "args": [{"op": "var", "var": "p2"}, {"op": "const", "value": 1}]}`),
+`{"id", "kind": "ltl", "formula"}` for a temporal one — and run `mcd check --ir` on
+the edited file. This is how a `reach` property is asked for from the CLI; `--ltl`
+and `--progress` are shortcuts for the temporal cases only. The model's own
+properties stay unless you remove them.
+
 **CLI stand-ins** when the server is not registered (the with-skill evals of
 `evals-workspace/` ran this way): `mc_parse` → `mcd parse`; `mc_check` → `mcd check`
-with the budget flags; `mc_explain` → read `counterexample.steps` and `final_state`
-in the report (§5.3); `mc_simulate` → no equivalent, skip the walk and say so;
+with the budget flags, and property lists through the edited IR as just described; `mc_explain` → read `counterexample.steps`, `counterexample.loop`
+and `final_state` in the report (§5.3) — the CLI report carries the same steps, so
+the only thing missing is the `loop_note` sentence, which you write yourself; `mc_simulate` → no equivalent, skip the walk and say so;
 `mc_lint_property` → classify by `properties-ltl-ctl.md` and say it was manual;
 `mc_estimate` → a `mcd check` with a small `--budget-states` is a crude stand-in (its
 `counters.states` at the budget says how far the budget reached, not how the count
@@ -152,18 +182,19 @@ manifest was assembled by hand.
 | `inputs` | one entry per input file: `kind` (`petri` / `ir` / `promela`), `path`, `sha256` of the file's bytes |
 | `model` | `name`, `state_bytes`, `processes`, `variables` |
 | `search` | `mode` (`dfs` / `bfs`), `budget` {`states`, `depth`, `time_ms`, `mem_bytes`} as given, `stop` (why the search ended, as a sentence: "complete", "all properties decided", "invalid model" — the engine's literal text with a space, a stop reason, not a verdict — or a budget sentence), `complete` (true only when the whole reachable graph was expanded) |
-| `warnings` | frontend warnings (G1): `printf` ignored, never claim not executed |
+| `warnings` | frontend warnings (G1), e.g. that `printf` statements are kept as no-op steps and produce no output. Read them; they are also on stderr |
 | `properties` | one record per property, in the model's property order (§5.2) |
 
 ### 5.2. One property record
 
 | Field | Content |
 |---|---|
-| `id`, `kind`, `text` | the Petri frontend generates `deadlock` (kind `deadlock`) and `safe` (kind `invariant`); the Promela frontend generates `deadlock` and, when some statement is an `assert`, `assert` (kind `assert`); the IR may add `reach` and `invariant` |
+| `id`, `kind`, `text` | the Petri frontend generates `deadlock` (kind `deadlock`) and `safe` (kind `invariant`); the Promela frontend generates `deadlock` and, when some statement is an `assert`, `assert` (kind `assert`), **and from the model itself**: `never` (kind `ltl`) when the file has a never claim, `accept` (kind `ltl`) when a process has an `accept` label and there is no claim, `progress` (kind `progress`) when some process has a `progress` label — you did not ask for these and they are still yours to read (`properties-ltl-ctl.md` §7). The CLI adds `ltl1`, `ltl2`, … for each `--ltl`, and `progress` for `--progress`; the IR may add `reach` and `invariant` |
 | `status` | one of the six words (`evidence-and-status.md` §1) |
 | `evidence` | `exhaustive`, `bounded`, `approximate`, `unknown` |
 | `counters` | `states`, `transitions`, `depth` (greatest depth expanded), `time_ms` (absent under `--no-timing`), `memory_bytes_est`; the same for every property of one run |
-| `complete` | copy of `search.complete` |
+| `complete` | for a state property, a copy of `search.complete`; a temporal property has its **own** `complete` — its search is a separate product with its own automaton, and `false` here means that product was not exhausted (a `violated` lasso stops the search, so `violated` normally comes with `complete: false` and evidence `exhaustive` — see §6) |
+| `temporal` | present for `ltl` and `progress`: `source` (`formula` for `--ltl`, `claim` for the model's never claim, `np` for non-progress), `formula` and `negated` (the engine builds the automaton for the negation), `atoms` in first-occurrence order, `stutter_invariant` (false exactly when the formula uses `X`), `automaton_states`, `automaton_transitions`, `automaton_accepting`, `fairness` (`none`/`weak`/`strong` as asked), `claim` (the name of the claim process in the counterexample: `never:<property id>` — `never:ltl1` for the CLI's first `--ltl` — or `np_` for a non-progress search) |
 | `counterexample` | present for `violated` (the violating run) and for `invalid-model` (the run to the offending step); §5.3 |
 | `witness` | present for a `reach` that came back `verified`: the run that reaches the condition |
 | `reason` | for `inconclusive` the exhausted resource; for `not-executed` / `invalid-model` what is missing or overflowed; for `violated` the engine may add a one-line diagnosis (`deadlock`: which processes are blocked; `assert`: "assert(…) fails in the last step of the counterexample"; `reach`: no state satisfies the condition) |
@@ -177,8 +208,18 @@ values —, `location` (control location after the step, when named), `partner` 
 rendezvous step, `origin` {`file`, `line`, `name`} (the Promela line of the statement
 is the mapping back to the source). `final_state[]` {`var`, `value`} lists **every**
 variable of the last state. `summary` joins the step commands with ", " — for
-`petrinet1` it is exactly `t1, t4`. Loops (prefix + cycle) arrive with G4; a run is
-a finite path.
+`petrinet1` it is exactly `t1, t4`; for a lasso it inserts `; loop: ` before the
+cycle.
+
+**`loop` {`start`, `steps`} (G4)** turns the run into a lasso: `start` is the
+1-based index of the first step of the cycle and `steps` its length, so steps
+`1 … start-1` are the prefix and steps `start … start+steps-1` repeat forever. A
+finite counterexample (invariant, `assert`, `deadlock`, a safety formula) has no
+`loop` at all. Two process names appear only in lassos: the claim process
+(`never:<property id>`, or `np_` for `--progress`), whose steps you drop when
+presenting the trace to a user, and `-`, a **null step** of the weak-fairness
+construction — it advances the fairness copy without any process moving
+(`counterexamples.md` §2a).
 
 ## 6. Rules the engine enforces on its own output (K1; `report.Build` refuses a document that breaks them)
 
@@ -188,13 +229,23 @@ a finite path.
 - `verified` requires `complete` = true and evidence `exhaustive`, except for `reach`.
 - `reach` is verified by a witness: the exact run attached as `witness`; the search
   may be incomplete and the verdict still stands.
-- Budget exhaustion gives `inconclusive`, evidence `bounded`, `complete` false, with
-  `reason` naming the exhausted resource: `state budget exhausted: N states stored`,
+- `violated` for a temporal property is an **acceptance cycle** (or, for `--progress`,
+  a non-progress cycle): the lasso of §5.3, with `reason` naming the promise that is
+  never discharged and, when fairness was `none`, which process is enabled through
+  the loop and never moves.
+- Budget exhaustion gives `inconclusive` and `complete` false, with `reason` naming
+  the exhausted resource. The evidence depends on **which** budget stopped it
+  (G4, plan §6): a states or depth stop is `bounded` — the engine can name the bound
+  and the result holds up to it; a time or memory stop is `unknown` — where the
+  search stood when the clock ran out is not a bound anyone can state
+  (`evidence-and-status.md` §3). Reasons: `state budget exhausted: N states stored`,
   `depth budget exhausted: …`, `time budget exhausted`, `memory budget exhausted: …`.
 - A construct outside the subset gives `not-executed`; so does a capability the
-  current build lacks — two different boundaries with the same status. A property
-  kind the engine does not run yet (`ltl`, `ctl`, `progress`) gets `not-executed`
-  from the engine with evidence `unknown` and the kind named; an unsupported *input*
+  current build lacks — two different boundaries with the same status. The only
+  property kind the engine does not run is `ctl` (G5): it gets `not-executed` from
+  the engine with evidence `unknown` and the kind named. `fairness: strong` is the
+  other capability boundary: the property is `not-executed`, evidence `unknown`,
+  with FR-008 in the `reason`. An unsupported *input*
   construct (an inhibitor arc, `c_code`, `unless`, …) is an exit code 2 rejection
   (§2) or `outcome: rejected` (§4), the engine produces no record, and you assign
   `not-executed` yourself (`evidence-and-status.md` §1).
@@ -204,7 +255,8 @@ a finite path.
   property still undecided at that point gets `invalid-model`, while a property
   already decided keeps its verdict (`steps/g0-confirmation.md` §4, decision 3).
   SPIN wraps silently where the engine stops (`promela-subset.md` §2).
-- `unknown` is in the vocabulary; the G0–G2 engine never emits it as a status.
+- `unknown` is in the vocabulary; the engine still never emits it as a *status* —
+  since G4 it does emit it as an *evidence* level for a time or memory budget stop.
 - Aggregation priority: `invalid-model` > `not-executed` > `violated` > `inconclusive` > `unknown` > `verified` (plan §6). Statuses are per property; the engine aggregates only when `mc_check` is asked (`aggregate: true`) and then also returns `basis`. If the user insists on one word, take the first of this list that occurs and still list the per-property records.
 
 Determinism (NFR-006): the same input and flags produce the same report except
@@ -223,9 +275,15 @@ Anything else that differs between two runs is an engine defect to report.
    they are; never upgrade an `inconclusive` or downgrade a `violated`.
 4. **`counterexample` / `witness`** — decode through `origin` (file, line, name) and
    `final_state` (CLI) or `mc_explain`'s `prefix` with `user_name` and `changes`
-   (MCP); classify the cause (`counterexamples.md`).
-5. **`reason`** — quote it verbatim.
-6. **`counters`** — into the Execution section; they are not evidence.
+   (MCP); when `loop` is present read it as a lasso and say which steps repeat;
+   classify the cause (`counterexamples.md`).
+5. **`temporal`**, for a temporal property — which formula was actually checked,
+   whether it was negated (it always is), what the atoms are, and which fairness
+   was in force. A report that shows a verdict without saying which formula
+   produced it is unreadable; quote `temporal.formula` and `temporal.fairness`
+   next to the status.
+6. **`reason`** — quote it verbatim.
+7. **`counters`** — into the Execution section; they are not evidence.
 
 ## 8. Capability by build step
 
@@ -233,9 +291,9 @@ Anything else that differs between two runs is an engine defect to report.
 |---|---|
 | Petri JSON (`--petri`), IR JSON (`--ir`); `deadlock`, `invariant`, `reach`, `assert`; DFS/BFS; budgets; `mcd-report/1`; finite-path counterexamples with `origin`; exit codes 0/1/2 | **G0 (built)** |
 | Promela subset via `--promela`, `-D`, `--sweep`; counterexamples mapped to Promela lines with instance-qualified locals and rendezvous partners; `pandiff` against `pan -d` | **G1 (built)** |
-| MCP server `mcd serve` with the seven tools, session directory, manifest, budget ceilings, read allow-list (the MCP layer arrives with G2 — built; Promela not linked into the server yet) | **G2 (built)** |
-| `ltl` (never claims and formulas), `progress`, weak fairness, loop counterexamples; CLI budget unification | G4 (LTL evidence `unknown`/experimental until the differential oracle passes, plan §11) |
-| `ctl`, vacuity for temporal formulas, the growth model of `mc_estimate`, Promela v1 (`inline`, `typedef`, channels in messages, `_nr_pr`) | G5 |
+| MCP server `mcd serve` with the seven tools, session directory, manifest, budget ceilings, read allow-list (the MCP layer is built, G2). The CLI and the MCP layer reach the same engine and return the same statuses, evidence levels and property records | **G2 (built)** |
+| `ltl` (never claims and `--ltl` formulas), `progress` (`--progress` and `progress` labels), weak fairness, lasso counterexamples (`loop`), `--unlimited`, the same budget rule in both layers, `mc_parse{promela}` over MCP | **G4 (built)**. Plan §11 kept LTL evidence at `unknown` only "while experimental"; the differential oracle of `steps/g4-confirmation.md` §3.1 (43 triples agreeing with `pan`) is what ends that, so LTL results now carry the ordinary evidence levels of §6 |
+| `ctl`, vacuity for temporal formulas, the growth model of `mc_estimate`, Promela v1 (`inline`, `typedef`, channels in messages, `_nr_pr`) | G5 — until then `ctl` is `not-executed` |
 | plugin installation (`.mcp.json`, binary build) validated with a real client | G6 |
 | bitstate (`approximate`), POR, parallel BFS | G7 (vNext, if chosen) |
 

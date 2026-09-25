@@ -1,0 +1,418 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0-g0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "petri",
+      "path": "petrinet.json",
+      "sha256": "71124a8d22ec43a8e0ff1e1cc444296afb99145db764a0c5386db501de3ddf51"
+    }
+  ],
+  "model": {
+    "name": "user-net",
+    "state_bytes": 8,
+    "processes": 1,
+    "variables": 6
+  },
+  "search": {
+    "mode": "dfs",
+    "budget": {
+      "states": 1000000,
+      "depth": 1000000,
+      "time_ms": 60000,
+      "mem_bytes": 1073741824
+    },
+    "stop": "complete",
+    "complete": true
+  },
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "hang (Holzmann §8.10): a reachable marking in which no transition is enabled",
+      "status": "violated",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 6,
+        "transitions": 8,
+        "depth": 2,
+        "memory_bytes_est": 24896
+      },
+      "complete": true,
+      "counterexample": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "init",
+            "command": "t1",
+            "changes": [
+              {
+                "var": "p1",
+                "before": 1,
+                "after": 0
+              },
+              {
+                "var": "p2",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "location": "do",
+            "origin": {
+              "file": "petrinet.json",
+              "name": "t1"
+            }
+          },
+          {
+            "index": 2,
+            "process": "init",
+            "command": "t4",
+            "changes": [
+              {
+                "var": "p4",
+                "before": 1,
+                "after": 0
+              },
+              {
+                "var": "p5",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "location": "do",
+            "origin": {
+              "file": "petrinet.json",
+              "name": "t4"
+            }
+          }
+        ],
+        "final_state": [
+          {
+            "var": "p1",
+            "value": 0
+          },
+          {
+            "var": "p2",
+            "value": 1
+          },
+          {
+            "var": "p3",
+            "value": 0
+          },
+          {
+            "var": "p4",
+            "value": 0
+          },
+          {
+            "var": "p5",
+            "value": 1
+          },
+          {
+            "var": "p6",
+            "value": 0
+          }
+        ],
+        "summary": "t1, t4"
+      },
+      "reason": "deadlock: no transition is enabled and not every process is terminated (at an end label or without outgoing edges)"
+    },
+    {
+      "id": "safe",
+      "kind": "invariant",
+      "text": "safe (Holzmann §8.10): every place holds at most one token in every reachable marking",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 6,
+        "transitions": 8,
+        "depth": 2,
+        "memory_bytes_est": 24896
+      },
+      "complete": true
+    },
+    {
+      "id": "ltl1",
+      "kind": "ltl",
+      "text": "<> (p2 > 0 && p5 > 0)",
+      "status": "violated",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 16,
+        "transitions": 19,
+        "depth": 15,
+        "memory_bytes_est": 25952
+      },
+      "complete": false,
+      "counterexample": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "never:ltl1",
+            "command": "(!(p2 > 0)) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(!(p2 > 0))"
+            }
+          },
+          {
+            "index": 2,
+            "process": "init",
+            "command": "t1",
+            "changes": [
+              {
+                "var": "p1",
+                "before": 1,
+                "after": 0
+              },
+              {
+                "var": "p2",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "location": "do",
+            "origin": {
+              "file": "petrinet.json",
+              "name": "t1"
+            }
+          },
+          {
+            "index": 3,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 0 -> 1, leaving an accepting state)"
+          },
+          {
+            "index": 4,
+            "process": "never:ltl1",
+            "command": "(!(p5 > 0)) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(!(p5 > 0))"
+            }
+          },
+          {
+            "index": 5,
+            "process": "init",
+            "command": "t2",
+            "changes": [
+              {
+                "var": "p2",
+                "before": 1,
+                "after": 0
+              },
+              {
+                "var": "p3",
+                "before": 0,
+                "after": 1
+              },
+              {
+                "var": "p4",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "location": "do",
+            "origin": {
+              "file": "petrinet.json",
+              "name": "t2"
+            }
+          },
+          {
+            "index": 6,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 2 -> 0, every process has moved or been blocked once)"
+          },
+          {
+            "index": 7,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 0 -> 1, leaving an accepting state)"
+          },
+          {
+            "index": 8,
+            "process": "never:ltl1",
+            "command": "(!(p2 > 0)) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(!(p2 > 0))"
+            }
+          },
+          {
+            "index": 9,
+            "process": "init",
+            "command": "t3",
+            "changes": [
+              {
+                "var": "p1",
+                "before": 0,
+                "after": 1
+              },
+              {
+                "var": "p3",
+                "before": 1,
+                "after": 0
+              },
+              {
+                "var": "p4",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "location": "do",
+            "origin": {
+              "file": "petrinet.json",
+              "name": "t3"
+            }
+          },
+          {
+            "index": 10,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 2 -> 0, every process has moved or been blocked once)"
+          },
+          {
+            "index": 11,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 0 -> 1, leaving an accepting state)"
+          },
+          {
+            "index": 12,
+            "process": "never:ltl1",
+            "command": "(!(p2 > 0)) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(!(p2 > 0))"
+            }
+          },
+          {
+            "index": 13,
+            "process": "init",
+            "command": "t4",
+            "changes": [
+              {
+                "var": "p4",
+                "before": 1,
+                "after": 0
+              },
+              {
+                "var": "p5",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "location": "do",
+            "origin": {
+              "file": "petrinet.json",
+              "name": "t4"
+            }
+          },
+          {
+            "index": 14,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 2 -> 0, every process has moved or been blocked once)"
+          },
+          {
+            "index": 15,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 0 -> 1, leaving an accepting state)"
+          },
+          {
+            "index": 16,
+            "process": "never:ltl1",
+            "command": "(!(p2 > 0)) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(!(p2 > 0))"
+            }
+          },
+          {
+            "index": 17,
+            "process": "init",
+            "command": "t1",
+            "changes": [
+              {
+                "var": "p1",
+                "before": 1,
+                "after": 0
+              },
+              {
+                "var": "p2",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "location": "do",
+            "origin": {
+              "file": "petrinet.json",
+              "name": "t1"
+            }
+          },
+          {
+            "index": 18,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 2 -> 0, every process has moved or been blocked once)"
+          },
+          {
+            "index": 19,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 0 -> 1, leaving an accepting state)"
+          },
+          {
+            "index": 20,
+            "process": "-",
+            "command": "(weak fairness: no process moves; copy 1 -> 2, process init is blocked)"
+          }
+        ],
+        "final_state": [
+          {
+            "var": "p1",
+            "value": 0
+          },
+          {
+            "var": "p2",
+            "value": 1
+          },
+          {
+            "var": "p3",
+            "value": 0
+          },
+          {
+            "var": "p4",
+            "value": 0
+          },
+          {
+            "var": "p5",
+            "value": 1
+          },
+          {
+            "var": "p6",
+            "value": 0
+          }
+        ],
+        "summary": "(!(p2 > 0)) -> goto accept_S1, t1, (weak fairness: no process moves; copy 0 -> 1, leaving an accepting state), (!(p5 > 0)) -> goto accept_S1, t2, (weak fairness: no process moves; copy 2 -> 0, every process has moved or been blocked once), (weak fairness: no process moves; copy 0 -> 1, leaving an accepting state), (!(p2 > 0)) -> goto accept_S1, t3, (weak fairness: no process moves; copy 2 -> 0, every process has moved or been blocked once), (weak fairness: no process moves; copy 0 -> 1, leaving an accepting state), (!(p2 > 0)) -> goto accept_S1, t4, (weak fairness: no process moves; copy 2 -> 0, every process has moved or been blocked once), (weak fairness: no process moves; copy 0 -> 1, leaving an accepting state), (!(p2 > 0)) -> goto accept_S1, t1; loop: (weak fairness: no process moves; copy 2 -> 0, every process has moved or been blocked once), (weak fairness: no process moves; copy 0 -> 1, leaving an accepting state), (weak fairness: no process moves; copy 1 -> 2, process init is blocked)",
+        "loop": {
+          "start": 18,
+          "steps": 3
+        }
+      },
+      "reason": "acceptance cycle: the loop of the counterexample passes through an accept state of the automaton for !(<> (p2 > 0 && p5 > 0)) infinitely often, so the run satisfies the negated property (SPIN pan -a: acceptance cycle)",
+      "temporal": {
+        "source": "formula",
+        "formula": "<> (p2 > 0 && p5 > 0)",
+        "negated": "!(<> (p2 > 0 && p5 > 0))",
+        "atoms": [
+          "p2 > 0",
+          "p5 > 0"
+        ],
+        "stutter_invariant": true,
+        "automaton_states": 2,
+        "automaton_transitions": 4,
+        "automaton_accepting": 1,
+        "fairness": "weak",
+        "claim": "never:ltl1"
+      }
+    }
+  ]
+}

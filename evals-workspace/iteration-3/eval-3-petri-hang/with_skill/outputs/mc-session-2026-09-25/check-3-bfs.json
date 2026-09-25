@@ -1,0 +1,138 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0-g0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "petri",
+      "path": "petrinet.json",
+      "sha256": "71124a8d22ec43a8e0ff1e1cc444296afb99145db764a0c5386db501de3ddf51"
+    }
+  ],
+  "model": {
+    "name": "user-net",
+    "state_bytes": 8,
+    "processes": 1,
+    "variables": 6
+  },
+  "search": {
+    "mode": "bfs",
+    "budget": {
+      "states": 1000000,
+      "depth": 1000000,
+      "time_ms": 60000,
+      "mem_bytes": 1073741824
+    },
+    "stop": "complete",
+    "complete": true
+  },
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "hang (Holzmann §8.10): a reachable marking in which no transition is enabled",
+      "status": "violated",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 6,
+        "transitions": 8,
+        "depth": 2,
+        "memory_bytes_est": 24960
+      },
+      "complete": true,
+      "counterexample": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "init",
+            "command": "t1",
+            "changes": [
+              {
+                "var": "p1",
+                "before": 1,
+                "after": 0
+              },
+              {
+                "var": "p2",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "location": "do",
+            "origin": {
+              "file": "petrinet.json",
+              "name": "t1"
+            }
+          },
+          {
+            "index": 2,
+            "process": "init",
+            "command": "t4",
+            "changes": [
+              {
+                "var": "p4",
+                "before": 1,
+                "after": 0
+              },
+              {
+                "var": "p5",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "location": "do",
+            "origin": {
+              "file": "petrinet.json",
+              "name": "t4"
+            }
+          }
+        ],
+        "final_state": [
+          {
+            "var": "p1",
+            "value": 0
+          },
+          {
+            "var": "p2",
+            "value": 1
+          },
+          {
+            "var": "p3",
+            "value": 0
+          },
+          {
+            "var": "p4",
+            "value": 0
+          },
+          {
+            "var": "p5",
+            "value": 1
+          },
+          {
+            "var": "p6",
+            "value": 0
+          }
+        ],
+        "summary": "t1, t4"
+      },
+      "reason": "deadlock: no transition is enabled and not every process is terminated (at an end label or without outgoing edges)"
+    },
+    {
+      "id": "safe",
+      "kind": "invariant",
+      "text": "safe (Holzmann §8.10): every place holds at most one token in every reachable marking",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 6,
+        "transitions": 8,
+        "depth": 2,
+        "memory_bytes_est": 24960
+      },
+      "complete": true
+    }
+  ]
+}

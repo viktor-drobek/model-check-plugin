@@ -1,0 +1,79 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0-g0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "promela",
+      "path": "Promela - examples/CH3/alternatingbit.pml",
+      "sha256": "09006d65d6619931809544f074da440a9f3758e7715d7cc7493657164267698d"
+    }
+  ],
+  "model": {
+    "name": "alternatingbit",
+    "state_bytes": 9,
+    "processes": 2,
+    "variables": 0
+  },
+  "search": {
+    "mode": "dfs",
+    "budget": {
+      "states": 4,
+      "depth": 1000000,
+      "time_ms": 60000,
+      "mem_bytes": 1073741824
+    },
+    "stop": "state budget exhausted: 4 states stored",
+    "complete": false
+  },
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)",
+      "status": "inconclusive",
+      "evidence": "bounded",
+      "counters": {
+        "states": 4,
+        "transitions": 4,
+        "depth": 3,
+        "memory_bytes_est": 24896
+      },
+      "complete": false,
+      "reason": "state budget exhausted: 4 states stored"
+    },
+    {
+      "id": "ltl1",
+      "kind": "ltl",
+      "text": "[] (nempty(to_rcvr) -> <> empty(to_rcvr))",
+      "status": "inconclusive",
+      "evidence": "bounded",
+      "counters": {
+        "states": 4,
+        "transitions": 4,
+        "depth": 3,
+        "memory_bytes_est": 24904
+      },
+      "complete": false,
+      "reason": "state budget exhausted: 4 states stored",
+      "temporal": {
+        "source": "formula",
+        "formula": "[] (nempty(to_rcvr) -> <> empty(to_rcvr))",
+        "negated": "!([] (nempty(to_rcvr) -> <> empty(to_rcvr)))",
+        "atoms": [
+          "len(to_rcvr) > 0",
+          "len(to_rcvr) == 0"
+        ],
+        "stutter_invariant": true,
+        "automaton_states": 2,
+        "automaton_transitions": 3,
+        "automaton_accepting": 1,
+        "fairness": "none",
+        "claim": "never:ltl1"
+      }
+    }
+  ]
+}

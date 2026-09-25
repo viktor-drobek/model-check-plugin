@@ -91,12 +91,14 @@ tool class would fit), no imitation of a result. Details and the branch table:
 Two layers reach the same engine (`references/engine-tools.md`). When the plugin's MCP
 server is registered in the session, call the `mc_*` tools; otherwise every `mc_*` name
 in this file means its `mcd` CLI equivalent: `mcd parse --petri|--ir|--promela [-D …]`
-and `mcd check --petri|--ir|--promela [-D …] [--budget-*] [--bfs] [--sweep] [--no-timing]`.
-Promela input goes through the `promela` field of `mc_parse` — or, since the server of
-this build does not link the Promela frontend yet, through `mcd parse --promela` /
-`mcd check --promela`. A Petri net goes through `petri` / `--petri`. Exit code 2 (CLI)
-or `outcome: rejected` (MCP) is the parser rejection meant below; exit code 0 /
-`outcome: report` is a result even when it says `invalid-model`.
+and `mcd check --petri|--ir|--promela [-D …] [--ltl 'φ']… [--progress]
+[--fairness none|weak] [--budget-*] [--unlimited] [--bfs] [--sweep] [--no-timing]`.
+Promela input goes through the `promela` field of `mc_parse` or through
+`mcd parse --promela` / `mcd check --promela` — both work; a Petri net goes through
+`petri` / `--petri`. Exit code 2 (CLI) or `outcome: rejected` (MCP) is the parser
+rejection meant below; exit code 0 / `outcome: report` is a result even when it says
+`invalid-model`. An `--ltl` formula the engine cannot parse is also a rejection, not
+a verdict.
 
 Call `mc_parse` on the Promela text or the Petri JSON. Read the warnings, not just the
 success flag: `printf` ignored, never claim not executed, capacity defaults applied.
@@ -109,18 +111,34 @@ back the `exhaustive` evidence level only cover the grammar the parser accepts.
 
 Classify each property on three axes (FR-004): class (safety / reachability /
 liveness), logic (invariant / LTL / CTL), extension (untimed / timed / probabilistic).
-Run `mc_lint_property` on every formula before checking: it returns the atoms, whether
-they are defined, vacuity candidates, the safety/liveness class and whether the
-formula is `X`-free. Always add at least one sanity reachability property (is the
-trigger reachable? is the interesting state reachable?) next to the main requirement;
-a response property whose request never happens holds for nothing.
+Run `mc_lint_property` on every property before checking — a state property by
+`expr`, an LTL property by `formula` — it returns the atoms, whether they are
+defined, vacuity candidates, the safety/liveness class and whether the formula is
+`X`-free. Always add at least one sanity reachability property (is the trigger
+reachable? is the interesting state reachable?) next to the main requirement; a
+response property whose request never happens holds for nothing.
+
+An LTL property is passed as `formula` (SPIN syntax), never as `expr`; the engine
+checks it by searching the product with the automaton for its **negation**, and the
+record it returns carries `temporal` — the formula, the atoms, the fairness, and
+`stutter_invariant`, which is false exactly when the formula uses `X`. Control-label
+atoms (`proc@label`) are **not** accepted by this build; a requirement about a
+control location needs a `progress` label or a variable added to the model, declared
+as a change to the model. A `ctl` property is `not-executed` until G5 — say so and
+say what was checked instead.
 
 LTL and CTL are not interchangeable (FR-007). Keep the logic the user chose or the
 requirement implies; the table of equivalent and diverging patterns is in
 `references/properties-ltl-ctl.md`. For every liveness property ask about fairness
 **before** running (FR-008): which infinite paths does the user consider
-unrealistic, and why. The engine supports weak fairness only; strong fairness is
-declared unsupported (`references/fairness.md`).
+unrealistic, and why. The engine supports weak fairness only (`fairness: weak`,
+`--fairness weak`); **strong fairness is unsupported** — the engine accepts
+`fairness: strong` and answers `not-executed`, and the report must say that the
+question was not answered by a search, not quietly present the weak-fairness run in
+its place (`references/fairness.md`). Report fairness as an assumption you made,
+never as a fact about the system; and when the run without fairness already returns
+`verified`, say the result does not depend on fairness rather than adding the
+assumption to it.
 
 ### 5. Pilot
 
@@ -133,7 +151,16 @@ property.
 
 ### 6. Check with `mc_check`
 
-Pass the IR, the property list, the fairness setting and an explicit budget. When a
+Pass the IR, the property list, the fairness setting and an explicit budget. An
+absent or zero budget field means the default in both layers; only the CLI can lift
+a budget, with `--unlimited`. Liveness is run **without** fairness first
+(`references/fairness.md` §3). Note which properties you did not ask for: the
+Promela frontend adds `deadlock`, the model's own `assert`, and — from the model —
+`never`, `accept` and `progress` when the corresponding labels or claim are there.
+The `progress` property in particular appears automatically as soon as any process
+carries a `progress` label, and a model with **no** progress label makes every cycle
+a non-progress cycle, so a `violated` `progress` on such a model means "no labels
+were placed", not "the system hangs". When a
 property returns `inconclusive`, increase the budget in steps (FR-024) and rerun; do
 not reformulate the result. When the engine reports an overflow (`byte` wrap, channel
 capacity, place capacity) the status is `invalid-model`: the engine cannot tell
@@ -144,7 +171,14 @@ that failed — fixing a deadlock can open a non-progress cycle.
 ### 7. Analyse with `mc_explain`
 
 For every `violated` property call `mc_explain` to get the counterexample as prefix
-and loop with the user's names and per-step variable diffs. Then classify the cause:
+and loop with the user's names and per-step variable diffs. A temporal violation is
+a **lasso**: its `loop` record (`counterexample.loop`) gives `start` (the 1-based
+index of the first loop step) and `steps`, and everything from there repeats forever — say that plainly, or
+the reader counts the steps and asks what happens next. Three process names in a
+lasso are not the user's processes and must be dropped or explained: the claim
+(`never:…`, or `np_` for a non-progress search), and `-`, a null step that is either
+the weak-fairness bookkeeping or the stutter extension of a system that has stopped.
+Then classify the cause:
 system defect, model defect (including artefacts of the model's over-approximation
 of the real system), property defect (wrong polarity, wrong atom, wrong logic), or a
 fairness/environment artefact that a justified assumption would exclude. The
@@ -175,8 +209,10 @@ Every property gets one status from the vocabulary of 11 §14 and one evidence l
 
 Evidence: `exhaustive`, `bounded`, `approximate`, `unknown`. Only `verified` with
 `exhaustive` may be phrased as "the property holds on the model". Everything else is
-phrased as what was searched and what was not. The engine does not produce
-statistical evidence because it checks no probabilistic models.
+phrased as what was searched and what was not. A budget stop on **states or depth**
+is `bounded` (the bound can be named); a stop on **time or memory** is `unknown` —
+the state count reached is a measurement, not a coverage claim. The engine does not
+produce statistical evidence because it checks no probabilistic models.
 
 Read `references/evidence-and-status.md` for the decision procedure that assigns
 the status, the status × evidence table, and the list of phrasings you must not use.
@@ -201,15 +237,23 @@ the status, the status × evidence table, and the list of phrasings you must not
 - **`CH2/mutex_flaw.pml`** — invariant `assert(cnt == 1)` in the critical section.
   Expected: `violated`, evidence `exhaustive`, counterexample through labels `L1`–`L4`
   showing both users at `L7`. Cause class: system defect (the algorithm is wrong).
-- **`CH3/alternatingbit.pml`** — safety (no message accepted out of order) can be
-  `verified`; liveness "every message is eventually acknowledged" depends on the
-  fairness setting you agreed in step 4 (the corpus file has lossless channels, so
-  any unfair path is a scheduling path); the report shows the readings with and
-  without fairness as different results.
+- **`CH3/alternatingbit.pml`** — sender and receiver alternate in lock-step, so
+  delivery comes back `verified` / `exhaustive` **with and without** weak fairness:
+  the honest sentence is that the result does not depend on the assumption, not that
+  the assumption justifies it. The file has no loss, no retransmission and no
+  timeout, so the verdict is about a handshake, not about the alternating-bit
+  protocol — say which. For the opposite case (a liveness property that is
+  `violated` by an unfair loop and `verified` under `fairness: weak`) use
+  `engine/testdata/promela/starvation.pml`.
 - **`CH5/pathfinder.pml`** — deadlock through priority inversion. The model uses
   `provided`, which is v1 of the subset; until then the honest status is
   `not-executed` with the construct named. When accepted, partial-order reduction is
   inapplicable because of the priorities — a fact to record, not a knob to try.
+- **`CH14/version1`** — a telephone switch with labels and no variables. "Can it
+  get stuck in `Busy`?" is liveness, and it cannot be written as a formula here:
+  label atoms are not accepted and the model has no variable to point at. The route
+  is a `progress` label placed where the requirement says progress is, declared as a
+  change to the model, and then the `progress` property the frontend adds by itself.
 - **`App_C/petrinet1`** — a Petri net encoded in Promela. As Petri JSON: initial
   marking `p1 = p4 = 1`; firing `t1` then `t4` leaves `p2 = p5 = 1` with no enabled
   transition. Expected: hang (deadlock) `violated` with the two-step counterexample.
@@ -218,6 +262,9 @@ the status, the status × evidence table, and the list of phrasings you must not
 
 - It does not run or recommend external model checkers; the built-in engine is the
   backend, and SPIN exists in the project only as an oracle for the engine's tests.
+- It does not check CTL yet (`ctl` → `not-executed`, G5) and it does not check
+  strong fairness (`not-executed`, FR-008); it says so rather than substituting a
+  neighbouring result.
 - It does not check timed, probabilistic, BDD-symbolic or SAT-bounded problems.
   For those it produces the model, the property classification and a plan with status
   `not-executed` (FR-020, FR-021 stay at routing level).

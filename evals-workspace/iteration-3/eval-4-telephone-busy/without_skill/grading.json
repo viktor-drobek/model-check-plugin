@@ -1,0 +1,54 @@
+{
+  "eval_id": 4,
+  "eval_name": "telephone-busy-liveness",
+  "run": "without_skill",
+  "passed_count": 4,
+  "total": 9,
+  "expectations": [
+    {
+      "text": "The requirement is classified as a liveness property",
+      "passed": false,
+      "evidence": "pattern '(?i)\\\\bliveness\\\\b|живост' not found"
+    },
+    {
+      "text": "It is formalised as a progress label or an LTL eventually/infinitely-often formula",
+      "passed": true,
+      "evidence": "matched '<>' at 611"
+    },
+    {
+      "text": "The formula refers to the model's labels or states (Busy), not to printf output",
+      "passed": true,
+      "evidence": "matched 'Busy' at 43"
+    },
+    {
+      "text": "Fairness is raised before the result",
+      "passed": true,
+      "evidence": "matched 'справедлив' at 1555"
+    },
+    {
+      "text": "A status from the vocabulary is given",
+      "passed": false,
+      "evidence": "pattern '\\\\b(verified|violated|inconclusive|unknown|not-executed|invalid-model)\\\\b' not found"
+    },
+    {
+      "text": "An evidence level is given",
+      "passed": false,
+      "evidence": "pattern '\\\\b(exhaustive|bounded|approximate|unknown)\\\\b' not found"
+    },
+    {
+      "text": "The progress property the frontend adds from progress labels is named",
+      "passed": false,
+      "evidence": "pattern '(?i)(свойств\\\\w*|property|properties)[^\\\\n]{0,60}`?progress`?|`?progress`?[^\\\\n]{0,60}(свойств\\\\w*|property|properties)' not found"
+    },
+    {
+      "text": "Placing a progress label (or adding a variable) is declared as a change to the model, not smuggled in",
+      "passed": false,
+      "evidence": "pattern '(?i)(добав\\\\w+|постав\\\\w+|размест\\\\w+|внёс|внес\\\\w+|перепис\\\\w+|измен\\\\w+|add\\\\w*|plac\\\\w+|insert\\\\w+|rewr\\\\w+|modif\\\\w+)[^\\\\n]{0,120}(progress|мет\\\\w+|label)|(progress|label|мет\\\\w+)[^\\\\n]{0,120}(добав\\\\w+|постав\\\\w+|перепис\\\\w+|измен\\\\w+ модел|add\\\\w*|plac\\\\w+|change to the model|изменени\\\\w* модел)' not found"
+    },
+    {
+      "text": "No forbidden phrasing",
+      "passed": true,
+      "evidence": "pattern '(?i)\\\\bno errors\\\\b|\\\\bproved\\\\b|\\\\bproven\\\\b|ошибок нет|доказано' absent"
+    }
+  ]
+}

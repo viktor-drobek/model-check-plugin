@@ -1,0 +1,77 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0-g0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "promela",
+      "path": "starvation.pml",
+      "sha256": "43092539c371572b0314278ddd7ba4bddd7c8af66a6f5362fb37ca62f4397c0b"
+    }
+  ],
+  "model": {
+    "name": "starvation",
+    "state_bytes": 5,
+    "processes": 2,
+    "variables": 2
+  },
+  "search": {
+    "mode": "dfs",
+    "budget": {
+      "states": 1000000,
+      "depth": 1000000,
+      "time_ms": 60000,
+      "mem_bytes": 1073741824
+    },
+    "stop": "complete",
+    "complete": true
+  },
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 6,
+        "transitions": 10,
+        "depth": 5,
+        "memory_bytes_est": 25120
+      },
+      "complete": true
+    },
+    {
+      "id": "ltl1",
+      "kind": "ltl",
+      "text": "<> done",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 11,
+        "transitions": 24,
+        "depth": 8,
+        "memory_bytes_est": 25238
+      },
+      "complete": true,
+      "reason": "no acceptance cycle in the complete product with the automaton for !(<> done): no run satisfies the negated property; under weak fairness",
+      "temporal": {
+        "source": "formula",
+        "formula": "<> done",
+        "negated": "!(<> done)",
+        "atoms": [
+          "done"
+        ],
+        "stutter_invariant": true,
+        "automaton_states": 2,
+        "automaton_transitions": 2,
+        "automaton_accepting": 1,
+        "fairness": "weak",
+        "claim": "never:ltl1"
+      }
+    }
+  ]
+}

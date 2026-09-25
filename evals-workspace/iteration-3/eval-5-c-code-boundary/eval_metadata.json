@@ -1,0 +1,229 @@
+{
+  "eval_id": 5,
+  "eval_name": "c-code-out-of-subset",
+  "iteration": 3,
+  "date": "2026-09-25",
+  "prompt": "Проверь эту модель с c_code: Promela - examples/CH17/simple1.pr",
+  "expected_output": "Parser rejection explained (c_code/c_expr are outside the subset; no host code is executed); status `not-executed` with the construct and line; no imitation of a result; a rewrite of the C effect as Promela statements offered.",
+  "fixture": "Promela - examples/CH17/simple1.pr",
+  "runnable_from": "G1",
+  "engine": "mcd 0.1.0-g0 built from model-check-plugin/engine at the G4 commit 85aa78e (go build -o /tmp/mcd ./cmd/mcd); the binary carries the G4 flags --ltl/--progress/--fairness/--unlimited although its version string still says 0.1.0-g0",
+  "protocol": {
+    "executor": "one general-purpose subagent per configuration, all twelve launched in parallel, same model as the coordinating session",
+    "with_skill": "prompt + repository root + output directory + path of skills/model-check/SKILL.md ('follow it literally, including the references') + path of the built binary /tmp/mcd; told that the MCP server is not registered (CLI fallback of SKILL.md step 3) and not to run SPIN",
+    "without_skill": "prompt + repository root + output directory only (as in iterations 1 and 2); SPIN was not forbidden and every baseline used it",
+    "mcp": "not exercised by the runs: an MCP server cannot be registered into a subagent's session dynamically. The MCP path was exercised once by hand instead — steps/g3-evals3-mcp-session.md",
+    "questions": "the user is not available; both configurations were told to record an explicitly labelled assumption instead of asking",
+    "grading": "evals-workspace/grader.py over outputs/answer.md and the outputs directory; assertions from skills/model-check/evals/evals.json",
+    "timing": "tokens, duration and tool uses copied from the Agent task-completion notifications; no other measurement"
+  },
+  "removed_after_run": {
+    "without_skill": {
+      "files": [
+        "outputs/work3/pan3",
+        "outputs/work3/pan.t",
+        "outputs/work3/pan.h",
+        "outputs/work3/pan.c",
+        "outputs/work3/pan.m",
+        "outputs/work3/pan.b",
+        "outputs/work3/pan.p",
+        "outputs/work4/pan.t",
+        "outputs/work4/pan.h",
+        "outputs/work4/pan_fn_notrack",
+        "outputs/work4/pan_fn_track",
+        "outputs/work4/pan.c",
+        "outputs/work4/pan.m",
+        "outputs/work4/pan.b",
+        "outputs/work4/pan.p",
+        "outputs/work5/pan.t",
+        "outputs/work5/pan.h",
+        "outputs/work5/panU",
+        "outputs/work5/pan.c",
+        "outputs/work5/pan.m",
+        "outputs/work5/pan.b",
+        "outputs/work5/pan.p",
+        "outputs/work5/panU2",
+        "outputs/work2/pan2",
+        "outputs/work2/simple2.pr",
+        "outputs/work2/pan.t",
+        "outputs/work2/pan.h",
+        "outputs/work2/pan.c",
+        "outputs/work2/pan.m",
+        "outputs/work2/pan.b",
+        "outputs/work2/pan.p",
+        "outputs/work/simple2.pr",
+        "outputs/work/pan.t",
+        "outputs/work/pan.h",
+        "outputs/work/pan1",
+        "outputs/work/pan.c",
+        "outputs/work/pan.m",
+        "outputs/work/pan.b",
+        "outputs/work/pan.p",
+        "outputs/work/simple1.pr"
+      ],
+      "reason": "verbatim copies of corpus files (plan 14 §2.1 licence note: the corpus is referenced by path and SHA-256, never copied) and SPIN-generated C sources / compiled pan binaries; removed by the coordinator AFTER grading, which for every eval of this iteration reads outputs/answer.md (and, for E3, the Petri JSON the run itself wrote)",
+      "detail": [
+        {
+          "path": "outputs/work3/pan3",
+          "reason": "SPIN-generated C source or compiled pan binary (84000 bytes)"
+        },
+        {
+          "path": "outputs/work3/pan.t",
+          "reason": "SPIN-generated C source or compiled pan binary (18325 bytes)"
+        },
+        {
+          "path": "outputs/work3/pan.h",
+          "reason": "SPIN-generated C source or compiled pan binary (15905 bytes)"
+        },
+        {
+          "path": "outputs/work3/pan.c",
+          "reason": "SPIN-generated C source or compiled pan binary (328965 bytes)"
+        },
+        {
+          "path": "outputs/work3/pan.m",
+          "reason": "SPIN-generated C source or compiled pan binary (2118 bytes)"
+        },
+        {
+          "path": "outputs/work3/pan.b",
+          "reason": "SPIN-generated C source or compiled pan binary (381 bytes)"
+        },
+        {
+          "path": "outputs/work3/pan.p",
+          "reason": "SPIN-generated C source or compiled pan binary (56176 bytes)"
+        },
+        {
+          "path": "outputs/work4/pan.t",
+          "reason": "SPIN-generated C source or compiled pan binary (18289 bytes)"
+        },
+        {
+          "path": "outputs/work4/pan.h",
+          "reason": "SPIN-generated C source or compiled pan binary (15891 bytes)"
+        },
+        {
+          "path": "outputs/work4/pan_fn_notrack",
+          "reason": "SPIN-generated C source or compiled pan binary (83952 bytes)"
+        },
+        {
+          "path": "outputs/work4/pan_fn_track",
+          "reason": "SPIN-generated C source or compiled pan binary (84000 bytes)"
+        },
+        {
+          "path": "outputs/work4/pan.c",
+          "reason": "SPIN-generated C source or compiled pan binary (328967 bytes)"
+        },
+        {
+          "path": "outputs/work4/pan.m",
+          "reason": "SPIN-generated C source or compiled pan binary (1554 bytes)"
+        },
+        {
+          "path": "outputs/work4/pan.b",
+          "reason": "SPIN-generated C source or compiled pan binary (318 bytes)"
+        },
+        {
+          "path": "outputs/work4/pan.p",
+          "reason": "SPIN-generated C source or compiled pan binary (56176 bytes)"
+        },
+        {
+          "path": "outputs/work5/pan.t",
+          "reason": "SPIN-generated C source or compiled pan binary (18289 bytes)"
+        },
+        {
+          "path": "outputs/work5/pan.h",
+          "reason": "SPIN-generated C source or compiled pan binary (15941 bytes)"
+        },
+        {
+          "path": "outputs/work5/panU",
+          "reason": "SPIN-generated C source or compiled pan binary (84112 bytes)"
+        },
+        {
+          "path": "outputs/work5/pan.c",
+          "reason": "SPIN-generated C source or compiled pan binary (329193 bytes)"
+        },
+        {
+          "path": "outputs/work5/pan.m",
+          "reason": "SPIN-generated C source or compiled pan binary (1570 bytes)"
+        },
+        {
+          "path": "outputs/work5/pan.b",
+          "reason": "SPIN-generated C source or compiled pan binary (318 bytes)"
+        },
+        {
+          "path": "outputs/work5/pan.p",
+          "reason": "SPIN-generated C source or compiled pan binary (56176 bytes)"
+        },
+        {
+          "path": "outputs/work5/panU2",
+          "reason": "SPIN-generated C source or compiled pan binary (84064 bytes)"
+        },
+        {
+          "path": "outputs/work2/pan2",
+          "reason": "SPIN-generated C source or compiled pan binary (84048 bytes)"
+        },
+        {
+          "path": "outputs/work2/simple2.pr",
+          "reason": "verbatim copy of Promela - examples/CH17/simple2.pr"
+        },
+        {
+          "path": "outputs/work2/pan.t",
+          "reason": "SPIN-generated C source or compiled pan binary (18325 bytes)"
+        },
+        {
+          "path": "outputs/work2/pan.h",
+          "reason": "SPIN-generated C source or compiled pan binary (15907 bytes)"
+        },
+        {
+          "path": "outputs/work2/pan.c",
+          "reason": "SPIN-generated C source or compiled pan binary (329044 bytes)"
+        },
+        {
+          "path": "outputs/work2/pan.m",
+          "reason": "SPIN-generated C source or compiled pan binary (2017 bytes)"
+        },
+        {
+          "path": "outputs/work2/pan.b",
+          "reason": "SPIN-generated C source or compiled pan binary (381 bytes)"
+        },
+        {
+          "path": "outputs/work2/pan.p",
+          "reason": "SPIN-generated C source or compiled pan binary (56176 bytes)"
+        },
+        {
+          "path": "outputs/work/simple2.pr",
+          "reason": "verbatim copy of Promela - examples/CH17/simple2.pr"
+        },
+        {
+          "path": "outputs/work/pan.t",
+          "reason": "SPIN-generated C source or compiled pan binary (18325 bytes)"
+        },
+        {
+          "path": "outputs/work/pan.h",
+          "reason": "SPIN-generated C source or compiled pan binary (15906 bytes)"
+        },
+        {
+          "path": "outputs/work/pan1",
+          "reason": "SPIN-generated C source or compiled pan binary (84000 bytes)"
+        },
+        {
+          "path": "outputs/work/pan.c",
+          "reason": "SPIN-generated C source or compiled pan binary (328854 bytes)"
+        },
+        {
+          "path": "outputs/work/pan.m",
+          "reason": "SPIN-generated C source or compiled pan binary (2017 bytes)"
+        },
+        {
+          "path": "outputs/work/pan.b",
+          "reason": "SPIN-generated C source or compiled pan binary (381 bytes)"
+        },
+        {
+          "path": "outputs/work/pan.p",
+          "reason": "SPIN-generated C source or compiled pan binary (56176 bytes)"
+        },
+        {
+          "path": "outputs/work/simple1.pr",
+          "reason": "verbatim copy of Promela - examples/CH17/simple1.pr"
+        }
+      ]
+    }
+  }
+}

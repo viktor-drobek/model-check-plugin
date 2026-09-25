@@ -1,0 +1,46 @@
+ltl v2_switch_not_stuck_busy: ! (<> ([] ((switch_ss7[1]@Busy))))
+ltl v2_idle_inf_often: [] (<> ((switch_ss7[1]@Idle)))
+starting claim 4
+Never claim moves to line 15	[(1)]
+  2:	proc  0 (subscriber:1) version2.pml:9 (state 1)	[tpc!offhook]
+  3:	proc  1 (switch_ss7:1) version2.pml:21 (state 1)	[tpc?offhook]
+Never claim moves to line 14	[(!((switch_ss7[1]._p==Idle)))]
+              MSC: dialtone
+  5:	proc  1 (switch_ss7:1) version2.pml:22 (state 2)	[printf('MSC: dialtone\\n')]
+Never claim moves to line 19	[(!((switch_ss7[1]._p==Idle)))]
+  7:	proc  0 (subscriber:1) version2.pml:12 (state 2)	[tpc!digits]
+  8:	proc  1 (switch_ss7:1) version2.pml:27 (state 6)	[tpc?digits]
+              MSC: notone
+ 10:	proc  1 (switch_ss7:1) version2.pml:28 (state 7)	[printf('MSC: notone\\n')]
+ 12:	proc  1 (switch_ss7:1) version2.pml:29 (state 8)	[rms!iam]
+ 14:	proc  2 (remote_ss7:1) version2.pml:93 (state 1)	[rms?iam]
+ 16:	proc  2 (remote_ss7:1) version2.pml:97 (state 5)	[tpc!acm]
+ 17:	proc  1 (switch_ss7:1) version2.pml:37 (state 15)	[tpc?acm]
+              MSC: ringtone
+ 19:	proc  1 (switch_ss7:1) version2.pml:38 (state 16)	[printf('MSC: ringtone\\n')]
+ 21:	proc  2 (remote_ss7:1) version2.pml:103 (state 13)	[tpc!anm]
+ 22:	proc  1 (switch_ss7:1) version2.pml:40 (state 18)	[tpc?anm]
+              MSC: notone
+ 24:	proc  1 (switch_ss7:1) version2.pml:41 (state 19)	[printf('MSC: notone\\n')]
+ 26:	proc  0 (subscriber:1) version2.pml:13 (state 4)	[tpc!onhook]
+ 27:	proc  1 (switch_ss7:1) version2.pml:56 (state 34)	[tpc?onhook]
+ 29:	proc  1 (switch_ss7:1) version2.pml:57 (state 35)	[rms!rel]
+ 31:	proc  2 (remote_ss7:1) version2.pml:109 (state 21)	[tpc!rel]
+ 32:	proc  1 (switch_ss7:1) version2.pml:69 (state 44)	[tpc?rel]
+ 34:	proc  2 (remote_ss7:1) version2.pml:115 (state 29)	[rms?rel]
+ 36:	proc  1 (switch_ss7:1) version2.pml:70 (state 45)	[rms!rlc]
+  <<<<<START OF CYCLE>>>>>
+ 38:	proc  0 (subscriber:1) version2.pml:9 (state 1)	[tpc!offhook]
+ 39:	proc  1 (switch_ss7:1) version2.pml:74 (state 49)	[tpc?offhook]
+ 41:	proc  0 (subscriber:1) version2.pml:13 (state 4)	[tpc!onhook]
+ 42:	proc  1 (switch_ss7:1) version2.pml:84 (state 58)	[tpc?onhook]
+spin: trail ends after 42 steps
+#processes: 3
+		queue 2 (rms): [rlc]
+		Busy = 0
+		Idle = 0
+ 42:	proc  2 (remote_ss7:1) version2.pml:122 (state 39)
+ 42:	proc  1 (switch_ss7:1) version2.pml:68 (state 51)
+ 42:	proc  0 (subscriber:1) version2.pml:9 (state 1)
+ 42:	proc  - (v2_idle_inf_often:1) _spin_nvr.tmp:18 (state 10)
+3 processes created

@@ -1,7 +1,7 @@
 # Skill Benchmark: model-check
 
-**Model**: claude-fable-5-1 (subagents of the coordinating session)
-**Date**: 2026-09-25T12:00:00Z
+**Model**: claude (same model as the coordinating session)
+**Date**: 2026-09-25
 **Evals**: 1, 3, 5 (1 run(s) each per configuration)
 
 ## Summary
@@ -30,4 +30,4 @@
 - Eval 3 (petri-net-hang): with_skill 10/10, without_skill 5/10
 - Eval 3: 5 of 10 assertions pass in both configurations and do not differentiate the skill: 'The counterexample is the firing sequence t1 then t4'; 'The final marking has one token in p2 (p2 = 1, or set notation {p2, p5})'; 'The final marking has one token in p5 (p5 = 1, or set notation {p2, p5})'; 'The number of reachable markings (6) is quoted from the engine's counters'; 'No forbidden phrasing (no errors / proved / net is correct)'
 - Eval 5 (c-code-out-of-subset): with_skill 7/7, without_skill 5/7
-- Eval 5: 5 of 7 assertions pass in both configurations and do not differentiate the skill: 'Status not-executed is reported'; 'The rejected construct c_code is named'; 'A source line of the construct is given'; 'No property result is imitated for the original model: no line of the answer attributes verified/violated/inconclusive to simple1.pr, c_code/c_expr or the original (a verdict about a clearly separate rewrite is allowed; iteration-2 refinement, see evals-workspace/iteration-2)'; 'No host code is executed and the answer says so'
+- Eval 5: 5 of 7 assertions pass in both configurations and do not differentiate the skill: 'Status not-executed is reported'; 'The rejected construct c_code is named'; 'A source line of the construct is given'; 'No property result is imitated for the original model: no line of the answer attributes verified/violated/inconclusive to simple1.pr, c_code/c_expr or the original model/file (a verdict about a clearly separate rewrite is allowed — including a line that calls that rewrite "the original" one as against a mutant; refined in iteration-2 and again in iteration-3, see steps/g3-evals3-confirmation.md)'; 'No host code is executed and the answer says so'

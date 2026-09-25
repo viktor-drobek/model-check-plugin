@@ -1,0 +1,132 @@
+{
+  "schema": "mcd-ir/1",
+  "name": "starvation",
+  "globals": [
+    {
+      "name": "done",
+      "type": "bit",
+      "origin": {
+        "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-3/eval-2b-starvation-loop/with_skill/outputs/mc-session-2026-09-25/starvation.pml",
+        "line": 6,
+        "name": "done"
+      }
+    }
+  ],
+  "processes": [
+    {
+      "name": "A:0",
+      "locals": [
+        {
+          "name": "t",
+          "type": "bit",
+          "origin": {
+            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-3/eval-2b-starvation-loop/with_skill/outputs/mc-session-2026-09-25/starvation.pml",
+            "line": 9,
+            "name": "t"
+          }
+        }
+      ],
+      "locations": [
+        {}
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 0,
+          "effect": [
+            {
+              "var": "t",
+              "value": {
+                "op": "sub",
+                "args": [
+                  {
+                    "op": "const",
+                    "value": 1
+                  },
+                  {
+                    "op": "var",
+                    "var": "t"
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "t = 1 - t",
+          "origin": {
+            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-3/eval-2b-starvation-loop/with_skill/outputs/mc-session-2026-09-25/starvation.pml",
+            "line": 11,
+            "name": "t = 1 - t"
+          }
+        }
+      ],
+      "origin": {
+        "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-3/eval-2b-starvation-loop/with_skill/outputs/mc-session-2026-09-25/starvation.pml",
+        "line": 8,
+        "name": "A"
+      }
+    },
+    {
+      "name": "B:1",
+      "locations": [
+        {},
+        {
+          "labels": [
+            "end"
+          ]
+        },
+        {
+          "name": "-dead-"
+        }
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 1,
+          "effect": [
+            {
+              "var": "done",
+              "value": {
+                "op": "const",
+                "value": 1
+              }
+            }
+          ],
+          "text": "done = 1",
+          "origin": {
+            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-3/eval-2b-starvation-loop/with_skill/outputs/mc-session-2026-09-25/starvation.pml",
+            "line": 17,
+            "name": "done = 1"
+          }
+        },
+        {
+          "from": 1,
+          "to": 2,
+          "text": "-end-",
+          "origin": {
+            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-3/eval-2b-starvation-loop/with_skill/outputs/mc-session-2026-09-25/starvation.pml",
+            "line": 18,
+            "name": "-end-"
+          }
+        }
+      ],
+      "origin": {
+        "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-3/eval-2b-starvation-loop/with_skill/outputs/mc-session-2026-09-25/starvation.pml",
+        "line": 15,
+        "name": "B"
+      }
+    }
+  ],
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)"
+    }
+  ],
+  "origin": {
+    "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-3/eval-2b-starvation-loop/with_skill/outputs/mc-session-2026-09-25/starvation.pml",
+    "name": "starvation"
+  }
+}

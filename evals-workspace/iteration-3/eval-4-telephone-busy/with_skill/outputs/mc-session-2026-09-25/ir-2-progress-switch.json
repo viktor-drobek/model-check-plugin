@@ -1,0 +1,347 @@
+warning: printf: 8 statement(s) kept as no-op steps so that state counts match SPIN; their output is not produced
+{
+  "schema": "mcd-ir/1",
+  "name": "version1-progress-switch",
+  "channels": [
+    {
+      "name": "tpc",
+      "capacity": 0,
+      "fields": [
+        "byte"
+      ],
+      "origin": {
+        "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-progress-switch.pml",
+        "line": 16,
+        "name": "tpc"
+      }
+    }
+  ],
+  "processes": [
+    {
+      "name": "subscriber:0",
+      "locations": [
+        {
+          "name": "Idle",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-progress-switch.pml",
+            "line": 20,
+            "name": "Idle"
+          }
+        },
+        {
+          "name": "Busy",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-progress-switch.pml",
+            "line": 22,
+            "name": "Busy"
+          }
+        }
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 1,
+          "send": {
+            "chan": "tpc",
+            "args": [
+              {
+                "op": "const",
+                "value": 3
+              }
+            ]
+          },
+          "text": "tpc!offhook",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-progress-switch.pml",
+            "line": 20,
+            "name": "tpc!offhook"
+          }
+        },
+        {
+          "from": 1,
+          "to": 1,
+          "send": {
+            "chan": "tpc",
+            "args": [
+              {
+                "op": "const",
+                "value": 2
+              }
+            ]
+          },
+          "text": "tpc!digits",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-progress-switch.pml",
+            "line": 23,
+            "name": "tpc!digits"
+          }
+        },
+        {
+          "from": 1,
+          "to": 0,
+          "send": {
+            "chan": "tpc",
+            "args": [
+              {
+                "op": "const",
+                "value": 1
+              }
+            ]
+          },
+          "text": "tpc!onhook",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-progress-switch.pml",
+            "line": 24,
+            "name": "tpc!onhook"
+          }
+        }
+      ],
+      "origin": {
+        "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-progress-switch.pml",
+        "line": 18,
+        "name": "subscriber"
+      }
+    },
+    {
+      "name": "switch:1",
+      "locations": [
+        {
+          "name": "progress_Idle",
+          "labels": [
+            "progress"
+          ],
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-progress-switch.pml",
+            "line": 31,
+            "name": "progress_Idle"
+          }
+        },
+        {
+          "name": "Dial",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-progress-switch.pml",
+            "line": 35,
+            "name": "Dial"
+          }
+        },
+        {
+          "name": "Wait",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-progress-switch.pml",
+            "line": 40,
+            "name": "Wait"
+          }
+        },
+        {
+          "name": "Connect",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-progress-switch.pml",
+            "line": 45,
+            "name": "Connect"
+          }
+        },
+        {
+          "name": "Busy",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-progress-switch.pml",
+            "line": 50,
+            "name": "Busy"
+          }
+        },
+        {},
+        {},
+        {},
+        {}
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 6,
+          "recv": {
+            "chan": "tpc",
+            "args": [
+              {
+                "match": {
+                  "op": "const",
+                  "value": 3
+                }
+              }
+            ]
+          },
+          "text": "tpc?offhook",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-progress-switch.pml",
+            "line": 32,
+            "name": "tpc?offhook"
+          }
+        },
+        {
+          "from": 6,
+          "to": 1,
+          "text": "printf(\"MSC: dialtone\\n\")",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-progress-switch.pml",
+            "line": 32,
+            "name": "printf(\"MSC: dialtone\\n\")"
+          }
+        },
+        {
+          "from": 1,
+          "to": 7,
+          "recv": {
+            "chan": "tpc",
+            "args": [
+              {
+                "match": {
+                  "op": "const",
+                  "value": 2
+                }
+              }
+            ]
+          },
+          "text": "tpc?digits",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-progress-switch.pml",
+            "line": 36,
+            "name": "tpc?digits"
+          }
+        },
+        {
+          "from": 7,
+          "to": 2,
+          "text": "printf(\"MSC: notone\\n\")",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-progress-switch.pml",
+            "line": 36,
+            "name": "printf(\"MSC: notone\\n\")"
+          }
+        },
+        {
+          "from": 1,
+          "to": 8,
+          "recv": {
+            "chan": "tpc",
+            "args": [
+              {
+                "match": {
+                  "op": "const",
+                  "value": 1
+                }
+              }
+            ]
+          },
+          "text": "tpc?onhook",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-progress-switch.pml",
+            "line": 37,
+            "name": "tpc?onhook"
+          }
+        },
+        {
+          "from": 8,
+          "to": 0,
+          "text": "printf(\"MSC: notone\\n\")",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-progress-switch.pml",
+            "line": 37,
+            "name": "printf(\"MSC: notone\\n\")"
+          }
+        },
+        {
+          "from": 2,
+          "to": 3,
+          "text": "printf(\"MSC: ringtone\\n\")",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-progress-switch.pml",
+            "line": 41,
+            "name": "printf(\"MSC: ringtone\\n\")"
+          }
+        },
+        {
+          "from": 2,
+          "to": 4,
+          "text": "printf(\"MSC: busytone\\n\")",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-progress-switch.pml",
+            "line": 42,
+            "name": "printf(\"MSC: busytone\\n\")"
+          }
+        },
+        {
+          "from": 3,
+          "to": 4,
+          "text": "printf(\"MSC: busytone\\n\")",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-progress-switch.pml",
+            "line": 46,
+            "name": "printf(\"MSC: busytone\\n\")"
+          }
+        },
+        {
+          "from": 3,
+          "to": 4,
+          "text": "printf(\"MSC: notone\\n\")",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-progress-switch.pml",
+            "line": 47,
+            "name": "printf(\"MSC: notone\\n\")"
+          }
+        },
+        {
+          "from": 4,
+          "to": 5,
+          "recv": {
+            "chan": "tpc",
+            "args": [
+              {
+                "match": {
+                  "op": "const",
+                  "value": 1
+                }
+              }
+            ]
+          },
+          "text": "tpc?onhook",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-progress-switch.pml",
+            "line": 50,
+            "name": "tpc?onhook"
+          }
+        },
+        {
+          "from": 5,
+          "to": 0,
+          "text": "printf(\"MSC: notone\\n\")",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-progress-switch.pml",
+            "line": 50,
+            "name": "printf(\"MSC: notone\\n\")"
+          }
+        }
+      ],
+      "origin": {
+        "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-progress-switch.pml",
+        "line": 28,
+        "name": "switch"
+      }
+    }
+  ],
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)"
+    },
+    {
+      "id": "progress",
+      "kind": "progress",
+      "text": "no non-progress cycle: every infinite run visits a progress label infinitely often (SPIN: pan -l)"
+    }
+  ],
+  "origin": {
+    "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-progress-switch.pml",
+    "name": "version1-progress-switch"
+  }
+}

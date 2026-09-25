@@ -1,0 +1,473 @@
+{
+  "schema": "mcd-ir/1",
+  "name": "version1-obs",
+  "globals": [
+    {
+      "name": "sw",
+      "type": "byte",
+      "init": [
+        0
+      ],
+      "origin": {
+        "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+        "line": 31,
+        "name": "sw"
+      }
+    },
+    {
+      "name": "sub_busy",
+      "type": "bit",
+      "init": [
+        0
+      ],
+      "origin": {
+        "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+        "line": 32,
+        "name": "sub_busy"
+      }
+    }
+  ],
+  "channels": [
+    {
+      "name": "tpc",
+      "capacity": 0,
+      "fields": [
+        "byte"
+      ],
+      "origin": {
+        "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+        "line": 29,
+        "name": "tpc"
+      }
+    }
+  ],
+  "processes": [
+    {
+      "name": "subscriber:0",
+      "locations": [
+        {
+          "name": "Idle",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+            "line": 36,
+            "name": "Idle"
+          }
+        },
+        {},
+        {
+          "name": "Busy",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+            "line": 39,
+            "name": "Busy"
+          }
+        },
+        {}
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 1,
+          "send": {
+            "chan": "tpc",
+            "args": [
+              {
+                "op": "const",
+                "value": 3
+              }
+            ]
+          },
+          "text": "tpc!offhook",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+            "line": 36,
+            "name": "tpc!offhook"
+          }
+        },
+        {
+          "from": 1,
+          "to": 2,
+          "effect": [
+            {
+              "var": "sub_busy",
+              "value": {
+                "op": "const",
+                "value": 1
+              }
+            }
+          ],
+          "text": "sub_busy = 1",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+            "line": 37,
+            "name": "sub_busy = 1"
+          }
+        },
+        {
+          "from": 2,
+          "to": 2,
+          "send": {
+            "chan": "tpc",
+            "args": [
+              {
+                "op": "const",
+                "value": 2
+              }
+            ]
+          },
+          "text": "tpc!digits",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+            "line": 40,
+            "name": "tpc!digits"
+          }
+        },
+        {
+          "from": 2,
+          "to": 3,
+          "send": {
+            "chan": "tpc",
+            "args": [
+              {
+                "op": "const",
+                "value": 1
+              }
+            ]
+          },
+          "text": "tpc!onhook",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+            "line": 41,
+            "name": "tpc!onhook"
+          }
+        },
+        {
+          "from": 3,
+          "to": 0,
+          "effect": [
+            {
+              "var": "sub_busy",
+              "value": {
+                "op": "const"
+              }
+            }
+          ],
+          "text": "sub_busy = 0",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+            "line": 41,
+            "name": "sub_busy = 0"
+          }
+        }
+      ],
+      "origin": {
+        "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+        "line": 34,
+        "name": "subscriber"
+      }
+    },
+    {
+      "name": "switch:1",
+      "locations": [
+        {
+          "name": "Idle",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+            "line": 48,
+            "name": "Idle"
+          }
+        },
+        {
+          "name": "Dial",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+            "line": 52,
+            "name": "Dial"
+          }
+        },
+        {
+          "name": "Wait",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+            "line": 57,
+            "name": "Wait"
+          }
+        },
+        {
+          "name": "Connect",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+            "line": 62,
+            "name": "Connect"
+          }
+        },
+        {
+          "name": "Busy",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+            "line": 67,
+            "name": "Busy"
+          }
+        },
+        {},
+        {},
+        {},
+        {}
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 6,
+          "recv": {
+            "chan": "tpc",
+            "args": [
+              {
+                "match": {
+                  "op": "const",
+                  "value": 3
+                }
+              }
+            ]
+          },
+          "text": "tpc?offhook",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+            "line": 49,
+            "name": "tpc?offhook"
+          }
+        },
+        {
+          "from": 6,
+          "to": 1,
+          "effect": [
+            {
+              "var": "sw",
+              "value": {
+                "op": "const",
+                "value": 1
+              }
+            }
+          ],
+          "text": "sw = 1",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+            "line": 49,
+            "name": "sw = 1"
+          }
+        },
+        {
+          "from": 1,
+          "to": 7,
+          "recv": {
+            "chan": "tpc",
+            "args": [
+              {
+                "match": {
+                  "op": "const",
+                  "value": 2
+                }
+              }
+            ]
+          },
+          "text": "tpc?digits",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+            "line": 53,
+            "name": "tpc?digits"
+          }
+        },
+        {
+          "from": 7,
+          "to": 2,
+          "effect": [
+            {
+              "var": "sw",
+              "value": {
+                "op": "const",
+                "value": 2
+              }
+            }
+          ],
+          "text": "sw = 2",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+            "line": 53,
+            "name": "sw = 2"
+          }
+        },
+        {
+          "from": 1,
+          "to": 8,
+          "recv": {
+            "chan": "tpc",
+            "args": [
+              {
+                "match": {
+                  "op": "const",
+                  "value": 1
+                }
+              }
+            ]
+          },
+          "text": "tpc?onhook",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+            "line": 54,
+            "name": "tpc?onhook"
+          }
+        },
+        {
+          "from": 8,
+          "to": 0,
+          "effect": [
+            {
+              "var": "sw",
+              "value": {
+                "op": "const"
+              }
+            }
+          ],
+          "text": "sw = 0",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+            "line": 54,
+            "name": "sw = 0"
+          }
+        },
+        {
+          "from": 2,
+          "to": 3,
+          "effect": [
+            {
+              "var": "sw",
+              "value": {
+                "op": "const",
+                "value": 3
+              }
+            }
+          ],
+          "text": "sw = 3",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+            "line": 58,
+            "name": "sw = 3"
+          }
+        },
+        {
+          "from": 2,
+          "to": 4,
+          "effect": [
+            {
+              "var": "sw",
+              "value": {
+                "op": "const",
+                "value": 4
+              }
+            }
+          ],
+          "text": "sw = 4",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+            "line": 59,
+            "name": "sw = 4"
+          }
+        },
+        {
+          "from": 3,
+          "to": 4,
+          "effect": [
+            {
+              "var": "sw",
+              "value": {
+                "op": "const",
+                "value": 4
+              }
+            }
+          ],
+          "text": "sw = 4",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+            "line": 63,
+            "name": "sw = 4"
+          }
+        },
+        {
+          "from": 3,
+          "to": 4,
+          "effect": [
+            {
+              "var": "sw",
+              "value": {
+                "op": "const",
+                "value": 4
+              }
+            }
+          ],
+          "text": "sw = 4",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+            "line": 64,
+            "name": "sw = 4"
+          }
+        },
+        {
+          "from": 4,
+          "to": 5,
+          "recv": {
+            "chan": "tpc",
+            "args": [
+              {
+                "match": {
+                  "op": "const",
+                  "value": 1
+                }
+              }
+            ]
+          },
+          "text": "tpc?onhook",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+            "line": 67,
+            "name": "tpc?onhook"
+          }
+        },
+        {
+          "from": 5,
+          "to": 0,
+          "effect": [
+            {
+              "var": "sw",
+              "value": {
+                "op": "const"
+              }
+            }
+          ],
+          "text": "sw = 0",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+            "line": 67,
+            "name": "sw = 0"
+          }
+        }
+      ],
+      "origin": {
+        "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+        "line": 45,
+        "name": "switch"
+      }
+    }
+  ],
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)"
+    }
+  ],
+  "origin": {
+    "file": "model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25/version1-obs.pml",
+    "name": "version1-obs"
+  }
+}

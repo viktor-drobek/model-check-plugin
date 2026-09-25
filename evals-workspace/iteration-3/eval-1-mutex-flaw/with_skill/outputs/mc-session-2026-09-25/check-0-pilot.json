@@ -1,0 +1,64 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0-g0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "promela",
+      "path": "Promela - examples/CH2/mutex_flaw.pml",
+      "sha256": "b9cb0230f9a306494af4a12592df3411988254b35526b5fbcdbf17ab328fdac4"
+    }
+  ],
+  "model": {
+    "name": "mutex_flaw",
+    "state_bytes": 9,
+    "processes": 2,
+    "variables": 6
+  },
+  "search": {
+    "mode": "dfs",
+    "budget": {
+      "states": 20,
+      "depth": 1000000,
+      "time_ms": 60000,
+      "mem_bytes": 1073741824
+    },
+    "stop": "state budget exhausted: 20 states stored",
+    "complete": false
+  },
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)",
+      "status": "inconclusive",
+      "evidence": "bounded",
+      "counters": {
+        "states": 20,
+        "transitions": 21,
+        "depth": 19,
+        "memory_bytes_est": 27200
+      },
+      "complete": false,
+      "reason": "state budget exhausted: 20 states stored"
+    },
+    {
+      "id": "assert",
+      "kind": "assert",
+      "text": "no assert statement fails (SPIN: assertion violations)",
+      "status": "inconclusive",
+      "evidence": "bounded",
+      "counters": {
+        "states": 20,
+        "transitions": 21,
+        "depth": 19,
+        "memory_bytes_est": 27200
+      },
+      "complete": false,
+      "reason": "state budget exhausted: 20 states stored"
+    }
+  ]
+}

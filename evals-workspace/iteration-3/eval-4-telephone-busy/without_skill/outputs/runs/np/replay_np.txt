@@ -1,0 +1,30 @@
+starting claim 2
+spin: couldn't find claim 2 (ignored)
+  2:	proc  0 (subscriber:1) version1.pml:9 (state 1)	[tpc!offhook]
+  3:	proc  1 (switch:1) version1.pml:21 (state 1)	[tpc?offhook]
+              MSC: dialtone
+  5:	proc  1 (switch:1) version1.pml:21 (state 2)	[printf('MSC: dialtone\\n')]
+  7:	proc  0 (subscriber:1) version1.pml:12 (state 2)	[tpc!digits]
+  8:	proc  1 (switch:1) version1.pml:25 (state 6)	[tpc?digits]
+  <<<<<START OF CYCLE>>>>>
+              MSC: notone
+ 10:	proc  1 (switch:1) version1.pml:25 (state 7)	[printf('MSC: notone\\n')]
+              MSC: ringtone
+ 12:	proc  1 (switch:1) version1.pml:30 (state 14)	[printf('MSC: ringtone\\n')]
+              MSC: busytone
+ 14:	proc  1 (switch:1) version1.pml:35 (state 20)	[printf('MSC: busytone\\n')]
+ 16:	proc  0 (subscriber:1) version1.pml:13 (state 4)	[tpc!onhook]
+ 17:	proc  1 (switch:1) version1.pml:39 (state 26)	[tpc?onhook]
+              MSC: notone
+ 19:	proc  1 (switch:1) version1.pml:39 (state 27)	[printf('MSC: notone\\n')]
+ 21:	proc  0 (subscriber:1) version1.pml:9 (state 1)	[tpc!offhook]
+ 22:	proc  1 (switch:1) version1.pml:21 (state 1)	[tpc?offhook]
+              MSC: dialtone
+ 24:	proc  1 (switch:1) version1.pml:21 (state 2)	[printf('MSC: dialtone\\n')]
+ 26:	proc  0 (subscriber:1) version1.pml:12 (state 2)	[tpc!digits]
+ 27:	proc  1 (switch:1) version1.pml:25 (state 6)	[tpc?digits]
+spin: trail ends after 27 steps
+#processes: 2
+ 27:	proc  1 (switch:1) version1.pml:25 (state 7)
+ 27:	proc  0 (subscriber:1) version1.pml:11 (state 6)
+2 processes created

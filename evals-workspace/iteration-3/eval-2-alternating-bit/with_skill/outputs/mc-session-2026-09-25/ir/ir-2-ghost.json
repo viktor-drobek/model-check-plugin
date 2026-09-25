@@ -1,0 +1,431 @@
+{
+  "schema": "mcd-ir/1",
+  "name": "alternatingbit-ghost",
+  "globals": [
+    {
+      "name": "pend1",
+      "type": "bit",
+      "origin": {
+        "file": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-ghost.pml",
+        "line": 21,
+        "name": "pend1"
+      }
+    },
+    {
+      "name": "pend0",
+      "type": "bit",
+      "origin": {
+        "file": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-ghost.pml",
+        "line": 21,
+        "name": "pend0"
+      }
+    },
+    {
+      "name": "got1",
+      "type": "bit",
+      "origin": {
+        "file": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-ghost.pml",
+        "line": 22,
+        "name": "got1"
+      }
+    },
+    {
+      "name": "got0",
+      "type": "bit",
+      "origin": {
+        "file": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-ghost.pml",
+        "line": 22,
+        "name": "got0"
+      }
+    }
+  ],
+  "channels": [
+    {
+      "name": "to_sndr",
+      "capacity": 2,
+      "fields": [
+        "byte"
+      ],
+      "origin": {
+        "file": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-ghost.pml",
+        "line": 18,
+        "name": "to_sndr"
+      }
+    },
+    {
+      "name": "to_rcvr",
+      "capacity": 2,
+      "fields": [
+        "byte"
+      ],
+      "origin": {
+        "file": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-ghost.pml",
+        "line": 19,
+        "name": "to_rcvr"
+      }
+    }
+  ],
+  "processes": [
+    {
+      "name": "Sender:0",
+      "locations": [
+        {
+          "name": "again",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-ghost.pml",
+            "line": 26,
+            "name": "again"
+          }
+        },
+        {},
+        {},
+        {},
+        {},
+        {}
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 4,
+          "send": {
+            "chan": "to_rcvr",
+            "args": [
+              {
+                "op": "const",
+                "value": 3
+              }
+            ]
+          },
+          "atomic": true,
+          "text": "to_rcvr!msg1",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-ghost.pml",
+            "line": 26,
+            "name": "to_rcvr!msg1"
+          }
+        },
+        {
+          "from": 4,
+          "to": 1,
+          "effect": [
+            {
+              "var": "pend1",
+              "value": {
+                "op": "const",
+                "value": 1
+              }
+            }
+          ],
+          "text": "pend1 = 1",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-ghost.pml",
+            "line": 26,
+            "name": "pend1 = 1"
+          }
+        },
+        {
+          "from": 1,
+          "to": 2,
+          "recv": {
+            "chan": "to_sndr",
+            "args": [
+              {
+                "match": {
+                  "op": "const",
+                  "value": 1
+                }
+              }
+            ]
+          },
+          "text": "to_sndr?ack1",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-ghost.pml",
+            "line": 27,
+            "name": "to_sndr?ack1"
+          }
+        },
+        {
+          "from": 2,
+          "to": 5,
+          "send": {
+            "chan": "to_rcvr",
+            "args": [
+              {
+                "op": "const",
+                "value": 4
+              }
+            ]
+          },
+          "atomic": true,
+          "text": "to_rcvr!msg0",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-ghost.pml",
+            "line": 28,
+            "name": "to_rcvr!msg0"
+          }
+        },
+        {
+          "from": 5,
+          "to": 3,
+          "effect": [
+            {
+              "var": "pend0",
+              "value": {
+                "op": "const",
+                "value": 1
+              }
+            }
+          ],
+          "text": "pend0 = 1",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-ghost.pml",
+            "line": 28,
+            "name": "pend0 = 1"
+          }
+        },
+        {
+          "from": 3,
+          "to": 0,
+          "recv": {
+            "chan": "to_sndr",
+            "args": [
+              {
+                "match": {
+                  "op": "const",
+                  "value": 2
+                }
+              }
+            ]
+          },
+          "text": "to_sndr?ack0",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-ghost.pml",
+            "line": 29,
+            "name": "to_sndr?ack0"
+          }
+        }
+      ],
+      "origin": {
+        "file": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-ghost.pml",
+        "line": 24,
+        "name": "Sender"
+      }
+    },
+    {
+      "name": "Receiver:1",
+      "locations": [
+        {
+          "name": "again",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-ghost.pml",
+            "line": 35,
+            "name": "again"
+          }
+        },
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {}
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 4,
+          "recv": {
+            "chan": "to_rcvr",
+            "args": [
+              {
+                "match": {
+                  "op": "const",
+                  "value": 3
+                }
+              }
+            ]
+          },
+          "atomic": true,
+          "text": "to_rcvr?msg1",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-ghost.pml",
+            "line": 35,
+            "name": "to_rcvr?msg1"
+          }
+        },
+        {
+          "from": 4,
+          "to": 5,
+          "effect": [
+            {
+              "var": "pend1",
+              "value": {
+                "op": "const"
+              }
+            }
+          ],
+          "atomic": true,
+          "text": "pend1 = 0",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-ghost.pml",
+            "line": 35,
+            "name": "pend1 = 0"
+          }
+        },
+        {
+          "from": 5,
+          "to": 1,
+          "effect": [
+            {
+              "var": "got1",
+              "value": {
+                "op": "sub",
+                "args": [
+                  {
+                    "op": "const",
+                    "value": 1
+                  },
+                  {
+                    "op": "var",
+                    "var": "got1"
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "got1 = 1 - got1",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-ghost.pml",
+            "line": 35,
+            "name": "got1 = 1 - got1"
+          }
+        },
+        {
+          "from": 1,
+          "to": 2,
+          "send": {
+            "chan": "to_sndr",
+            "args": [
+              {
+                "op": "const",
+                "value": 1
+              }
+            ]
+          },
+          "text": "to_sndr!ack1",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-ghost.pml",
+            "line": 36,
+            "name": "to_sndr!ack1"
+          }
+        },
+        {
+          "from": 2,
+          "to": 6,
+          "recv": {
+            "chan": "to_rcvr",
+            "args": [
+              {
+                "match": {
+                  "op": "const",
+                  "value": 4
+                }
+              }
+            ]
+          },
+          "atomic": true,
+          "text": "to_rcvr?msg0",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-ghost.pml",
+            "line": 37,
+            "name": "to_rcvr?msg0"
+          }
+        },
+        {
+          "from": 6,
+          "to": 7,
+          "effect": [
+            {
+              "var": "pend0",
+              "value": {
+                "op": "const"
+              }
+            }
+          ],
+          "atomic": true,
+          "text": "pend0 = 0",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-ghost.pml",
+            "line": 37,
+            "name": "pend0 = 0"
+          }
+        },
+        {
+          "from": 7,
+          "to": 3,
+          "effect": [
+            {
+              "var": "got0",
+              "value": {
+                "op": "sub",
+                "args": [
+                  {
+                    "op": "const",
+                    "value": 1
+                  },
+                  {
+                    "op": "var",
+                    "var": "got0"
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "got0 = 1 - got0",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-ghost.pml",
+            "line": 37,
+            "name": "got0 = 1 - got0"
+          }
+        },
+        {
+          "from": 3,
+          "to": 0,
+          "send": {
+            "chan": "to_sndr",
+            "args": [
+              {
+                "op": "const",
+                "value": 2
+              }
+            ]
+          },
+          "text": "to_sndr!ack0",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-ghost.pml",
+            "line": 38,
+            "name": "to_sndr!ack0"
+          }
+        }
+      ],
+      "origin": {
+        "file": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-ghost.pml",
+        "line": 33,
+        "name": "Receiver"
+      }
+    }
+  ],
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)"
+    }
+  ],
+  "origin": {
+    "file": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-ghost.pml",
+    "name": "alternatingbit-ghost"
+  }
+}

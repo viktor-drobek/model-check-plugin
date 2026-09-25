@@ -25,8 +25,8 @@ and — the part the engine cannot do — decide what it means.
 |---|---|---|
 | `invariant`, `assert`, `reach` (as a witness) | finite path from an initial state to the bad (or sought) state | BFS gives the shortest by number of steps; DFS gives the first found |
 | `deadlock` | finite path to a state with no enabled transition; the list of processes and where each is blocked | `end`-labelled processes are shown as legitimately finished |
-| `ltl` | **prefix + loop** (lasso): a finite stem, then a cycle that repeats forever; the acceptance obligation that is never discharged is named (which `<>`/`U` promise stays open) | for a liveness formula the loop is essential — a finite sequence alone refutes nothing (AC-18); for a safety formula the prefix is already a bad prefix (05 гл. 3) and the loop shown is arbitrary |
-| `progress` | prefix + loop where the loop visits no `progress` label | |
+| `ltl` | **prefix + loop** (lasso): a finite stem, then a cycle that repeats forever; the acceptance obligation that is never discharged is named (which `<>`/`U` promise stays open) | for a liveness formula the loop is essential — a finite sequence alone refutes nothing (AC-18); for a safety formula there is no `loop` at all: the prefix is already a bad prefix (05 гл. 3). A never claim that reaches its own end is also a violation on a finite prefix, with no loop (`properties-ltl-ctl.md` §6) |
+| `progress` | prefix + loop where the loop visits no `progress` label; the claim process is `np_` | a model with **no** `progress` label at all makes every cycle non-progress — read such a `violated` as "no progress labels were placed", not as a finding (`properties-ltl-ctl.md` §7) |
 | `ctl` — violation of `AG p`, witness for `EF p` | one finite path | |
 | `ctl` — witness for `EG p` | prefix + loop inside `p`-states | |
 | `ctl` — violation of nested formulas such as `AG EF p`, `AG(p -> AF q)` | may be a **tree**: a state from which *every* continuation fails; `mc_explain` returns the path to that state and, per branch, why it fails | say in the report whether one trace was enough (11 §11) |
@@ -51,10 +51,12 @@ Present a counterexample as:
    violation became possible or inevitable — usually a scheduling choice between two
    enabled processes, or a nondeterministic branch. Mark it. The shortest trace is
    not always the most explanatory one; the fork is what the engineer needs.
-4. **For a lasso**: the loop as a separate block, with the obligation that is never
-   met ("`ack` is promised by `<>` and never occurs in the loop"), and — if
-   fairness was `none` — which enabled process or transition is starved along the
-   loop (this feeds `fairness.md` §3).
+4. **For a lasso**: the loop as a separate block (`prefix` then `loop`, the split of
+   §2a), with the obligation that is never met ("`ack` is promised by `<>` and never
+   occurs in the loop"), and — if fairness was `none` — which enabled process or
+   transition is starved along the loop (this feeds `fairness.md` §3). Say plainly
+   that the loop repeats forever; a reader who takes it for a finite trace will
+   count the steps and ask what happens next.
 5. **Parameters** the trace depends on (10 §10): queue sizes, process counts, loss
    switches, fairness mode, search mode, seed, model hash — from `mc_manifest`.
 
@@ -63,6 +65,49 @@ The corpus `*.trail` files (`CH14/version3.trail`, `CH14/version6.trail`,
 of `depth:process:transition` numbers, unreadable without the model, the mapping
 and the tool version (11 §15). `mc_explain` exists so that the report never ships
 numbers like these without their meaning.
+
+## 2a. The lasso as the engine emits it (G4)
+
+A counterexample for a temporal property carries `loop` {`start`, `steps`}:
+**`loop.start` is the 1-based index of the first step of the cycle**, and
+`loop.steps` is how many steps the cycle has. So steps `1 … loop.start - 1` are the
+prefix and steps `loop.start … loop.start + loop.steps - 1` repeat forever; after
+the last loop step the state is exactly the state before `loop.start`. A finite
+counterexample has no `loop` field. `mc_explain` does the split for you, into
+`prefix` and `loop`, and states it in one sentence in `loop_note`; with the CLI you
+do the arithmetic yourself from the report and write that sentence by hand. The
+report's `summary` marks the cycle with `; loop: `.
+
+Three process names in a lasso are not processes of the user's system, and all
+three must be dropped or explained rather than narrated as actions:
+
+| `process` | What it is | What to say |
+|---|---|---|
+| `never:<property id>` (`never:ltl1` for the first `--ltl`; `never:never` when the property is the model's own `never` claim) | the property automaton for the **negated** formula, moving first at every step | drop it from the chronology (projection, 10 §10); if you show it, say it is the property, not the system |
+| `np_` | the synthesised non-progress automaton of a `--progress` search | the same; its `accept` state means "the cycle so far visited no progress label" |
+| `-` | a **null step**: no process moved | see below — there are two reasons for one, and they mean different things |
+
+**Reading a stuttering process in a lasso.** A step of process `-` appears in two
+situations, and confusing them inverts the diagnosis:
+
+1. **Stutter extension.** The command text says so: `(stutter: no process can move,
+   the system state repeats forever; SPIN's stutter extension)`. The system has
+   *stopped* — every process terminated or the state is a deadlock — and the engine
+   extends the finite run into an infinite one by repeating the final state, because
+   an LTL formula is evaluated on infinite runs. A loop made only of the claim and
+   such a step means: **nothing further happens, and the promise is never kept**.
+   Report it as "the system reaches a state from which nothing can happen, and `q`
+   never occurs", and check the `deadlock` property next to it — a stutter loop on a
+   non-terminated state is a deadlock wearing a liveness costume.
+2. **Weak-fairness bookkeeping.** Under `fairness: weak` the copies construction
+   inserts null steps to advance the fairness copy. They carry no system meaning at
+   all; drop them silently.
+
+A process that is *absent* from the loop is the third case and the interesting one
+for fairness: it did not stutter, it was **not scheduled**. Under `fairness: none`
+the engine names it for you — `reason` says which processes move in the loop and
+which are "enabled throughout the loop and never move". That sentence is the input
+to question 3 of §3 and to `fairness.md` §3.
 
 ## 3. The four causes — classification procedure
 
@@ -75,11 +120,11 @@ after the first is fixed, rerun and classify the new trace afresh.
 | # | Question | If yes → class | Typical evidence |
 |---|---|---|---|
 | 1 | Is the formula saying something other than the requirement? (wrong polarity, wrong atom, `[]<>` where `<>[]` was meant, LTL where the requirement was branching, missing sanity conjunct, vacuity) | **property defect** | `mc_lint_property` polarity/vacuity notes; paraphrase the formula and compare with the user's words; corpus: `CH4/prop.pml` shows `[]p` vs `![]p` as never claims |
-| 2 | Does a step in the trace do something the real system cannot do? (an interleaving hidden by a real lock but not by the model, a channel losing when the real one cannot, a capacity or domain smaller than reality, a missing `end` label, an environment allowed too much) | **model defect** (including translation/mapping defects and over-approximation artefacts) | compare each step with the system; 07 лекция 3: an over-approximating model admits traces the program does not have |
+| 2 | Does a step in the trace do something the real system cannot do? (only askable when a real system is named — see the paragraph after the table) (an interleaving hidden by a real lock but not by the model, a channel losing when the real one cannot, a capacity or domain smaller than reality, a missing `end` label, an environment allowed too much) | **model defect** (including translation/mapping defects and over-approximation artefacts) | compare each step with the system; 07 лекция 3: an over-approximating model admits traces the program does not have |
 | 3 | Does the loop rely on a scheduling that the user's stated assumptions exclude? (a ready process never runs; a message is lost forever) | **fairness / environment artefact** — logically a sub-case of 2, singled out because the remedy differs (a justified assumption, not a model change); handled by `fairness.md` §3: rerun with the assumption and report both | the starved transition in the loop |
-| 4 | None of the above: every step is possible in the real system and the formula says what the requirement says | **system defect** | the trace replayed by `mc_simulate` in `guided` mode from the counterexample id |
+| 4 | None of the above: every step is possible in the real system — or there is no real system, and every step is possible in the object the user described — and the formula says what the requirement says | **system defect** (read the paragraph below before writing the words) | the trace replayed by `mc_simulate` in `guided` mode from the counterexample id |
 
-When the model **is** the object — a Petri net or an algorithm the user gave in words, with no real system behind it (E3 of the evals) — the row-4 class still applies, but write it as "defect of the described object" and say in the report that no real system is known: "system defect" alone reads as a statement about an implementation, and the intake card's "relation to the implementation" field is then empty by construction.
+When the model **is** the object — a Petri net, or an algorithm the user gave in words or as a `.pml` file, with no real system behind it (E3 and E1 of the evals) — questions 2 and 4 cannot be asked as written: there is no real system to compare a step against. Ask them of the object the user described instead, and write the class as "defect of the described object", not "system defect": the bare phrase reads as a statement about an implementation, and the intake card's "relation to the implementation" field is empty by construction. Watch for the contradiction this produces if you do not: a report that says in its summary "nothing follows about the real system" and in its classification "every step is possible in the real system" has used the word *system* in two senses and says both nothing and something about the same thing.
 
 "Spurious" in the sense of abstraction refinement (11 §12, FR-018) is class 2: the
 engine performs no abstraction itself, so a spurious trace can only come from the

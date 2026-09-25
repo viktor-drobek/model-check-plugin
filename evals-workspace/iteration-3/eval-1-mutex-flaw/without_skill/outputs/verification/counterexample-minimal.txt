@@ -1,0 +1,34 @@
+  1:	proc  0 (user:1) mutex_flaw.pml:5 (state 1)	[x = me]
+		x = 1
+  2:	proc  0 (user:1) mutex_flaw.pml:8 (state 4)	[(((y==0)||(y==me)))]
+  3:	proc  0 (user:1) mutex_flaw.pml:10 (state 7)	[z = me]
+		z = 1
+  4:	proc  0 (user:1) mutex_flaw.pml:13 (state 10)	[((x==me))]
+  5:	proc  1 (user:1) mutex_flaw.pml:5 (state 1)	[x = me]
+		x = 2
+  6:	proc  1 (user:1) mutex_flaw.pml:8 (state 4)	[(((y==0)||(y==me)))]
+  7:	proc  0 (user:1) mutex_flaw.pml:15 (state 13)	[y = me]
+		y = 1
+  8:	proc  0 (user:1) mutex_flaw.pml:18 (state 16)	[((z==me))]
+  9:	proc  1 (user:1) mutex_flaw.pml:10 (state 7)	[z = me]
+		z = 2
+ 10:	proc  1 (user:1) mutex_flaw.pml:13 (state 10)	[((x==me))]
+ 11:	proc  1 (user:1) mutex_flaw.pml:15 (state 13)	[y = me]
+		y = 2
+ 12:	proc  1 (user:1) mutex_flaw.pml:18 (state 16)	[((z==me))]
+ 13:	proc  1 (user:1) mutex_flaw.pml:22 (state 19)	[cnt = (cnt+1)]
+		cnt = 1
+ 14:	proc  0 (user:1) mutex_flaw.pml:22 (state 19)	[cnt = (cnt+1)]
+		cnt = 2
+spin: mutex_flaw.pml:23, Error: assertion violated
+spin: text of failed assertion: assert((cnt==1))
+ 15:	proc  0 (user:1) mutex_flaw.pml:23 (state 20)	[assert((cnt==1))]
+spin: trail ends after 15 steps
+#processes: 2
+		cnt = 2
+		x = 2
+		y = 2
+		z = 2
+ 15:	proc  1 (user:1) mutex_flaw.pml:23 (state 20)
+ 15:	proc  0 (user:1) mutex_flaw.pml:24 (state 21)
+2 processes created

@@ -1,0 +1,117 @@
+# Intake card (FR-001, FR-002) — starvation.pml, question: "will B eventually set done?"
+# Filled 2026-09-25. The user was not available for questions, so every field that
+# would normally be a question is filled with an EXPLICITLY LABELLED ASSUMPTION
+# ("ASSUMPTION:"), taken from the model text itself wherever possible.
+
+system:
+  name: "starvation.pml — two processes: A spins, B sets done"
+  boundary: "the two Promela processes A and B and the global bit `done`; nothing else"
+  environment: "the scheduler only — it chooses at every step which enabled process moves"
+  excluded:
+    - "any real system behind the model: none is named; the model is the object of the check"
+    - "no channels, no timers, no failures, no data"
+  relation_to_implementation: >
+    ASSUMPTION: the .pml file is the object of the check, not a model of a named
+    implementation (it is an engine test fixture). No conformance argument to any
+    real program is available or claimed.
+
+state:
+  variables:
+    - "done: bit, global, initial 0 — 'B has announced completion'"
+    - "A:0.t: bit, local to A, initial 0 — A's own flag, read by nothing"
+  processes:
+    - "A:0 — active proctype A: do :: t = 1 - t od (never terminates, always enabled)"
+    - "B:1 — active proctype B: done = 1 (one statement, then terminates)"
+  channels: []
+  initial_states: "done == 0, A:0.t == 0, both processes at their first statement"
+  observables:
+    - "done -> global bit `done` -> 'B has set done'"
+
+transitions:
+  semantics: "interleaving of the two processes (Promela/SPIN semantics as implemented by mcd)"
+  atomic_step: >
+    one Promela statement. ASSUMPTION: this is the intended granularity — the model
+    contains no atomic/d_step block, and the property `<> done` is X-free, so the
+    verdict does not depend on the granularity choice (stutter-invariant).
+  terminal_states: >
+    B terminates after its single statement; A never does. The engine's `deadlock`
+    property (invalid end states) is checked and reported.
+  nondeterminism: "scheduler choice between A and B only"
+
+properties:
+  - id: P1
+    wording: "Процесс B должен рано или поздно выставить done. Так ли это?"
+    class: liveness
+    logic: LTL
+    extension: untimed
+    formula: "<> done"
+    atoms: ["done"]
+    expected_evidence: "lasso (a violation of a liveness formula is an infinite path)"
+    sanity_companion: "P2"
+    note: >
+      `done` is written by B only (line 17), so "B eventually sets done" and
+      "done eventually becomes 1" are the same statement on this model.
+      Manual lint (mc_lint_property has no CLI equivalent): one atom, `done`,
+      defined as a global; no implication, so no vacuous antecedent; X-free,
+      therefore stutter-invariant; syntactic class liveness.
+  - id: P2
+    wording: "sanity: is the interesting state reachable at all?"
+    class: reachability
+    logic: LTL (reachability asked backwards, properties-ltl-ctl.md §3)
+    extension: untimed
+    formula: "[] (done == 0)"
+    atoms: ["done == 0"]
+    expected_evidence: "finite prefix inside the counterexample; `violated` here means `done == 1` IS reachable"
+    sanity_companion: "—"
+  - id: P0
+    wording: "(not asked by the user; added by the Promela frontend)"
+    class: safety
+    logic: deadlock
+    extension: untimed
+    formula: "—"
+    atoms: []
+    expected_evidence: "finite trace to an invalid end state"
+    sanity_companion: "—"
+
+assumptions:
+  scheduler: >
+    ASSUMPTION (the point of the whole check): none stated by the user. The check is
+    therefore run twice — with `fairness: none` (every interleaving is a run) and with
+    `fairness: weak` (a process continuously enabled from some point on eventually
+    moves) — and both results are reported separately.
+  delivery: "n/a — no channels"
+  failures: "none modelled"
+  environment_inputs: "none"
+  bounds:
+    - "the model is finite by construction: 2 processes, 2 bits, no channels; 6 reachable states"
+
+fairness:
+  required: "run both: none and weak"
+  justification: >
+    ASSUMPTION, not a fact about any system: a real OS/runtime scheduler that never
+    runs a ready, never-blocking process is normally considered unrealistic, which is
+    what weak (process-level) fairness excludes. Whether the scheduler of the system
+    this model stands for is weakly fair CANNOT be decided from the model and was not
+    confirmed by the user.
+  confirmed_by_user: false
+
+backend:
+  engine: mcd 0.1.0-g0 (CLI; the plugin's MCP server is not registered in this session)
+  search_mode: dfs
+  reductions: none
+
+budget:
+  time: "60000 ms (default)"
+  states: "1000000 (default)"
+  depth: "1000000 (default)"
+  memory: "1024 MiB (default)"
+  repeats: 1
+  note: "the defaults are far above what this model needs — the full graph is 6 states"
+
+evidence:
+  expected: exhaustive
+  goal: "exhaustive result (the user asks whether the property holds, not for a bug hunt)"
+
+artefacts:
+  may_store_models_and_traces: true   # ASSUMPTION: an engine test fixture, no business data
+  contains_secrets_or_personal_data: "no"

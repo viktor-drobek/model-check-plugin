@@ -1,0 +1,49 @@
+{
+  "eval_id": 1,
+  "eval_name": "mutex-invariant-violated",
+  "run": "with_skill",
+  "passed_count": 8,
+  "total": 8,
+  "expectations": [
+    {
+      "text": "The mutual-exclusion property is reported with status violated",
+      "passed": true,
+      "evidence": "matched 'violated' at 387"
+    },
+    {
+      "text": "The evidence level exhaustive is stated",
+      "passed": true,
+      "evidence": "matched 'exhaustive' at 408"
+    },
+    {
+      "text": "The counterexample is decoded through the model's labels L1–L4",
+      "passed": true,
+      "evidence": "matched 'L1' at 4058"
+    },
+    {
+      "text": "The counterexample shows both users at label L7 (the critical section)",
+      "passed": true,
+      "evidence": "matched 'L7' at 503"
+    },
+    {
+      "text": "The cause is classified as a system (algorithm) defect",
+      "passed": true,
+      "evidence": "matched 'дефект алгоритма' at 16137"
+    },
+    {
+      "text": "The engine was invoked (CLI or MCP), not reasoned around",
+      "passed": true,
+      "evidence": "matched 'mcd check' at 7344"
+    },
+    {
+      "text": "The engine version and input hash (manifest) are quoted",
+      "passed": true,
+      "evidence": "matched '0.1.0-g0' at 7261"
+    },
+    {
+      "text": "No forbidden phrasing (no errors / proved / system is correct)",
+      "passed": true,
+      "evidence": "pattern '(?i)\\\\bno errors\\\\b|\\\\bproved\\\\b|\\\\bproven\\\\b|ошибок нет|доказано|system is correct|система корректна' absent"
+    }
+  ]
+}

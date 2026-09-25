@@ -28,8 +28,8 @@ class AggregateTest(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.tmp)
 
-    def make_eval(self, eval_id, name, with_skill, without, timing):
-        d = os.path.join(self.tmp, "eval-%d-%s" % (eval_id, name))
+    def make_eval(self, eval_id, name, with_skill, without, timing, dirname=None):
+        d = os.path.join(self.tmp, dirname or ("eval-%d-%s" % (eval_id, name)))
         for conf, flags in (("with_skill", with_skill), ("without_skill", without)):
             os.makedirs(os.path.join(d, conf, "outputs"))
             with open(os.path.join(d, conf, "grading.json"), "w") as fh:
@@ -38,6 +38,27 @@ class AggregateTest(unittest.TestCase):
             json.dump({"eval_id": eval_id, "eval_name": name, "prompt": "p", "date": "2026-09-25"}, fh)
         with open(os.path.join(d, "timing.json"), "w") as fh:
             json.dump(timing, fh)
+
+    def test_directory_without_a_numeric_id_takes_it_from_the_metadata(self):
+        # E2b lives in eval-2b-starvation-loop: int("2b") is not an id, so the
+        # id must come from eval_metadata.json, and the run must not be dropped.
+        self.make_eval(7, "starvation", with_skill=[True, True], without=[False, True],
+                       timing={"with_skill": {"tokens": 1, "duration_s": 1.0, "tool_uses": 1},
+                               "without_skill": {"tokens": 1, "duration_s": 1.0, "tool_uses": 1}},
+                       dirname="eval-2b-starvation-loop")
+        path = os.path.join(self.tmp, "eval-2b-starvation-loop")
+        self.assertEqual(aggregate.dir_eval_id(path), 7)
+        self.assertIn(path, aggregate.eval_dirs(self.tmp))
+        bench = aggregate.build_benchmark(self.tmp, "s", "p", "m", "T")
+        self.assertEqual(bench["metadata"]["evals_run"], [1, 3, 7])
+        self.assertEqual([r["eval_id"] for r in bench["runs"] if r["configuration"] == "with_skill"],
+                         [1, 3, 7])
+
+    def test_directory_with_neither_an_id_nor_metadata_is_skipped(self):
+        d = os.path.join(self.tmp, "eval-notes")
+        os.makedirs(d)
+        self.assertIsNone(aggregate.dir_eval_id(d))
+        self.assertNotIn(d, aggregate.eval_dirs(self.tmp))
 
     def test_stats(self):
         self.assertEqual(aggregate.calculate_stats([]), {"mean": 0.0, "stddev": 0.0, "min": 0.0, "max": 0.0})

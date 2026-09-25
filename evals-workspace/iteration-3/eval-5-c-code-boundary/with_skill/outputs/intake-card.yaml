@@ -1,0 +1,104 @@
+# Intake card (assets/intake-card.yaml, FR-001/FR-002)
+# The user was not available for questions; every value marked ASSUMPTION was set
+# by me as a labelled default for a teaching example and is NOT user-confirmed.
+
+system:
+  name: "CH17/simple1.pr — SPIN teaching model for embedded C code (c_code/c_expr)"
+  boundary: "one process `simple` and one integer variable x"          # ASSUMPTION A2
+  environment: "none — the model is closed, the only nondeterminism is the if-choice"
+  excluded:
+    - "the C compiler / host runtime that SPIN would use to execute the c_code fragments (ASSUMPTION A8)"
+  relation_to_implementation: "hand-written rewrite of a corpus model; the original is a teaching model, not a system"
+
+state:
+  variables:
+    - name: x
+      domain: "engine `int` (original: C `int` declared inside c_code)"
+      encoding: "global model variable, initial 0"
+      source_meaning: "the value the C fragments compute"
+  processes:
+    - "simple:0 — active proctype, one instance"
+  channels: []
+  initial_states: "x = 0, simple:0 at its first statement"
+  observables:
+    - "x == 4  -> branch 1 postcondition"
+    - "x == 6  -> branch 2 postcondition"
+
+transitions:
+  semantics: "interleaving (only one process, so no interleaving in fact)"
+  atomic_step: "one Promela statement"                                  # ASSUMPTION A3
+  terminal_states: "normal termination of simple:0 is a valid end state"
+  nondeterminism: "the two options of the `if` — both unconditionally executable"
+
+properties:
+  - id: P1
+    wording: "assert(x==4) after the first branch and assert(x==6) after the second hold"
+    class: safety
+    logic: invariant
+    extension: untimed
+    formula: "the model's own assert statements (engine property `assert`)"
+    atoms: ["x == 4", "x == 6"]
+    expected_evidence: "finite trace on violation"
+    sanity_companion: "P3, P4"
+  - id: P2
+    wording: "the model does not hang (no invalid end state)"
+    class: safety
+    logic: deadlock
+    extension: untimed
+    formula: "engine property `deadlock` (added by the frontend)"
+    atoms: []
+    expected_evidence: "finite trace on violation"
+    sanity_companion: "P3, P4"
+  - id: P3
+    wording: "sanity: the first branch (x == 4) is actually reachable"
+    class: reachability
+    logic: LTL
+    extension: untimed
+    formula: "[] !(x == 4)  — `violated` IS the witness (properties-ltl-ctl.md §4)"
+    atoms: ["x == 4"]
+    expected_evidence: "lasso whose prefix reaches the state"
+    sanity_companion: "—"
+  - id: P4
+    wording: "sanity: the second branch (x == 6) is actually reachable"
+    class: reachability
+    logic: LTL
+    extension: untimed
+    formula: "[] !(x == 6)"
+    atoms: ["x == 6"]
+    expected_evidence: "lasso whose prefix reaches the state"
+    sanity_companion: "—"
+
+assumptions:
+  scheduler: "irrelevant — a single process"
+  delivery: "no channels"
+  failures: "none modelled"
+  environment_inputs: "none"
+  bounds:
+    - "x is an engine `int`; reachable values are 0, 2, 4, 6, so no domain question arises"   # A5
+    - "one process instance (from `active proctype`)"
+
+fairness:
+  required: "none"                                                      # ASSUMPTION A6
+  justification: "no liveness property was asked or checked; the two reachability
+    properties are witnessed by finite prefixes, so fairness does not enter"
+  confirmed_by_user: false
+
+backend:
+  engine: mcd        # CLI /tmp/mcd, version 0.1.0-g0; the plugin's MCP server is not registered in this session
+  search_mode: dfs   # plus one bfs run for the negative control
+  reductions: none
+
+budget:
+  time: "60000 ms (default)"
+  states: "1000000 (default); one pilot run at 3 states"
+  depth: "1000000 (default)"
+  memory: "1024 MiB (default)"
+  repeats: 1
+
+evidence:
+  expected: exhaustive
+  goal: "exhaustive result"                                             # ASSUMPTION A1
+
+artefacts:
+  may_store_models_and_traces: true   # ASSUMPTION A9: a public teaching corpus file, no secrets
+  contains_secrets_or_personal_data: "no"

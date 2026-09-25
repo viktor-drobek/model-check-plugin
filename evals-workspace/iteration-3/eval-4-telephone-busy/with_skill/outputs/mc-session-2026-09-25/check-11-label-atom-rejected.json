@@ -1,0 +1,7 @@
+{
+  "error": {
+    "kind": "ltl",
+    "status": "not-executed",
+    "message": "property ltl1: formula: unexpected character '@' (at offset 10)"
+  }
+}

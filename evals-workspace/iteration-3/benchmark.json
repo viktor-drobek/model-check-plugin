@@ -1,0 +1,829 @@
+{
+  "metadata": {
+    "skill_name": "model-check",
+    "skill_path": "skills/model-check",
+    "executor_model": "claude (same model as the coordinating session)",
+    "analyzer_model": "none (mechanical aggregation, evals-workspace/aggregate.py)",
+    "timestamp": "2026-09-25",
+    "evals_run": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      7
+    ],
+    "runs_per_configuration": 1
+  },
+  "runs": [
+    {
+      "eval_id": 1,
+      "eval_name": "mutex-invariant-violated",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 8,
+        "failed": 0,
+        "total": 8,
+        "time_seconds": 434.602,
+        "tokens": 137874,
+        "tool_calls": 34,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "The mutual-exclusion property is reported with status violated",
+          "passed": true,
+          "evidence": "matched 'violated' at 387"
+        },
+        {
+          "text": "The evidence level exhaustive is stated",
+          "passed": true,
+          "evidence": "matched 'exhaustive' at 408"
+        },
+        {
+          "text": "The counterexample is decoded through the model's labels L1–L4",
+          "passed": true,
+          "evidence": "matched 'L1' at 4058"
+        },
+        {
+          "text": "The counterexample shows both users at label L7 (the critical section)",
+          "passed": true,
+          "evidence": "matched 'L7' at 503"
+        },
+        {
+          "text": "The cause is classified as a system (algorithm) defect",
+          "passed": true,
+          "evidence": "matched 'дефект алгоритма' at 16137"
+        },
+        {
+          "text": "The engine was invoked (CLI or MCP), not reasoned around",
+          "passed": true,
+          "evidence": "matched 'mcd check' at 7344"
+        },
+        {
+          "text": "The engine version and input hash (manifest) are quoted",
+          "passed": true,
+          "evidence": "matched '0.1.0-g0' at 7261"
+        },
+        {
+          "text": "No forbidden phrasing (no errors / proved / system is correct)",
+          "passed": true,
+          "evidence": "pattern '(?i)\\\\bno errors\\\\b|\\\\bproved\\\\b|\\\\bproven\\\\b|ошибок нет|доказано|system is correct|система корректна' absent"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "alternating-bit-liveness-fairness",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 9,
+        "failed": 0,
+        "total": 9,
+        "time_seconds": 546.998,
+        "tokens": 149919,
+        "tool_calls": 29,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Fairness is raised as a question or as an explicitly labelled assumption",
+          "passed": true,
+          "evidence": "matched 'предположений о справедлив' at 262"
+        },
+        {
+          "text": "The delivery (liveness) property is reported verified",
+          "passed": true,
+          "evidence": "matched 'verified' at 199"
+        },
+        {
+          "text": "The evidence level exhaustive is stated",
+          "passed": true,
+          "evidence": "matched 'exhaustive' at 234"
+        },
+        {
+          "text": "The formula that was actually checked is shown, in LTL syntax",
+          "passed": true,
+          "evidence": "matched '[]' at 1327"
+        },
+        {
+          "text": "The answer says the verdict does not depend on the fairness setting (the model is lock-step)",
+          "passed": true,
+          "evidence": "matched 'lock-step' at 770"
+        },
+        {
+          "text": "The claim is limited to this model: it has no message loss, retransmission or timeout",
+          "passed": true,
+          "evidence": "matched 'потери сообщений' at 481"
+        },
+        {
+          "text": "The engine was invoked (CLI or MCP), not reasoned around",
+          "passed": true,
+          "evidence": "matched 'mcd check' at 11578"
+        },
+        {
+          "text": "The word proved/доказано is not used for the model result",
+          "passed": true,
+          "evidence": "pattern '(?i)\\\\bproved\\\\b|\\\\bproven\\\\b|доказано|доказал' absent"
+        },
+        {
+          "text": "No forbidden phrasing",
+          "passed": true,
+          "evidence": "pattern '(?i)\\\\bno errors\\\\b|ошибок нет|protocol is correct|протокол корректен|система корректна' absent"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "petri-net-hang",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 10,
+        "failed": 0,
+        "total": 10,
+        "time_seconds": 407.687,
+        "tokens": 149575,
+        "tool_calls": 26,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "A Petri-net JSON accepted by the engine's frontend was written, with the six places, initial marking p1=p4=1 and the six transitions of the prompt",
+          "passed": true,
+          "evidence": "mc-session-2026-09-25/petrinet.json is a valid net equivalent to evals/fixtures/petrinet1.json"
+        },
+        {
+          "text": "The engine CLI was run on the net and the command line is shown (mcd check --petri, the binary possibly named through a shell variable)",
+          "passed": true,
+          "evidence": "matched 'mcd check --no-timing --petri' at 18463"
+        },
+        {
+          "text": "The hang (deadlock) property is reported with status violated",
+          "passed": true,
+          "evidence": "matched 'violated' at 318"
+        },
+        {
+          "text": "The evidence level exhaustive is stated",
+          "passed": true,
+          "evidence": "matched 'exhaustive' at 354"
+        },
+        {
+          "text": "The counterexample is the firing sequence t1 then t4",
+          "passed": true,
+          "evidence": "matched 't1`, затем `t4' at 147"
+        },
+        {
+          "text": "The final marking has one token in p2 (p2 = 1, or set notation {p2, p5})",
+          "passed": true,
+          "evidence": "matched 'p2=1' at 187"
+        },
+        {
+          "text": "The final marking has one token in p5 (p5 = 1, or set notation {p2, p5})",
+          "passed": true,
+          "evidence": "matched 'p5=1' at 193"
+        },
+        {
+          "text": "The number of reachable markings (6) is quoted from the engine's counters",
+          "passed": true,
+          "evidence": "matched '6 маркиров' at 282"
+        },
+        {
+          "text": "The generated safe property is also reported",
+          "passed": true,
+          "evidence": "matched 'safe' at 776"
+        },
+        {
+          "text": "No forbidden phrasing (no errors / proved / net is correct)",
+          "passed": true,
+          "evidence": "pattern '(?i)\\\\bno errors\\\\b|\\\\bproved\\\\b|\\\\bproven\\\\b|ошибок нет|доказано|net is correct|сеть корректна' absent"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 4,
+      "eval_name": "telephone-busy-liveness",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 9,
+        "failed": 0,
+        "total": 9,
+        "time_seconds": 672.165,
+        "tokens": 171709,
+        "tool_calls": 29,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "The requirement is classified as a liveness property",
+          "passed": true,
+          "evidence": "matched 'живост' at 1828"
+        },
+        {
+          "text": "It is formalised as a progress label or an LTL eventually/infinitely-often formula",
+          "passed": true,
+          "evidence": "matched '<>' at 1121"
+        },
+        {
+          "text": "The formula refers to the model's labels or states (Busy), not to printf output",
+          "passed": true,
+          "evidence": "matched 'Busy' at 143"
+        },
+        {
+          "text": "Fairness is raised before the result",
+          "passed": true,
+          "evidence": "matched 'fairness' at 1795"
+        },
+        {
+          "text": "A status from the vocabulary is given",
+          "passed": true,
+          "evidence": "matched 'verified' at 886"
+        },
+        {
+          "text": "An evidence level is given",
+          "passed": true,
+          "evidence": "matched 'exhaustive' at 899"
+        },
+        {
+          "text": "The progress property the frontend adds from progress labels is named",
+          "passed": true,
+          "evidence": "matched '`progress` | вид свойства' at 11991"
+        },
+        {
+          "text": "Placing a progress label (or adding a variable) is declared as a change to the model, not smuggled in",
+          "passed": true,
+          "evidence": "matched 'Метка `progress` поставлена' at 5270"
+        },
+        {
+          "text": "No forbidden phrasing",
+          "passed": true,
+          "evidence": "pattern '(?i)\\\\bno errors\\\\b|\\\\bproved\\\\b|\\\\bproven\\\\b|ошибок нет|доказано' absent"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 5,
+      "eval_name": "c-code-out-of-subset",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 7,
+        "failed": 0,
+        "total": 7,
+        "time_seconds": 330.231,
+        "tokens": 122931,
+        "tool_calls": 24,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Status not-executed is reported",
+          "passed": true,
+          "evidence": "matched 'not-executed' at 558"
+        },
+        {
+          "text": "The rejected construct c_code is named",
+          "passed": true,
+          "evidence": "matched 'c_code' at 63"
+        },
+        {
+          "text": "The rejection is attributed to the parser/frontend (exit code 2 or an explicit rejection)",
+          "passed": true,
+          "evidence": "matched 'отклон' at 324"
+        },
+        {
+          "text": "A source line of the construct is given",
+          "passed": true,
+          "evidence": "matched 'строке 1' at 341"
+        },
+        {
+          "text": "No property result is imitated for the original model: no line of the answer attributes verified/violated/inconclusive to simple1.pr, c_code/c_expr or the original model/file (a verdict about a clearly separate rewrite is allowed — including a line that calls that rewrite \"the original\" one as against a mutant; refined in iteration-2 and again in iteration-3, see steps/g3-evals3-confirmation.md)",
+          "passed": true,
+          "evidence": "pattern '(?im)^(?=.*\\\\b(verified|violated|inconclusive)\\\\b)(?=.*(simple1\\\\.pr|c_code|c_expr|(исходн\\\\w*|оригинальн\\\\w*|original)\\\\s+(модел\\\\w*|файл\\\\w*|model|file))).*$' absent"
+        },
+        {
+          "text": "A rewrite of the C effect as Promela statements is offered",
+          "passed": true,
+          "evidence": "matched 'перепис' at 837"
+        },
+        {
+          "text": "No host code is executed and the answer says so",
+          "passed": true,
+          "evidence": "matched 'not-execut' at 558"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 7,
+      "eval_name": "starvation-loop-fairness",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 9,
+        "failed": 0,
+        "total": 9,
+        "time_seconds": 322.91,
+        "tokens": 123462,
+        "tool_calls": 24,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Without fairness the property is reported violated",
+          "passed": true,
+          "evidence": "matched 'violated' at 269"
+        },
+        {
+          "text": "The counterexample is described as a loop that repeats forever, not as a finite trace",
+          "passed": true,
+          "evidence": "matched 'лассо' at 317"
+        },
+        {
+          "text": "Process B is named as the one that is enabled through the loop and never moves",
+          "passed": true,
+          "evidence": "matched 'starvation.pml — «Процесс B' at 15"
+        },
+        {
+          "text": "The run under weak fairness is reported and comes back verified",
+          "passed": true,
+          "evidence": "in order: [(441, 'слабая справедлив'), (483, 'verified')]"
+        },
+        {
+          "text": "Both results are given: without fairness first, then with weak fairness",
+          "passed": true,
+          "evidence": "in order: [(7450, 'без справедлив'), (8298, '--fairness weak')]"
+        },
+        {
+          "text": "Weak fairness is named as an assumption, not as a fact about the system",
+          "passed": true,
+          "evidence": "matched 'допущение, а не факт.** `verified` при слабой справедлив' at 13380"
+        },
+        {
+          "text": "Each result carries an evidence level",
+          "passed": true,
+          "evidence": "matched 'exhaustive' at 292"
+        },
+        {
+          "text": "The engine was invoked (CLI or MCP), not reasoned around",
+          "passed": true,
+          "evidence": "matched 'mcd check' at 7688"
+        },
+        {
+          "text": "No forbidden phrasing, and the fair result is not called proved",
+          "passed": true,
+          "evidence": "pattern '(?i)\\\\bno errors\\\\b|ошибок нет|\\\\bproved\\\\b|\\\\bproven\\\\b|доказано|система корректна' absent"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "mutex-invariant-violated",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.375,
+        "passed": 3,
+        "failed": 5,
+        "total": 8,
+        "time_seconds": 286.995,
+        "tokens": 66553,
+        "tool_calls": 21,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "The mutual-exclusion property is reported with status violated",
+          "passed": false,
+          "evidence": "pattern '\\\\bviolated\\\\b' not found"
+        },
+        {
+          "text": "The evidence level exhaustive is stated",
+          "passed": false,
+          "evidence": "pattern '\\\\bexhaustive\\\\b' not found"
+        },
+        {
+          "text": "The counterexample is decoded through the model's labels L1–L4",
+          "passed": true,
+          "evidence": "matched 'L1' at 905"
+        },
+        {
+          "text": "The counterexample shows both users at label L7 (the critical section)",
+          "passed": true,
+          "evidence": "matched 'L7' at 775"
+        },
+        {
+          "text": "The cause is classified as a system (algorithm) defect",
+          "passed": false,
+          "evidence": "pattern '(?i)system defect|algorithm (is|itself is) wrong|дефект (системы|алгоритма)|ошибка (в )?алгоритм' not found"
+        },
+        {
+          "text": "The engine was invoked (CLI or MCP), not reasoned around",
+          "passed": false,
+          "evidence": "pattern 'mcd check|mc_check' not found"
+        },
+        {
+          "text": "The engine version and input hash (manifest) are quoted",
+          "passed": false,
+          "evidence": "pattern '(?i)(sha256|sha-256)[^\\\\n]{0,40}[0-9a-f]{16}|0\\\\.1\\\\.0-g\\\\d|mcd \\\\d+\\\\.\\\\d+' not found"
+        },
+        {
+          "text": "No forbidden phrasing (no errors / proved / system is correct)",
+          "passed": true,
+          "evidence": "pattern '(?i)\\\\bno errors\\\\b|\\\\bproved\\\\b|\\\\bproven\\\\b|ошибок нет|доказано|system is correct|система корректна' absent"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "alternating-bit-liveness-fairness",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.4444,
+        "passed": 4,
+        "failed": 5,
+        "total": 9,
+        "time_seconds": 376.099,
+        "tokens": 67954,
+        "tool_calls": 20,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Fairness is raised as a question or as an explicitly labelled assumption",
+          "passed": true,
+          "evidence": "matched 'предположения о справедлив' at 4619"
+        },
+        {
+          "text": "The delivery (liveness) property is reported verified",
+          "passed": false,
+          "evidence": "pattern '\\\\bverified\\\\b' not found"
+        },
+        {
+          "text": "The evidence level exhaustive is stated",
+          "passed": false,
+          "evidence": "pattern '\\\\bexhaustive\\\\b' not found"
+        },
+        {
+          "text": "The formula that was actually checked is shown, in LTL syntax",
+          "passed": true,
+          "evidence": "matched '[]' at 2318"
+        },
+        {
+          "text": "The answer says the verdict does not depend on the fairness setting (the model is lock-step)",
+          "passed": false,
+          "evidence": "pattern '(?i)lock-?step|жёстк\\\\w* чередован|строг\\\\w* чередован|чередуются|(не зависит|не завис\\\\w+|does not depend|independent|не влия|no effect|ничего не мен|changes nothing|не требует\\\\w*|not (needed|required))[^\\\\n]{0,80}(fairness|справедлив)|(fairness|справедлив)\\\\w*[^\\\\n]{0,80}(не зависит|не завис\\\\w+|does not depend|не влия|no effect|ничего не мен|changes nothing|не требует\\\\w*|not (needed|required))' not found"
+        },
+        {
+          "text": "The claim is limited to this model: it has no message loss, retransmission or timeout",
+          "passed": true,
+          "evidence": "matched 'не теря' at 365"
+        },
+        {
+          "text": "The engine was invoked (CLI or MCP), not reasoned around",
+          "passed": false,
+          "evidence": "pattern 'mcd check|mc_check' not found"
+        },
+        {
+          "text": "The word proved/доказано is not used for the model result",
+          "passed": false,
+          "evidence": "forbidden match 'доказано' at 226"
+        },
+        {
+          "text": "No forbidden phrasing",
+          "passed": true,
+          "evidence": "pattern '(?i)\\\\bno errors\\\\b|ошибок нет|protocol is correct|протокол корректен|система корректна' absent"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "petri-net-hang",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.5,
+        "passed": 5,
+        "failed": 5,
+        "total": 10,
+        "time_seconds": 93.284,
+        "tokens": 46174,
+        "tool_calls": 3,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "A Petri-net JSON accepted by the engine's frontend was written, with the six places, initial marking p1=p4=1 and the six transitions of the prompt",
+          "passed": false,
+          "evidence": "no valid net under outputs: no *.json files"
+        },
+        {
+          "text": "The engine CLI was run on the net and the command line is shown (mcd check --petri, the binary possibly named through a shell variable)",
+          "passed": false,
+          "evidence": "pattern '(?i)mcd check[^\\\\n]*--petri' not found"
+        },
+        {
+          "text": "The hang (deadlock) property is reported with status violated",
+          "passed": false,
+          "evidence": "pattern '\\\\bviolated\\\\b' not found"
+        },
+        {
+          "text": "The evidence level exhaustive is stated",
+          "passed": false,
+          "evidence": "pattern '\\\\bexhaustive\\\\b' not found"
+        },
+        {
+          "text": "The counterexample is the firing sequence t1 then t4",
+          "passed": true,
+          "evidence": "matched 't1, t4' at 139"
+        },
+        {
+          "text": "The final marking has one token in p2 (p2 = 1, or set notation {p2, p5})",
+          "passed": true,
+          "evidence": "matched 'p2=1' at 1362"
+        },
+        {
+          "text": "The final marking has one token in p5 (p5 = 1, or set notation {p2, p5})",
+          "passed": true,
+          "evidence": "matched 'p5=1' at 1380"
+        },
+        {
+          "text": "The number of reachable markings (6) is quoted from the engine's counters",
+          "passed": true,
+          "evidence": "matched '6 маркиров' at 2619"
+        },
+        {
+          "text": "The generated safe property is also reported",
+          "passed": false,
+          "evidence": "pattern '\\\\bsafe\\\\b' not found"
+        },
+        {
+          "text": "No forbidden phrasing (no errors / proved / net is correct)",
+          "passed": true,
+          "evidence": "pattern '(?i)\\\\bno errors\\\\b|\\\\bproved\\\\b|\\\\bproven\\\\b|ошибок нет|доказано|net is correct|сеть корректна' absent"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 4,
+      "eval_name": "telephone-busy-liveness",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.4444,
+        "passed": 4,
+        "failed": 5,
+        "total": 9,
+        "time_seconds": 323.481,
+        "tokens": 77655,
+        "tool_calls": 24,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "The requirement is classified as a liveness property",
+          "passed": false,
+          "evidence": "pattern '(?i)\\\\bliveness\\\\b|живост' not found"
+        },
+        {
+          "text": "It is formalised as a progress label or an LTL eventually/infinitely-often formula",
+          "passed": true,
+          "evidence": "matched '<>' at 611"
+        },
+        {
+          "text": "The formula refers to the model's labels or states (Busy), not to printf output",
+          "passed": true,
+          "evidence": "matched 'Busy' at 43"
+        },
+        {
+          "text": "Fairness is raised before the result",
+          "passed": true,
+          "evidence": "matched 'справедлив' at 1555"
+        },
+        {
+          "text": "A status from the vocabulary is given",
+          "passed": false,
+          "evidence": "pattern '\\\\b(verified|violated|inconclusive|unknown|not-executed|invalid-model)\\\\b' not found"
+        },
+        {
+          "text": "An evidence level is given",
+          "passed": false,
+          "evidence": "pattern '\\\\b(exhaustive|bounded|approximate|unknown)\\\\b' not found"
+        },
+        {
+          "text": "The progress property the frontend adds from progress labels is named",
+          "passed": false,
+          "evidence": "pattern '(?i)(свойств\\\\w*|property|properties)[^\\\\n]{0,60}`?progress`?|`?progress`?[^\\\\n]{0,60}(свойств\\\\w*|property|properties)' not found"
+        },
+        {
+          "text": "Placing a progress label (or adding a variable) is declared as a change to the model, not smuggled in",
+          "passed": false,
+          "evidence": "pattern '(?i)(добав\\\\w+|постав\\\\w+|размест\\\\w+|внёс|внес\\\\w+|перепис\\\\w+|измен\\\\w+|add\\\\w*|plac\\\\w+|insert\\\\w+|rewr\\\\w+|modif\\\\w+)[^\\\\n]{0,120}(progress|мет\\\\w+|label)|(progress|label|мет\\\\w+)[^\\\\n]{0,120}(добав\\\\w+|постав\\\\w+|перепис\\\\w+|измен\\\\w+ модел|add\\\\w*|plac\\\\w+|change to the model|изменени\\\\w* модел)' not found"
+        },
+        {
+          "text": "No forbidden phrasing",
+          "passed": true,
+          "evidence": "pattern '(?i)\\\\bno errors\\\\b|\\\\bproved\\\\b|\\\\bproven\\\\b|ошибок нет|доказано' absent"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 5,
+      "eval_name": "c-code-out-of-subset",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.4286,
+        "passed": 3,
+        "failed": 4,
+        "total": 7,
+        "time_seconds": 198.502,
+        "tokens": 54735,
+        "tool_calls": 13,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Status not-executed is reported",
+          "passed": false,
+          "evidence": "pattern '\\\\bnot-executed\\\\b' not found"
+        },
+        {
+          "text": "The rejected construct c_code is named",
+          "passed": true,
+          "evidence": "matched 'c_code' at 310"
+        },
+        {
+          "text": "The rejection is attributed to the parser/frontend (exit code 2 or an explicit rejection)",
+          "passed": false,
+          "evidence": "pattern '(?i)exit code 2|rejected|rejection|отверг|отклон' not found"
+        },
+        {
+          "text": "A source line of the construct is given",
+          "passed": false,
+          "evidence": "pattern '(?i)(line|строк\\\\w*)\\\\s*\\\\d+' not found"
+        },
+        {
+          "text": "No property result is imitated for the original model: no line of the answer attributes verified/violated/inconclusive to simple1.pr, c_code/c_expr or the original model/file (a verdict about a clearly separate rewrite is allowed — including a line that calls that rewrite \"the original\" one as against a mutant; refined in iteration-2 and again in iteration-3, see steps/g3-evals3-confirmation.md)",
+          "passed": true,
+          "evidence": "pattern '(?im)^(?=.*\\\\b(verified|violated|inconclusive)\\\\b)(?=.*(simple1\\\\.pr|c_code|c_expr|(исходн\\\\w*|оригинальн\\\\w*|original)\\\\s+(модел\\\\w*|файл\\\\w*|model|file))).*$' absent"
+        },
+        {
+          "text": "A rewrite of the C effect as Promela statements is offered",
+          "passed": false,
+          "evidence": "pattern '(?i)rewrite|rewritten|перепис|переписать' not found"
+        },
+        {
+          "text": "No host code is executed and the answer says so",
+          "passed": true,
+          "evidence": "matched 'не выполня' at 6372"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 7,
+      "eval_name": "starvation-loop-fairness",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.3333,
+        "passed": 3,
+        "failed": 6,
+        "total": 9,
+        "time_seconds": 72.364,
+        "tokens": 45705,
+        "tool_calls": 7,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Without fairness the property is reported violated",
+          "passed": false,
+          "evidence": "pattern '\\\\bviolated\\\\b' not found"
+        },
+        {
+          "text": "The counterexample is described as a loop that repeats forever, not as a finite trace",
+          "passed": true,
+          "evidence": "matched 'бесконечный цикл' at 527"
+        },
+        {
+          "text": "Process B is named as the one that is enabled through the loop and never moves",
+          "passed": true,
+          "evidence": "matched 'B` не ждёт ни канала, ни условия. То есть это не взаимная блокировка (deadlock) ' at 792"
+        },
+        {
+          "text": "The run under weak fairness is reported and comes back verified",
+          "passed": false,
+          "evidence": "pattern '\\\\bverified\\\\b' not found"
+        },
+        {
+          "text": "Both results are given: without fairness first, then with weak fairness",
+          "passed": false,
+          "evidence": "pattern '(?i)with weak fairness|under weak fairness|(с|при) (слабой )?(fairness|справедлив)|fairness: ?weak|--fairness weak' not found"
+        },
+        {
+          "text": "Weak fairness is named as an assumption, not as a fact about the system",
+          "passed": true,
+          "evidence": "matched 'предположений о справедлив' at 1103"
+        },
+        {
+          "text": "Each result carries an evidence level",
+          "passed": false,
+          "evidence": "pattern '\\\\b(exhaustive|bounded|approximate|unknown)\\\\b' not found"
+        },
+        {
+          "text": "The engine was invoked (CLI or MCP), not reasoned around",
+          "passed": false,
+          "evidence": "pattern 'mcd check|mc_check' not found"
+        },
+        {
+          "text": "No forbidden phrasing, and the fair result is not called proved",
+          "passed": false,
+          "evidence": "forbidden match 'Ошибок нет' at 3203"
+        }
+      ],
+      "notes": []
+    }
+  ],
+  "run_summary": {
+    "with_skill": {
+      "pass_rate": {
+        "mean": 1.0,
+        "stddev": 0.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "time_seconds": {
+        "mean": 452.4322,
+        "stddev": 135.0958,
+        "min": 322.91,
+        "max": 672.165
+      },
+      "tokens": {
+        "mean": 142578.3333,
+        "stddev": 18574.2679,
+        "min": 122931,
+        "max": 171709
+      }
+    },
+    "without_skill": {
+      "pass_rate": {
+        "mean": 0.4209,
+        "stddev": 0.0587,
+        "min": 0.3333,
+        "max": 0.5
+      },
+      "time_seconds": {
+        "mean": 225.1208,
+        "stddev": 124.6769,
+        "min": 72.364,
+        "max": 376.099
+      },
+      "tokens": {
+        "mean": 59796.0,
+        "stddev": 12968.2904,
+        "min": 45705,
+        "max": 77655
+      }
+    },
+    "delta": {
+      "pass_rate": "+0.58",
+      "time_seconds": "+227.3",
+      "tokens": "+82782"
+    }
+  },
+  "notes": [
+    "Eval 1 (mutex-invariant-violated): with_skill 8/8, without_skill 3/8",
+    "Eval 1: 3 of 8 assertions pass in both configurations and do not differentiate the skill: 'The counterexample is decoded through the model's labels L1–L4'; 'The counterexample shows both users at label L7 (the critical section)'; 'No forbidden phrasing (no errors / proved / system is correct)'",
+    "Eval 2 (alternating-bit-liveness-fairness): with_skill 9/9, without_skill 4/9",
+    "Eval 2: 4 of 9 assertions pass in both configurations and do not differentiate the skill: 'Fairness is raised as a question or as an explicitly labelled assumption'; 'The formula that was actually checked is shown, in LTL syntax'; 'The claim is limited to this model: it has no message loss, retransmission or timeout'; 'No forbidden phrasing'",
+    "Eval 3 (petri-net-hang): with_skill 10/10, without_skill 5/10",
+    "Eval 3: 5 of 10 assertions pass in both configurations and do not differentiate the skill: 'The counterexample is the firing sequence t1 then t4'; 'The final marking has one token in p2 (p2 = 1, or set notation {p2, p5})'; 'The final marking has one token in p5 (p5 = 1, or set notation {p2, p5})'; 'The number of reachable markings (6) is quoted from the engine's counters'; 'No forbidden phrasing (no errors / proved / net is correct)'",
+    "Eval 4 (telephone-busy-liveness): with_skill 9/9, without_skill 4/9",
+    "Eval 4: 4 of 9 assertions pass in both configurations and do not differentiate the skill: 'It is formalised as a progress label or an LTL eventually/infinitely-often formula'; 'The formula refers to the model's labels or states (Busy), not to printf output'; 'Fairness is raised before the result'; 'No forbidden phrasing'",
+    "Eval 5 (c-code-out-of-subset): with_skill 7/7, without_skill 3/7",
+    "Eval 5: 3 of 7 assertions pass in both configurations and do not differentiate the skill: 'The rejected construct c_code is named'; 'No property result is imitated for the original model: no line of the answer attributes verified/violated/inconclusive to simple1.pr, c_code/c_expr or the original model/file (a verdict about a clearly separate rewrite is allowed — including a line that calls that rewrite \"the original\" one as against a mutant; refined in iteration-2 and again in iteration-3, see steps/g3-evals3-confirmation.md)'; 'No host code is executed and the answer says so'",
+    "Eval 7 (starvation-loop-fairness): with_skill 9/9, without_skill 3/9",
+    "Eval 7: 3 of 9 assertions pass in both configurations and do not differentiate the skill: 'The counterexample is described as a loop that repeats forever, not as a finite trace'; 'Process B is named as the one that is enabled through the loop and never moves'; 'Weak fairness is named as an assumption, not as a fact about the system'"
+  ]
+}

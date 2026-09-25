@@ -1,0 +1,587 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0-g0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "promela",
+      "path": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-lossy.pml",
+      "sha256": "34e1706f8247a4c27a4c81f44452ee53aa9efb2bd7febbc0098347900113fbae"
+    }
+  ],
+  "model": {
+    "name": "alternatingbit-lossy",
+    "state_bytes": 13,
+    "processes": 2,
+    "variables": 4
+  },
+  "search": {
+    "mode": "bfs",
+    "budget": {
+      "states": 1000000,
+      "depth": 1000000,
+      "time_ms": 60000,
+      "mem_bytes": 1073741824
+    },
+    "stop": "all properties decided",
+    "complete": false
+  },
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)",
+      "status": "violated",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 5,
+        "transitions": 6,
+        "depth": 2,
+        "memory_bytes_est": 25024
+      },
+      "complete": false,
+      "counterexample": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "Sender:0",
+            "command": "pend1 = 1",
+            "changes": [
+              {
+                "var": "pend1",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-lossy.pml",
+              "line": 19,
+              "name": "pend1 = 1"
+            }
+          },
+          {
+            "index": 2,
+            "process": "Sender:0",
+            "command": "skip",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-lossy.pml",
+              "line": 22,
+              "name": "skip"
+            }
+          }
+        ],
+        "final_state": [
+          {
+            "var": "pend1",
+            "value": 1
+          },
+          {
+            "var": "pend0",
+            "value": 0
+          },
+          {
+            "var": "got1",
+            "value": 0
+          },
+          {
+            "var": "got0",
+            "value": 0
+          }
+        ],
+        "final_channels": [
+          {
+            "chan": "to_sndr",
+            "messages": []
+          },
+          {
+            "chan": "to_rcvr",
+            "messages": []
+          }
+        ],
+        "summary": "pend1 = 1, skip"
+      },
+      "reason": "deadlock: no transition is enabled and not every process is terminated (at an end label or without outgoing edges)"
+    },
+    {
+      "id": "ltl1",
+      "kind": "ltl",
+      "text": "[] (pend1 == 1 -> <> pend1 == 0)",
+      "status": "violated",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 24,
+        "transitions": 38,
+        "depth": 27,
+        "memory_bytes_est": 27504
+      },
+      "complete": false,
+      "counterexample": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 2,
+            "process": "Sender:0",
+            "command": "pend1 = 1",
+            "changes": [
+              {
+                "var": "pend1",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-lossy.pml",
+              "line": 19,
+              "name": "pend1 = 1"
+            }
+          },
+          {
+            "index": 3,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 4,
+            "process": "Sender:0",
+            "command": "to_rcvr!msg1",
+            "channels": [
+              {
+                "chan": "to_rcvr",
+                "messages": [
+                  [
+                    3
+                  ]
+                ]
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-lossy.pml",
+              "line": 21,
+              "name": "to_rcvr!msg1"
+            }
+          },
+          {
+            "index": 5,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 6,
+            "process": "Receiver:1",
+            "command": "to_rcvr?msg1",
+            "channels": [
+              {
+                "chan": "to_rcvr",
+                "messages": []
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-lossy.pml",
+              "line": 36,
+              "name": "to_rcvr?msg1"
+            }
+          },
+          {
+            "index": 7,
+            "process": "Receiver:1",
+            "command": "pend1 = 0",
+            "changes": [
+              {
+                "var": "pend1",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-lossy.pml",
+              "line": 36,
+              "name": "pend1 = 0"
+            }
+          },
+          {
+            "index": 8,
+            "process": "Receiver:1",
+            "command": "got1 = 1 - got1",
+            "changes": [
+              {
+                "var": "got1",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-lossy.pml",
+              "line": 36,
+              "name": "got1 = 1 - got1"
+            }
+          },
+          {
+            "index": 9,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 10,
+            "process": "Receiver:1",
+            "command": "to_sndr!ack1",
+            "channels": [
+              {
+                "chan": "to_sndr",
+                "messages": [
+                  [
+                    1
+                  ]
+                ]
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-lossy.pml",
+              "line": 37,
+              "name": "to_sndr!ack1"
+            }
+          },
+          {
+            "index": 11,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 12,
+            "process": "Sender:0",
+            "command": "to_sndr?ack1",
+            "channels": [
+              {
+                "chan": "to_sndr",
+                "messages": []
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-lossy.pml",
+              "line": 24,
+              "name": "to_sndr?ack1"
+            }
+          },
+          {
+            "index": 13,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 14,
+            "process": "Sender:0",
+            "command": "pend0 = 1",
+            "changes": [
+              {
+                "var": "pend0",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-lossy.pml",
+              "line": 25,
+              "name": "pend0 = 1"
+            }
+          },
+          {
+            "index": 15,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 16,
+            "process": "Sender:0",
+            "command": "to_rcvr!msg0",
+            "channels": [
+              {
+                "chan": "to_rcvr",
+                "messages": [
+                  [
+                    4
+                  ]
+                ]
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-lossy.pml",
+              "line": 27,
+              "name": "to_rcvr!msg0"
+            }
+          },
+          {
+            "index": 17,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 18,
+            "process": "Receiver:1",
+            "command": "to_rcvr?msg0",
+            "channels": [
+              {
+                "chan": "to_rcvr",
+                "messages": []
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-lossy.pml",
+              "line": 38,
+              "name": "to_rcvr?msg0"
+            }
+          },
+          {
+            "index": 19,
+            "process": "Receiver:1",
+            "command": "pend0 = 0",
+            "changes": [
+              {
+                "var": "pend0",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-lossy.pml",
+              "line": 38,
+              "name": "pend0 = 0"
+            }
+          },
+          {
+            "index": 20,
+            "process": "Receiver:1",
+            "command": "got0 = 1 - got0",
+            "changes": [
+              {
+                "var": "got0",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-lossy.pml",
+              "line": 38,
+              "name": "got0 = 1 - got0"
+            }
+          },
+          {
+            "index": 21,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 22,
+            "process": "Receiver:1",
+            "command": "to_sndr!ack0",
+            "channels": [
+              {
+                "chan": "to_sndr",
+                "messages": [
+                  [
+                    2
+                  ]
+                ]
+              }
+            ],
+            "location": "again",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-lossy.pml",
+              "line": 39,
+              "name": "to_sndr!ack0"
+            }
+          },
+          {
+            "index": 23,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 24,
+            "process": "Sender:0",
+            "command": "to_sndr?ack0",
+            "channels": [
+              {
+                "chan": "to_sndr",
+                "messages": []
+              }
+            ],
+            "location": "again",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-lossy.pml",
+              "line": 30,
+              "name": "to_sndr?ack0"
+            }
+          },
+          {
+            "index": 25,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 26,
+            "process": "Sender:0",
+            "command": "pend1 = 1",
+            "changes": [
+              {
+                "var": "pend1",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-lossy.pml",
+              "line": 19,
+              "name": "pend1 = 1"
+            }
+          },
+          {
+            "index": 27,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 28,
+            "process": "Sender:0",
+            "command": "skip",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-3/eval-2-alternating-bit/with_skill/outputs/mc-session-2026-09-25/model/alternatingbit-lossy.pml",
+              "line": 22,
+              "name": "skip"
+            }
+          },
+          {
+            "index": 29,
+            "process": "never:ltl1",
+            "command": "((pend1 == 1) && !(pend1 == 0)) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "((pend1 == 1) && !(pend1 == 0))"
+            }
+          },
+          {
+            "index": 30,
+            "process": "-",
+            "command": "(stutter: no process can move, the system state repeats forever; SPIN's stutter extension)"
+          },
+          {
+            "index": 31,
+            "process": "never:ltl1",
+            "command": "(!(pend1 == 0)) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(!(pend1 == 0))"
+            }
+          },
+          {
+            "index": 32,
+            "process": "-",
+            "command": "(stutter: no process can move, the system state repeats forever; SPIN's stutter extension)"
+          }
+        ],
+        "final_state": [
+          {
+            "var": "pend1",
+            "value": 1
+          },
+          {
+            "var": "pend0",
+            "value": 0
+          },
+          {
+            "var": "got1",
+            "value": 1
+          },
+          {
+            "var": "got0",
+            "value": 1
+          }
+        ],
+        "final_channels": [
+          {
+            "chan": "to_sndr",
+            "messages": []
+          },
+          {
+            "chan": "to_rcvr",
+            "messages": []
+          }
+        ],
+        "summary": "(1) -> goto T0_init, pend1 = 1, (1) -> goto T0_init, to_rcvr!msg1, (1) -> goto T0_init, to_rcvr?msg1, pend1 = 0, got1 = 1 - got1, (1) -> goto T0_init, to_sndr!ack1, (1) -> goto T0_init, to_sndr?ack1, (1) -> goto T0_init, pend0 = 1, (1) -> goto T0_init, to_rcvr!msg0, (1) -> goto T0_init, to_rcvr?msg0, pend0 = 0, got0 = 1 - got0, (1) -> goto T0_init, to_sndr!ack0, (1) -> goto T0_init, to_sndr?ack0, (1) -> goto T0_init, pend1 = 1, (1) -> goto T0_init, skip, ((pend1 == 1) && !(pend1 == 0)) -> goto accept_S1, (stutter: no process can move, the system state repeats forever; SPIN's stutter extension); loop: (!(pend1 == 0)) -> goto accept_S1, (stutter: no process can move, the system state repeats forever; SPIN's stutter extension)",
+        "loop": {
+          "start": 31,
+          "steps": 2
+        }
+      },
+      "reason": "acceptance cycle: the loop of the counterexample passes through an accept state of the automaton for !([] (pend1 == 1 -> <> pend1 == 0)) infinitely often, so the run satisfies the negated property (SPIN pan -a: acceptance cycle)",
+      "temporal": {
+        "source": "formula",
+        "formula": "[] (pend1 == 1 -> <> pend1 == 0)",
+        "negated": "!([] (pend1 == 1 -> <> pend1 == 0))",
+        "atoms": [
+          "pend1 == 1",
+          "pend1 == 0"
+        ],
+        "stutter_invariant": true,
+        "automaton_states": 2,
+        "automaton_transitions": 3,
+        "automaton_accepting": 1,
+        "fairness": "none",
+        "claim": "never:ltl1"
+      }
+    }
+  ]
+}

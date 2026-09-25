@@ -1,0 +1,25 @@
+ltl deliver1: [] ((! (pend1)) || (<> (! (pend1))))
+ltl deliver0: [] ((! (pend0)) || (<> (! (pend0))))
+ltl forever: ([] (<> (pend1))) && ([] (<> (pend0)))
+ltl excl: [] (! ((pend0) && (pend1)))
+ltl cap: [] ((inflight<=1))
+ltl bogus: [] (! (pend1))
+starting claim 7
+Never claim moves to line 60	[(1)]
+  2:	proc  0 (Sender:1) abp-ltl.pml:25 (state 1)	[to_rcvr!msg1]
+  2:	proc  0 (Sender:1) abp-ltl.pml:26 (state 2)	[assert(!(pend1))]
+  2:	proc  0 (Sender:1) abp-ltl.pml:27 (state 3)	[pend1 = 1]
+  2:	proc  0 (Sender:1) abp-ltl.pml:27 (state 4)	[inflight = (inflight+1)]
+  2:	proc  0 (Sender:1) abp-ltl.pml:28 (state 5)	[assert((inflight<=1))]
+spin: _spin_nvr.tmp:59, Error: assertion violated
+spin: text of failed assertion: assert(!(!(!(pend1))))
+Never claim moves to line 59	[assert(!(!(!(pend1))))]
+spin: trail ends after 3 steps
+#processes: 2
+		queue 1 (to_rcvr): [msg1]
+		pend1 = 1
+		pend0 = 0
+		inflight = 1
+  3:	proc  1 (Receiver:1) abp-ltl.pml:46 (state 5)
+  3:	proc  0 (Sender:1) abp-ltl.pml:30 (state 7)
+  3:	proc  - (bogus:1) _spin_nvr.tmp:58 (state 6)

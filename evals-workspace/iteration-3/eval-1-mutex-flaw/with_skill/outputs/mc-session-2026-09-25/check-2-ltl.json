@@ -1,0 +1,4176 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0-g0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "promela",
+      "path": "Promela - examples/CH2/mutex_flaw.pml",
+      "sha256": "b9cb0230f9a306494af4a12592df3411988254b35526b5fbcdbf17ab328fdac4"
+    }
+  ],
+  "model": {
+    "name": "mutex_flaw",
+    "state_bytes": 9,
+    "processes": 2,
+    "variables": 6
+  },
+  "search": {
+    "mode": "dfs",
+    "budget": {
+      "states": 1000000,
+      "depth": 1000000,
+      "time_ms": 60000,
+      "mem_bytes": 1073741824
+    },
+    "stop": "complete",
+    "complete": true
+  },
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 429,
+        "transitions": 858,
+        "depth": 65,
+        "memory_bytes_est": 33408
+      },
+      "complete": true
+    },
+    {
+      "id": "assert",
+      "kind": "assert",
+      "text": "no assert statement fails (SPIN: assertion violations)",
+      "status": "violated",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 429,
+        "transitions": 858,
+        "depth": 65,
+        "memory_bytes_est": 33408
+      },
+      "complete": true,
+      "counterexample": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "user:0",
+            "command": "x = me",
+            "changes": [
+              {
+                "var": "x",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "location": "L2",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 5,
+              "name": "x = me"
+            }
+          },
+          {
+            "index": 2,
+            "process": "user:0",
+            "command": "(y == 0 || y == me)",
+            "location": "L3",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 8,
+              "name": "(y == 0 || y == me)"
+            }
+          },
+          {
+            "index": 3,
+            "process": "user:0",
+            "command": "z = me",
+            "changes": [
+              {
+                "var": "z",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "location": "L4",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 10,
+              "name": "z = me"
+            }
+          },
+          {
+            "index": 4,
+            "process": "user:0",
+            "command": "(x == me)",
+            "location": "L5",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 13,
+              "name": "(x == me)"
+            }
+          },
+          {
+            "index": 5,
+            "process": "user:1",
+            "command": "x = me",
+            "changes": [
+              {
+                "var": "x",
+                "before": 1,
+                "after": 2
+              }
+            ],
+            "location": "L2",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 5,
+              "name": "x = me"
+            }
+          },
+          {
+            "index": 6,
+            "process": "user:1",
+            "command": "(y == 0 || y == me)",
+            "location": "L3",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 8,
+              "name": "(y == 0 || y == me)"
+            }
+          },
+          {
+            "index": 7,
+            "process": "user:0",
+            "command": "y = me",
+            "changes": [
+              {
+                "var": "y",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "location": "L6",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 15,
+              "name": "y = me"
+            }
+          },
+          {
+            "index": 8,
+            "process": "user:0",
+            "command": "(z == me)",
+            "location": "L7",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 18,
+              "name": "(z == me)"
+            }
+          },
+          {
+            "index": 9,
+            "process": "user:0",
+            "command": "cnt++",
+            "changes": [
+              {
+                "var": "cnt",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 22,
+              "name": "cnt++"
+            }
+          },
+          {
+            "index": 10,
+            "process": "user:0",
+            "command": "assert(cnt == 1)",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 23,
+              "name": "assert(cnt == 1)"
+            }
+          },
+          {
+            "index": 11,
+            "process": "user:0",
+            "command": "cnt--",
+            "changes": [
+              {
+                "var": "cnt",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "location": "L1",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 24,
+              "name": "cnt--"
+            }
+          },
+          {
+            "index": 12,
+            "process": "user:1",
+            "command": "z = me",
+            "changes": [
+              {
+                "var": "z",
+                "before": 1,
+                "after": 2
+              }
+            ],
+            "location": "L4",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 10,
+              "name": "z = me"
+            }
+          },
+          {
+            "index": 13,
+            "process": "user:1",
+            "command": "(x == me)",
+            "location": "L5",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 13,
+              "name": "(x == me)"
+            }
+          },
+          {
+            "index": 14,
+            "process": "user:0",
+            "command": "x = me",
+            "changes": [
+              {
+                "var": "x",
+                "before": 2,
+                "after": 1
+              }
+            ],
+            "location": "L2",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 5,
+              "name": "x = me"
+            }
+          },
+          {
+            "index": 15,
+            "process": "user:0",
+            "command": "(y == 0 || y == me)",
+            "location": "L3",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 8,
+              "name": "(y == 0 || y == me)"
+            }
+          },
+          {
+            "index": 16,
+            "process": "user:0",
+            "command": "z = me",
+            "changes": [
+              {
+                "var": "z",
+                "before": 2,
+                "after": 1
+              }
+            ],
+            "location": "L4",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 10,
+              "name": "z = me"
+            }
+          },
+          {
+            "index": 17,
+            "process": "user:0",
+            "command": "(x == me)",
+            "location": "L5",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 13,
+              "name": "(x == me)"
+            }
+          },
+          {
+            "index": 18,
+            "process": "user:0",
+            "command": "y = me",
+            "location": "L6",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 15,
+              "name": "y = me"
+            }
+          },
+          {
+            "index": 19,
+            "process": "user:0",
+            "command": "(z == me)",
+            "location": "L7",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 18,
+              "name": "(z == me)"
+            }
+          },
+          {
+            "index": 20,
+            "process": "user:0",
+            "command": "cnt++",
+            "changes": [
+              {
+                "var": "cnt",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 22,
+              "name": "cnt++"
+            }
+          },
+          {
+            "index": 21,
+            "process": "user:0",
+            "command": "assert(cnt == 1)",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 23,
+              "name": "assert(cnt == 1)"
+            }
+          },
+          {
+            "index": 22,
+            "process": "user:0",
+            "command": "cnt--",
+            "changes": [
+              {
+                "var": "cnt",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "location": "L1",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 24,
+              "name": "cnt--"
+            }
+          },
+          {
+            "index": 23,
+            "process": "user:0",
+            "command": "x = me",
+            "location": "L2",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 5,
+              "name": "x = me"
+            }
+          },
+          {
+            "index": 24,
+            "process": "user:0",
+            "command": "(y == 0 || y == me)",
+            "location": "L3",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 8,
+              "name": "(y == 0 || y == me)"
+            }
+          },
+          {
+            "index": 25,
+            "process": "user:1",
+            "command": "y = me",
+            "changes": [
+              {
+                "var": "y",
+                "before": 1,
+                "after": 2
+              }
+            ],
+            "location": "L6",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 15,
+              "name": "y = me"
+            }
+          },
+          {
+            "index": 26,
+            "process": "user:0",
+            "command": "z = me",
+            "location": "L4",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 10,
+              "name": "z = me"
+            }
+          },
+          {
+            "index": 27,
+            "process": "user:0",
+            "command": "(x == me)",
+            "location": "L5",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 13,
+              "name": "(x == me)"
+            }
+          },
+          {
+            "index": 28,
+            "process": "user:1",
+            "command": "(z != me)",
+            "location": "L1",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 17,
+              "name": "(z != me)"
+            }
+          },
+          {
+            "index": 29,
+            "process": "user:1",
+            "command": "x = me",
+            "changes": [
+              {
+                "var": "x",
+                "before": 1,
+                "after": 2
+              }
+            ],
+            "location": "L2",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 5,
+              "name": "x = me"
+            }
+          },
+          {
+            "index": 30,
+            "process": "user:1",
+            "command": "(y == 0 || y == me)",
+            "location": "L3",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 8,
+              "name": "(y == 0 || y == me)"
+            }
+          },
+          {
+            "index": 31,
+            "process": "user:1",
+            "command": "z = me",
+            "changes": [
+              {
+                "var": "z",
+                "before": 1,
+                "after": 2
+              }
+            ],
+            "location": "L4",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 10,
+              "name": "z = me"
+            }
+          },
+          {
+            "index": 32,
+            "process": "user:1",
+            "command": "(x == me)",
+            "location": "L5",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 13,
+              "name": "(x == me)"
+            }
+          },
+          {
+            "index": 33,
+            "process": "user:1",
+            "command": "y = me",
+            "location": "L6",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 15,
+              "name": "y = me"
+            }
+          },
+          {
+            "index": 34,
+            "process": "user:0",
+            "command": "y = me",
+            "changes": [
+              {
+                "var": "y",
+                "before": 2,
+                "after": 1
+              }
+            ],
+            "location": "L6",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 15,
+              "name": "y = me"
+            }
+          },
+          {
+            "index": 35,
+            "process": "user:0",
+            "command": "(z != me)",
+            "location": "L1",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 17,
+              "name": "(z != me)"
+            }
+          },
+          {
+            "index": 36,
+            "process": "user:0",
+            "command": "x = me",
+            "changes": [
+              {
+                "var": "x",
+                "before": 2,
+                "after": 1
+              }
+            ],
+            "location": "L2",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 5,
+              "name": "x = me"
+            }
+          },
+          {
+            "index": 37,
+            "process": "user:0",
+            "command": "(y == 0 || y == me)",
+            "location": "L3",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 8,
+              "name": "(y == 0 || y == me)"
+            }
+          },
+          {
+            "index": 38,
+            "process": "user:1",
+            "command": "(z == me)",
+            "location": "L7",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 18,
+              "name": "(z == me)"
+            }
+          },
+          {
+            "index": 39,
+            "process": "user:0",
+            "command": "z = me",
+            "changes": [
+              {
+                "var": "z",
+                "before": 2,
+                "after": 1
+              }
+            ],
+            "location": "L4",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 10,
+              "name": "z = me"
+            }
+          },
+          {
+            "index": 40,
+            "process": "user:0",
+            "command": "(x == me)",
+            "location": "L5",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 13,
+              "name": "(x == me)"
+            }
+          },
+          {
+            "index": 41,
+            "process": "user:0",
+            "command": "y = me",
+            "location": "L6",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 15,
+              "name": "y = me"
+            }
+          },
+          {
+            "index": 42,
+            "process": "user:0",
+            "command": "(z == me)",
+            "location": "L7",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 18,
+              "name": "(z == me)"
+            }
+          },
+          {
+            "index": 43,
+            "process": "user:0",
+            "command": "cnt++",
+            "changes": [
+              {
+                "var": "cnt",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 22,
+              "name": "cnt++"
+            }
+          },
+          {
+            "index": 44,
+            "process": "user:0",
+            "command": "assert(cnt == 1)",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 23,
+              "name": "assert(cnt == 1)"
+            }
+          },
+          {
+            "index": 45,
+            "process": "user:0",
+            "command": "cnt--",
+            "changes": [
+              {
+                "var": "cnt",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "location": "L1",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 24,
+              "name": "cnt--"
+            }
+          },
+          {
+            "index": 46,
+            "process": "user:0",
+            "command": "x = me",
+            "location": "L2",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 5,
+              "name": "x = me"
+            }
+          },
+          {
+            "index": 47,
+            "process": "user:0",
+            "command": "(y == 0 || y == me)",
+            "location": "L3",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 8,
+              "name": "(y == 0 || y == me)"
+            }
+          },
+          {
+            "index": 48,
+            "process": "user:1",
+            "command": "cnt++",
+            "changes": [
+              {
+                "var": "cnt",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 22,
+              "name": "cnt++"
+            }
+          },
+          {
+            "index": 49,
+            "process": "user:0",
+            "command": "z = me",
+            "location": "L4",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 10,
+              "name": "z = me"
+            }
+          },
+          {
+            "index": 50,
+            "process": "user:0",
+            "command": "(x == me)",
+            "location": "L5",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 13,
+              "name": "(x == me)"
+            }
+          },
+          {
+            "index": 51,
+            "process": "user:0",
+            "command": "y = me",
+            "location": "L6",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 15,
+              "name": "y = me"
+            }
+          },
+          {
+            "index": 52,
+            "process": "user:0",
+            "command": "(z == me)",
+            "location": "L7",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 18,
+              "name": "(z == me)"
+            }
+          },
+          {
+            "index": 53,
+            "process": "user:0",
+            "command": "cnt++",
+            "changes": [
+              {
+                "var": "cnt",
+                "before": 1,
+                "after": 2
+              }
+            ],
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 22,
+              "name": "cnt++"
+            }
+          },
+          {
+            "index": 54,
+            "process": "user:0",
+            "command": "assert(cnt == 1)",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 23,
+              "name": "assert(cnt == 1)"
+            }
+          }
+        ],
+        "final_state": [
+          {
+            "var": "user:0.me",
+            "value": 1
+          },
+          {
+            "var": "user:1.me",
+            "value": 2
+          },
+          {
+            "var": "cnt",
+            "value": 2
+          },
+          {
+            "var": "x",
+            "value": 1
+          },
+          {
+            "var": "y",
+            "value": 1
+          },
+          {
+            "var": "z",
+            "value": 1
+          }
+        ],
+        "summary": "x = me, (y == 0 || y == me), z = me, (x == me), x = me, (y == 0 || y == me), y = me, (z == me), cnt++, assert(cnt == 1), cnt--, z = me, (x == me), x = me, (y == 0 || y == me), z = me, (x == me), y = me, (z == me), cnt++, assert(cnt == 1), cnt--, x = me, (y == 0 || y == me), y = me, z = me, (x == me), (z != me), x = me, (y == 0 || y == me), z = me, (x == me), y = me, y = me, (z != me), x = me, (y == 0 || y == me), (z == me), z = me, (x == me), y = me, (z == me), cnt++, assert(cnt == 1), cnt--, x = me, (y == 0 || y == me), cnt++, z = me, (x == me), y = me, (z == me), cnt++, assert(cnt == 1)"
+      },
+      "reason": "assert(cnt == 1) fails in the last step of the counterexample"
+    },
+    {
+      "id": "ltl1",
+      "kind": "ltl",
+      "text": "[] (cnt <= 1)",
+      "status": "violated",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 244,
+        "transitions": 413,
+        "depth": 94,
+        "memory_bytes_est": 37800
+      },
+      "complete": false,
+      "counterexample": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 2,
+            "process": "user:0",
+            "command": "x = me",
+            "changes": [
+              {
+                "var": "x",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "location": "L2",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 5,
+              "name": "x = me"
+            }
+          },
+          {
+            "index": 3,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 4,
+            "process": "user:0",
+            "command": "(y == 0 || y == me)",
+            "location": "L3",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 8,
+              "name": "(y == 0 || y == me)"
+            }
+          },
+          {
+            "index": 5,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 6,
+            "process": "user:0",
+            "command": "z = me",
+            "changes": [
+              {
+                "var": "z",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "location": "L4",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 10,
+              "name": "z = me"
+            }
+          },
+          {
+            "index": 7,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 8,
+            "process": "user:0",
+            "command": "(x == me)",
+            "location": "L5",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 13,
+              "name": "(x == me)"
+            }
+          },
+          {
+            "index": 9,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 10,
+            "process": "user:1",
+            "command": "x = me",
+            "changes": [
+              {
+                "var": "x",
+                "before": 1,
+                "after": 2
+              }
+            ],
+            "location": "L2",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 5,
+              "name": "x = me"
+            }
+          },
+          {
+            "index": 11,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 12,
+            "process": "user:1",
+            "command": "(y == 0 || y == me)",
+            "location": "L3",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 8,
+              "name": "(y == 0 || y == me)"
+            }
+          },
+          {
+            "index": 13,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 14,
+            "process": "user:0",
+            "command": "y = me",
+            "changes": [
+              {
+                "var": "y",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "location": "L6",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 15,
+              "name": "y = me"
+            }
+          },
+          {
+            "index": 15,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 16,
+            "process": "user:0",
+            "command": "(z == me)",
+            "location": "L7",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 18,
+              "name": "(z == me)"
+            }
+          },
+          {
+            "index": 17,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 18,
+            "process": "user:0",
+            "command": "cnt++",
+            "changes": [
+              {
+                "var": "cnt",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 22,
+              "name": "cnt++"
+            }
+          },
+          {
+            "index": 19,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 20,
+            "process": "user:0",
+            "command": "assert(cnt == 1)",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 23,
+              "name": "assert(cnt == 1)"
+            }
+          },
+          {
+            "index": 21,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 22,
+            "process": "user:0",
+            "command": "cnt--",
+            "changes": [
+              {
+                "var": "cnt",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "location": "L1",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 24,
+              "name": "cnt--"
+            }
+          },
+          {
+            "index": 23,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 24,
+            "process": "user:1",
+            "command": "z = me",
+            "changes": [
+              {
+                "var": "z",
+                "before": 1,
+                "after": 2
+              }
+            ],
+            "location": "L4",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 10,
+              "name": "z = me"
+            }
+          },
+          {
+            "index": 25,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 26,
+            "process": "user:1",
+            "command": "(x == me)",
+            "location": "L5",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 13,
+              "name": "(x == me)"
+            }
+          },
+          {
+            "index": 27,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 28,
+            "process": "user:0",
+            "command": "x = me",
+            "changes": [
+              {
+                "var": "x",
+                "before": 2,
+                "after": 1
+              }
+            ],
+            "location": "L2",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 5,
+              "name": "x = me"
+            }
+          },
+          {
+            "index": 29,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 30,
+            "process": "user:0",
+            "command": "(y == 0 || y == me)",
+            "location": "L3",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 8,
+              "name": "(y == 0 || y == me)"
+            }
+          },
+          {
+            "index": 31,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 32,
+            "process": "user:0",
+            "command": "z = me",
+            "changes": [
+              {
+                "var": "z",
+                "before": 2,
+                "after": 1
+              }
+            ],
+            "location": "L4",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 10,
+              "name": "z = me"
+            }
+          },
+          {
+            "index": 33,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 34,
+            "process": "user:0",
+            "command": "(x == me)",
+            "location": "L5",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 13,
+              "name": "(x == me)"
+            }
+          },
+          {
+            "index": 35,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 36,
+            "process": "user:0",
+            "command": "y = me",
+            "location": "L6",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 15,
+              "name": "y = me"
+            }
+          },
+          {
+            "index": 37,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 38,
+            "process": "user:0",
+            "command": "(z == me)",
+            "location": "L7",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 18,
+              "name": "(z == me)"
+            }
+          },
+          {
+            "index": 39,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 40,
+            "process": "user:0",
+            "command": "cnt++",
+            "changes": [
+              {
+                "var": "cnt",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 22,
+              "name": "cnt++"
+            }
+          },
+          {
+            "index": 41,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 42,
+            "process": "user:0",
+            "command": "assert(cnt == 1)",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 23,
+              "name": "assert(cnt == 1)"
+            }
+          },
+          {
+            "index": 43,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 44,
+            "process": "user:0",
+            "command": "cnt--",
+            "changes": [
+              {
+                "var": "cnt",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "location": "L1",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 24,
+              "name": "cnt--"
+            }
+          },
+          {
+            "index": 45,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 46,
+            "process": "user:0",
+            "command": "x = me",
+            "location": "L2",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 5,
+              "name": "x = me"
+            }
+          },
+          {
+            "index": 47,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 48,
+            "process": "user:0",
+            "command": "(y == 0 || y == me)",
+            "location": "L3",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 8,
+              "name": "(y == 0 || y == me)"
+            }
+          },
+          {
+            "index": 49,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 50,
+            "process": "user:1",
+            "command": "y = me",
+            "changes": [
+              {
+                "var": "y",
+                "before": 1,
+                "after": 2
+              }
+            ],
+            "location": "L6",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 15,
+              "name": "y = me"
+            }
+          },
+          {
+            "index": 51,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 52,
+            "process": "user:0",
+            "command": "z = me",
+            "location": "L4",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 10,
+              "name": "z = me"
+            }
+          },
+          {
+            "index": 53,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 54,
+            "process": "user:0",
+            "command": "(x == me)",
+            "location": "L5",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 13,
+              "name": "(x == me)"
+            }
+          },
+          {
+            "index": 55,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 56,
+            "process": "user:1",
+            "command": "(z != me)",
+            "location": "L1",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 17,
+              "name": "(z != me)"
+            }
+          },
+          {
+            "index": 57,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 58,
+            "process": "user:1",
+            "command": "x = me",
+            "changes": [
+              {
+                "var": "x",
+                "before": 1,
+                "after": 2
+              }
+            ],
+            "location": "L2",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 5,
+              "name": "x = me"
+            }
+          },
+          {
+            "index": 59,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 60,
+            "process": "user:1",
+            "command": "(y == 0 || y == me)",
+            "location": "L3",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 8,
+              "name": "(y == 0 || y == me)"
+            }
+          },
+          {
+            "index": 61,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 62,
+            "process": "user:1",
+            "command": "z = me",
+            "changes": [
+              {
+                "var": "z",
+                "before": 1,
+                "after": 2
+              }
+            ],
+            "location": "L4",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 10,
+              "name": "z = me"
+            }
+          },
+          {
+            "index": 63,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 64,
+            "process": "user:1",
+            "command": "(x == me)",
+            "location": "L5",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 13,
+              "name": "(x == me)"
+            }
+          },
+          {
+            "index": 65,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 66,
+            "process": "user:1",
+            "command": "y = me",
+            "location": "L6",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 15,
+              "name": "y = me"
+            }
+          },
+          {
+            "index": 67,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 68,
+            "process": "user:0",
+            "command": "y = me",
+            "changes": [
+              {
+                "var": "y",
+                "before": 2,
+                "after": 1
+              }
+            ],
+            "location": "L6",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 15,
+              "name": "y = me"
+            }
+          },
+          {
+            "index": 69,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 70,
+            "process": "user:0",
+            "command": "(z != me)",
+            "location": "L1",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 17,
+              "name": "(z != me)"
+            }
+          },
+          {
+            "index": 71,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 72,
+            "process": "user:0",
+            "command": "x = me",
+            "changes": [
+              {
+                "var": "x",
+                "before": 2,
+                "after": 1
+              }
+            ],
+            "location": "L2",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 5,
+              "name": "x = me"
+            }
+          },
+          {
+            "index": 73,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 74,
+            "process": "user:0",
+            "command": "(y == 0 || y == me)",
+            "location": "L3",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 8,
+              "name": "(y == 0 || y == me)"
+            }
+          },
+          {
+            "index": 75,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 76,
+            "process": "user:1",
+            "command": "(z == me)",
+            "location": "L7",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 18,
+              "name": "(z == me)"
+            }
+          },
+          {
+            "index": 77,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 78,
+            "process": "user:0",
+            "command": "z = me",
+            "changes": [
+              {
+                "var": "z",
+                "before": 2,
+                "after": 1
+              }
+            ],
+            "location": "L4",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 10,
+              "name": "z = me"
+            }
+          },
+          {
+            "index": 79,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 80,
+            "process": "user:0",
+            "command": "(x == me)",
+            "location": "L5",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 13,
+              "name": "(x == me)"
+            }
+          },
+          {
+            "index": 81,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 82,
+            "process": "user:0",
+            "command": "y = me",
+            "location": "L6",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 15,
+              "name": "y = me"
+            }
+          },
+          {
+            "index": 83,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 84,
+            "process": "user:0",
+            "command": "(z == me)",
+            "location": "L7",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 18,
+              "name": "(z == me)"
+            }
+          },
+          {
+            "index": 85,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 86,
+            "process": "user:0",
+            "command": "cnt++",
+            "changes": [
+              {
+                "var": "cnt",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 22,
+              "name": "cnt++"
+            }
+          },
+          {
+            "index": 87,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 88,
+            "process": "user:0",
+            "command": "assert(cnt == 1)",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 23,
+              "name": "assert(cnt == 1)"
+            }
+          },
+          {
+            "index": 89,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 90,
+            "process": "user:0",
+            "command": "cnt--",
+            "changes": [
+              {
+                "var": "cnt",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "location": "L1",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 24,
+              "name": "cnt--"
+            }
+          },
+          {
+            "index": 91,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 92,
+            "process": "user:0",
+            "command": "x = me",
+            "location": "L2",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 5,
+              "name": "x = me"
+            }
+          },
+          {
+            "index": 93,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 94,
+            "process": "user:0",
+            "command": "(y == 0 || y == me)",
+            "location": "L3",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 8,
+              "name": "(y == 0 || y == me)"
+            }
+          },
+          {
+            "index": 95,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 96,
+            "process": "user:1",
+            "command": "cnt++",
+            "changes": [
+              {
+                "var": "cnt",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 22,
+              "name": "cnt++"
+            }
+          },
+          {
+            "index": 97,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 98,
+            "process": "user:0",
+            "command": "z = me",
+            "location": "L4",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 10,
+              "name": "z = me"
+            }
+          },
+          {
+            "index": 99,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 100,
+            "process": "user:0",
+            "command": "(x == me)",
+            "location": "L5",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 13,
+              "name": "(x == me)"
+            }
+          },
+          {
+            "index": 101,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 102,
+            "process": "user:0",
+            "command": "y = me",
+            "location": "L6",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 15,
+              "name": "y = me"
+            }
+          },
+          {
+            "index": 103,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 104,
+            "process": "user:0",
+            "command": "(z == me)",
+            "location": "L7",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 18,
+              "name": "(z == me)"
+            }
+          },
+          {
+            "index": 105,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 106,
+            "process": "user:0",
+            "command": "cnt++",
+            "changes": [
+              {
+                "var": "cnt",
+                "before": 1,
+                "after": 2
+              }
+            ],
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 22,
+              "name": "cnt++"
+            }
+          },
+          {
+            "index": 107,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 108,
+            "process": "user:0",
+            "command": "assert(cnt == 1)",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 23,
+              "name": "assert(cnt == 1)"
+            }
+          },
+          {
+            "index": 109,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 110,
+            "process": "user:0",
+            "command": "cnt--",
+            "changes": [
+              {
+                "var": "cnt",
+                "before": 2,
+                "after": 1
+              }
+            ],
+            "location": "L1",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 24,
+              "name": "cnt--"
+            }
+          },
+          {
+            "index": 111,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 112,
+            "process": "user:0",
+            "command": "x = me",
+            "location": "L2",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 5,
+              "name": "x = me"
+            }
+          },
+          {
+            "index": 113,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 114,
+            "process": "user:1",
+            "command": "assert(cnt == 1)",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 23,
+              "name": "assert(cnt == 1)"
+            }
+          },
+          {
+            "index": 115,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 116,
+            "process": "user:0",
+            "command": "(y == 0 || y == me)",
+            "location": "L3",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 8,
+              "name": "(y == 0 || y == me)"
+            }
+          },
+          {
+            "index": 117,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 118,
+            "process": "user:0",
+            "command": "z = me",
+            "location": "L4",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 10,
+              "name": "z = me"
+            }
+          },
+          {
+            "index": 119,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 120,
+            "process": "user:0",
+            "command": "(x == me)",
+            "location": "L5",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 13,
+              "name": "(x == me)"
+            }
+          },
+          {
+            "index": 121,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 122,
+            "process": "user:0",
+            "command": "y = me",
+            "location": "L6",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 15,
+              "name": "y = me"
+            }
+          },
+          {
+            "index": 123,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 124,
+            "process": "user:0",
+            "command": "(z == me)",
+            "location": "L7",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 18,
+              "name": "(z == me)"
+            }
+          },
+          {
+            "index": 125,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 126,
+            "process": "user:0",
+            "command": "cnt++",
+            "changes": [
+              {
+                "var": "cnt",
+                "before": 1,
+                "after": 2
+              }
+            ],
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 22,
+              "name": "cnt++"
+            }
+          },
+          {
+            "index": 127,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 128,
+            "process": "user:0",
+            "command": "assert(cnt == 1)",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 23,
+              "name": "assert(cnt == 1)"
+            }
+          },
+          {
+            "index": 129,
+            "process": "never:ltl1",
+            "command": "(!(cnt <= 1)) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(!(cnt <= 1))"
+            }
+          },
+          {
+            "index": 130,
+            "process": "user:0",
+            "command": "cnt--",
+            "changes": [
+              {
+                "var": "cnt",
+                "before": 2,
+                "after": 1
+              }
+            ],
+            "location": "L1",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 24,
+              "name": "cnt--"
+            }
+          },
+          {
+            "index": 131,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 132,
+            "process": "user:0",
+            "command": "x = me",
+            "location": "L2",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 5,
+              "name": "x = me"
+            }
+          },
+          {
+            "index": 133,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 134,
+            "process": "user:0",
+            "command": "(y == 0 || y == me)",
+            "location": "L3",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 8,
+              "name": "(y == 0 || y == me)"
+            }
+          },
+          {
+            "index": 135,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 136,
+            "process": "user:0",
+            "command": "z = me",
+            "location": "L4",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 10,
+              "name": "z = me"
+            }
+          },
+          {
+            "index": 137,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 138,
+            "process": "user:0",
+            "command": "(x == me)",
+            "location": "L5",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 13,
+              "name": "(x == me)"
+            }
+          },
+          {
+            "index": 139,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 140,
+            "process": "user:0",
+            "command": "y = me",
+            "location": "L6",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 15,
+              "name": "y = me"
+            }
+          },
+          {
+            "index": 141,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 142,
+            "process": "user:0",
+            "command": "(z == me)",
+            "location": "L7",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 18,
+              "name": "(z == me)"
+            }
+          },
+          {
+            "index": 143,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 144,
+            "process": "user:0",
+            "command": "cnt++",
+            "changes": [
+              {
+                "var": "cnt",
+                "before": 1,
+                "after": 2
+              }
+            ],
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 22,
+              "name": "cnt++"
+            }
+          },
+          {
+            "index": 145,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 146,
+            "process": "user:0",
+            "command": "assert(cnt == 1)",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 23,
+              "name": "assert(cnt == 1)"
+            }
+          },
+          {
+            "index": 147,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 148,
+            "process": "user:1",
+            "command": "cnt--",
+            "changes": [
+              {
+                "var": "cnt",
+                "before": 2,
+                "after": 1
+              }
+            ],
+            "location": "L1",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 24,
+              "name": "cnt--"
+            }
+          },
+          {
+            "index": 149,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 150,
+            "process": "user:0",
+            "command": "cnt--",
+            "changes": [
+              {
+                "var": "cnt",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "location": "L1",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 24,
+              "name": "cnt--"
+            }
+          },
+          {
+            "index": 151,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 152,
+            "process": "user:0",
+            "command": "x = me",
+            "location": "L2",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 5,
+              "name": "x = me"
+            }
+          },
+          {
+            "index": 153,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 154,
+            "process": "user:0",
+            "command": "(y == 0 || y == me)",
+            "location": "L3",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 8,
+              "name": "(y == 0 || y == me)"
+            }
+          },
+          {
+            "index": 155,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 156,
+            "process": "user:0",
+            "command": "z = me",
+            "location": "L4",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 10,
+              "name": "z = me"
+            }
+          },
+          {
+            "index": 157,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 158,
+            "process": "user:0",
+            "command": "(x == me)",
+            "location": "L5",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 13,
+              "name": "(x == me)"
+            }
+          },
+          {
+            "index": 159,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 160,
+            "process": "user:0",
+            "command": "y = me",
+            "location": "L6",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 15,
+              "name": "y = me"
+            }
+          },
+          {
+            "index": 161,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 162,
+            "process": "user:0",
+            "command": "(z == me)",
+            "location": "L7",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 18,
+              "name": "(z == me)"
+            }
+          },
+          {
+            "index": 163,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 164,
+            "process": "user:0",
+            "command": "cnt++",
+            "changes": [
+              {
+                "var": "cnt",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 22,
+              "name": "cnt++"
+            }
+          },
+          {
+            "index": 165,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 166,
+            "process": "user:1",
+            "command": "x = me",
+            "changes": [
+              {
+                "var": "x",
+                "before": 1,
+                "after": 2
+              }
+            ],
+            "location": "L2",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 5,
+              "name": "x = me"
+            }
+          },
+          {
+            "index": 167,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 168,
+            "process": "user:0",
+            "command": "assert(cnt == 1)",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 23,
+              "name": "assert(cnt == 1)"
+            }
+          },
+          {
+            "index": 169,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 170,
+            "process": "user:0",
+            "command": "cnt--",
+            "changes": [
+              {
+                "var": "cnt",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "location": "L1",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 24,
+              "name": "cnt--"
+            }
+          },
+          {
+            "index": 171,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 172,
+            "process": "user:0",
+            "command": "x = me",
+            "changes": [
+              {
+                "var": "x",
+                "before": 2,
+                "after": 1
+              }
+            ],
+            "location": "L2",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 5,
+              "name": "x = me"
+            }
+          },
+          {
+            "index": 173,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 174,
+            "process": "user:0",
+            "command": "(y == 0 || y == me)",
+            "location": "L3",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 8,
+              "name": "(y == 0 || y == me)"
+            }
+          },
+          {
+            "index": 175,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 176,
+            "process": "user:0",
+            "command": "z = me",
+            "location": "L4",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 10,
+              "name": "z = me"
+            }
+          },
+          {
+            "index": 177,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 178,
+            "process": "user:0",
+            "command": "(x == me)",
+            "location": "L5",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 13,
+              "name": "(x == me)"
+            }
+          },
+          {
+            "index": 179,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 180,
+            "process": "user:0",
+            "command": "y = me",
+            "location": "L6",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 15,
+              "name": "y = me"
+            }
+          },
+          {
+            "index": 181,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 182,
+            "process": "user:0",
+            "command": "(z == me)",
+            "location": "L7",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 18,
+              "name": "(z == me)"
+            }
+          },
+          {
+            "index": 183,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 184,
+            "process": "user:0",
+            "command": "cnt++",
+            "changes": [
+              {
+                "var": "cnt",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 22,
+              "name": "cnt++"
+            }
+          },
+          {
+            "index": 185,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 186,
+            "process": "user:0",
+            "command": "assert(cnt == 1)",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 23,
+              "name": "assert(cnt == 1)"
+            }
+          },
+          {
+            "index": 187,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 188,
+            "process": "user:0",
+            "command": "cnt--",
+            "changes": [
+              {
+                "var": "cnt",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "location": "L1",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 24,
+              "name": "cnt--"
+            }
+          },
+          {
+            "index": 189,
+            "process": "never:ltl1",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 190,
+            "process": "user:0",
+            "command": "x = me",
+            "location": "L2",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 5,
+              "name": "x = me"
+            }
+          }
+        ],
+        "final_state": [
+          {
+            "var": "user:0.me",
+            "value": 1
+          },
+          {
+            "var": "user:1.me",
+            "value": 2
+          },
+          {
+            "var": "cnt",
+            "value": 0
+          },
+          {
+            "var": "x",
+            "value": 1
+          },
+          {
+            "var": "y",
+            "value": 1
+          },
+          {
+            "var": "z",
+            "value": 1
+          }
+        ],
+        "summary": "(1) -> goto T0_init, x = me, (1) -> goto T0_init, (y == 0 || y == me), (1) -> goto T0_init, z = me, (1) -> goto T0_init, (x == me), (1) -> goto T0_init, x = me, (1) -> goto T0_init, (y == 0 || y == me), (1) -> goto T0_init, y = me, (1) -> goto T0_init, (z == me), (1) -> goto T0_init, cnt++, (1) -> goto T0_init, assert(cnt == 1), (1) -> goto T0_init, cnt--, (1) -> goto T0_init, z = me, (1) -> goto T0_init, (x == me), (1) -> goto T0_init, x = me, (1) -> goto T0_init, (y == 0 || y == me), (1) -> goto T0_init, z = me, (1) -> goto T0_init, (x == me), (1) -> goto T0_init, y = me, (1) -> goto T0_init, (z == me), (1) -> goto T0_init, cnt++, (1) -> goto T0_init, assert(cnt == 1), (1) -> goto T0_init, cnt--, (1) -> goto T0_init, x = me, (1) -> goto T0_init, (y == 0 || y == me), (1) -> goto T0_init, y = me, (1) -> goto T0_init, z = me, (1) -> goto T0_init, (x == me), (1) -> goto T0_init, (z != me), (1) -> goto T0_init, x = me, (1) -> goto T0_init, (y == 0 || y == me), (1) -> goto T0_init, z = me, (1) -> goto T0_init, (x == me), (1) -> goto T0_init, y = me, (1) -> goto T0_init, y = me, (1) -> goto T0_init, (z != me), (1) -> goto T0_init, x = me, (1) -> goto T0_init, (y == 0 || y == me), (1) -> goto T0_init, (z == me), (1) -> goto T0_init, z = me, (1) -> goto T0_init, (x == me), (1) -> goto T0_init, y = me, (1) -> goto T0_init, (z == me), (1) -> goto T0_init, cnt++, (1) -> goto T0_init, assert(cnt == 1), (1) -> goto T0_init, cnt--, (1) -> goto T0_init, x = me, (1) -> goto T0_init, (y == 0 || y == me), (1) -> goto T0_init, cnt++, (1) -> goto T0_init, z = me, (1) -> goto T0_init, (x == me), (1) -> goto T0_init, y = me, (1) -> goto T0_init, (z == me), (1) -> goto T0_init, cnt++, (1) -> goto T0_init, assert(cnt == 1), (1) -> goto T0_init, cnt--, (1) -> goto T0_init, x = me, (1) -> goto T0_init, assert(cnt == 1), (1) -> goto T0_init, (y == 0 || y == me), (1) -> goto T0_init, z = me, (1) -> goto T0_init, (x == me), (1) -> goto T0_init, y = me, (1) -> goto T0_init, (z == me), (1) -> goto T0_init, cnt++, (1) -> goto T0_init, assert(cnt == 1), (!(cnt <= 1)) -> goto accept_S1, cnt--, (1) -> goto accept_S1, x = me, (1) -> goto accept_S1, (y == 0 || y == me), (1) -> goto accept_S1, z = me, (1) -> goto accept_S1, (x == me), (1) -> goto accept_S1, y = me, (1) -> goto accept_S1, (z == me), (1) -> goto accept_S1, cnt++, (1) -> goto accept_S1, assert(cnt == 1), (1) -> goto accept_S1, cnt--, (1) -> goto accept_S1, cnt--, (1) -> goto accept_S1, x = me, (1) -> goto accept_S1, (y == 0 || y == me), (1) -> goto accept_S1, z = me, (1) -> goto accept_S1, (x == me), (1) -> goto accept_S1, y = me, (1) -> goto accept_S1, (z == me), (1) -> goto accept_S1, cnt++, (1) -> goto accept_S1, x = me, (1) -> goto accept_S1, assert(cnt == 1), (1) -> goto accept_S1, cnt--, (1) -> goto accept_S1, x = me; loop: (1) -> goto accept_S1, (y == 0 || y == me), (1) -> goto accept_S1, z = me, (1) -> goto accept_S1, (x == me), (1) -> goto accept_S1, y = me, (1) -> goto accept_S1, (z == me), (1) -> goto accept_S1, cnt++, (1) -> goto accept_S1, assert(cnt == 1), (1) -> goto accept_S1, cnt--, (1) -> goto accept_S1, x = me",
+        "loop": {
+          "start": 173,
+          "steps": 18
+        }
+      },
+      "reason": "acceptance cycle: the loop of the counterexample passes through an accept state of the automaton for !([] (cnt <= 1)) infinitely often, so the run satisfies the negated property (SPIN pan -a: acceptance cycle); in the loop only never:ltl1, user:0 move(s); user:1 is enabled throughout the loop and never moves (the loop is not weakly fair; rerun with fairness weak to exclude such runs)",
+      "temporal": {
+        "source": "formula",
+        "formula": "[] (cnt <= 1)",
+        "negated": "!([] (cnt <= 1))",
+        "atoms": [
+          "cnt <= 1"
+        ],
+        "stutter_invariant": true,
+        "automaton_states": 2,
+        "automaton_transitions": 3,
+        "automaton_accepting": 1,
+        "fairness": "none",
+        "claim": "never:ltl1"
+      }
+    },
+    {
+      "id": "ltl2",
+      "kind": "ltl",
+      "text": "[] !(cnt == 1)",
+      "status": "violated",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 51,
+        "transitions": 60,
+        "depth": 49,
+        "memory_bytes_est": 29926
+      },
+      "complete": false,
+      "counterexample": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "never:ltl2",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 2,
+            "process": "user:0",
+            "command": "x = me",
+            "changes": [
+              {
+                "var": "x",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "location": "L2",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 5,
+              "name": "x = me"
+            }
+          },
+          {
+            "index": 3,
+            "process": "never:ltl2",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 4,
+            "process": "user:0",
+            "command": "(y == 0 || y == me)",
+            "location": "L3",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 8,
+              "name": "(y == 0 || y == me)"
+            }
+          },
+          {
+            "index": 5,
+            "process": "never:ltl2",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 6,
+            "process": "user:0",
+            "command": "z = me",
+            "changes": [
+              {
+                "var": "z",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "location": "L4",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 10,
+              "name": "z = me"
+            }
+          },
+          {
+            "index": 7,
+            "process": "never:ltl2",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 8,
+            "process": "user:0",
+            "command": "(x == me)",
+            "location": "L5",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 13,
+              "name": "(x == me)"
+            }
+          },
+          {
+            "index": 9,
+            "process": "never:ltl2",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 10,
+            "process": "user:0",
+            "command": "y = me",
+            "changes": [
+              {
+                "var": "y",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "location": "L6",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 15,
+              "name": "y = me"
+            }
+          },
+          {
+            "index": 11,
+            "process": "never:ltl2",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 12,
+            "process": "user:0",
+            "command": "(z == me)",
+            "location": "L7",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 18,
+              "name": "(z == me)"
+            }
+          },
+          {
+            "index": 13,
+            "process": "never:ltl2",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 14,
+            "process": "user:0",
+            "command": "cnt++",
+            "changes": [
+              {
+                "var": "cnt",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 22,
+              "name": "cnt++"
+            }
+          },
+          {
+            "index": 15,
+            "process": "never:ltl2",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 16,
+            "process": "user:0",
+            "command": "assert(cnt == 1)",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 23,
+              "name": "assert(cnt == 1)"
+            }
+          },
+          {
+            "index": 17,
+            "process": "never:ltl2",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 18,
+            "process": "user:0",
+            "command": "cnt--",
+            "changes": [
+              {
+                "var": "cnt",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "location": "L1",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 24,
+              "name": "cnt--"
+            }
+          },
+          {
+            "index": 19,
+            "process": "never:ltl2",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 20,
+            "process": "user:0",
+            "command": "x = me",
+            "location": "L2",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 5,
+              "name": "x = me"
+            }
+          },
+          {
+            "index": 21,
+            "process": "never:ltl2",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 22,
+            "process": "user:0",
+            "command": "(y == 0 || y == me)",
+            "location": "L3",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 8,
+              "name": "(y == 0 || y == me)"
+            }
+          },
+          {
+            "index": 23,
+            "process": "never:ltl2",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 24,
+            "process": "user:0",
+            "command": "z = me",
+            "location": "L4",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 10,
+              "name": "z = me"
+            }
+          },
+          {
+            "index": 25,
+            "process": "never:ltl2",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 26,
+            "process": "user:0",
+            "command": "(x == me)",
+            "location": "L5",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 13,
+              "name": "(x == me)"
+            }
+          },
+          {
+            "index": 27,
+            "process": "never:ltl2",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 28,
+            "process": "user:1",
+            "command": "x = me",
+            "changes": [
+              {
+                "var": "x",
+                "before": 1,
+                "after": 2
+              }
+            ],
+            "location": "L2",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 5,
+              "name": "x = me"
+            }
+          },
+          {
+            "index": 29,
+            "process": "never:ltl2",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 30,
+            "process": "user:0",
+            "command": "y = me",
+            "location": "L6",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 15,
+              "name": "y = me"
+            }
+          },
+          {
+            "index": 31,
+            "process": "never:ltl2",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 32,
+            "process": "user:0",
+            "command": "(z == me)",
+            "location": "L7",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 18,
+              "name": "(z == me)"
+            }
+          },
+          {
+            "index": 33,
+            "process": "never:ltl2",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 34,
+            "process": "user:0",
+            "command": "cnt++",
+            "changes": [
+              {
+                "var": "cnt",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 22,
+              "name": "cnt++"
+            }
+          },
+          {
+            "index": 35,
+            "process": "never:ltl2",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 36,
+            "process": "user:0",
+            "command": "assert(cnt == 1)",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 23,
+              "name": "assert(cnt == 1)"
+            }
+          },
+          {
+            "index": 37,
+            "process": "never:ltl2",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 38,
+            "process": "user:0",
+            "command": "cnt--",
+            "changes": [
+              {
+                "var": "cnt",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "location": "L1",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 24,
+              "name": "cnt--"
+            }
+          },
+          {
+            "index": 39,
+            "process": "never:ltl2",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 40,
+            "process": "user:0",
+            "command": "x = me",
+            "changes": [
+              {
+                "var": "x",
+                "before": 2,
+                "after": 1
+              }
+            ],
+            "location": "L2",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 5,
+              "name": "x = me"
+            }
+          },
+          {
+            "index": 41,
+            "process": "never:ltl2",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 42,
+            "process": "user:0",
+            "command": "(y == 0 || y == me)",
+            "location": "L3",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 8,
+              "name": "(y == 0 || y == me)"
+            }
+          },
+          {
+            "index": 43,
+            "process": "never:ltl2",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 44,
+            "process": "user:0",
+            "command": "z = me",
+            "location": "L4",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 10,
+              "name": "z = me"
+            }
+          },
+          {
+            "index": 45,
+            "process": "never:ltl2",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 46,
+            "process": "user:0",
+            "command": "(x == me)",
+            "location": "L5",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 13,
+              "name": "(x == me)"
+            }
+          },
+          {
+            "index": 47,
+            "process": "never:ltl2",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 48,
+            "process": "user:0",
+            "command": "y = me",
+            "location": "L6",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 15,
+              "name": "y = me"
+            }
+          },
+          {
+            "index": 49,
+            "process": "never:ltl2",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 50,
+            "process": "user:0",
+            "command": "(z == me)",
+            "location": "L7",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 18,
+              "name": "(z == me)"
+            }
+          },
+          {
+            "index": 51,
+            "process": "never:ltl2",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 52,
+            "process": "user:0",
+            "command": "cnt++",
+            "changes": [
+              {
+                "var": "cnt",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 22,
+              "name": "cnt++"
+            }
+          },
+          {
+            "index": 53,
+            "process": "never:ltl2",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 54,
+            "process": "user:0",
+            "command": "assert(cnt == 1)",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 23,
+              "name": "assert(cnt == 1)"
+            }
+          },
+          {
+            "index": 55,
+            "process": "never:ltl2",
+            "command": "((cnt == 1)) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "((cnt == 1))"
+            }
+          },
+          {
+            "index": 56,
+            "process": "user:0",
+            "command": "cnt--",
+            "changes": [
+              {
+                "var": "cnt",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "location": "L1",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 24,
+              "name": "cnt--"
+            }
+          },
+          {
+            "index": 57,
+            "process": "never:ltl2",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 58,
+            "process": "user:0",
+            "command": "x = me",
+            "location": "L2",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 5,
+              "name": "x = me"
+            }
+          },
+          {
+            "index": 59,
+            "process": "never:ltl2",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 60,
+            "process": "user:0",
+            "command": "(y == 0 || y == me)",
+            "location": "L3",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 8,
+              "name": "(y == 0 || y == me)"
+            }
+          },
+          {
+            "index": 61,
+            "process": "never:ltl2",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 62,
+            "process": "user:0",
+            "command": "z = me",
+            "location": "L4",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 10,
+              "name": "z = me"
+            }
+          },
+          {
+            "index": 63,
+            "process": "never:ltl2",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 64,
+            "process": "user:0",
+            "command": "(x == me)",
+            "location": "L5",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 13,
+              "name": "(x == me)"
+            }
+          },
+          {
+            "index": 65,
+            "process": "never:ltl2",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 66,
+            "process": "user:0",
+            "command": "y = me",
+            "location": "L6",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 15,
+              "name": "y = me"
+            }
+          },
+          {
+            "index": 67,
+            "process": "never:ltl2",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 68,
+            "process": "user:0",
+            "command": "(z == me)",
+            "location": "L7",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 18,
+              "name": "(z == me)"
+            }
+          },
+          {
+            "index": 69,
+            "process": "never:ltl2",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 70,
+            "process": "user:0",
+            "command": "cnt++",
+            "changes": [
+              {
+                "var": "cnt",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 22,
+              "name": "cnt++"
+            }
+          },
+          {
+            "index": 71,
+            "process": "never:ltl2",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 72,
+            "process": "user:0",
+            "command": "assert(cnt == 1)",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 23,
+              "name": "assert(cnt == 1)"
+            }
+          },
+          {
+            "index": 73,
+            "process": "never:ltl2",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 74,
+            "process": "user:1",
+            "command": "(y != 0 && y != me)",
+            "location": "L1",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 7,
+              "name": "(y != 0 && y != me)"
+            }
+          },
+          {
+            "index": 75,
+            "process": "never:ltl2",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 76,
+            "process": "user:0",
+            "command": "cnt--",
+            "changes": [
+              {
+                "var": "cnt",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "location": "L1",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 24,
+              "name": "cnt--"
+            }
+          },
+          {
+            "index": 77,
+            "process": "never:ltl2",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 78,
+            "process": "user:0",
+            "command": "x = me",
+            "location": "L2",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 5,
+              "name": "x = me"
+            }
+          },
+          {
+            "index": 79,
+            "process": "never:ltl2",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 80,
+            "process": "user:0",
+            "command": "(y == 0 || y == me)",
+            "location": "L3",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 8,
+              "name": "(y == 0 || y == me)"
+            }
+          },
+          {
+            "index": 81,
+            "process": "never:ltl2",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 82,
+            "process": "user:0",
+            "command": "z = me",
+            "location": "L4",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 10,
+              "name": "z = me"
+            }
+          },
+          {
+            "index": 83,
+            "process": "never:ltl2",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 84,
+            "process": "user:0",
+            "command": "(x == me)",
+            "location": "L5",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 13,
+              "name": "(x == me)"
+            }
+          },
+          {
+            "index": 85,
+            "process": "never:ltl2",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 86,
+            "process": "user:0",
+            "command": "y = me",
+            "location": "L6",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 15,
+              "name": "y = me"
+            }
+          },
+          {
+            "index": 87,
+            "process": "never:ltl2",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 88,
+            "process": "user:0",
+            "command": "(z == me)",
+            "location": "L7",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 18,
+              "name": "(z == me)"
+            }
+          },
+          {
+            "index": 89,
+            "process": "never:ltl2",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 90,
+            "process": "user:0",
+            "command": "cnt++",
+            "changes": [
+              {
+                "var": "cnt",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 22,
+              "name": "cnt++"
+            }
+          },
+          {
+            "index": 91,
+            "process": "never:ltl2",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 92,
+            "process": "user:1",
+            "command": "x = me",
+            "changes": [
+              {
+                "var": "x",
+                "before": 1,
+                "after": 2
+              }
+            ],
+            "location": "L2",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 5,
+              "name": "x = me"
+            }
+          },
+          {
+            "index": 93,
+            "process": "never:ltl2",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 94,
+            "process": "user:0",
+            "command": "assert(cnt == 1)",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 23,
+              "name": "assert(cnt == 1)"
+            }
+          },
+          {
+            "index": 95,
+            "process": "never:ltl2",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 96,
+            "process": "user:0",
+            "command": "cnt--",
+            "changes": [
+              {
+                "var": "cnt",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "location": "L1",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 24,
+              "name": "cnt--"
+            }
+          },
+          {
+            "index": 97,
+            "process": "never:ltl2",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 98,
+            "process": "user:1",
+            "command": "(y != 0 && y != me)",
+            "location": "L1",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 7,
+              "name": "(y != 0 && y != me)"
+            }
+          },
+          {
+            "index": 99,
+            "process": "never:ltl2",
+            "command": "(1) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 100,
+            "process": "user:0",
+            "command": "x = me",
+            "changes": [
+              {
+                "var": "x",
+                "before": 2,
+                "after": 1
+              }
+            ],
+            "location": "L2",
+            "origin": {
+              "file": "Promela - examples/CH2/mutex_flaw.pml",
+              "line": 5,
+              "name": "x = me"
+            }
+          }
+        ],
+        "final_state": [
+          {
+            "var": "user:0.me",
+            "value": 1
+          },
+          {
+            "var": "user:1.me",
+            "value": 2
+          },
+          {
+            "var": "cnt",
+            "value": 0
+          },
+          {
+            "var": "x",
+            "value": 1
+          },
+          {
+            "var": "y",
+            "value": 1
+          },
+          {
+            "var": "z",
+            "value": 1
+          }
+        ],
+        "summary": "(1) -> goto T0_init, x = me, (1) -> goto T0_init, (y == 0 || y == me), (1) -> goto T0_init, z = me, (1) -> goto T0_init, (x == me), (1) -> goto T0_init, y = me, (1) -> goto T0_init, (z == me), (1) -> goto T0_init, cnt++, (1) -> goto T0_init, assert(cnt == 1), (1) -> goto T0_init, cnt--, (1) -> goto T0_init, x = me, (1) -> goto T0_init, (y == 0 || y == me), (1) -> goto T0_init, z = me, (1) -> goto T0_init, (x == me), (1) -> goto T0_init, x = me, (1) -> goto T0_init, y = me, (1) -> goto T0_init, (z == me), (1) -> goto T0_init, cnt++, (1) -> goto T0_init, assert(cnt == 1), (1) -> goto T0_init, cnt--, (1) -> goto T0_init, x = me, (1) -> goto T0_init, (y == 0 || y == me), (1) -> goto T0_init, z = me, (1) -> goto T0_init, (x == me), (1) -> goto T0_init, y = me, (1) -> goto T0_init, (z == me), (1) -> goto T0_init, cnt++, (1) -> goto T0_init, assert(cnt == 1), ((cnt == 1)) -> goto accept_S1, cnt--, (1) -> goto accept_S1, x = me, (1) -> goto accept_S1, (y == 0 || y == me), (1) -> goto accept_S1, z = me, (1) -> goto accept_S1, (x == me), (1) -> goto accept_S1, y = me, (1) -> goto accept_S1, (z == me), (1) -> goto accept_S1, cnt++, (1) -> goto accept_S1, assert(cnt == 1), (1) -> goto accept_S1, (y != 0 && y != me), (1) -> goto accept_S1, cnt--, (1) -> goto accept_S1, x = me; loop: (1) -> goto accept_S1, (y == 0 || y == me), (1) -> goto accept_S1, z = me, (1) -> goto accept_S1, (x == me), (1) -> goto accept_S1, y = me, (1) -> goto accept_S1, (z == me), (1) -> goto accept_S1, cnt++, (1) -> goto accept_S1, x = me, (1) -> goto accept_S1, assert(cnt == 1), (1) -> goto accept_S1, cnt--, (1) -> goto accept_S1, (y != 0 && y != me), (1) -> goto accept_S1, x = me",
+        "loop": {
+          "start": 79,
+          "steps": 22
+        }
+      },
+      "reason": "acceptance cycle: the loop of the counterexample passes through an accept state of the automaton for !([] !(cnt == 1)) infinitely often, so the run satisfies the negated property (SPIN pan -a: acceptance cycle)",
+      "temporal": {
+        "source": "formula",
+        "formula": "[] !(cnt == 1)",
+        "negated": "!([] !(cnt == 1))",
+        "atoms": [
+          "cnt == 1"
+        ],
+        "stutter_invariant": true,
+        "automaton_states": 2,
+        "automaton_transitions": 3,
+        "automaton_accepting": 1,
+        "fairness": "none",
+        "claim": "never:ltl2"
+      }
+    }
+  ]
+}

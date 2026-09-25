@@ -1,0 +1,13 @@
+  1:	proc  0 (Sender:1) abp-lossy1.pml:16 (state 1)	[to_rcvr!msg1]
+  2:	proc  2 (Loss:1) abp-lossy1.pml:35 (state 1)	[(((budget>0)&&(len(to_rcvr)>0)))]
+  3:	proc  2 (Loss:1) abp-lossy1.pml:35 (state 2)	[to_rcvr?m]
+  3:	proc  2 (Loss:1) abp-lossy1.pml:35 (state 3)	[budget = (budget-1)]
+  4:	proc  2 (Loss:1) abp-lossy1.pml:37 (state 9)	[((budget==0))]
+  5: proc 2 terminates
+spin: trail ends after 5 steps
+#processes: 2
+		queue 1 (to_rcvr): 
+		budget = 0
+  5:	proc  1 (Receiver:1) abp-lossy1.pml:25 (state 1)
+  5:	proc  0 (Sender:1) abp-lossy1.pml:17 (state 2)
+3 processes created

@@ -1,0 +1,202 @@
+# Intake card (FR-001, FR-002) — eval E2, "alternating bit delivers every message".
+# The user was not available for questions; every value the user did not state is
+# marked `ASSUMPTION (not confirmed)` and is repeated in the report.
+
+system:
+  name: "CH3/alternatingbit.pml — sender/receiver handshake over two FIFO channels"
+  boundary: "two processes, Sender and Receiver, and the two channels to_rcvr and to_sndr"
+  environment: "none. The model contains no medium process, no loss, no duplication,
+                no reordering, no timeout and no retransmission — the channels are
+                the perfect FIFO channels of Promela"
+  excluded:
+    - "message loss / corruption (the reason the real alternating-bit protocol exists)"
+    - "retransmission and timeouts"
+    - "the payload: the model carries only the tags msg0/msg1/ack0/ack1, there is no data"
+    - "duplicate detection on the receiver side (nothing can duplicate)"
+  relation_to_implementation: "hand-written textbook model (Holzmann, SPIN book, ch. 3);
+                               no implementation is in scope"
+
+state:
+  variables: []            # the corpus model has no variables at all (report: model.variables = 0)
+  processes:
+    - "Sender:0   — 4 control locations: !msg1, ?ack1, !msg0, ?ack0, goto again"
+    - "Receiver:1 — 4 control locations: ?msg1, !ack1, ?msg0, !ack0, goto again"
+  channels:
+    - "to_rcvr, capacity 2, {mtype}, FIFO, lossless"
+    - "to_sndr, capacity 2, {mtype}, FIFO, lossless"
+  initial_states: "both processes at their `again:` label, both channels empty (one initial state)"
+  observables:
+    - "len(to_rcvr) > 0  → a message is in the receiver's channel, not yet taken out"
+    - "len(to_rcvr) == 0 → the receiver's channel is drained"
+    - "len(to_sndr) > 0 / == 0 → the same for the acknowledgement channel"
+    - "ghost model only: pend1/pend0 == 1 → msg1/msg0 submitted and not yet delivered"
+    - "ghost model only: got1/got0 → toggled on each delivery of msg1/msg0"
+
+transitions:
+  semantics: "asynchronous interleaving with buffered FIFO channels (capacity 2);
+              a send is enabled iff the channel is not full, a receive iff the head
+              message matches the pattern"
+  atomic_step: "one Promela statement of one process (engine default).
+                ASSUMPTION (not confirmed): the textbook granularity is the intended one.
+                In the ghost model each ghost assignment is fused with the send or
+                receive it records by `atomic`, so the ghosts add no observable step"
+  terminal_states: "none — both processes loop forever; there is no `end` label and
+                    none is needed, since no state without an enabled transition is reachable"
+  nondeterminism: "scheduler only — and the search shows there is none in practice:
+                   the reachable graph has 8 states and 8 transitions, i.e. exactly one
+                   enabled transition per state (lock-step)"
+
+properties:
+  - id: P1
+    wording: "alternating bit доставляет каждое сообщение — every message is delivered"
+    class: liveness
+    logic: LTL
+    extension: untimed
+    formula: "[] (nempty(to_rcvr) -> <> empty(to_rcvr))"
+    atoms: ["len(to_rcvr) > 0", "len(to_rcvr) == 0"]
+    expected_evidence: lasso (if violated)
+    sanity_companion: "P3 ([]<> nempty(to_rcvr)) and P0 ([] empty(to_rcvr)) — see below"
+  - id: P2
+    wording: "the acknowledgement of every delivered message reaches the sender"
+    class: liveness
+    logic: LTL
+    extension: untimed
+    formula: "[] (nempty(to_sndr) -> <> empty(to_sndr))"
+    atoms: ["len(to_sndr) > 0", "len(to_sndr) == 0"]
+    expected_evidence: lasso (if violated)
+    sanity_companion: P3
+  - id: P3
+    wording: "the sender never stops submitting messages (guards P1 against vacuity)"
+    class: liveness
+    logic: LTL
+    extension: untimed
+    formula: "[]<> nempty(to_rcvr)"
+    atoms: ["len(to_rcvr) > 0"]
+    expected_evidence: lasso (if violated)
+    sanity_companion: "P0"
+  - id: P4
+    wording: "at most one frame is in flight (makes 'the channel drains' mean
+              'that very message was delivered')"
+    class: safety
+    logic: LTL (invariant shape)
+    extension: untimed
+    formula: "[] (len(to_rcvr) <= 1)"
+    atoms: ["len(to_rcvr) <= 1"]
+    expected_evidence: finite trace (if violated)
+    sanity_companion: P0
+  - id: P5
+    wording: "the same for the acknowledgement channel"
+    class: safety
+    logic: LTL (invariant shape)
+    extension: untimed
+    formula: "[] (len(to_sndr) <= 1)"
+    atoms: ["len(to_sndr) <= 1"]
+    expected_evidence: finite trace (if violated)
+    sanity_companion: P0
+  - id: P0
+    wording: "sanity / non-vacuity: is anything ever put into to_rcvr at all?
+              asked backwards, as LTL cannot say 'reachable'"
+    class: reachability
+    logic: LTL
+    extension: untimed
+    formula: "[] empty(to_rcvr)   — a `violated` result IS the witness"
+    atoms: ["len(to_rcvr) == 0"]
+    expected_evidence: finite prefix (the witness)
+    sanity_companion: "—"
+  - id: P6
+    wording: "every submitted msg1 is eventually delivered (per message type)"
+    class: liveness
+    logic: LTL
+    extension: untimed
+    formula: "[] (pend1 == 1 -> <> pend1 == 0)   — on the ghost model only"
+    atoms: ["pend1 == 1", "pend1 == 0"]
+    expected_evidence: lasso (if violated)
+    sanity_companion: "P8 ([]<> got1 == 1 && []<> got1 == 0)"
+  - id: P7
+    wording: "every submitted msg0 is eventually delivered"
+    class: liveness
+    logic: LTL
+    extension: untimed
+    formula: "[] (pend0 == 1 -> <> pend0 == 0)   — ghost model"
+    atoms: ["pend0 == 1", "pend0 == 0"]
+    expected_evidence: lasso (if violated)
+    sanity_companion: P9
+  - id: P8
+    wording: "msg1 is delivered infinitely often (the guarantee of P6 is not empty)"
+    class: liveness
+    logic: LTL
+    extension: untimed
+    formula: "([]<> got1 == 1) && ([]<> got1 == 0)   — ghost model"
+    atoms: ["got1 == 1", "got1 == 0"]
+    expected_evidence: lasso (if violated)
+    sanity_companion: "—"
+  - id: P9
+    wording: "msg0 is delivered infinitely often"
+    class: liveness
+    logic: LTL
+    extension: untimed
+    formula: "([]<> got0 == 1) && ([]<> got0 == 0)   — ghost model"
+    atoms: ["got0 == 1", "got0 == 0"]
+    expected_evidence: lasso (if violated)
+    sanity_companion: "—"
+  - id: P10
+    wording: "at most one message is outstanding at a time (ghost model)"
+    class: safety
+    logic: LTL (invariant shape)
+    extension: untimed
+    formula: "[] (pend1 + pend0 <= 1)"
+    atoms: ["pend1 + pend0 <= 1"]
+    expected_evidence: finite trace (if violated)
+    sanity_companion: "—"
+  - id: D
+    wording: "no invalid end state (added by the Promela frontend, not requested)"
+    class: safety
+    logic: deadlock
+    extension: untimed
+    formula: "—"
+    atoms: []
+    expected_evidence: finite trace (if violated)
+    sanity_companion: "—"
+
+assumptions:
+  scheduler: "arbitrary interleaving; no fairness needed — the reachable graph is a
+              single cycle with one enabled transition per state"
+  delivery: "lossless, no duplication, no reordering, FIFO — this is what the file says,
+             NOT an assumption we added. It is also the single most important limitation"
+  failures: "none modelled"
+  environment_inputs: "none — the sender sends unconditionally"
+  bounds:
+    - "channel capacity 2 for both channels (from the file); the search shows at most 1
+       message is ever in a channel, so the capacity does not bind"
+    - "exactly 2 processes, fixed by `active proctype`"
+    - "no data domain at all"
+
+fairness:
+  required: "none"
+  justification: "The question is liveness, so fairness was asked before the run
+                  (FR-008). The run without fairness returns `verified`, so no
+                  assumption is needed and none is claimed. A weak-fairness run was
+                  made as well and agrees; the result does not depend on the setting.
+                  Strong fairness is not implemented by the engine (FR-008) and was
+                  not needed, so no `not-executed` record is owed here."
+  confirmed_by_user: false   # user not available; ASSUMPTION
+
+backend:
+  engine: mcd                # 0.1.0-g0, CLI (the plugin's MCP server was not registered)
+  search_mode: dfs           # bfs for the lossy sensitivity run
+  reductions: none           # unreduced search
+
+budget:
+  time: "60000 ms (default)"
+  states: "1000000 (default); pilot run with --budget-states 4"
+  depth: "1000000 (default)"
+  memory: "1024 MiB (default)"
+  repeats: 1
+
+evidence:
+  expected: exhaustive
+  goal: "exhaustive result (the user asked for a proof)"
+
+artefacts:
+  may_store_models_and_traces: true   # ASSUMPTION: textbook model, no business data
+  contains_secrets_or_personal_data: "no"

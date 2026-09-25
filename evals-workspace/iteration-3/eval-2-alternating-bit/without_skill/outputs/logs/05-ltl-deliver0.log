@@ -1,0 +1,36 @@
+pan: ltl formula deliver0
+
+(Spin Version 6.5.2 -- 6 December 2019)
+
+Full statespace search for:
+	never claim         	+ (deliver0)
+	assertion violations	+ (if within scope of claim)
+	acceptance   cycles 	+ (fairness disabled)
+	invalid end states	- (disabled by never claim)
+
+State-vector 60 byte, depth reached 21, errors: 0
+       14 states, stored
+        4 states, matched
+       18 transitions (= stored+matched)
+        0 atomic steps
+hash conflicts:         0 (resolved)
+
+Stats on memory usage (in Megabytes):
+    0.001	equivalent memory usage for states (stored*(State-vector + overhead))
+    0.282	actual memory usage for states
+  128.000	memory used for hash table (-w24)
+    5.341	memory used for DFS stack (-m100000)
+  133.536	total actual memory usage
+
+
+unreached in proctype Sender
+	abp-ltl.pml:41, state 17, "-end-"
+	(1 of 17 states)
+unreached in proctype Receiver
+	abp-ltl.pml:61, state 15, "-end-"
+	(1 of 15 states)
+unreached in claim deliver0
+	_spin_nvr.tmp:21, state 13, "-end-"
+	(1 of 13 states)
+
+pan: elapsed time 0 seconds

@@ -1,0 +1,91 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0-g0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "promela",
+      "path": "Promela - examples/CH2/peterson.pml",
+      "sha256": "7aa3fc27fe751c8caa218d9bbefee866f04b71098772a08ee391469c0e4f27eb"
+    }
+  ],
+  "model": {
+    "name": "peterson",
+    "state_bytes": 11,
+    "processes": 2,
+    "variables": 7
+  },
+  "search": {
+    "mode": "bfs",
+    "budget": {
+      "states": 1000000,
+      "depth": 1000000,
+      "time_ms": 60000,
+      "mem_bytes": 1073741824
+    },
+    "stop": "complete",
+    "complete": true
+  },
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 74,
+        "transitions": 136,
+        "depth": 13,
+        "memory_bytes_est": 30592
+      },
+      "complete": true
+    },
+    {
+      "id": "assert",
+      "kind": "assert",
+      "text": "no assert statement fails (SPIN: assertion violations)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 74,
+        "transitions": 136,
+        "depth": 13,
+        "memory_bytes_est": 30592
+      },
+      "complete": true
+    },
+    {
+      "id": "ltl1",
+      "kind": "ltl",
+      "text": "[] (cnt <= 1)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 74,
+        "transitions": 136,
+        "depth": 41,
+        "memory_bytes_est": 30356
+      },
+      "complete": true,
+      "reason": "no acceptance cycle in the complete product with the automaton for !([] (cnt <= 1)): no run satisfies the negated property",
+      "temporal": {
+        "source": "formula",
+        "formula": "[] (cnt <= 1)",
+        "negated": "!([] (cnt <= 1))",
+        "atoms": [
+          "cnt <= 1"
+        ],
+        "stutter_invariant": true,
+        "automaton_states": 2,
+        "automaton_transitions": 3,
+        "automaton_accepting": 1,
+        "fairness": "none",
+        "claim": "never:ltl1"
+      }
+    }
+  ]
+}

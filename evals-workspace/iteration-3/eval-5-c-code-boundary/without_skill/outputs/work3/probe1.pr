@@ -1,0 +1,10 @@
+c_code { int x; }
+
+active proctype simple()
+{
+   c_code { x = 2; printf("[probe] set x=2\n"); };
+   if
+   :: c_code { x = x+2; printf("[probe] branch A: x=%d\n", x); }; assert(c_expr { x==4 })
+   :: c_code { x = x*3; printf("[probe] branch B: x=%d\n", x); }; assert(c_expr { x==6 })
+   fi
+}
