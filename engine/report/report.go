@@ -83,6 +83,10 @@ type ModelInfo struct {
 	Variables  int    `json:"variables"`
 }
 
+// Search describes the run's safety search (deadlock, invariant, reach,
+// assert), or the first temporal search when there is no safety property.
+// An ltl / progress property has its own product search: read its own
+// `complete` and counters, not these.
 type Search struct {
 	Mode     string `json:"mode"`
 	Budget   Budget `json:"budget"`

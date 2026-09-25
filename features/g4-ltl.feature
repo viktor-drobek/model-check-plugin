@@ -30,7 +30,13 @@ Feature: G4 LTL — Büchi translation, nested DFS, non-progress cycles, weak fa
     claim (as `spin -f` writes them) likewise (SPIN: "assertion violated"). A
     cycle through a state whose claim location carries `accept` is a violation
     (SPIN: "acceptance cycle"). The claim does not move inside an atomic sequence
-    (intermediate atomic states stay unstored, G1 rule preserved in the product).
+    (intermediate atomic states stay unstored, G1 rule preserved in the product);
+    a claim edge inside `atomic { }` continues at once, on the same system state,
+    with the next enabled claim edge (`spin -f` claims evaluate their `assert`
+    this way). Stutter extension (pan's default): in a state where no process
+    can move — all terminated, or blocked — the state repeats forever and the
+    claim keeps moving alone; without a claim, an `accept` label in such a state
+    is an acceptance cycle (SPIN: "accept stutter").
   - counterexample of a cycle: `steps` is the whole run; `loop.start` is the 1-based
     index of the first step of the loop and `loop.steps` its length; after the last
     step the state equals the state before step `loop.start`. Claim moves are steps
@@ -38,7 +44,9 @@ Feature: G4 LTL — Büchi translation, nested DFS, non-progress cycles, weak fa
     `-` (no process moves; the fairness counter advances). A finite-prefix
     violation has no `loop`. The CLI JSON and `mc_explain` show the same split.
   - statuses: acceptance cycle found → `violated`, evidence `exhaustive`; no cycle
-    and the search complete → `verified`, `exhaustive`; budget hit → `inconclusive`
+    and the property's own product search complete → `verified`, `exhaustive`
+    (each ltl / progress property reports its own counters and `complete`; the
+    report's top-level `search` describes the safety search); budget hit → `inconclusive`
     with evidence `bounded` when the declared states or depth limit was reached and
     `unknown` when time or memory ran out (plan 14 §6); strong fairness →
     `not-executed` with a reason; malformed formula or undeclared atom → the input
