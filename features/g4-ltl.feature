@@ -48,7 +48,11 @@ Feature: G4 LTL — Büchi translation, nested DFS, non-progress cycles, weak fa
     `--unlimited` (CLI only) lifts every limit and the report echoes 0 for them.
   - the pan numbers quoted were produced by SPIN 6.5.2, `spin -a -o1 -o2 -o3`,
     `gcc -O2 -DNOREDUCE [-DNP]`, `./pan -a [-f] -c0` / `./pan -l [-f] -c0`, on
-    2026-09-25. Test models: `engine/testdata/promela/starvation.pml` (two-process
+    2026-09-25. One known counter artefact: when the initial state is already
+    accepting (CH8/fairness.pml, CH4/fair.pml under -DNP) pan's "states, stored"
+    counts one re-insertion of its nested search (`pan -DCHECK` prints "New state
+    3+"); the product itself has as many states as pan's plain run, and that is the
+    number the engine reports. Test models: `engine/testdata/promela/starvation.pml` (two-process
     starvation) and `leader3.pml` (CH12/leader rewritten for N = 3 because the
     original uses a channel array, channel parameters and `run` in a loop, which
     are outside the G1 subset).
@@ -57,10 +61,10 @@ Feature: G4 LTL — Büchi translation, nested DFS, non-progress cycles, weak fa
 
   Scenario: CH4/prop.pml with -D PHI — the claim for []p accepts a run that keeps p, as pan -a
     Given the corpus model "CH4/prop.pml"
-    When I run "mcd check --promela <model> -D PHI --sweep --no-timing"
+    When I invoke "mcd check --promela <model> -D PHI --sweep --no-timing"
     Then it exits with 0
     And the property "never" is "violated" with evidence "exhaustive"
-    And the reason for "never" mentions "acceptance cycle"
+    And the reason of property "never" mentions "acceptance cycle"
     And the counterexample of "never" has a loop
     And every step of the loop of "never" is by process "init:0" or by the claim
     And the search for "never" is complete
@@ -68,17 +72,17 @@ Feature: G4 LTL — Büchi translation, nested DFS, non-progress cycles, weak fa
 
   Scenario: CH4/prop.pml without PHI — the claim for ![]p runs to its end when x becomes 0, as pan -a
     Given the corpus model "CH4/prop.pml"
-    When I run "mcd check --promela <model> --sweep --no-timing"
+    When I invoke "mcd check --promela <model> --sweep --no-timing"
     Then it exits with 0
     And the property "never" is "violated" with evidence "exhaustive"
-    And the reason for "never" mentions "end state in claim reached"
+    And the reason of property "never" mentions "end state in claim reached"
     And the counterexample of "never" has no loop
-    And the counterexample of "never" ends with "x" equal to 0
+    And the final state of "never" has "x" equal to 0
     And the state count of "never" is 5
 
   Scenario: []p on CH4/prop.pml through the engine's own automaton — violated with prefix + loop
     Given the corpus model "CH4/prop.pml"
-    When I run "mcd check --promela <model> --ltl '[]p' --no-timing"
+    When I invoke "mcd check --promela <model> --ltl '[]p' --no-timing"
     Then it exits with 0
     And the property "ltl1" is "violated" with evidence "exhaustive"
     And the property "ltl1" has formula "[]p" and negation "!([]p)"
@@ -89,7 +93,7 @@ Feature: G4 LTL — Büchi translation, nested DFS, non-progress cycles, weak fa
 
   Scenario: CH4/dijkstra_progress.pml — no non-progress cycle, as pan -l
     Given the corpus model "CH4/dijkstra_progress.pml"
-    When I run "mcd check --promela <model> --sweep --no-timing"
+    When I invoke "mcd check --promela <model> --sweep --no-timing"
     Then it exits with 0
     And the property "progress" is "verified" with evidence "exhaustive"
     And the search for "progress" is complete
@@ -97,19 +101,19 @@ Feature: G4 LTL — Büchi translation, nested DFS, non-progress cycles, weak fa
 
   Scenario: CH4/fair.pml — every cycle is a non-progress cycle, as pan -l
     Given the corpus model "CH4/fair.pml"
-    When I run "mcd check --promela <model> --progress --sweep --no-timing"
+    When I invoke "mcd check --promela <model> --progress --sweep --no-timing"
     Then it exits with 0
     And the property "progress" is "violated" with evidence "exhaustive"
-    And the reason for "progress" mentions "non-progress cycle"
+    And the reason of property "progress" mentions "non-progress cycle"
     And the counterexample of "progress" has a loop
-    And the state count of "progress" is 5
+    And the state count of "progress" is 4
 
   Scenario: CH4/fair_accept.pml — acceptance cycle through B's accept label, with and without weak fairness, as pan -a and pan -a -f
     Given the corpus model "CH4/fair_accept.pml"
-    When I run "mcd check --promela <model> --no-timing"
+    When I invoke "mcd check --promela <model> --no-timing"
     Then the property "accept" is "violated" with evidence "exhaustive"
     And the counterexample of "accept" has a loop
-    When I run "mcd check --promela <model> --fairness weak --no-timing"
+    When I invoke "mcd check --promela <model> --fairness weak --no-timing"
     Then the property "accept" is "violated" with evidence "exhaustive"
     And the counterexample of "accept" has a loop
     And the loop of "accept" contains a step by process "A:0"
@@ -117,7 +121,7 @@ Feature: G4 LTL — Büchi translation, nested DFS, non-progress cycles, weak fa
 
   Scenario: CH4/true.pml and false.pml — a finite model has no cycle; the assert decides
     Given the corpus model "CH4/false.pml"
-    When I run "mcd check --promela <model> --ltl '[]true' --no-timing"
+    When I invoke "mcd check --promela <model> --ltl '[]true' --no-timing"
     Then it exits with 0
     And the property "assert" is "violated" with evidence "exhaustive"
     And the property "ltl1" is "verified" with evidence "exhaustive"
@@ -126,62 +130,69 @@ Feature: G4 LTL — Büchi translation, nested DFS, non-progress cycles, weak fa
 
   Scenario: CH8/fairness.pml — the accept label in A lies on a cycle even under weak fairness, as pan -a -f
     Given the corpus model "CH8/fairness.pml"
-    When I run "mcd check --promela <model> --sweep --no-timing"
+    When I invoke "mcd check --promela <model> --sweep --no-timing"
     Then the property "accept" is "violated" with evidence "exhaustive"
-    And the state count of "accept" is 5
-    When I run "mcd check --promela <model> --fairness weak --no-timing"
+    And the state count of "accept" is 4
+    When I invoke "mcd check --promela <model> --fairness weak --no-timing"
     Then the property "accept" is "violated" with evidence "exhaustive"
     And the loop of "accept" contains a step by process "B:1"
 
   Scenario: CH8/trivial.pml — the claim's accept state is on the x = 0, 1, 0, 1 cycle, with and without weak fairness, as pan
     Given the corpus model "CH8/trivial.pml"
-    When I run "mcd check --promela <model> --sweep --no-timing"
+    When I invoke "mcd check --promela <model> --sweep --no-timing"
     Then the property "never" is "violated" with evidence "exhaustive"
     And the state count of "never" is 2
-    When I run "mcd check --promela <model> --fairness weak --no-timing"
+    When I invoke "mcd check --promela <model> --fairness weak --no-timing"
     Then the property "never" is "violated" with evidence "exhaustive"
     And the counterexample of "never" has a loop
 
   Scenario: CH8/example.pml — a finite state space: the assert is violated and no acceptance property exists
     Given the corpus model "CH8/example.pml"
-    When I run "mcd check --promela <model> --no-timing"
+    When I invoke "mcd check --promela <model> --no-timing"
     Then it exits with 0
     And the property "assert" is "violated" with evidence "exhaustive"
     And there is no property "accept"
 
   # ---------------------------------------------------------------- exit criterion: App_A and CH12
 
-  Scenario: App_A/example — <>[]p holds: the model's own claim finds no cycle and the state count is pan's
+  Scenario: App_A/example — the model's claim (the automaton FOR <>[]p) accepts no run, as pan -a, and the state count is pan's
     Given the corpus model "App_A/example"
-    When I run "mcd check --promela <model> --sweep --no-timing"
+    When I invoke "mcd check --promela <model> --sweep --no-timing"
     Then it exits with 0
     And the property "never" is "verified" with evidence "exhaustive"
     And the search for "never" is complete
     And the state count of "never" is 10
 
-  Scenario: App_A/example — the engine's automaton for <>[]p agrees with the model's claim
+  Scenario: App_A/example — the engine's automata agree with the model's claim on the negation direction
+    # The claim of App_A is written for <>[]p itself: it accepts the runs that
+    # satisfy <>[]p, and pan's "no errors" means no run does (x runs 4, 2, 1, 4 …
+    # and p = (x < 4) fails at every x = 4). So the property []<>!p holds and the
+    # property <>[]p is violated by a lasso; both are what the engine's own
+    # automata report.
     Given the corpus model "App_A/example"
-    When I run "mcd check --promela <model> --ltl '<>[]p' --no-timing"
+    When I invoke "mcd check --promela <model> --ltl '[]<>!p' --ltl '<>[]p' --no-timing"
     Then it exits with 0
     And the property "ltl1" is "verified" with evidence "exhaustive"
-    And the property "ltl1" has formula "<>[]p" and negation "!(<>[]p)"
+    And the property "ltl1" has formula "[]<>!p" and negation "!([]<>!p)"
+    And the property "ltl2" is "violated" with evidence "exhaustive"
+    And the counterexample of "ltl2" has a loop
     And the property "never" is "verified" with evidence "exhaustive"
 
   Scenario: leader election (CH12 claim on the N = 3 rewrite) — engine automaton and SPIN never claim give the same verdict
     Given the test model "leader3.pml" with the corpus claim "CH12/leader.ltl" appended
-    When I run "mcd check --promela <model> --ltl '<>[]oneLeader' --sweep --no-timing"
+    When I invoke "mcd check --promela <model> --ltl '<>[]oneLeader' --sweep --no-timing"
     Then it exits with 0
     And the property "never" is "verified" with evidence "exhaustive"
     And the property "ltl1" is "verified" with evidence "exhaustive"
     And the property "assert" is "verified" with evidence "exhaustive"
     And the state count of "never" is 1340
-    And the atoms of "ltl1" are "(nr_leaders == 1)"
+    And the atoms of "ltl1" are "nr_leaders == 1"
 
   # ---------------------------------------------------------------- fairness
 
   Scenario: starvation — <>done is violated without fairness by a loop in which only A moves
     Given the test model "starvation.pml"
-    When I run "mcd check --promela <model> --ltl '<>done' --no-timing"
+    When I invoke "mcd check --promela <model> --ltl '<>done' --no-timing"
     Then it exits with 0
     And the property "ltl1" is "violated" with evidence "exhaustive"
     And the counterexample of "ltl1" has a loop
@@ -190,88 +201,97 @@ Feature: G4 LTL — Büchi translation, nested DFS, non-progress cycles, weak fa
 
   Scenario: starvation — under weak fairness B must move, so <>done holds, as pan -a -f
     Given the test model "starvation.pml"
-    When I run "mcd check --promela <model> --ltl '<>done' --fairness weak --no-timing"
+    When I invoke "mcd check --promela <model> --ltl '<>done' --fairness weak --no-timing"
     Then it exits with 0
     And the property "ltl1" is "verified" with evidence "exhaustive"
     And the property "ltl1" records fairness "weak"
 
   Scenario: CH3/alternatingbit.pml — every message handed to the receiver is taken, with and without fairness, as pan
     Given the corpus model "CH3/alternatingbit.pml"
-    When I run "mcd check --promela <model> --ltl '[] (len(to_rcvr) > 0 -> <> (len(to_rcvr) == 0))' --no-timing"
+    When I invoke "mcd check --promela <model> --ltl '[] (len(to_rcvr) > 0 -> <> (len(to_rcvr) == 0))' --no-timing"
     Then the property "ltl1" is "verified" with evidence "exhaustive"
-    When I run "mcd check --promela <model> --ltl '[] (len(to_rcvr) > 0 -> <> (len(to_rcvr) == 0))' --fairness weak --no-timing"
+    When I invoke "mcd check --promela <model> --ltl '[] (len(to_rcvr) > 0 -> <> (len(to_rcvr) == 0))' --fairness weak --no-timing"
     Then the property "ltl1" is "verified" with evidence "exhaustive"
     And the property "ltl1" records fairness "weak"
 
   Scenario: strong fairness is not executed, with a reason; safety properties are unaffected
     Given the test model "starvation.pml"
-    When I run "mcd check --promela <model> --ltl '<>done' --fairness strong --no-timing"
+    When I invoke "mcd check --promela <model> --ltl '<>done' --fairness strong --no-timing"
     Then it exits with 0
     And the property "ltl1" is "not-executed" with evidence "unknown"
-    And the reason for "ltl1" mentions "strong fairness"
-    And the reason for "ltl1" mentions "weak"
+    And the reason of property "ltl1" mentions "strong fairness"
+    And the reason of property "ltl1" mentions "weak"
     And the property "deadlock" is "verified" with evidence "exhaustive"
 
   # ---------------------------------------------------------------- formulas
 
   Scenario: a formula with X is flagged as not stutter-invariant
     Given the corpus model "App_A/example"
-    When I run "mcd check --promela <model> --ltl 'X p' --no-timing"
+    When I invoke "mcd check --promela <model> --ltl 'X p' --no-timing"
     Then it exits with 0
     And the property "ltl1" is not stutter-invariant
     And the property "ltl1" is "violated" with evidence "exhaustive"
 
   Scenario: a malformed formula is a rejected input, not a verdict
     Given the corpus model "App_A/example"
-    When I run "mcd check --promela <model> --ltl '[] (p ->' --no-timing"
+    When I invoke "mcd check --promela <model> --ltl '[] (p ->' --no-timing"
     Then it exits with 2
-    And the rejection has kind "ltl" and status "not-executed"
+    And the input is rejected with kind "ltl" and status "not-executed"
     And the rejection message mentions "formula"
 
   Scenario: an undeclared atom is a rejected input
     Given the corpus model "App_A/example"
-    When I run "mcd check --promela <model> --ltl '<> nosuchvar' --no-timing"
+    When I invoke "mcd check --promela <model> --ltl '<> nosuchvar' --no-timing"
     Then it exits with 2
-    And the rejection has kind "ltl" and status "not-executed"
+    And the input is rejected with kind "ltl" and status "not-executed"
     And the rejection message mentions "nosuchvar"
 
   # ---------------------------------------------------------------- budgets (plan 14 §6 as amended)
 
   Scenario: a budget flag at 0 means the default in the CLI, as in MCP
     Given the corpus model "App_A/example"
-    When I run "mcd check --promela <model> --budget-states 0 --budget-ms 0 --no-timing"
+    When I invoke "mcd check --promela <model> --budget-states 0 --budget-ms 0 --no-timing"
     Then it exits with 0
     And the report budget has states 1000000 and time_ms 60000
 
   Scenario: --unlimited lifts every limit
     Given the corpus model "App_A/example"
-    When I run "mcd check --promela <model> --unlimited --no-timing"
+    When I invoke "mcd check --promela <model> --unlimited --no-timing"
     Then it exits with 0
     And the report budget has states 0 and time_ms 0
     And the property "never" is "verified" with evidence "exhaustive"
 
   Scenario: a state budget hit during a cycle search is inconclusive and bounded
     Given the test model "leader3.pml" with the corpus claim "CH12/leader.ltl" appended
-    When I run "mcd check --promela <model> --budget-states 100 --no-timing"
+    When I invoke "mcd check --promela <model> --budget-states 100 --no-timing"
     Then it exits with 0
     And the property "never" is "inconclusive" with evidence "bounded"
-    And the reason for "never" mentions "state budget"
+    And the reason of property "never" mentions "state budget"
     And the search for "never" is not complete
 
   Scenario: a time budget hit is inconclusive and unknown
-    Given the corpus model "CH5/counter.pml"
-    When I run "mcd check --promela <model> --ltl '[](cnt >= 0)' --budget-ms 1 --no-timing"
+    # 64 million states (G1 §3.2); len(q) <= 8 always holds, so the search
+    # cannot stop early on a violation.
+    Given the corpus model "CH5/sink_source_filter.pml"
+    When I invoke "mcd check --promela <model> --ltl '[](len(q) <= 8)' --budget-ms 1 --no-timing"
     Then it exits with 0
     And the property "ltl1" is "inconclusive" with evidence "unknown"
-    And the reason for "ltl1" mentions "time budget"
+    And the reason of property "ltl1" mentions "time budget"
     And the search for "ltl1" is not complete
 
   Scenario: two identical cycle checks are byte-identical
     Given the test model "starvation.pml"
-    When I run "mcd check --promela <model> --ltl '<>done' --no-timing" twice
+    When I invoke "mcd check --promela <model> --ltl '<>done' --no-timing" twice
     Then the two reports are byte-identical
 
   # ---------------------------------------------------------------- MCP
+
+  Scenario: mc_parse with promela over MCP returns IR (the frontend is linked into the server)
+    # G2 left Config.Promela as a hook; G4 wires the G1 frontend into `mcd serve`.
+    Given an MCP server with the Promela frontend linked as mcd serve links it
+    When I call mc_parse with the corpus Promela source "CH2/mutex_flaw.pml"
+    Then the mc_parse outcome is "ir" with 2 processes
+    And the parsed model has the properties "deadlock, assert"
 
   Scenario: mc_check runs an ltl formula and mc_explain shows the loop
     Given an MCP session with the test model "starvation.pml" parsed
@@ -322,27 +342,30 @@ Feature: G4 LTL — Büchi translation, nested DFS, non-progress cycles, weak fa
   Scenario Outline: the engine, the engine with SPIN's claim, and pan give the same verdict
     Given spin and gcc are installed
     And the model "<model>" for the differential check
-    When I compare the engine with pan for formula "<formula>" with fairness "<fairness>" and mode "<mode>"
+    When I compare the engine with pan for formula "<formula>" with defines "<defines>", fairness "<fairness>" and mode "<mode>"
     Then the three verdicts agree
 
     Examples:
-      | model                           | formula                                              | fairness | mode |
-      | CH4/prop.pml                    | []p                                                  | none     | a    |
-      | CH4/prop.pml                    | <>[]p                                                | none     | a    |
-      | CH4/prop.pml                    | []<>p                                                | none     | a    |
-      | App_A/example                   | <>[]p                                                | none     | a    |
-      | App_A/example                   | []<>p                                                | none     | a    |
-      | App_A/example                   | X p                                                  | none     | a    |
-      | CH8/trivial.pml                 | []<>x                                                | none     | a    |
-      | CH8/trivial.pml                 | []<>x                                                | weak     | a    |
-      | CH4/fair.pml                    | []<>(x == 1)                                         | none     | a    |
-      | CH4/fair.pml                    | []<>(x == 1)                                         | weak     | a    |
-      | CH4/fair.pml                    |                                                      | none     | l    |
-      | CH4/dijkstra_progress.pml       |                                                      | none     | l    |
-      | CH4/dijkstra_progress.pml       |                                                      | weak     | l    |
-      | CH3/alternatingbit.pml          | [] (len(to_rcvr) > 0 -> <> (len(to_rcvr) == 0))      | none     | a    |
-      | CH3/alternatingbit.pml          | [] (len(to_rcvr) > 0 -> <> (len(to_rcvr) == 0))      | weak     | a    |
-      | testdata:starvation.pml         | <>done                                               | none     | a    |
-      | testdata:starvation.pml         | <>done                                               | weak     | a    |
-      | testdata:starvation.pml         | done U (done)                                        | none     | a    |
-      | testdata:leader3.pml            | <>[]oneLeader                                        | none     | a    |
+      | model                      | formula                        | defines                                                   | fairness | mode |
+      | CH4/prop.pml               | []p                            |                                                           | none     | a    |
+      | CH4/prop.pml               | <>[]p                          |                                                           | none     | a    |
+      | CH4/prop.pml               | []<>p                          |                                                           | none     | a    |
+      | App_A/example              | <>[]p                          |                                                           | none     | a    |
+      | App_A/example              | []<>p                          |                                                           | none     | a    |
+      | App_A/example              | X p                            |                                                           | none     | a    |
+      | CH8/trivial.pml            | []<>x                          |                                                           | none     | a    |
+      | CH8/trivial.pml            | []<>x                          |                                                           | weak     | a    |
+      | CH8/fairness.pml           |                                |                                                           | none     | a    |
+      | CH8/fairness.pml           |                                |                                                           | weak     | a    |
+      | CH4/fair_accept.pml        |                                |                                                           | weak     | a    |
+      | CH4/fair.pml               | []<>(x == 1)                   |                                                           | none     | a    |
+      | CH4/fair.pml               | []<>(x == 1)                   |                                                           | weak     | a    |
+      | CH4/fair.pml               |                                |                                                           | none     | l    |
+      | CH4/dijkstra_progress.pml  |                                |                                                           | none     | l    |
+      | CH4/dijkstra_progress.pml  |                                |                                                           | weak     | l    |
+      | CH3/alternatingbit.pml     | [] (full1 -> <> empty1)        | full1=(len(to_rcvr) > 0); empty1=(len(to_rcvr) == 0)      | none     | a    |
+      | CH3/alternatingbit.pml     | [] (full1 -> <> empty1)        | full1=(len(to_rcvr) > 0); empty1=(len(to_rcvr) == 0)      | weak     | a    |
+      | testdata:starvation.pml    | <>done                         |                                                           | none     | a    |
+      | testdata:starvation.pml    | <>done                         |                                                           | weak     | a    |
+      | testdata:starvation.pml    | done U (done)                  |                                                           | none     | a    |
+      | testdata:leader3.pml       | <>[]oneLeader                  | oneLeader=(nr_leaders == 1)                               | none     | a    |

@@ -204,15 +204,19 @@ Feature: G1 Promela subset — chapter 2–3 models through the Promela frontend
 
   # ---------------------------------------------------------------- preprocessor and never claims
 
-  Scenario: -D selects the never claim through #ifdef in CH4/prop.pml; the claim is parsed and ignored with a warning
+  # Amended in G4: the claim is no longer "parsed and ignored with a warning";
+  # it becomes the model's `ltl` property `never` and is run in product with
+  # the system (features/g4-ltl.feature). The claim's closing brace carries the
+  # `end` label, which for a claim means "the claim terminated" (a violation).
+  Scenario: -D selects the never claim through #ifdef in CH4/prop.pml; the claim becomes the property "never"
     Given the Promela model "CH4/prop.pml" from the corpus
     When I execute "mcd parse --promela <model> -D PHI"
     Then the command exits with 0
     And the IR has a claim process whose locations carry the label "accept"
-    And the warnings mention "never claim"
+    And the IR has a property "never" of kind "ltl"
     When I execute "mcd parse --promela <model>"
     Then the command exits with 0
-    And the IR has a claim process whose locations carry no label
+    And the IR has a claim process whose locations carry no "accept" label
     And the IR has a claim process with an edge whose text is "!(x != 0)"
 
   Scenario: a never claim does not take part in a safety check
@@ -220,8 +224,8 @@ Feature: G1 Promela subset — chapter 2–3 models through the Promela frontend
     When I execute "mcd check --promela <model> -D PHI --no-timing"
     Then the command exits with 0
     And property "deadlock" is "verified" with evidence "exhaustive"
-    And the warnings mention "never claim"
     And the state count is 3
+    And property "never" is "violated" with evidence "exhaustive"
 
   Scenario: xr and xs are accepted and stored as hints
     Given the Promela file "testdata/promela/xrxs.pml"

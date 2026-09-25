@@ -17,12 +17,19 @@
 //     because its counterexample is an exact run of the model, whatever
 //     stopped the search afterwards; for `reach` because only a complete
 //     search can establish that no state satisfies the condition.
-//   - `inconclusive` carries `bounded` and a `reason` naming the exhausted
-//     resource; complete is false.
+//   - `inconclusive` carries a `reason` naming the exhausted resource and
+//     evidence `bounded` when a declared states or depth limit was reached,
+//     `unknown` when time or memory ran out (plan 14 §6); complete is
+//     false.
 //   - `invalid-model` and `not-executed` carry `unknown` and a `reason`; an
 //     invalid-model result attaches the run to the offending step as its
 //     counterexample.
-//   - `unknown` is in the vocabulary but the G0 engine never produces it.
+//   - `unknown` is in the vocabulary but the engine never produces it.
+//
+// An ltl / progress property (G4) has its own search: its counters and
+// `complete` are those of the product search, and `temporal` describes the
+// claim (formula, negation, atoms, stutter invariance, automaton size,
+// fairness). A cycle counterexample carries `loop` (see package cex).
 package report
 
 import (
@@ -83,12 +90,19 @@ type Search struct {
 	Complete bool   `json:"complete"`
 }
 
-// Budget echoes the limits the run was given (0 = unlimited).
+// Budget echoes the limits the run was given (0 = no limit, which the CLI
+// sets only under --unlimited).
 type Budget struct {
 	States   int   `json:"states"`
 	Depth    int   `json:"depth"`
 	TimeMS   int64 `json:"time_ms"`
 	MemBytes int64 `json:"mem_bytes"`
+}
+
+// Explore converts the echoed budget to the explorer's (0 = no limit in
+// both).
+func (b Budget) Explore() explore.Budget {
+	return explore.Budget{MaxStates: b.States, MaxDepth: b.Depth, MaxMemBytes: b.MemBytes}
 }
 
 type Property struct {
@@ -105,6 +119,25 @@ type Property struct {
 	// Witness: the run that reaches the condition of a verified `reach`.
 	Witness *cex.Trace `json:"witness,omitempty"`
 	Reason  string     `json:"reason,omitempty"`
+	// Temporal is present for ltl and progress properties.
+	Temporal *Temporal `json:"temporal,omitempty"`
+}
+
+// Temporal describes how an ltl / progress property was checked.
+type Temporal struct {
+	// Source: formula | never-claim | accept-labels | np
+	Source  string `json:"source"`
+	Formula string `json:"formula,omitempty"`
+	// Negated is the formula whose automaton was run as the claim; an
+	// acceptance cycle satisfies it and violates Formula.
+	Negated          string   `json:"negated,omitempty"`
+	Atoms            []string `json:"atoms,omitempty"`
+	StutterInvariant *bool    `json:"stutter_invariant,omitempty"`
+	AutomatonStates  int      `json:"automaton_states,omitempty"`
+	AutomatonTrans   int      `json:"automaton_transitions,omitempty"`
+	AutomatonAccept  int      `json:"automaton_accepting,omitempty"`
+	Fairness         string   `json:"fairness"`
+	Claim            string   `json:"claim,omitempty"`
 }
 
 // Counters describe the whole run (they are the same for every property of
@@ -146,17 +179,34 @@ func Build(m *ir.Model, res *explore.Result, meta Meta) (*Report, error) {
 		tm = &ms
 	}
 	for _, o := range res.Outcomes {
+		counters := Counters{States: res.States, Transitions: res.Transitions, Depth: res.MaxDepth, TimeMS: tm, MemoryBytesEst: res.MemBytes}
+		complete := res.Complete
+		if st := o.Stats; st != nil {
+			counters = Counters{States: st.States, Transitions: st.Transitions, Depth: st.MaxDepth, TimeMS: tm, MemoryBytesEst: st.MemBytes}
+			if !meta.NoTiming {
+				ms := st.Elapsed.Milliseconds()
+				counters.TimeMS = &ms
+			}
+			complete = st.Complete
+		}
 		p := Property{
 			ID: o.Property.ID, Kind: o.Property.Kind, Text: o.Property.Text,
 			Status: string(o.Status), Evidence: string(o.Evidence),
-			Counters: Counters{States: res.States, Transitions: res.Transitions, Depth: res.MaxDepth, TimeMS: tm, MemoryBytesEst: res.MemBytes},
-			Complete: res.Complete, Reason: o.Reason,
+			Counters: counters, Complete: complete, Reason: o.Reason,
+		}
+		if ti := o.Temporal; ti != nil {
+			p.Temporal = &Temporal{Source: ti.Source, Formula: ti.Formula, Negated: ti.Negated, Atoms: ti.Atoms,
+				StutterInvariant: ti.StutterInvariant, AutomatonStates: ti.AutomatonStates, AutomatonTrans: ti.AutomatonTrans,
+				AutomatonAccept: ti.AutomatonAccept, Fairness: ti.Fairness, Claim: ti.Claim}
+			if p.Temporal.Atoms == nil {
+				p.Temporal.Atoms = []string{}
+			}
 		}
 		switch o.Status {
 		case explore.Verified:
 			if o.Property.Kind == ir.KindReach {
 				p.Witness = o.Trace
-			} else if !res.Complete {
+			} else if !complete {
 				return nil, fmt.Errorf("report: property %q is verified but the search is not complete", o.Property.ID)
 			}
 			if o.Evidence != explore.Exhaustive {
@@ -168,8 +218,8 @@ func Build(m *ir.Model, res *explore.Result, meta Meta) (*Report, error) {
 				return nil, fmt.Errorf("report: violated %q with evidence %q", o.Property.ID, o.Evidence)
 			}
 		case explore.Inconclusive:
-			if o.Evidence != explore.Bounded || o.Reason == "" || res.Complete {
-				return nil, fmt.Errorf("report: inconclusive %q needs bounded evidence, a reason and complete=false", o.Property.ID)
+			if (o.Evidence != explore.Bounded && o.Evidence != explore.EvUnknown) || o.Reason == "" || complete {
+				return nil, fmt.Errorf("report: inconclusive %q needs bounded or unknown evidence, a reason and complete=false", o.Property.ID)
 			}
 		case explore.InvalidModel:
 			p.Counterexample = o.Trace
@@ -179,7 +229,7 @@ func Build(m *ir.Model, res *explore.Result, meta Meta) (*Report, error) {
 				return nil, fmt.Errorf("report: %s %q needs unknown evidence and a reason", o.Status, o.Property.ID)
 			}
 		case explore.Unknown:
-			return nil, fmt.Errorf("report: the G0 engine does not produce status unknown (%q)", o.Property.ID)
+			return nil, fmt.Errorf("report: the engine does not produce status unknown (%q)", o.Property.ID)
 		default:
 			return nil, fmt.Errorf("report: status %q of %q is outside the vocabulary", o.Status, o.Property.ID)
 		}

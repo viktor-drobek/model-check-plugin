@@ -113,6 +113,7 @@ func (s *Server) parse(ctx context.Context, req *sdk.CallToolRequest, in ParseIn
 
 	var m *ir.Model
 	var rej *Rejection
+	var defines map[string]string
 	switch src.kind {
 	case "promela":
 		if s.cfg.Promela == nil {
@@ -120,9 +121,14 @@ func (s *Server) parse(ctx context.Context, req *sdk.CallToolRequest, in ParseIn
 			out.Reason = "promela frontend not available in this build (engine/frontend/promela, step G1, is not linked into this server); pass the model as petri or ir"
 			return nil, out, nil
 		}
-		m, rej, err = s.cfg.Promela(string(src.data), in.Defines, src.source)
+		var pr *PromelaResult
+		pr, rej, err = s.cfg.Promela(string(src.data), in.Defines, src.source)
 		if err != nil {
 			return nil, nil, err
+		}
+		if pr != nil {
+			m, defines = pr.Model, pr.Defines
+			out.Warnings = append(out.Warnings, pr.Warnings...)
 		}
 	case "petri":
 		m, rej = parsePetri(src)
@@ -142,6 +148,7 @@ func (s *Server) parse(ctx context.Context, req *sdk.CallToolRequest, in ParseIn
 		return nil, nil, err
 	}
 	sess.mu.Lock()
+	sess.defines = defines
 	out.IRPath = filepath.Join(sess.Dir, sess.modelInput.Path)
 	canon := sess.modelBytes
 	sess.mu.Unlock()

@@ -24,8 +24,9 @@ import (
 // directory. The --max-* flags are ceilings a client budget cannot exceed
 // (0 = no ceiling); the defaults applied to budget fields a client leaves at
 // 0 are the CLI defaults, clamped into the ceilings. --cleanup removes the
-// session directories at shutdown (opt-in). The Promela frontend (G1) is not
-// linked into this command yet: mc_parse answers not-executed for Promela.
+// session directories at shutdown (opt-in). The Promela frontend (G1) is
+// linked through mcp.PromelaViaCLI (G4), so mc_parse accepts Promela with
+// the same rejections as `mcd parse --promela`.
 func serve(args []string) int {
 	fs := flag.NewFlagSet("mcd serve", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
@@ -51,6 +52,7 @@ func serve(args []string) int {
 		AllowRead:   allow,
 		Ceiling:     mcp.Budget{States: *maxStates, Depth: *maxDepth, MS: *maxMS, MemoryMB: *maxMem},
 		Concurrency: *concurrency,
+		Promela:     mcp.PromelaViaCLI,
 	})
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "mcd serve:", err)

@@ -23,9 +23,11 @@
 //     recognisable (see rejectedInput).
 //   - A verification result carries, per property, exactly one status of the
 //     11 §14 vocabulary and one evidence level, with the meanings fixed by
-//     package report. Kinds ltl, ctl and progress are `not-executed` in G2
-//     with a reason naming the missing capability and the step (G4/G5) that
-//     brings it; the server never fabricates a verdict.
+//     package report. Kinds ltl and progress are executed since G4 (product
+//     with a Büchi automaton or the model's never claim, nested DFS, weak
+//     fairness on request); ctl is `not-executed` with a reason naming the
+//     missing capability and the step (G5) that brings it; the server never
+//     fabricates a verdict.
 //
 // Every tool answer names its session id. Large results are files under
 // <base>/<session id>/ and the answer carries their paths; every file the
@@ -46,11 +48,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"modelcheck/cli"
 	"modelcheck/ir"
 	"modelcheck/report"
 )
@@ -58,10 +62,53 @@ import (
 // ToolNames are the seven tools, in the order they are registered.
 var ToolNames = []string{"mc_parse", "mc_simulate", "mc_check", "mc_explain", "mc_lint_property", "mc_estimate", "mc_manifest"}
 
-// PromelaFrontend parses Promela source. It returns a model, or a
-// Rejection for input outside the subset, or an error for a tool failure.
-// The G1 frontend is plugged in here by cmd/mcd when it is linked.
-type PromelaFrontend func(src string, defines map[string]string, file string) (*ir.Model, *Rejection, error)
+// PromelaFrontend parses Promela source. It returns the parsed model with
+// its warnings and #define table, or a Rejection for input outside the
+// subset, or an error for a tool failure. cmd/mcd links the G1 frontend
+// through PromelaViaCLI (G4); a Config without it answers not-executed.
+type PromelaFrontend func(src string, defines map[string]string, file string) (*PromelaResult, *Rejection, error)
+
+// PromelaResult is what the frontend produced.
+type PromelaResult struct {
+	Model    *ir.Model
+	Warnings []string
+	// Defines are the object-like #define macros, for the atoms of ltl
+	// formulas checked later in the session.
+	Defines map[string]string
+}
+
+// PromelaViaCLI is the G1 frontend as the CLI runs it (same rejections,
+// same words). -D style defines are passed as NAME=value.
+func PromelaViaCLI(src string, defines map[string]string, file string) (*PromelaResult, *Rejection, error) {
+	var ds []string
+	for _, k := range sortedNames(defines) {
+		if v := defines[k]; v == "" {
+			ds = append(ds, k)
+		} else {
+			ds = append(ds, k+"="+v)
+		}
+	}
+	parsed, rej := cli.ParsePromela([]byte(src), file, ds)
+	if rej != nil {
+		line := 0
+		if i := strings.LastIndex(rej.Path, ":"); i > 0 {
+			if j := strings.LastIndex(rej.Path[:i], ":"); j > 0 {
+				fmt.Sscanf(rej.Path[j+1:i], "%d", &line)
+			}
+		}
+		return nil, &Rejection{Kind: rej.Kind, Construct: "promela", File: file, Line: line, Reason: rej.Message}, nil
+	}
+	return &PromelaResult{Model: parsed.Model, Warnings: parsed.Warnings, Defines: parsed.Defines}, nil, nil
+}
+
+func sortedNames(m map[string]string) []string {
+	var out []string
+	for k := range m {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
+}
 
 // Config is the server configuration; zero values take the defaults noted.
 type Config struct {

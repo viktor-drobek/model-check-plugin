@@ -1,7 +1,9 @@
 // Package cex builds counterexamples: a finite run of the model as a list
 // of steps, each naming the process, the command taken, the variables it
 // changed with before/after values, and the source mapping of the command
-// (14 §4.1, FR-015, NFR-011). Loops (prefix + cycle) arrive with G4.
+// (14 §4.1, FR-015, NFR-011). A cycle counterexample (G4) is the same list
+// with a Loop marker: the steps from Loop.Start on repeat forever, because
+// the state after the last step equals the state before step Loop.Start.
 package cex
 
 import (
@@ -21,8 +23,19 @@ type Trace struct {
 	Final []Value `json:"final_state"`
 	// FinalChannels lists the buffer of every channel in the last state.
 	FinalChannels []ChanValue `json:"final_channels,omitempty"`
-	// Summary is the step texts joined with ", ", e.g. "t1, t4".
+	// Summary is the step texts joined with ", ", e.g. "t1, t4"; for a
+	// lasso the loop part follows "; loop: ".
 	Summary string `json:"summary"`
+	// Loop is present for a cycle counterexample (ltl, progress).
+	Loop *Loop `json:"loop,omitempty"`
+}
+
+// Loop marks the repeated part of a lasso: the steps with index >= Start
+// (1-based, as Step.Index) are the loop, Steps of them; the state after the
+// last step equals the state before step Start.
+type Loop struct {
+	Start int `json:"start"`
+	Steps int `json:"steps"`
 }
 
 // ChanValue is a channel and its buffer, head first; each message is one
@@ -74,7 +87,15 @@ type Ref struct {
 	HasPartner  bool
 	PartnerProc int
 	PartnerEdge int
+
+	// Null marks a step in which no process moves: the weak-fairness
+	// counter advances (Note says why). Proc and Edge are ignored.
+	Null bool
+	Note string
 }
+
+// NullProcess is the process name of a null step.
+const NullProcess = "-"
 
 // Partner is the receiving half of a rendezvous handshake step.
 type Partner struct {
@@ -91,6 +112,12 @@ func Build(l *ir.Layout, states [][]byte, refs []Ref) *Trace {
 	t := &Trace{}
 	var texts []string
 	for i, r := range refs {
+		if r.Null {
+			st := Step{Index: i + 1, Process: NullProcess, Command: r.Note}
+			t.Steps = append(t.Steps, st)
+			texts = append(texts, st.Command)
+			continue
+		}
 		pr := &l.Model.Processes[r.Proc]
 		e := &pr.Edges[r.Edge]
 		st := Step{Index: i + 1, Process: pr.Name, Command: CommandText(e), Origin: e.Origin}
@@ -131,6 +158,40 @@ func Build(l *ir.Layout, states [][]byte, refs []Ref) *Trace {
 	}
 	t.Summary = strings.Join(texts, ", ")
 	return t
+}
+
+// BuildLasso renders a cycle counterexample: the run states[0..n] with
+// refs between them, whose suffix from step loopStart (0-based index into
+// refs) is the loop — states[len(states)-1] must equal states[loopStart].
+func BuildLasso(l *ir.Layout, states [][]byte, refs []Ref, loopStart int) *Trace {
+	t := Build(l, states, refs)
+	t.Loop = &Loop{Start: loopStart + 1, Steps: len(refs) - loopStart}
+	var pre, loop []string
+	for i, s := range t.Steps {
+		if i < loopStart {
+			pre = append(pre, s.Command)
+		} else {
+			loop = append(loop, s.Command)
+		}
+	}
+	t.Summary = strings.Join(pre, ", ") + "; loop: " + strings.Join(loop, ", ")
+	return t
+}
+
+// Prefix and LoopSteps split the steps of a lasso; for a finite run the
+// loop part is empty.
+func (t *Trace) Prefix() []Step {
+	if t.Loop == nil {
+		return t.Steps
+	}
+	return t.Steps[:t.Loop.Start-1]
+}
+
+func (t *Trace) LoopSteps() []Step {
+	if t.Loop == nil {
+		return nil
+	}
+	return t.Steps[t.Loop.Start-1:]
 }
 
 // CommandText is the user-facing text of an edge.

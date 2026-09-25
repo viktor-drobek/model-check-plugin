@@ -35,6 +35,30 @@ type preprocessor struct {
 // produced by an expansion carry the line of the expansion site, as cpp
 // and therefore SPIN's line numbers do.
 func Preprocess(toks []Token, defines []string, file string) ([]Token, *Error) {
+	out, _, err := PreprocessMacros(toks, defines, file)
+	return out, err
+}
+
+// Defines renders the object-like macros as name → body text, for the
+// atoms of LTL formulas (ltl.Options.Defines). Function-like macros are
+// left out.
+func Defines(macros map[string]*Macro) map[string]string {
+	out := map[string]string{}
+	for name, m := range macros {
+		if m.Func {
+			continue
+		}
+		var parts []string
+		for _, t := range m.Body {
+			parts = append(parts, t.String())
+		}
+		out[name] = strings.Join(parts, " ")
+	}
+	return out
+}
+
+// PreprocessMacros is Preprocess that also returns the final macro table.
+func PreprocessMacros(toks []Token, defines []string, file string) ([]Token, map[string]*Macro, *Error) {
 	pp := &preprocessor{file: file, macros: map[string]*Macro{}}
 	for _, d := range defines {
 		name, val := d, "1"
@@ -43,7 +67,7 @@ func Preprocess(toks []Token, defines []string, file string) ([]Token, *Error) {
 		}
 		body, err := Lex(val, "-D "+name)
 		if err != nil {
-			return nil, syntaxErr(file, 0, 0, "-D %s: %s", d, err.Message)
+			return nil, nil, syntaxErr(file, 0, 0, "-D %s: %s", d, err.Message)
 		}
 		body = body[:len(body)-1] // drop EOF
 		for i := range body {
@@ -56,14 +80,14 @@ func Preprocess(toks []Token, defines []string, file string) ([]Token, *Error) {
 		t := toks[i]
 		if t.Kind == Directive {
 			if err := pp.directive(t); err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			i++
 			continue
 		}
 		if t.Kind == EOF {
 			if len(pp.conds) > 0 {
-				return nil, syntaxErr(file, pp.conds[len(pp.conds)-1].line, 1, "#if without #endif")
+				return nil, nil, syntaxErr(file, pp.conds[len(pp.conds)-1].line, 1, "#if without #endif")
 			}
 			pp.out = append(pp.out, t)
 			break
@@ -74,12 +98,12 @@ func Preprocess(toks []Token, defines []string, file string) ([]Token, *Error) {
 		}
 		n, expanded, err := pp.expand(toks, i, nil)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		pp.out = append(pp.out, expanded...)
 		i = n
 	}
-	return pp.out, nil
+	return pp.out, pp.macros, nil
 }
 
 func (pp *preprocessor) live() bool {

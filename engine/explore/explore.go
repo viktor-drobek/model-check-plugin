@@ -43,9 +43,10 @@
 // continuation is a model error ("block in d_step seq"), reported as
 // invalid-model with the run to the offending step.
 //
-// A process marked Claim (a never claim) is stored but never executed and
-// does not take part in the deadlock rule; its product with the system is
-// G4.
+// A process marked Claim (a never claim) is stored but never executed by
+// the safety search and does not take part in the deadlock rule; the
+// cycle search of an ltl / progress property (cycle.go, G4) runs the claim
+// in synchronous product with the system.
 //
 // # Deadlock
 //
@@ -70,7 +71,9 @@
 //	               satisfying state (exhaustive because complete)
 //	verified       undecided after a complete search (evidence exhaustive);
 //	               for reach: a satisfying state was found (witness, exact run)
-//	inconclusive   undecided and a budget stopped the search (bounded)
+//	inconclusive   undecided and a budget stopped the search: evidence
+//	               bounded for the declared states/depth limits, unknown
+//	               for time/memory (plan 14 §6)
 //	invalid-model  undecided when the model misbehaved: domain overflow,
 //	               index out of range, division by zero, blocking inside
 //	               d_step (evidence unknown; the trace to the offending step
@@ -127,6 +130,12 @@ type Options struct {
 	// state count is that of the whole reachable graph (pan -c0). The
 	// verdicts do not change: the first one stands.
 	Sweep bool
+	// Fairness applies to ltl and progress properties: "" or "none",
+	// "weak" (pan -f, see cycle.go), "strong" (not executed, FR-008).
+	Fairness string
+	// Defines are the object-like #define macros of a Promela input, for
+	// the atoms of ltl formulas.
+	Defines map[string]string
 }
 
 // Status and Evidence values (11 §14).
@@ -159,6 +168,11 @@ type Outcome struct {
 	// Trace is the counterexample (violated), the witness (reach verified)
 	// or the run to the offending step (invalid-model).
 	Trace *cex.Trace
+	// Stats are the counters of the property's own search when it had
+	// one (ltl, progress: the product search); nil means the Result's.
+	Stats *Stats
+	// Temporal describes the claim used for an ltl / progress property.
+	Temporal *TemporalInfo
 }
 
 // Result is the outcome of one run.
@@ -175,14 +189,32 @@ type Result struct {
 	MemBytes   int64
 	Elapsed    time.Duration
 	StateBytes int
-	// Complete is true only when the whole reachable graph was expanded.
+	// Complete is true only when the whole reachable graph was expanded
+	// (by the safety search; a temporal property's own search reports its
+	// completeness in Outcome.Stats).
 	Complete bool
 	// Stop says why the search ended: "complete", "all properties decided",
 	// "invalid model", or the budget reason.
 	Stop string
 }
 
-// Run explores m from its initial state.
+// budgetEvidence maps a stop reason to the evidence of an inconclusive
+// verdict (plan 14 §6): a declared bound on states or depth was reached →
+// bounded; time or memory ran out → unknown (the bound was not declared as
+// a search bound but happened).
+func budgetEvidence(stop string) Evidence {
+	if strings.HasPrefix(stop, "state budget") || strings.HasPrefix(stop, "depth budget") {
+		return Bounded
+	}
+	return EvUnknown
+}
+
+// Run explores m from its initial state. Safety properties (deadlock,
+// invariant, reach, assert) are decided by one DFS / BFS over the model;
+// each ltl / progress property is decided by its own product search
+// (cycle.go) with its own counters and completeness (Outcome.Stats). The
+// Result's counters and Complete are those of the safety search, or of
+// the first temporal search when there is no safety property.
 func Run(ctx context.Context, m *ir.Model, opt Options) (*Result, error) {
 	start := time.Now()
 	c, err := compile(m)
@@ -191,6 +223,11 @@ func Run(ctx context.Context, m *ir.Model, opt Options) (*Result, error) {
 	}
 	if opt.Mode == "" {
 		opt.Mode = DFS
+	}
+	switch opt.Fairness {
+	case "", "none", "weak", "strong":
+	default:
+		return nil, fmt.Errorf("fairness must be none, weak or strong, got %q", opt.Fairness)
 	}
 	newVisited := opt.NewVisited
 	if newVisited == nil {
@@ -204,12 +241,36 @@ func Run(ctx context.Context, m *ir.Model, opt Options) (*Result, error) {
 		res:     &Result{StateBytes: c.layout.Size},
 	}
 	s.initOutcomes()
-	if opt.Mode == BFS {
-		s.bfs()
-	} else {
-		s.dfs()
+	var temporal []int
+	for i, p := range c.props {
+		if p.Kind == KindLTL || p.Kind == KindProgress {
+			temporal = append(temporal, i)
+		}
 	}
-	s.finish()
+	hasSafety := s.undecided > 0
+	if hasSafety || len(temporal) == 0 {
+		if opt.Mode == BFS {
+			s.bfs()
+		} else {
+			s.dfs()
+		}
+		s.finish()
+	}
+	for _, i := range temporal {
+		o, err := runCycle(s, m, c.props[i], i, opt)
+		if err != nil {
+			return nil, err
+		}
+		s.res.Outcomes[i] = o
+	}
+	if !hasSafety && len(temporal) > 0 {
+		if st := s.res.Outcomes[temporal[0]].Stats; st != nil {
+			s.res.States, s.res.Transitions, s.res.AtomicSteps, s.res.MaxDepth = st.States, st.Transitions, st.AtomicSteps, st.MaxDepth
+			s.res.MemBytes, s.res.Complete, s.res.Stop = st.MemBytes, st.Complete, st.Stop
+		} else {
+			s.res.Complete, s.res.Stop = true, "not executed"
+		}
+	}
 	s.res.Elapsed = time.Since(start)
 	return s.res, nil
 }
@@ -311,8 +372,8 @@ func compile(m *ir.Model) (*compiled, error) {
 			if ce.assert, err = l.Compile(e.Assert, p); err != nil {
 				return nil, fmt.Errorf("%s edge %d assert: %w", pr.Name, i, err)
 			}
-			if e.Assert != nil {
-				c.hasAsrt = true
+			if e.Assert != nil && !pr.Claim {
+				c.hasAsrt = true // a claim's assert belongs to the claim, not to the model
 			}
 			if ce.usesTimeout {
 				c.hasTimeout = true
@@ -451,6 +512,18 @@ type frame struct {
 	pend     *cEdge // the rendezvous send whose receivers are enumerated
 	phase    int8   // 0: timeout = false; 1: timeout = true (see package doc)
 	exclOnly bool
+	// Product search (cycle.go): the claim edge taken to reach this state
+	// (-1 none), a null fairness step (0 none, else target copy + 1), the
+	// claim iterator (cpos: -1 not started, -2 no claim step here; cedge:
+	// the chosen claim edge or -1) and whether the null step was offered.
+	viaClaim int32
+	viaNull  int8
+	cpos     int32
+	cedge    int32
+	cto      int32 // the claim's location after the chosen claim step
+	eps      int8
+	sysSeen  bool // a system move was returned from this frame
+	stut     bool // the stutter move was returned for the current claim edge
 }
 
 type search struct {
@@ -486,10 +559,15 @@ func (s *search) initOutcomes() {
 		switch p.Kind {
 		case ir.KindDeadlock, ir.KindInvariant, ir.KindReach, ir.KindAssert:
 			s.undecided++
+		case KindLTL, KindProgress:
+			// Placeholder: Run replaces it by the product search's outcome.
+			o.Status = NotExecuted
+			o.Evidence = EvUnknown
+			o.Reason = "temporal property not yet checked"
 		default:
 			o.Status = NotExecuted
 			o.Evidence = EvUnknown
-			o.Reason = fmt.Sprintf("property kind %q is not executed by this engine version (it executes deadlock, invariant, reach, assert)", p.Kind)
+			o.Reason = fmt.Sprintf("property kind %q is not executed by this engine version (it executes deadlock, invariant, reach, assert, ltl, progress)", p.Kind)
 		}
 		s.res.Outcomes = append(s.res.Outcomes, o)
 	}
@@ -1035,7 +1113,7 @@ func (s *search) ref(proc, edge, part int32) cex.Ref {
 
 // ---- DFS --------------------------------------------------------------------
 
-const frameBytes = 48
+const frameBytes = 64
 
 // intermediate reports whether state is inside an atomic sequence whose
 // holder can move (pan does not store such states).
@@ -1367,7 +1445,7 @@ func (s *search) finish() {
 			}
 			continue
 		}
-		o.Status, o.Evidence = Inconclusive, Bounded
+		o.Status, o.Evidence = Inconclusive, budgetEvidence(s.stop)
 		switch {
 		case s.budgetHit:
 			o.Reason = s.stop

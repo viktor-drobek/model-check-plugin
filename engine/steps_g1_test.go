@@ -357,17 +357,37 @@ func registerG1Steps(sc *godog.ScenarioContext) {
 		}
 		return fmt.Errorf("no location of the claim carries %q", label)
 	})
-	sc.Step(`^the IR has a claim process whose locations carry no label$`, func() error {
+	// Amended in G4: a claim's exit location carries `end` (claim
+	// termination), so the check is for the absence of one label.
+	sc.Step(`^the IR has a claim process whose locations carry no "([^"]*)" label$`, func(label string) error {
 		pm, err := claim()
 		if err != nil {
 			return err
 		}
 		for _, l := range pm["locations"].([]any) {
-			if len(asList(l.(map[string]any)["labels"])) > 0 {
-				return fmt.Errorf("claim location %v carries labels", l)
+			for _, lb := range asList(l.(map[string]any)["labels"]) {
+				if lb == label {
+					return fmt.Errorf("claim location %v carries %q", l, label)
+				}
 			}
 		}
 		return nil
+	})
+	sc.Step(`^the IR has a property "([^"]*)" of kind "([^"]*)"$`, func(id, kind string) error {
+		m, err := w.irDoc()
+		if err != nil {
+			return err
+		}
+		for _, p := range asAny(m["properties"]) {
+			pm := p.(map[string]any)
+			if pm["id"] == id {
+				if pm["kind"] != kind {
+					return fmt.Errorf("property %s has kind %v", id, pm["kind"])
+				}
+				return nil
+			}
+		}
+		return fmt.Errorf("no property %q in the IR", id)
 	})
 	sc.Step(`^the IR has a claim process with an edge whose text is "([^"]*)"$`, func(text string) error {
 		pm, err := claim()

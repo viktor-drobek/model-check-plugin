@@ -306,9 +306,11 @@ func TestBlockedAtomicLosesExclusivity(t *testing.T) {
 
 func TestUnsupportedKindIsNotExecuted(t *testing.T) {
 	m := petrinet1()
-	m.Properties = append(m.Properties, ir.Property{ID: "live", Kind: "ltl", Text: "[]<> fire(t1)"})
+	// ltl and progress are executed since G4; ctl is the remaining
+	// unsupported kind of plan 14 §6 until G5.
+	m.Properties = append(m.Properties, ir.Property{ID: "live", Kind: "ctl", Text: "AG EF fire(t1)"})
 	r := run(t, m, Options{})
-	if o := outcome(t, r, "live"); o.Status != NotExecuted || o.Evidence != EvUnknown || !strings.Contains(o.Reason, "ltl") {
+	if o := outcome(t, r, "live"); o.Status != NotExecuted || o.Evidence != EvUnknown || !strings.Contains(o.Reason, "ctl") {
 		t.Fatalf("%s/%s: %s", o.Status, o.Evidence, o.Reason)
 	}
 }

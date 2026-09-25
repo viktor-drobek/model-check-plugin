@@ -264,12 +264,15 @@ type Process struct {
 }
 
 // Property kinds the IR can carry. The explorer executes Deadlock,
-// Invariant, Reach and Assert in G0; other kinds are reported not-executed.
+// Invariant, Reach and Assert since G0, LTL and Progress since G4; other
+// kinds are reported not-executed.
 const (
 	KindDeadlock  = "deadlock"  // no reachable deadlock (definition: explore package)
 	KindInvariant = "invariant" // Expr holds in every reachable state
 	KindReach     = "reach"     // some reachable state satisfies Expr
 	KindAssert    = "assert"    // no edge assert fails on any reachable step
+	KindLTL       = "ltl"       // Formula holds on every infinite run (explore/cycle.go)
+	KindProgress  = "progress"  // no non-progress cycle (explore/cycle.go)
 )
 
 // Property is a verification question about the model.
@@ -278,6 +281,10 @@ type Property struct {
 	Kind string `json:"kind"`
 	// Expr is required for invariant and reach, ignored for the others.
 	Expr *Expr `json:"expr,omitempty"`
+	// Formula is the LTL formula of an `ltl` property in SPIN syntax (G4).
+	// An `ltl` property without a formula means "the model as written":
+	// its never claim, else its accept labels (SPIN's pan -a).
+	Formula string `json:"formula,omitempty"`
 	// Text is the user-facing statement of the property.
 	Text   string  `json:"text,omitempty"`
 	Origin *Origin `json:"origin,omitempty"`

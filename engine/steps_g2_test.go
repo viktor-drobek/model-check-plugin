@@ -674,8 +674,8 @@ func registerG2Steps(sc *godog.ScenarioContext) {
 		}
 		return nil
 	})
-	sc.Step(`^the explanation says that loop counterexamples arrive with G4$`, func() error {
-		if !strings.Contains(str(w.out, "loop_note"), "G4") {
+	sc.Step(`^the explanation says that the run is finite and the loop is empty$`, func() error {
+		if !strings.Contains(str(w.out, "loop_note"), "finite run") {
 			return fmt.Errorf("loop_note %q", str(w.out, "loop_note"))
 		}
 		return nil

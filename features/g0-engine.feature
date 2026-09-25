@@ -139,7 +139,10 @@ Feature: G0 engine — Petri nets through IR to a JSON verdict via the mcd CLI
     Given the IR file "testdata/ir/counters-10-6.json"
     When I run "mcd check --ir <file> --budget-states 0 --budget-depth 0 --budget-ms 20"
     Then the exit code is 0
-    And the property "deadlock" has status "inconclusive" with evidence "bounded"
+    # G4 (plan 14 §6 as amended): time and memory are limits that happened, not
+    # declared search bounds, so their evidence is `unknown`; states and depth
+    # stay `bounded`. Since G4, 0 in a budget flag means the default.
+    And the property "deadlock" has status "inconclusive" with evidence "unknown"
     And the reason of "deadlock" mentions "time"
     And the report is not complete
 

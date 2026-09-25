@@ -40,7 +40,11 @@ import (
 //   - mtype values: within one declaration the last name is 1, counting
 //     up backwards; a later declaration continues above the earlier one.
 //   - A never claim becomes a process with Claim = true and no `-end-`;
-//     the explorer stores it and does not run it (G4).
+//     its exit location (the closing brace) carries the `end` label, which
+//     for a claim means "the claim terminated" — a violation in the
+//     product search (explore/cycle.go). The model gets an `ltl` property
+//     `never` without formula for it; a model with accept labels and no
+//     claim gets `accept`; a model with progress labels gets `progress`.
 
 type node struct {
 	atomic []int // enclosing atomic block ids (innermost last)
@@ -216,7 +220,6 @@ func lower(mod *Module, file, name string) (*ir.Model, []string, map[string][]in
 	}
 	if mod.Never != nil {
 		l.insts = append(l.insts, &instance{pt: mod.Never, pid: len(l.insts), claim: true})
-		l.warnings = append(l.warnings, fmt.Sprintf("never claim (line %d) parsed and stored as a claim process; not executed in this engine version — safety properties only; the claim's product with the system is G4", mod.Never.Pos.Line))
 	}
 	for _, in := range l.insts {
 		in.name = fmt.Sprintf("%s:%d", in.pt.Name, in.pid)
@@ -282,6 +285,35 @@ func lower(mod *Module, file, name string) (*ir.Model, []string, map[string][]in
 	}
 	if hasAssert {
 		m.Properties = append(m.Properties, ir.Property{ID: "assert", Kind: ir.KindAssert, Text: "no assert statement fails (SPIN: assertion violations)"})
+	}
+	hasAccept, hasProgress := false, false
+	for _, in := range l.insts {
+		if in.claim {
+			continue
+		}
+		for _, loc := range in.proc.Locations {
+			for _, lb := range loc.Labels {
+				switch lb {
+				case ir.Accept:
+					hasAccept = true
+				case ir.Progress:
+					hasProgress = true
+				}
+			}
+		}
+	}
+	switch {
+	case mod.Never != nil:
+		m.Properties = append(m.Properties, ir.Property{ID: "never", Kind: ir.KindLTL,
+			Text:   fmt.Sprintf("the never claim (line %d) accepts no run: no acceptance cycle through its accept labels and no run to its end (SPIN: pan -a)", mod.Never.Pos.Line),
+			Origin: &ir.Origin{File: file, Line: mod.Never.Pos.Line, Name: "never"}})
+	case hasAccept:
+		m.Properties = append(m.Properties, ir.Property{ID: "accept", Kind: ir.KindLTL,
+			Text: "no acceptance cycle through an accept label of a process (SPIN: pan -a)"})
+	}
+	if hasProgress {
+		m.Properties = append(m.Properties, ir.Property{ID: "progress", Kind: ir.KindProgress,
+			Text: "no non-progress cycle: every infinite run visits a progress label infinitely often (SPIN: pan -l)"})
 	}
 	if l.printfs > 0 {
 		l.warnings = append(l.warnings, fmt.Sprintf("printf: %d statement(s) kept as no-op steps so that state counts match SPIN; their output is not produced", l.printfs))
@@ -504,7 +536,12 @@ func (l *lowerer) lowerInstance(in *instance) *Error {
 	if !in.claim {
 		in.deadNode = l.newNode()
 		in.nodes[in.deadNode].name = "-dead-"
-		in.nodes[in.endNode].labels = append(in.nodes[in.endNode].labels, ir.End)
+	}
+	// For a process, `end` on the exit location marks a valid end state;
+	// for a claim it marks the claim's termination (a violation).
+	in.nodes[in.endNode].labels = append(in.nodes[in.endNode].labels, ir.End)
+	if in.claim {
+		in.nodes[in.endNode].name = "-end-"
 	}
 	if err := l.lowerSeq(pt.Body.Items, in.entry, in.endNode, seqCtx{breakTo: -1}); err != nil {
 		return err

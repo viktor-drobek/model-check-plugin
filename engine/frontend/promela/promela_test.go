@@ -327,15 +327,25 @@ func TestNeverClaimAndWarnings(t *testing.T) {
 	if len(m.Processes) != 2 || !m.Processes[1].Claim || m.Processes[0].Claim {
 		t.Fatalf("claim flags: %+v", m.Processes)
 	}
-	if len(warnings) != 2 || !strings.Contains(warnings[0], "never claim") || !strings.Contains(warnings[1], "printf") {
+	if len(warnings) != 1 || !strings.Contains(warnings[0], "printf") {
 		t.Fatalf("warnings %v", warnings)
+	}
+	if n := len(m.Properties); n != 2 || m.Properties[1].ID != "never" || m.Properties[1].Kind != ir.KindLTL {
+		t.Fatalf("properties %+v", m.Properties)
 	}
 	res, err2 := explore.Run(context.Background(), m, explore.Options{})
 	if err2 != nil {
 		t.Fatal(err2)
 	}
-	if res.States != 2 || !res.Complete {
-		t.Fatalf("claim must be ignored: %d states complete=%v", res.States, res.Complete)
+	// The safety search ignores the claim (2 states); the claim's own
+	// product search decides the `never` property (G4).
+	if res.States != 2 || res.Outcomes[0].Status != explore.Verified {
+		t.Fatalf("claim must be ignored by the safety search: %d states, deadlock %s", res.States, res.Outcomes[0].Status)
+	}
+	// x is 0 initially, so the claim's only edge (x == 1) is blocked at
+	// the first claim step: the claim accepts no run — verified.
+	if res.Outcomes[1].Status != explore.Verified {
+		t.Fatalf("never: %s %q", res.Outcomes[1].Status, res.Outcomes[1].Reason)
 	}
 }
 

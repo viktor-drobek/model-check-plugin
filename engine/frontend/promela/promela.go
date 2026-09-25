@@ -15,6 +15,9 @@ type Result struct {
 	Module *Module
 	// PanLines: see Lowered.PanLines.
 	PanLines map[string][]int
+	// Defines are the object-like #define macros (including -D symbols),
+	// name → body text, for the atoms of LTL formulas.
+	Defines map[string]string
 }
 
 // Parse runs the whole frontend on src: lexer, preprocessor (with -D
@@ -25,7 +28,7 @@ func Parse(src []byte, file string, defines []string) (*Result, *Error) {
 	if err != nil {
 		return nil, err
 	}
-	toks, err = Preprocess(toks, defines, file)
+	toks, macros, err := PreprocessMacros(toks, defines, file)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +41,7 @@ func Parse(src []byte, file string, defines []string) (*Result, *Error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Result{Model: lw.Model, Warnings: lw.Warnings, Module: mod, PanLines: lw.PanLines}, nil
+	return &Result{Model: lw.Model, Warnings: lw.Warnings, Module: mod, PanLines: lw.PanLines, Defines: Defines(macros)}, nil
 }
 
 // ParseTokens is the parser stage alone.

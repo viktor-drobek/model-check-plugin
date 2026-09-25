@@ -143,6 +143,9 @@ type Session struct {
 	model      *ir.Model
 	modelBytes []byte // canonical JSON of model (ir.MarshalJSON)
 	modelInput ManifestInput
+	// defines is the #define table of a Promela model parsed in this
+	// session, for the atoms of ltl formulas (nil otherwise).
+	defines map[string]string
 	// cexs maps counterexample ids to their metadata.
 	cexs []cexEntry
 }

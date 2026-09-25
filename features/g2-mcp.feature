@@ -31,10 +31,10 @@
 #      bounded, approximate, unknown), with the meanings fixed by
 #      features/g0-engine.feature. Budget exhaustion is `inconclusive` with the
 #      resource named (resource error); a model that misbehaves is
-#      `invalid-model` (model error). Property kinds ltl, ctl and progress are
-#      `not-executed` in G2 and the reason names the missing capability and
-#      the step that brings it (G4 for LTL and progress, G5 for CTL); the
-#      server never fabricates a verdict for them.
+#      `invalid-model` (model error). Property kind ctl is `not-executed` and
+#      the reason names the missing capability and the step that brings it
+#      (G5); ltl and progress are executed since G4 (features/g4-ltl.feature);
+#      the server never fabricates a verdict.
 #
 # Aggregation: statuses are not aggregated unless the caller asks
 # (`aggregate: true`); then the priority is
@@ -166,7 +166,9 @@ Feature: G2 — MCP server with the seven tools, session directory, budgets
     Then the applied budget has states 1000
     And the budget notes are empty
 
-  Scenario Outline: ltl, ctl and progress are not executed in G2 and the reason names the missing step
+  # Amended in G4: ltl and progress are executed since G4 (features/g4-ltl.feature);
+  # ctl remains not-executed until G5.
+  Scenario Outline: ctl is not executed and the reason names the missing step
     Given a session in which the Petri net "testdata/petri/petrinet1.json" was parsed
     When I call "mc_check" in that session with properties:
       | id   | kind   | expr |
@@ -178,8 +180,6 @@ Feature: G2 — MCP server with the seven tools, session directory, budgets
 
     Examples:
       | kind     | step | capability   |
-      | ltl      | G4   | LTL          |
-      | progress | G4   | non-progress |
       | ctl      | G5   | CTL          |
 
   Scenario: an unknown property kind is a tool error, not a status
@@ -201,14 +201,14 @@ Feature: G2 — MCP server with the seven tools, session directory, budgets
     And the explanation has 1 prefix steps and an empty loop
     And the explanation step 1 changes "p1" from 1 to 0 and "p2" from 0 to 1
     And the explanation maps its steps to the user names "t1"
-    And the explanation says that loop counterexamples arrive with G4
+    And the explanation says that the run is finite and the loop is empty
 
   Scenario: the aggregate status is computed only on request and follows the fixed priority
     Given a session in which the Petri net "testdata/petri/petrinet1.json" was parsed
     When I call "mc_check" in that session with aggregate requested and properties:
       | id   | kind     | expr |
       | dl   | deadlock |      |
-      | live | ltl      | p6   |
+      | live | ctl      | p6   |
     Then the answer property "dl" has status "violated" with evidence "exhaustive"
     And the answer property "live" has status "not-executed" with evidence "unknown"
     And the aggregate status is "not-executed"
