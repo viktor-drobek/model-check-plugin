@@ -303,6 +303,20 @@ func registerG2Steps(sc *godog.ScenarioContext) {
 		}
 		return call("mc_check", inSession(map[string]any{"properties": props}))
 	})
+	sc.Step(`^I call "mc_check" in that session with fairness "([^"]*)" and properties:$`, func(fair string, t *godog.Table) error {
+		props, err := propsFromTable(t)
+		if err != nil {
+			return err
+		}
+		return call("mc_check", inSession(map[string]any{"properties": props, "fairness": fair}))
+	})
+	sc.Step(`^I call "mc_check" in that session with aggregate requested, fairness "([^"]*)" and properties:$`, func(fair string, t *godog.Table) error {
+		props, err := propsFromTable(t)
+		if err != nil {
+			return err
+		}
+		return call("mc_check", inSession(map[string]any{"properties": props, "aggregate": true, "fairness": fair}))
+	})
 	sc.Step(`^I call "mc_check" in that session with aggregate requested and properties:$`, func(t *godog.Table) error {
 		props, err := propsFromTable(t)
 		if err != nil {

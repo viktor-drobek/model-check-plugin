@@ -3,8 +3,8 @@
 // and is it a size this engine can finish?
 //
 // The answer is measured, then extrapolated, and the two are kept apart.
-// Measured: a sequence of breadth-first runs with growing depth budgets,
-// each inside the time left, giving the number of states within each depth.
+// Measured: one breadth-first search under the time budget, reporting the
+// number of states within each depth it finished expanding.
 // Extrapolated: a growth factor fitted to the last levels (the geometric
 // mean of their ratios) and, from it, a projection to a target depth. The
 // projection carries evidence `approximate`; only a run that expanded the
@@ -12,14 +12,19 @@
 // extrapolated at all.
 //
 // Size classes are the A4 bounds of plan 14 §12, fixed at checkpoint K1 in
-// steps/spike-confirmation.md:
+// steps/spike-confirmation.md. Two of those bounds decide the class here —
+// the number of states and the width of the state vector:
 //
-//	small    up to 1e5 states and depth
-//	medium   up to 1e6 states, depth up to 1e6, state vector up to 128 bytes,
-//	         within 60 s and 1 GiB
+//	small    up to 1e5 states, state vector up to 128 bytes
+//	medium   up to 1e6 states, state vector up to 128 bytes
 //	large    beyond them — the plan's instruction for such a model is to say
 //	         so in advance instead of waiting silently, so the recommendation
 //	         names what to do (bound the model, or accept `inconclusive`).
+//
+// The other A4 bounds — depth 1e6, 60 s, 1 GiB — are budgets of a run, not
+// properties of the model, so they are not part of the classification; the
+// depth actually reached is reported separately as depth_reached, and the
+// recommendation of each class names the budgets it expects to fit.
 //
 // An estimate is never a verification result: no property gets a status
 // here, and the caller is told so in Result.Note.
@@ -29,7 +34,6 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"strings"
 	"time"
 
 	"modelcheck/explore"
@@ -47,10 +51,7 @@ const (
 )
 
 // Level is the number of states within a depth.
-type Level struct {
-	Depth  int `json:"depth"`
-	States int `json:"states"`
-}
+type Level = explore.Level
 
 // Growth is the per-level measurement and the factor fitted to it.
 type Growth struct {
@@ -106,48 +107,33 @@ type Options struct {
 const Note = "estimate of the state space by partial breadth-first exploration; not a verification result — no property gets a status from it"
 
 // Run measures m under the options and returns the estimate.
+//
+// One breadth-first search does the measuring: it reports the number of
+// states within each depth it finished expanding, so the levels are exact
+// and cost one pass rather than one pass per level. Whatever the time
+// budget stops is simply the last depth reported.
 func Run(ctx context.Context, m *ir.Model, opt Options) (*Result, error) {
 	limit := opt.TimeLimitMS
 	if limit <= 0 {
 		limit = 1000
 	}
 	start := time.Now()
-	deadline := start.Add(time.Duration(limit) * time.Millisecond)
-	runCtx, cancel := context.WithDeadline(ctx, deadline)
+	runCtx, cancel := context.WithDeadline(ctx, start.Add(time.Duration(limit)*time.Millisecond))
 	defer cancel()
 	out := &Result{TimeLimitMS: limit, Growth: Growth{PerLevel: []Level{}}, Note: Note}
-	budget := opt.Budget
-	for d := 1; ; d++ {
-		if time.Now().After(deadline) {
-			break
-		}
-		budget.MaxDepth = d
-		res, err := explore.Run(runCtx, m, explore.Options{Mode: explore.BFS, Budget: budget, Watch: []*ir.Expr{}})
-		if err != nil {
-			return nil, err
-		}
-		out.StateBytes = res.StateBytes
-		// A deeper run stores a superset of the shallower one unless the
-		// time cut it short, so the maximum is what was actually seen.
-		if res.States > out.StatesVisited {
-			out.StatesVisited, out.Transitions, out.DepthReached = res.States, res.Transitions, res.MaxDepth
-		}
-		if runCtx.Err() != nil {
-			// The time ran out inside this run: its counts are partial and
-			// are not a level.
-			break
-		}
-		// A run with MaxDepth = d stores the states at distance <= d+1 (the
-		// frontier is stored but not expanded), so level d+1 is what it counts.
-		out.Growth.PerLevel = append(out.Growth.PerLevel, Level{Depth: d + 1, States: res.States})
-		if res.Complete {
-			out.Complete = true
-			break
-		}
-		if res.Stop != "" && res.Stop != "complete" && !strings.HasPrefix(res.Stop, "depth") {
-			// The states or memory bound was hit: deeper runs only repeat it.
-			break
-		}
+	// The estimate measures the state space, not the properties: a copy
+	// without them keeps a temporal property from starting a product search
+	// that has nothing to do with the question asked here.
+	mm := *m
+	mm.Properties = nil
+	res, err := explore.Run(runCtx, &mm, explore.Options{Mode: explore.BFS, Budget: opt.Budget, Sweep: true, Watch: []*ir.Expr{}})
+	if err != nil {
+		return nil, err
+	}
+	out.StatesVisited, out.Transitions, out.DepthReached = res.States, res.Transitions, res.MaxDepth
+	out.StateBytes, out.Complete = res.StateBytes, res.Complete
+	if len(res.Levels) > 0 {
+		out.Growth.PerLevel = res.Levels
 	}
 	elapsed := time.Since(start)
 	out.ElapsedMS = elapsed.Milliseconds()
@@ -198,6 +184,10 @@ func project(r *Result, target int) Projection {
 		p.StatesAtTarget = r.StatesVisited
 		p.TargetDepth = target
 		p.Note = fmt.Sprintf("the reachable graph was expanded completely: %d states is exact, there is nothing to extrapolate", r.StatesVisited)
+		if target > 0 && len(r.Growth.PerLevel) > 0 && target < r.Growth.PerLevel[len(r.Growth.PerLevel)-1].Depth {
+			p.StatesAtTarget = statesWithin(r.Growth.PerLevel, target)
+			p.Note += fmt.Sprintf("; within depth %d there are %d of them, measured, not projected", target, p.StatesAtTarget)
+		}
 		return p
 	case r.Growth.Rate <= 0:
 		p.Note = "fewer than two levels were measured within the time limit: no growth factor, and therefore no projection"
@@ -250,8 +240,8 @@ func classify(r *Result) Size {
 			how = "the states seen so far (no larger projection)"
 		}
 	}
-	s := Size{Basis: fmt.Sprintf("%s (%d) against the A4 bounds of plan 14 §12: small up to %d states, medium up to %d states with a state vector up to %d bytes; the state vector here is %d bytes",
-		how, states, SmallStates, MediumStates, MediumVector, r.StateBytes)}
+	s := Size{Basis: fmt.Sprintf("%s (%d) against the A4 bounds of plan 14 §12, which the class reads off two numbers: small up to %d states, medium up to %d states, both with a state vector up to %d bytes; the state vector here is %d bytes, and the depth reached (%d) is reported separately because it is a bound of the run, not of the model",
+		how, states, SmallStates, MediumStates, MediumVector, r.StateBytes, r.DepthReached)}
 	switch {
 	case states <= SmallStates && r.StateBytes <= MediumVector:
 		s.Class = "small"

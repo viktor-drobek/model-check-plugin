@@ -31,10 +31,10 @@
 #      bounded, approximate, unknown), with the meanings fixed by
 #      features/g0-engine.feature. Budget exhaustion is `inconclusive` with the
 #      resource named (resource error); a model that misbehaves is
-#      `invalid-model` (model error). Property kind ctl is `not-executed` and
-#      the reason names the missing capability and the step that brings it
-#      (G5); ltl and progress are executed since G4 (features/g4-ltl.feature);
-#      the server never fabricates a verdict.
+#      `invalid-model` (model error). Every property kind of plan 14 §6 is
+#      executed since G5; what is still `not-executed` is an assumption the
+#      engine cannot honour (fairness for ctl, strong fairness for ltl), and
+#      its reason names that assumption; the server never fabricates a verdict.
 #
 # Aggregation: statuses are not aggregated unless the caller asks
 # (`aggregate: true`); then the priority is
@@ -166,21 +166,27 @@ Feature: G2 — MCP server with the seven tools, session directory, budgets
     Then the applied budget has states 1000
     And the budget notes are empty
 
-  # Amended in G4: ltl and progress are executed since G4 (features/g4-ltl.feature);
-  # ctl remains not-executed until G5.
-  Scenario Outline: ctl is not executed and the reason names the missing step
+  # Amended in G4: ltl and progress are executed since G4 (features/g4-ltl.feature).
+  # Amended in G5: ctl is executed too (features/g5-ctl-v1.feature), so no
+  # property kind is refused for being unimplemented any more. What remains
+  # `not-executed` is an assumption the engine cannot honour: fairness for a
+  # ctl property (plan 14 §4.2 puts fair CTL out of scope) and strong
+  # fairness for an ltl one (FR-008). Both are refused with a reason, never
+  # answered by dropping the assumption.
+  Scenario Outline: an assumption the engine cannot honour is not-executed, with a reason
     Given a session in which the Petri net "testdata/petri/petrinet1.json" was parsed
-    When I call "mc_check" in that session with properties:
-      | id   | kind   | expr |
-      | live | <kind> | p6   |
+    When I call "mc_check" in that session with fairness "<fairness>" and properties:
+      | id   | kind   | formula   |
+      | live | <kind> | <formula> |
     Then the call is not an error
     And the answer property "live" has status "not-executed" with evidence "unknown"
-    And the answer reason of "live" mentions "<step>"
     And the answer reason of "live" mentions "<capability>"
+    And the answer reason of "live" mentions "<note>"
 
     Examples:
-      | kind     | step | capability   |
-      | ctl      | G5   | CTL          |
+      | kind | formula   | fairness | capability | note        |
+      | ctl  | AG (p6 == 0) | weak  | CTL        | plan 14 §4.2 |
+      | ltl  | [](p6 == 0)  | strong | strong fairness | FR-008 |
 
   Scenario: an unknown property kind is a tool error, not a status
     Given a session in which the Petri net "testdata/petri/petrinet1.json" was parsed
@@ -205,10 +211,10 @@ Feature: G2 — MCP server with the seven tools, session directory, budgets
 
   Scenario: the aggregate status is computed only on request and follows the fixed priority
     Given a session in which the Petri net "testdata/petri/petrinet1.json" was parsed
-    When I call "mc_check" in that session with aggregate requested and properties:
-      | id   | kind     | expr |
-      | dl   | deadlock |      |
-      | live | ctl      | p6   |
+    When I call "mc_check" in that session with aggregate requested, fairness "weak" and properties:
+      | id   | kind     | expr | formula      |
+      | dl   | deadlock |      |              |
+      | live | ctl      |      | AG (p6 == 0) |
     Then the answer property "dl" has status "violated" with evidence "exhaustive"
     And the answer property "live" has status "not-executed" with evidence "unknown"
     And the aggregate status is "not-executed"

@@ -28,6 +28,7 @@ type ParseIn struct {
 	Petri     map[string]any    `json:"petri,omitempty" jsonschema:"P/T net as JSON (frontend/petri/schema.json)"`
 	IR        any               `json:"ir,omitempty" jsonschema:"IR JSON (mcd-ir/1); validated and re-emitted canonically"`
 	Defines   map[string]string `json:"defines,omitempty" jsonschema:"preprocessor defines for Promela (name = value)"`
+	MaxProcs  int               `json:"max_procs,omitempty" jsonschema:"instances pre-instantiated per proctype that a run can create repeatedly (default 8); a run that finds none free exhausts a declared bound and makes the check inconclusive, never a verdict"`
 	File      *FileRef          `json:"file,omitempty" jsonschema:"read this file instead of an inline input; allowed only under an --allow-read prefix"`
 }
 
@@ -122,7 +123,7 @@ func (s *Server) parse(ctx context.Context, req *sdk.CallToolRequest, in ParseIn
 			return nil, out, nil
 		}
 		var pr *PromelaResult
-		pr, rej, err = s.cfg.Promela(string(src.data), in.Defines, src.source)
+		pr, rej, err = s.cfg.Promela(string(src.data), in.Defines, src.source, in.MaxProcs)
 		if err != nil {
 			return nil, nil, err
 		}

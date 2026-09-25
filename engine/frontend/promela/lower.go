@@ -802,10 +802,13 @@ func (l *lowerer) lowerInstance(in *instance) *Error {
 }
 
 // declare adds a local; fresh is false when the name is already a local of
-// the process, which SPIN allows for a declaration in another scope (it
-// keeps one variable and re-initialises it). The types must agree: two
-// different types under one name would need two slots, which the flat
-// per-process set of locals cannot give.
+// the process, which SPIN allows for a declaration in another scope: it
+// keeps one variable and re-initialises it at each declaration (probes
+// against SPIN 6.5.2 on both shapes of nested scope — two calls of an
+// inline that declares a variable, and two plain `{ }` blocks that declare
+// the same name; see the tests in promela_g5_test.go). The types must
+// agree: two different types under one name would need two slots, which the
+// flat per-process set of locals cannot give.
 func (l *lowerer) declare(v *ir.Var, at Pos) (bool, *Error) {
 	in := l.cur
 	if in.declared[v.Name] {
@@ -1231,6 +1234,17 @@ func (l *lowerer) lowerStmt(it Item, from, to int, ctx seqCtx, first bool) *Erro
 	return semanticErr(l.file, it.Pos.Line, it.Pos.Col, "internal: unknown statement %T", it.Stmt)
 }
 
+// warnOnce records a warning unless the same text is already there, so
+// that a construct used many times is reported once.
+func (l *lowerer) warnOnce(msg string) {
+	for _, w := range l.warnings {
+		if w == msg {
+			return
+		}
+	}
+	l.warnings = append(l.warnings, msg)
+}
+
 func appendUnique(xs []string, s string) []string {
 	for _, x := range xs {
 		if x == s {
@@ -1400,6 +1414,7 @@ func (l *lowerer) expr(e Expr, pid int, constOnly bool) (*ir.Expr, *Error) {
 		if n < 0 || n >= int64(len(l.insts)) {
 			return nil, semanticErr(l.file, x.Pos.Line, x.Pos.Col, "pc_value(%d): the model has %d process instances", n, len(l.insts))
 		}
+		l.warnOnce(fmt.Sprintf("pc_value (line %d): the value is this engine's control-location numbering, which is built differently from pan's internal state numbers; a model whose behaviour depends on the number behaves differently here than under SPIN", x.Pos.Line))
 		return ir.PC(int(n)), nil
 	case *ChanExpr:
 		name, sel, err := l.chanRef(x.Chan, x.Index, pid, x.Pos)

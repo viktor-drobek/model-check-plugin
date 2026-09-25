@@ -24,17 +24,19 @@ import (
 var checkKinds = map[string]bool{"invariant": true, "deadlock": true, "reach": true, "ltl": true, "ctl": true, "progress": true}
 
 // notExecutedReason names, per kind, the missing capability and the step
-// that brings it. It is the only text the server writes for these kinds.
-var notExecutedReason = map[string]string{
-	"ctl": "not implemented until G5: CTL model checking (graph labelling for EX/EU/EG) is not part of this engine version",
-}
+// that brings it. Every kind of plan 14 §6 is executed since G5 (ltl and
+// progress in G4, ctl here), so the table is empty: a `not-executed` now
+// comes from the engine itself, with the engine's own reason (strong
+// fairness for ltl, any fairness for ctl, a kind the IR carries that this
+// version does not know).
+var notExecutedReason = map[string]string{}
 
 // PropertyIn is one property to check.
 type PropertyIn struct {
 	ID      string `json:"id"`
 	Kind    string `json:"kind" jsonschema:"invariant | deadlock | reach | ltl | ctl | progress"`
-	Expr    any    `json:"expr,omitempty" jsonschema:"boolean state expression: IR expression JSON ({op, args, var, value}) or a bare variable name; required for invariant, reach, ctl"`
-	Formula string `json:"formula,omitempty" jsonschema:"ltl only: the formula in SPIN syntax ([] <> U V X ! && || -> <->, atoms are global variables or parenthesised comparisons; #define symbols of a Promela model parsed in this session are expanded); omitted = the model's own never claim, else its accept labels (SPIN pan -a)"`
+	Expr    any    `json:"expr,omitempty" jsonschema:"boolean state expression: IR expression JSON ({op, args, var, value}) or a bare variable name; required for invariant and reach"`
+	Formula string `json:"formula,omitempty" jsonschema:"ltl: the formula in SPIN syntax ([] <> U V X ! && || -> <->); omitted = the model's own never claim, else its accept labels (SPIN pan -a). ctl (required): the formula in CTL syntax (AG AF AX EG EF EX, A[f U g], E[f U g]); atoms of both are global variables, parenthesised comparisons, len/empty/full of a channel, pc_value(n) or P@label, with the #define symbols of a Promela model parsed in this session expanded. CTL is decided by graph labelling and LTL by an automaton; neither is rewritten into the other"`
 	Text    string `json:"text,omitempty" jsonschema:"the user's statement of the property"`
 }
 
@@ -84,7 +86,10 @@ type PropertyOut struct {
 	Counters       report.Counters  `json:"counters"`
 	Counterexample *TraceRef        `json:"counterexample,omitempty"`
 	Witness        *TraceRef        `json:"witness,omitempty"`
-	Temporal       *report.Temporal `json:"temporal,omitempty" jsonschema:"ltl / progress: the claim used (formula, negation, atoms, stutter invariance, automaton size, fairness)"`
+	Temporal       *report.Temporal `json:"temporal,omitempty" jsonschema:"ltl / progress: the claim used (logic ltl, formula, negation, atoms, stutter invariance, automaton size, fairness); ctl: logic ctl, the formula, its normalisation into the EX/EU/EG basis, the atoms, the vacuity hint and, when the verdict carries no run, why"`
+	// Warnings are hints about this property that do not change its
+	// verdict — the vacuity hints of FR-011.
+	Warnings []string `json:"warnings,omitempty"`
 }
 
 // Aggregate is the optional single status.
@@ -168,14 +173,17 @@ func (s *Server) check(ctx context.Context, req *sdk.CallToolRequest, in CheckIn
 			if err != nil {
 				return nil, nil, fmt.Errorf("properties[%d] (%s): %v", i, p.ID, err)
 			}
-			if e == nil && (p.Kind == "invariant" || p.Kind == "reach" || p.Kind == "ctl") {
+			if e == nil && (p.Kind == "invariant" || p.Kind == "reach") {
 				return nil, nil, fmt.Errorf("properties[%d] (%s): kind %s requires expr", i, p.ID, p.Kind)
 			}
-			if (p.Kind == "ltl" || p.Kind == "progress") && e != nil {
-				return nil, nil, fmt.Errorf("properties[%d] (%s): kind %s takes formula (SPIN LTL syntax), not expr", i, p.ID, p.Kind)
+			if (p.Kind == "ltl" || p.Kind == "progress" || p.Kind == "ctl") && e != nil {
+				return nil, nil, fmt.Errorf("properties[%d] (%s): kind %s takes formula, not expr", i, p.ID, p.Kind)
 			}
-			if p.Kind != "ltl" && p.Formula != "" {
-				return nil, nil, fmt.Errorf("properties[%d] (%s): formula is for kind ltl only", i, p.ID)
+			if p.Kind == "ctl" && p.Formula == "" {
+				return nil, nil, fmt.Errorf("properties[%d] (%s): kind ctl requires formula (there is no \"the model as written\" reading of CTL: that reading belongs to a never claim, which is an ltl property)", i, p.ID)
+			}
+			if p.Kind != "ltl" && p.Kind != "ctl" && p.Formula != "" {
+				return nil, nil, fmt.Errorf("properties[%d] (%s): formula is for kinds ltl and ctl only", i, p.ID)
 			}
 			text := p.Text
 			if text == "" && p.Formula != "" {
@@ -228,7 +236,7 @@ func (s *Server) check(ctx context.Context, req *sdk.CallToolRequest, in CheckIn
 			}
 		}
 		if !hasTemporal {
-			out.Warnings = append(out.Warnings, "fairness "+fairness+" has no effect: it applies to ltl and progress properties only, and none was given")
+			out.Warnings = append(out.Warnings, "fairness "+fairness+" has no effect: it applies to ltl and progress properties only, and none was given (a ctl property asked with fairness is not executed, because fairness for CTL is out of scope — plan 14 §4.2)")
 		}
 	}
 	sess.mu.Lock()
@@ -301,9 +309,10 @@ func (s *Server) check(ctx context.Context, req *sdk.CallToolRequest, in CheckIn
 	artifacts = append(artifacts, rel)
 
 	out.Outcome = "report"
+	out.Warnings = append(out.Warnings, rep.Warnings...)
 	out.Search = &SearchOut{Mode: string(mode), BudgetRequested: requested, BudgetApplied: applied, BudgetNotes: notes, Stop: res.Stop, Complete: res.Complete}
 	for _, p := range rep.Properties {
-		po := PropertyOut{ID: p.ID, Kind: p.Kind, Text: p.Text, Status: p.Status, Evidence: p.Evidence, Complete: p.Complete, Reason: p.Reason, Counters: p.Counters, Temporal: p.Temporal}
+		po := PropertyOut{ID: p.ID, Kind: p.Kind, Text: p.Text, Status: p.Status, Evidence: p.Evidence, Complete: p.Complete, Reason: p.Reason, Counters: p.Counters, Temporal: p.Temporal, Warnings: p.Warnings}
 		if p.Counterexample != nil {
 			ref, rel, e := s.storeTrace(sess, p.ID, "counterexample", p.Counterexample)
 			if e != nil {

@@ -5,7 +5,8 @@ import (
 	"sort"
 )
 
-// Labelling over the reachable graph (Clarke–Emerson–Sistla): every
+// Labelling over the reachable graph: the algorithm of Clarke, Emerson and
+// Sistla as notes 05 ch. 6.4 and notes 03 give it. Every
 // subformula of the normalised formula is evaluated once, bottom-up, as the
 // set of states that satisfy it. Each of the three temporal cases costs one
 // pass over the edges, so the whole labelling is O(|states| + |edges|) per
@@ -247,13 +248,21 @@ type Witness struct {
 	Note string
 }
 
-// The four texts of the "none" branch, written once so that the division
-// below and the documentation cannot drift apart.
+// The texts of the "none" branch, written once so that the division below
+// and the documentation cannot drift apart. Which of them is used is
+// decided by the branch of the division, never by a helper: a helper that
+// finds no path says only that, and the branch says why that is the honest
+// answer here.
 const (
 	whyUniversalHolds   = "not available: a universal property that holds is justified by the complete reachable graph, not by one run — there is no single run to show"
 	whyExistentialFails = "not available: a failing existential property has no run to show — the claim is that no run of the whole graph fulfils it"
-	whyBoolean          = "not available: the formula's top operator is a boolean connective or an atom, so the verdict is a property of the initial state itself and no run leads to it"
-	NestedNote          = "the counterexample ends at the state where the outer property fails; why the nested subformula fails there is not a finite run and is not shown"
+	whyBoolean          = "not available: the formula's top operator is a boolean connective, a negation or an atom, so the verdict is a property of the initial state itself and this engine composes no single run for it"
+	// whyNoRunFound is the answer when the branch expected a run and the
+	// search for it came back empty. It is not an expected outcome: the
+	// labelling says such a run exists, so this text also asks for the case
+	// to be reported rather than pretending the absence was principled.
+	whyNoRunFound = "not available: the labelling says a run exists but none was found on the stored graph; this is an engine defect, not a property of the model — please report the model and the formula"
+	NestedNote    = "the counterexample ends at the state where the outer property fails; why the nested subformula fails there is not a finite run and is not shown"
 )
 
 // BuildWitness picks the run for the verdict of the *original* formula f
@@ -264,11 +273,20 @@ const (
 //	holds & top is EG                 → a lasso
 //	fails & top is AG                 → a finite path to a violating state
 //	fails & top is AX                 → a one-step path to a violating successor
-//	fails & top is AF / A[·U·]        → a lasso that never reaches the goal
+//	fails & top is AF                 → a lasso on which the goal never comes
+//	fails & top is A[f U g]           → a finite path when one refutes it
+//	                                    (E[!g U (!f && !g)], the shorter
+//	                                    answer), else a lasso (EG !g)
 //	anything else                     → Kind "none" with the reason
 //
 // "Anything else" is: an existential top operator that fails, a universal
-// one that holds, and a top-level boolean connective or atom either way.
+// one that holds, and a top-level boolean connective, negation or atom
+// either way.
+//
+// A[f U g] is the one case with two shapes, because its negation is a
+// disjunction: either some run reaches a state where f has failed before g
+// ever held — a finite path — or some run never reaches g at all — a lasso.
+// Both refute it, and the finite one is preferred because it is shorter.
 func BuildWitness(g Graph, f *Formula, l *Labelling, holds bool) (Witness, error) {
 	sat := l.Eval
 	switch f.Op {
@@ -283,6 +301,11 @@ func BuildWitness(g Graph, f *Formula, l *Labelling, holds bool) (Witness, error
 	default:
 		return Witness{Kind: "none", Why: whyBoolean}, nil
 	}
+	// From here the branch is fixed and a run is expected. A search that
+	// comes back empty is reported as whyNoRunFound — the labelling has
+	// already said the run exists, so an empty result is a defect of this
+	// engine, not a fact about the model, and it must not borrow the words
+	// of a case where the absence is principled.
 	switch f.Op {
 	case EX:
 		inner, err := sat(Normalise(f.L))
@@ -294,13 +317,13 @@ func BuildWitness(g Graph, f *Formula, l *Labelling, holds bool) (Witness, error
 				return Witness{Kind: "path", Path: []int{0, int(t)}, Loop: -1}, nil
 			}
 		}
-		return Witness{Kind: "none", Why: whyExistentialFails}, nil
+		return Witness{Kind: "none", Why: whyNoRunFound}, nil
 	case EF:
 		goal, err := sat(Normalise(f.L))
 		if err != nil {
 			return Witness{}, err
 		}
-		return pathWitness(g, allStates(g), goal)
+		return pathWitness(g, allStates(g), goal), nil
 	case EU:
 		left, err := sat(Normalise(f.L))
 		if err != nil {
@@ -314,7 +337,7 @@ func BuildWitness(g Graph, f *Formula, l *Labelling, holds bool) (Witness, error
 		for i := range within {
 			within[i] = left[i] || goal[i]
 		}
-		return pathWitness(g, within, goal)
+		return pathWitness(g, within, goal), nil
 	case EG:
 		inner, err := sat(Normalise(f.L))
 		if err != nil {
@@ -326,12 +349,11 @@ func BuildWitness(g Graph, f *Formula, l *Labelling, holds bool) (Witness, error
 		if err != nil {
 			return Witness{}, err
 		}
-		bad := negate(inner)
-		w, err := pathWitness(g, allStates(g), bad)
-		if err == nil && w.Kind == "path" && hasTemporal(f.L) {
+		w := pathWitness(g, allStates(g), negate(inner))
+		if w.Kind == "path" && hasTemporal(f.L) {
 			w.Note = NestedNote
 		}
-		return w, err
+		return w, nil
 	case AX:
 		inner, err := sat(Normalise(f.L))
 		if err != nil {
@@ -346,25 +368,31 @@ func BuildWitness(g Graph, f *Formula, l *Labelling, holds bool) (Witness, error
 				return w, nil
 			}
 		}
-		return Witness{Kind: "none", Why: whyUniversalHolds}, nil
+		return Witness{Kind: "none", Why: whyNoRunFound}, nil
 	case AF:
 		inner, err := sat(Normalise(f.L))
 		if err != nil {
 			return Witness{}, err
 		}
-		return lassoWitness(g, egSat(g, negate(inner)))
-	case AU:
-		right, err := sat(Normalise(f.R))
-		if err != nil {
-			return Witness{}, err
+		w, err := lassoWitness(g, egSat(g, negate(inner)))
+		if err == nil && w.Kind == "lasso" && hasTemporal(f.L) {
+			w.Note = NestedNote
 		}
+		return w, err
+	case AU:
 		left, err := sat(Normalise(f.L))
 		if err != nil {
 			return Witness{}, err
 		}
-		// ¬A[f U g] = E[¬g U (¬f ∧ ¬g)] ∨ EG ¬g; the first disjunct gives a
-		// finite path, the second a lasso. Both are checked, the finite one
-		// first because it is the shorter answer.
+		right, err := sat(Normalise(f.R))
+		if err != nil {
+			return Witness{}, err
+		}
+		// !A[f U g] = E[!g U (!f && !g)] || EG !g: either a run reaches a
+		// state where f has failed before g ever held — a finite path — or a
+		// run never reaches g at all — a lasso. Both refute the property;
+		// the finite one is tried first because it is the shorter answer,
+		// and the two shapes are what the feature file promises here.
 		nl, nr := negate(left), negate(right)
 		both := make([]bool, g.Len())
 		for i := range both {
@@ -374,7 +402,7 @@ func BuildWitness(g Graph, f *Formula, l *Labelling, holds bool) (Witness, error
 		for i := range within {
 			within[i] = nr[i] || both[i]
 		}
-		if w, err := pathWitness(g, within, both); err == nil && w.Kind == "path" {
+		if w := pathWitness(g, within, both); w.Kind == "path" {
 			return w, nil
 		}
 		return lassoWitness(g, egSat(g, nr))
@@ -413,13 +441,15 @@ func hasTemporal(g *Formula) bool {
 }
 
 // pathWitness is a shortest path from the initial state to a goal state
-// using only states of within.
-func pathWitness(g Graph, within, goal []bool) (Witness, error) {
+// using only states of within. It reports only whether such a path exists;
+// the reason for an absence belongs to the branch that asked (see
+// BuildWitness), because the same absence means different things there.
+func pathWitness(g Graph, within, goal []bool) Witness {
 	if !within[0] {
-		return Witness{Kind: "none", Why: whyExistentialFails}, nil
+		return Witness{Kind: "none", Why: whyNoRunFound}
 	}
 	if goal[0] {
-		return Witness{Kind: "path", Path: []int{0}, Loop: -1}, nil
+		return Witness{Kind: "path", Path: []int{0}, Loop: -1}
 	}
 	prev := make([]int32, g.Len())
 	for i := range prev {
@@ -438,12 +468,12 @@ func pathWitness(g Graph, within, goal []bool) (Witness, error) {
 			seen[t] = true
 			prev[t] = int32(cur)
 			if goal[t] {
-				return Witness{Kind: "path", Path: backtrack(prev, int(t)), Loop: -1}, nil
+				return Witness{Kind: "path", Path: backtrack(prev, int(t)), Loop: -1}
 			}
 			queue = append(queue, int(t))
 		}
 	}
-	return Witness{Kind: "none", Why: whyExistentialFails}, nil
+	return Witness{Kind: "none", Why: whyNoRunFound}
 }
 
 // lassoWitness walks from the initial state inside the set (every state of
@@ -451,7 +481,7 @@ func pathWitness(g Graph, within, goal []bool) (Witness, error) {
 // until a state repeats: the prefix and the loop are then read off the walk.
 func lassoWitness(g Graph, set []bool) (Witness, error) {
 	if !set[0] {
-		return Witness{Kind: "none", Why: whyExistentialFails}, nil
+		return Witness{Kind: "none", Why: whyNoRunFound}, nil
 	}
 	pos := map[int]int{}
 	var path []int

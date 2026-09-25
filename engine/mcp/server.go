@@ -67,7 +67,7 @@ var ToolNames = []string{"mc_parse", "mc_simulate", "mc_check", "mc_explain", "m
 // its warnings and #define table, or a Rejection for input outside the
 // subset, or an error for a tool failure. cmd/mcd links the G1 frontend
 // through PromelaViaCLI (G4); a Config without it answers not-executed.
-type PromelaFrontend func(src string, defines map[string]string, file string) (*PromelaResult, *Rejection, error)
+type PromelaFrontend func(src string, defines map[string]string, file string, maxProcs int) (*PromelaResult, *Rejection, error)
 
 // PromelaResult is what the frontend produced.
 type PromelaResult struct {
@@ -80,7 +80,7 @@ type PromelaResult struct {
 
 // PromelaViaCLI is the G1 frontend as the CLI runs it (same rejections,
 // same words). -D style defines are passed as NAME=value.
-func PromelaViaCLI(src string, defines map[string]string, file string) (*PromelaResult, *Rejection, error) {
+func PromelaViaCLI(src string, defines map[string]string, file string, maxProcs int) (*PromelaResult, *Rejection, error) {
 	var ds []string
 	for _, k := range sortedNames(defines) {
 		if v := defines[k]; v == "" {
@@ -89,7 +89,10 @@ func PromelaViaCLI(src string, defines map[string]string, file string) (*Promela
 			ds = append(ds, k+"="+v)
 		}
 	}
-	parsed, rej := cli.ParsePromela([]byte(src), file, ds, promela.DefaultMaxProcs)
+	if maxProcs <= 0 {
+		maxProcs = promela.DefaultMaxProcs
+	}
+	parsed, rej := cli.ParsePromela([]byte(src), file, ds, maxProcs)
 	if rej != nil {
 		line := 0
 		if i := strings.LastIndex(rej.Path, ":"); i > 0 {

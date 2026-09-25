@@ -151,6 +151,13 @@ const (
 	FairnessStrong = "strong"
 )
 
+// Level is the number of states within a depth (states at distance <= Depth
+// from the initial state).
+type Level struct {
+	Depth  int `json:"depth"`
+	States int `json:"states"`
+}
+
 // Status and Evidence values (11 §14).
 type Status string
 
@@ -213,6 +220,12 @@ type Result struct {
 	// Coverage is the record of Options.Watch over the stored states; it is
 	// meaningful only when Complete.
 	Coverage []Coverage
+	// Levels is, for a breadth-first run, the number of states within each
+	// depth — the measured half of the growth model of plan 14 §6. Only
+	// depths the search finished expanding appear: a depth the budget cut
+	// short would report a count that is not the number of states within
+	// it, and half a level is worse than no level.
+	Levels []Level
 	// Stop says why the search ended: "complete", "all properties decided",
 	// "invalid model", or the budget reason.
 	Stop string
@@ -243,7 +256,7 @@ type poolExhausted struct {
 }
 
 func (e *poolExhausted) Error() string {
-	return fmt.Sprintf("process budget exhausted: the step %q starts another %s, but the engine pre-instantiates at most %d instance(s) of it; raise the bound with --max-procs (mcd) or max_procs (mc_check) and rerun",
+	return fmt.Sprintf("process budget exhausted: the step %q starts another %s, but the engine pre-instantiates at most %d instance(s) of it; raise the bound with --max-procs (mcd check) or max_procs (mc_parse) and rerun",
 		e.step, e.proc, e.n)
 }
 
@@ -1649,6 +1662,43 @@ func (s *search) bfs() {
 	if s.stop == "" && head >= s.visited.Len() {
 		s.stop = "complete"
 	}
+	s.res.Levels = s.levels(head)
+}
+
+// levels reads the per-depth counts off the breadth-first depth table.
+// head is the queue position the search stopped at: every state before it
+// was expanded, so every depth strictly below the depth of head is
+// complete. A complete search has every depth complete.
+func (s *search) levels(head int) []Level {
+	n := s.visited.Len()
+	if n == 0 || len(s.depth) < n {
+		return nil
+	}
+	last := -1
+	for i := 0; i < n; i++ {
+		if int(s.depth[i]) > last {
+			last = int(s.depth[i])
+		}
+	}
+	if s.stop != "complete" && head < n {
+		last = int(s.depth[head]) - 1
+	}
+	if last < 0 {
+		return nil
+	}
+	counts := make([]int, last+1)
+	for i := 0; i < n; i++ {
+		if d := int(s.depth[i]); d <= last {
+			counts[d]++
+		}
+	}
+	out := make([]Level, 0, last+1)
+	total := 0
+	for d, c := range counts {
+		total += c
+		out = append(out, Level{Depth: d, States: total})
+	}
+	return out
 }
 
 // bfsPath renders the shortest run to stored state idx (via parent links,

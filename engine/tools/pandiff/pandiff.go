@@ -87,6 +87,10 @@ type EngineEdge struct {
 	Text string
 }
 
+// panDepth is the search-depth flag every pan run gets (pan's default is
+// 10000, which is smaller than the deepest model of the corpus).
+const panDepth = "-m1000000"
+
 // Tools locates spin and gcc.
 type Tools struct {
 	Spin string // default "spin"
@@ -139,12 +143,15 @@ func (t Tools) RunSpin(ctx context.Context, model string, defines []string, dir 
 		return nil, fmt.Errorf("gcc failed: %s%v", firstLines(out, 3), errNote(err))
 	}
 	pan := filepath.Join(dir, "pan")
-	c0, _ := run(ctx, dir, pan, "-c0")
+	// -m raises pan's default depth limit of 10000: CH15/client_server.pml
+	// reaches depth 31309, and a search cut off by the default would report
+	// a partial count that is not comparable with the engine's.
+	c0, _ := run(ctx, dir, pan, "-c0", panDepth)
 	if res.Stored, res.Matched, res.Errors, err = ParseC0(c0); err != nil {
 		return nil, fmt.Errorf("pan -c0: %w\n%s", err, firstLines(c0, 8))
 	}
 	res.Incomplete = strings.Contains(c0, "Search not completed") || strings.Contains(c0, "max search depth too small")
-	first, _ := run(ctx, dir, pan)
+	first, _ := run(ctx, dir, pan, panDepth)
 	res.FirstError, res.Class = ParseFirst(first, res.Errors)
 	d, _ := run(ctx, dir, pan, "-d")
 	res.Statements, res.Order = ParseD(d)

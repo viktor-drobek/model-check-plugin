@@ -172,7 +172,7 @@ const (
 )
 
 // strongFairnessReason is the FR-008 text.
-const strongFairnessReason = "strong fairness is not executed by this engine version (plan 14 §4.2): only weak fairness (every continuously enabled process eventually moves; pan -f) is implemented by the n+2 copies construction; rerun with fairness weak or none"
+const strongFairnessReason = "strong fairness is not executed by this engine version (plan 14 §4.2, and FR-008 requires saying so rather than answering as if the assumption had been honoured): only weak fairness (every continuously enabled process eventually moves; pan -f) is implemented, by the n+2 copies construction; rerun with fairness weak or none"
 
 // productMove is one transition of the product.
 type productMove struct {
@@ -294,6 +294,7 @@ func runCycle(ctx0 *search, base *ir.Model, prop ir.Property, propIndex int, opt
 		info.Source, info.Formula, info.Negated, info.Atoms = "formula", c.Info.Formula, c.Info.Negated, c.Info.Atoms
 		info.StutterInvariant = &si
 		info.AutomatonStates, info.AutomatonTrans, info.AutomatonAccept = c.Info.States, c.Info.Transitions, c.Info.Accepting
+		info.Antecedents = c.Info.Antecedents
 		info.Claim = claimName
 	default:
 		for _, p := range base.Processes {

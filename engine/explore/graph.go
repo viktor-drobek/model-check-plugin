@@ -171,8 +171,13 @@ func (g *Graph) build() {
 			}
 			g.addSucc(head, idx, chain)
 		}
-		if !moved && len(g.Succ[head]) == 0 {
+		if !moved && len(g.Succ[head]) == 0 && s.stop == "" {
 			// Totality: a state with no move stutters (see the package note).
+			// The stop check matters: a state whose expansion a budget or a
+			// model error cut short has no move *yet*, and giving it a
+			// self-loop would put an edge in the graph that the model does
+			// not have. Such a graph is incomplete anyway, and an incomplete
+			// graph yields no CTL verdict.
 			g.Stuttered[head] = true
 			g.Succ[head] = []int32{int32(head)}
 			g.Chain[head] = [][]cex.Ref{nil}

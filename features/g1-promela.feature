@@ -164,10 +164,13 @@ Feature: G1 Promela subset — chapter 2–3 models through the Promela frontend
     And the rejection mentions "simple1.pr"
     And the rejection mentions "line 1"
 
+  # Amended in G5: the v1 subset of plan 14 §5.2 is implemented, so `inline`,
+  # `typedef`, `provided`, channel-typed message fields, channel-typed
+  # variables and `run` outside init are no longer outside it — they are
+  # checked by features/g5-ctl-v1.feature against pan's counts. What stays
+  # outside keeps its place here, and the division remains exhaustive: an
+  # input is parsed, or rejected by name and line.
   Scenario Outline: every construct outside the subset the engine accepts is named with its line
-    # The engine's subset is plan 14 §5.2 narrowed in one place: `run` is accepted
-    # only as a straight-line statement of init (static instantiation); see
-    # steps/g1-confirmation.md §5 for the deviation and its consequence for K2.
     Given the Promela model "<file>" from the corpus
     When I execute "mcd parse --promela <model>"
     Then the command exits with 2
@@ -177,15 +180,10 @@ Feature: G1 Promela subset — chapter 2–3 models through the Promela frontend
 
     Examples:
       | file                | construct                    | line |
-      | CH3/inline.pml      | inline                       | 1    |
-      | CH3/typedef.pml     | typedef                      | 1    |
-      | CH3/toggle.pml      | provided                     | 4    |
-      | CH3/pots.pml        | channel-typed message field  | 4    |
-      | CH3/rendezvous2.pml | channel-typed message field  | 3    |
-      | CH2/prodcons2.pml   | inline                       | 6    |
-      | CH3/splurge.pml     | run outside init             | 4    |
-      | CH3/wc.pml          | uninitialised channel        | 1    |
+      | CH3/pots.pml        | unless                       | 20   |
       | CH3/notpossible.pml | run inside an expression     | 3    |
+      | CH17/simple1.pr     | c_code                       | 1    |
+      | CH14/version6       | remote reference (P@label)   | 231  |
 
   Scenario: a syntax error is a rejection with the position, not an engine result
     Given the Promela file "testdata/promela/syntax-error.pml"

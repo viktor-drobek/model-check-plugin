@@ -1,6 +1,10 @@
 package ctl
 
-// Normalisation to the EX / EU / EG basis (notes 05 ch. 6.4, 03). Every CTL
+// Normalisation to the EX / EU / EG basis. The equivalences below are the
+// standard ones of CTL (notes 05 "Principles of Model Checking" ch. 6.4 and
+// notes 03); they are identities of the semantics, not approximations, and
+// they are listed here so that the basis is a stated ground rather than an
+// assumption. Every CTL
 // formula is equivalent to one built from atoms, `!`, `&&`, `||`, `EX`,
 // `E[· U ·]` and `EG` by these equivalences, each of which is an identity of
 // CTL semantics, not an approximation:

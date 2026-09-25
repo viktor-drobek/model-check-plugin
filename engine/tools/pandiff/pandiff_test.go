@@ -107,7 +107,42 @@ func TestDifferentialCorpus(t *testing.T) {
 		"../model-check-plugin/engine/testdata/promela/atomic-t6.pml",
 		"../model-check-plugin/engine/testdata/promela/atomic-at.pml",
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	// Unlocked by the v1 subset of G5. CH15/client_server.pml predates
+	// SPIN 6, where `return` became a reserved word: without the rename
+	// `spin -a` refuses the file, so both sides get the same rename and
+	// compare the same model.
+	// stmtExempt: the verdict, the error class and the state count are
+	// compared for every file; the statement table is not compared for
+	// CH9/leader.pml, where pan emits two control transitions of its own
+	// for a `break` that ends an option *inside* an `atomic` sequence
+	// ("goto :b1" at the break's line and "break" at the do's line). They
+	// are the same class of artefact as the ".(goto)" join the parser
+	// already drops — unstored atomic steps with no statement behind them —
+	// but they cannot be told apart from the transitions pan emits for a
+	// *lone* `:: break` option, which the engine does produce. The counts
+	// agree (41692 = pan), so the difference is in the diagnostic table
+	// only; see steps/g5-confirmation.md.
+	v1 := []struct {
+		file       string
+		defines    []string
+		stmtExempt bool
+	}{
+		{file: "CH2/prodcons2.pml"},
+		{file: "CH3/inline.pml"},
+		{file: "CH3/inline2.pml"},
+		{file: "CH3/typedef.pml"},
+		{file: "CH3/toggle.pml"},
+		{file: "CH3/rendezvous2.pml"},
+		{file: "CH5/pathfinder.pml"},
+		{file: "CH5/diskhead.pml"},
+		{file: "CH9/leader.pml", stmtExempt: true},
+		{file: "CH14/version1"},
+		{file: "CH14/version2"},
+		{file: "CH14/version3"},
+		{file: "CH14/version4"},
+		{file: "CH15/client_server.pml", defines: []string{"return=ret_"}},
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Minute)
 	defer cancel()
 	for _, f := range files {
 		cmp, _, _, err := Run(ctx, tools, filepath.Join(corpus, f), nil, false)
@@ -117,6 +152,16 @@ func TestDifferentialCorpus(t *testing.T) {
 		}
 		if !cmp.Agree || !cmp.StmtAgree {
 			t.Errorf("%s:\n%s", f, cmp.Table(f))
+		}
+	}
+	for _, c := range v1 {
+		cmp, _, _, err := Run(ctx, tools, filepath.Join(corpus, c.file), c.defines, false)
+		if err != nil {
+			t.Errorf("%s: %v", c.file, err)
+			continue
+		}
+		if !cmp.Agree || (!cmp.StmtAgree && !c.stmtExempt) {
+			t.Errorf("%s:\n%s", c.file, cmp.Table(c.file))
 		}
 	}
 }
