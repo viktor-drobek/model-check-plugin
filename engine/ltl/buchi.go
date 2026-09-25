@@ -47,6 +47,11 @@ type Info struct {
 	States           int      `json:"automaton_states"`
 	Transitions      int      `json:"automaton_transitions"`
 	Accepting        int      `json:"automaton_accepting"`
+	// Antecedents are the left-hand sides of the implications of the
+	// formula, as written; they are the vacuity candidates of FR-011 (an
+	// antecedent that is never true makes the implication hold for a reason
+	// unrelated to its consequent).
+	Antecedents []string `json:"antecedents,omitempty"`
 }
 
 // Translate builds the Büchi automaton of f (Gerth–Peled–Vardi–Wolper

@@ -203,7 +203,7 @@ func RunCorpus2(ctx context.Context, o CampaignOptions, root string) (*Corpus2Re
 		l.Engine, l.EngineNote = engineParse(ctx, o, f)
 		l.Pan, l.PanNote = panAccepts(ctx, tools, f)
 		if l.Engine == EngineParsed && l.Pan == PanAccepted {
-			cr := CompareOne(ctx, o, f, nil, Check{Name: "safety"})
+			cr := CompareOne(ctx, o, f, nil, naturalCheck(src))
 			l.Diff = &cr
 			switch {
 			case !isVerdict(cr.Engine) || !isVerdict(cr.Pan):
@@ -220,6 +220,22 @@ func RunCorpus2(ctx context.Context, o CampaignOptions, root string) (*Corpus2Re
 		progressf(o, "%s: engine %s, pan %s, %s\n", l.File, l.Engine, l.Pan, l.Agree)
 	}
 	return res, nil
+}
+
+var reNever = regexp.MustCompile(`(?m)^\s*never\s*{`)
+
+// naturalCheck picks the one check to compare a listing under, by the same
+// rule the corpus campaign uses (see corpus.go): a model that carries a never
+// claim is compared with `pan -a`, because plain `pan` disables
+// invalid-end-state checking under a claim and limits assertions to the
+// claim's scope — the two sides would be answering different questions and
+// every deadlocking claim model would look like a disagreement. Everything
+// else is compared on its asserts and end states.
+func naturalCheck(src []byte) Check {
+	if reNever.Match(stripComments(src)) {
+		return Check{Mode: "a"}
+	}
+	return Check{Name: "safety"}
 }
 
 // engineParse runs `mcd parse` and reduces it to the README's engine column.
@@ -280,11 +296,11 @@ func (r *Corpus2Results) Markdown(title, preamble string) string {
 	for _, l := range r.Listings {
 		engine := l.Engine
 		if l.Engine != EngineParsed && l.EngineNote != "" {
-			engine = l.Engine + ": " + l.EngineNote
+			engine = l.Engine + " — " + l.EngineNote
 		}
 		pan := l.Pan
 		if l.Pan == PanRejected && l.PanNote != "" {
-			pan = l.Pan + ": " + l.PanNote
+			pan = l.Pan + " — " + l.PanNote
 		}
 		agree := l.Agree
 		if l.Diff != nil {

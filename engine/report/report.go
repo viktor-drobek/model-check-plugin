@@ -123,18 +123,28 @@ type Property struct {
 	// Witness: the run that reaches the condition of a verified `reach`.
 	Witness *cex.Trace `json:"witness,omitempty"`
 	Reason  string     `json:"reason,omitempty"`
-	// Temporal is present for ltl and progress properties.
+	// Temporal is present for ltl, progress and ctl properties.
 	Temporal *Temporal `json:"temporal,omitempty"`
+	// Warnings are hints about this property that do not change its verdict
+	// (the vacuity hints of FR-011). They are repeated in Report.Warnings.
+	Warnings []string `json:"warnings,omitempty"`
 }
 
-// Temporal describes how an ltl / progress property was checked.
+// Temporal describes how an ltl / progress / ctl property was checked.
 type Temporal struct {
+	// Logic is "ltl" (an automaton in synchronous product: kinds ltl and
+	// progress) or "ctl" (graph labelling: kind ctl). A ctl property is
+	// never answered by an LTL automaton and an ltl property never by CTL
+	// labelling, and this field is how a caller checks that.
+	Logic string `json:"logic"`
 	// Source: formula | never-claim | accept-labels | np
 	Source  string `json:"source"`
 	Formula string `json:"formula,omitempty"`
-	// Negated is the formula whose automaton was run as the claim; an
+	// Negated is the LTL formula whose automaton was run as the claim; an
 	// acceptance cycle satisfies it and violates Formula.
-	Negated          string   `json:"negated,omitempty"`
+	Negated string `json:"negated,omitempty"`
+	// Normalised is the CTL formula in the EX/EU/EG basis that was labelled.
+	Normalised       string   `json:"normalised,omitempty"`
 	Atoms            []string `json:"atoms,omitempty"`
 	StutterInvariant *bool    `json:"stutter_invariant,omitempty"`
 	AutomatonStates  int      `json:"automaton_states,omitempty"`
@@ -142,6 +152,16 @@ type Temporal struct {
 	AutomatonAccept  int      `json:"automaton_accepting,omitempty"`
 	Fairness         string   `json:"fairness"`
 	Claim            string   `json:"claim,omitempty"`
+	// Note records a semantic decision needed to read the verdict.
+	Note string `json:"note,omitempty"`
+	// WitnessNote says, when the verdict carries no run, which rule of the
+	// witness division applies — the engine's honest "not available".
+	WitnessNote string `json:"witness_note,omitempty"`
+	// Vacuous marks the FR-011 hint that the implication's antecedent named
+	// in VacuousAtom is never true in a reachable state. It is a hint: the
+	// status and evidence above are what the search found.
+	Vacuous     bool   `json:"vacuous,omitempty"`
+	VacuousAtom string `json:"vacuous_atom,omitempty"`
 }
 
 // Counters describe the whole run (they are the same for every property of
@@ -199,19 +219,34 @@ func Build(m *ir.Model, res *explore.Result, meta Meta) (*Report, error) {
 			Counters: counters, Complete: complete, Reason: o.Reason,
 		}
 		if ti := o.Temporal; ti != nil {
-			p.Temporal = &Temporal{Source: ti.Source, Formula: ti.Formula, Negated: ti.Negated, Atoms: ti.Atoms,
+			p.Temporal = &Temporal{Logic: ti.Logic, Source: ti.Source, Formula: ti.Formula, Negated: ti.Negated,
+				Normalised: ti.Normalised, Atoms: ti.Atoms,
 				StutterInvariant: ti.StutterInvariant, AutomatonStates: ti.AutomatonStates, AutomatonTrans: ti.AutomatonTrans,
-				AutomatonAccept: ti.AutomatonAccept, Fairness: ti.Fairness, Claim: ti.Claim}
+				AutomatonAccept: ti.AutomatonAccept, Fairness: ti.Fairness, Claim: ti.Claim,
+				Note: ti.Note, WitnessNote: ti.WitnessNote, Vacuous: ti.Vacuous, VacuousAtom: ti.VacuousAtom}
 			if p.Temporal.Atoms == nil {
 				p.Temporal.Atoms = []string{}
 			}
 		}
+		p.Warnings = o.Warnings
+		r.Warnings = append(r.Warnings, o.Warnings...)
 		switch o.Status {
 		case explore.Verified:
-			if o.Property.Kind == ir.KindReach {
+			switch o.Property.Kind {
+			case ir.KindReach:
+				// The witness is an exact run, so completeness is not needed.
 				p.Witness = o.Trace
-			} else if !complete {
-				return nil, fmt.Errorf("report: property %q is verified but the search is not complete", o.Property.ID)
+			case ir.KindCTL:
+				// A CTL verdict is only ever given on a complete graph, and
+				// an existential formula that holds brings a witness with it.
+				p.Witness = o.Trace
+				if !complete {
+					return nil, fmt.Errorf("report: property %q is verified but the search is not complete", o.Property.ID)
+				}
+			default:
+				if !complete {
+					return nil, fmt.Errorf("report: property %q is verified but the search is not complete", o.Property.ID)
+				}
 			}
 			if o.Evidence != explore.Exhaustive {
 				return nil, fmt.Errorf("report: verified %q with evidence %q", o.Property.ID, o.Evidence)

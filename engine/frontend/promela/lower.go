@@ -61,9 +61,32 @@ type instance struct {
 	name       string
 	runCreated bool
 	claim      bool
+	// chanObj / chanArr are the channel objects this instance declares
+	// locally: a scalar maps to its index in Model.Channels, an array to the
+	// length of the byte array of ids that names its elements (G5).
+	chanObj map[string]int
+	chanArr map[string]int
+	// localChans lists the indices of the channel objects the instance owns,
+	// so that its `-end-` edge can empty them (a process releases its
+	// channels when it dies).
+	localChans []int
+	// initAssigns are the initialisers of a dynamic instance's locals. A
+	// dynamic instance starts with everything at zero (its dormant slot must
+	// be indistinguishable from the slot of a process that has died, or the
+	// two would be counted as different states), so its initialisers run as
+	// part of the `run` step, in the new process's own scope — which is also
+	// what lets `byte maximum = mynumber` read a parameter, as SPIN does.
+	initAssigns []ir.Assign
 
-	nodes                             []node
-	labels                            map[string]int
+	nodes  []node
+	labels map[string]int
+	// defined holds the labels a statement actually carries; gotos holds
+	// every `goto` with its position. A goto to a label that no statement
+	// carries is rejected (SPIN: "undefined label"): silently dropping the
+	// jump would change the model into a different one that happens to
+	// verify, which is the one thing a checker must never do.
+	defined                           map[string]bool
+	gotos                             []gotoRef
 	edges                             []ir.Edge // From/To are raw node ids until finalise
 	panLines                          []int     // parallel to edges
 	finalPanLines                     []int     // parallel to proc.Edges
@@ -83,27 +106,54 @@ type pendingRun struct {
 	target *instance
 }
 
+// gotoRef is one `goto` and where it was written.
+type gotoRef struct {
+	label string
+	pos   Pos
+}
+
 type lowerer struct {
-	mod       *Module
-	file      string
-	mtype     map[string]int64
-	globals   map[string]*ir.Var
-	chans     map[string]*ir.Channel
-	chanCap   map[string]int
-	insts     []*instance
+	mod      *Module
+	file     string
+	maxProcs int
+	mtype    map[string]int64
+	globals  map[string]*ir.Var
+	chans    map[string]*ir.Channel
+	chanCap  map[string]int
+	// gChanObj / gChanArr are the global channel objects: a scalar maps to
+	// its index in Model.Channels, an array to its length (its elements are
+	// named by a byte array of channel ids with the same name).
+	gChanObj map[string]int
+	gChanArr map[string]int
+	model    *ir.Model
+	insts    []*instance
+	// pools maps a proctype name to the instances a `run` may start, in
+	// allocation order; byRun holds the dedicated instance of a `run` the
+	// frontend could see is taken at most once.
+	pools     map[string][]*instance
 	byRun     map[*RunStmt]*instance
+	dynamic   map[string]bool
 	warnings  []string
 	printfs   int
 	cur       *instance
 	curAtomic []int
 	curDStep  []int
 	blockID   int
+	// declDepth is the nesting of `{ }` blocks inside the process body. A
+	// declaration at depth 0 is not a step (its value is the variable's
+	// initial value); a declaration in a nested scope IS a step that assigns
+	// the initial value, which is what pan generates ("y = 0", "z = 5") —
+	// probe in inline.go. An inline expansion is such a nested scope.
+	declDepth int
 	// current block context
 }
 
 type seqCtx struct {
 	breakTo  int  // node of the enclosing do's exit, -1 if none
 	isOption bool // the sequence is an if/do option (lone goto/break rule)
+	// nextLine is the line of the statement that follows the current one;
+	// pan attributes the initialisation step of a nested declaration to it.
+	nextLine int
 	// optLine is the source line of the first statement of the first option
 	// of the enclosing if/do: pan attributes the first statement of every
 	// option to that line (see Lowered.PanLines).
@@ -123,19 +173,37 @@ type Lowered struct {
 	PanLines map[string][]int
 }
 
+// DefaultMaxProcs is the size of the instance pool the lowering gives a
+// proctype whose `run` may be taken more than once (inside a loop or an
+// option, or in a process that itself exists many times). It is a declared
+// bound: exceeding it stops the search with an inconclusive verdict, never
+// with a wrong one. SPIN's own bound is 255 processes in total.
+const DefaultMaxProcs = 8
+
 // Lower translates the module.
 func Lower(mod *Module, file, name string) (*Lowered, *Error) {
-	m, w, pl, err := lower(mod, file, name)
+	return LowerWith(mod, file, name, DefaultMaxProcs)
+}
+
+// LowerWith translates the module with an explicit process-pool bound.
+func LowerWith(mod *Module, file, name string, maxProcs int) (*Lowered, *Error) {
+	m, w, pl, err := lower(mod, file, name, maxProcs)
 	if err != nil {
 		return nil, err
 	}
 	return &Lowered{Model: m, Warnings: w, PanLines: pl}, nil
 }
 
-func lower(mod *Module, file, name string) (*ir.Model, []string, map[string][]int, *Error) {
-	l := &lowerer{mod: mod, file: file, mtype: map[string]int64{}, globals: map[string]*ir.Var{},
-		chans: map[string]*ir.Channel{}, chanCap: map[string]int{}, byRun: map[*RunStmt]*instance{}}
+func lower(mod *Module, file, name string, maxProcs int) (*ir.Model, []string, map[string][]int, *Error) {
+	if maxProcs <= 0 {
+		maxProcs = DefaultMaxProcs
+	}
+	l := &lowerer{mod: mod, file: file, maxProcs: maxProcs, mtype: map[string]int64{}, globals: map[string]*ir.Var{},
+		chans: map[string]*ir.Channel{}, chanCap: map[string]int{},
+		gChanObj: map[string]int{}, gChanArr: map[string]int{},
+		pools: map[string][]*instance{}, byRun: map[*RunStmt]*instance{}, dynamic: map[string]bool{}}
 	m := &ir.Model{Schema: ir.Schema, Name: name, Origin: &ir.Origin{File: file, Name: name}}
+	l.model = m
 
 	// mtype values
 	base := int64(0)
@@ -155,17 +223,24 @@ func lower(mod *Module, file, name string) (*ir.Model, []string, map[string][]in
 
 	// globals and channels
 	for _, d := range mod.Globals {
-		if d.Type == "chan" {
+		if d.Type == "chan" && d.Chan != nil {
 			if _, dup := l.chans[d.Name]; dup || l.globals[d.Name] != nil || l.mtype[d.Name] != 0 {
 				return nil, nil, nil, semanticErr(file, d.Pos.Line, d.Pos.Col, "%s declared twice", d.Name)
 			}
-			ch := ir.Channel{Name: d.Name, Capacity: d.Chan.Cap, Origin: &ir.Origin{File: file, Line: d.Pos.Line, Name: d.Name}}
-			for _, f := range d.Chan.Fields {
-				ch.Fields = append(ch.Fields, irType(f))
+			ids, err := l.declChanObjects(d, d.Name)
+			if err != nil {
+				return nil, nil, nil, err
 			}
-			m.Channels = append(m.Channels, ch)
-			l.chans[d.Name] = &m.Channels[len(m.Channels)-1]
-			l.chanCap[d.Name] = d.Chan.Cap
+			if d.Len > 0 {
+				// The elements of a channel array are named by a byte array
+				// of channel ids, so that `q[i]` with a computed index is an
+				// ordinary array read that yields a channel.
+				l.gChanArr[d.Name] = d.Len
+				m.Globals = append(m.Globals, ir.Var{Name: d.Name, Type: ir.Byte, Len: d.Len, Init: ids,
+					Origin: &ir.Origin{File: file, Line: d.Pos.Line, Name: d.Name}})
+			} else {
+				l.gChanObj[d.Name] = int(ids[0]) - 1
+			}
 			continue
 		}
 		v, err := l.varDecl(d, -1)
@@ -185,38 +260,96 @@ func lower(mod *Module, file, name string) (*ir.Model, []string, map[string][]in
 		l.globals[m.Globals[i].Name] = &m.Globals[i]
 	}
 
-	// pass 1: instances in pid order
+	// pass 1: instances in pid order — the static ones first, in textual
+	// order (SPIN's pid order), then the pools a `run` draws from.
 	byName := map[string]*Proctype{}
 	for _, pt := range mod.Procs {
 		byName[pt.Name] = pt
 	}
-	var initPT *Proctype
 	for _, pt := range mod.Procs {
 		for k := 0; k < pt.Active; k++ {
 			l.insts = append(l.insts, &instance{pt: pt, pid: len(l.insts)})
 		}
-		if pt.IsInit {
-			initPT = pt
+	}
+	// Every `run` of the module, in the textual order of the proctypes that
+	// contain them, so that the instance order is a function of the source.
+	type runSite struct {
+		stmt *RunStmt
+		in   *Proctype
+	}
+	var sites []runSite
+	for _, pt := range mod.Procs {
+		var runs []*RunStmt
+		collectRuns(pt.Body.Items, &runs)
+		for _, r := range runs {
+			sites = append(sites, runSite{r, pt})
 		}
 	}
-	if initPT != nil {
-		var runs []*RunStmt
-		collectRuns(initPT.Body.Items, &runs)
-		for _, r := range runs {
-			pt := byName[r.Proc]
-			if pt == nil || pt.IsInit {
-				return nil, nil, nil, semanticErr(file, r.Pos.Line, r.Pos.Col, "run of undeclared proctype %s", r.Proc)
+	for _, s := range sites {
+		if byName[s.stmt.Proc] == nil || byName[s.stmt.Proc].IsInit {
+			return nil, nil, nil, semanticErr(file, s.stmt.Pos.Line, s.stmt.Pos.Col, "run of undeclared proctype %s", s.stmt.Proc)
+		}
+		l.dynamic[s.stmt.Proc] = true
+	}
+	// A run statement needs a pool rather than one dedicated instance when
+	// it can be taken more than once: inside an if/do option, or in a
+	// proctype that itself exists more than once (several `active`
+	// instances, or one created by `run`).
+	shared := map[string]bool{}
+	for _, s := range sites {
+		if s.stmt.InLoop || s.in.Active > 1 || l.dynamic[s.in.Name] {
+			shared[s.stmt.Proc] = true
+		}
+	}
+	for _, pt := range mod.Procs {
+		if !l.dynamic[pt.Name] {
+			continue
+		}
+		n := 0
+		if shared[pt.Name] {
+			n = maxProcs
+		} else {
+			for _, s := range sites {
+				if s.stmt.Proc == pt.Name {
+					n++
+				}
 			}
-			if len(r.Args) != len(pt.Params) {
-				return nil, nil, nil, semanticErr(file, r.Pos.Line, r.Pos.Col, "run %s: %d argument(s) for %d parameter(s)", r.Proc, len(r.Args), len(pt.Params))
-			}
+		}
+		for k := 0; k < n; k++ {
 			in := &instance{pt: pt, pid: len(l.insts), runCreated: true}
 			l.insts = append(l.insts, in)
-			l.byRun[r] = in
+			l.pools[pt.Name] = append(l.pools[pt.Name], in)
+		}
+	}
+	for _, s := range sites {
+		pt := byName[s.stmt.Proc]
+		if len(s.stmt.Args) != len(pt.Params) {
+			return nil, nil, nil, semanticErr(file, s.stmt.Pos.Line, s.stmt.Pos.Col, "run %s: %d argument(s) for %d parameter(s)", s.stmt.Proc, len(s.stmt.Args), len(pt.Params))
+		}
+	}
+	if !anyShared(shared) {
+		// Every run is taken at most once: give each its own instance, in
+		// the textual order of the run statements, which is what G1 did and
+		// what keeps those models' vectors unchanged.
+		used := map[string]int{}
+		for _, s := range sites {
+			pool := l.pools[s.stmt.Proc]
+			l.byRun[s.stmt] = pool[used[s.stmt.Proc]]
+			used[s.stmt.Proc]++
+		}
+	} else {
+		for _, s := range sites {
+			if !shared[s.stmt.Proc] {
+				pool := l.pools[s.stmt.Proc]
+				l.byRun[s.stmt] = pool[0]
+			}
 		}
 	}
 	if len(l.insts) == 0 {
 		return nil, nil, nil, semanticErr(file, 0, 0, "the model has no active process and no init")
+	}
+	if len(l.insts) > 254 {
+		return nil, nil, nil, semanticErr(file, 0, 0, "%d process instances exceed the 254 the engine can name; lower --max-procs", len(l.insts))
 	}
 	if mod.Never != nil {
 		l.insts = append(l.insts, &instance{pt: mod.Never, pid: len(l.insts), claim: true})
@@ -238,33 +371,45 @@ func lower(mod *Module, file, name string) (*ir.Model, []string, map[string][]in
 	for _, in := range l.insts {
 		l.finalise(in)
 	}
+	hasDynamic := false
+	for _, in := range l.insts {
+		if in.runCreated {
+			hasDynamic = true
+		}
+	}
 	for k, in := range l.insts {
 		for _, pr := range in.runs {
 			e := &in.proc.Edges[in.edgeMap[pr.edge]]
 			e.Run.Entry = pr.target.final[pr.target.find(pr.target.entry)]
+			e.Run.Init = pr.target.initAssigns
 		}
 		if in.endEdge >= 0 && in.edgeMap[in.endEdge] >= 0 {
-			var conj []*ir.Expr
-			for j := k + 1; j < len(l.insts); j++ {
-				o := l.insts[j]
-				if o.claim {
-					continue
+			edge := &in.proc.Edges[in.edgeMap[in.endEdge]]
+			if hasDynamic {
+				// With a live-process table the rule is pan's own, stated
+				// once: only the youngest live process may leave the vector.
+				edge.Guard = ir.Youngest(k)
+				edge.Leave = true
+			} else {
+				var conj []*ir.Expr
+				for j := k + 1; j < len(l.insts); j++ {
+					o := l.insts[j]
+					if o.claim {
+						continue
+					}
+					// j is "not alive" when dead. A process whose end is
+					// unreachable never dies: constant false.
+					var dead *ir.Expr
+					if d, ok := o.final[o.find(o.deadNode)]; ok {
+						dead = ir.Binary("eq", ir.PC(j), ir.Const(int64(d)))
+					} else {
+						dead = ir.Const(0)
+					}
+					conj = append(conj, dead)
 				}
-				// j is "not alive" when dead or (run-created) dormant. A
-				// process whose end is unreachable never dies: constant false.
-				var dead *ir.Expr
-				if d, ok := o.final[o.find(o.deadNode)]; ok {
-					dead = ir.Binary("eq", ir.PC(j), ir.Const(int64(d)))
-				} else {
-					dead = ir.Const(0)
+				if len(conj) > 0 {
+					edge.Guard = ir.And(conj...)
 				}
-				if o.runCreated {
-					dead = ir.Binary("or", dead, ir.Binary("eq", ir.PC(j), ir.Const(int64(o.final[o.find(o.dormant)]))))
-				}
-				conj = append(conj, dead)
-			}
-			if len(conj) > 0 {
-				in.proc.Edges[in.edgeMap[in.endEdge]].Guard = ir.And(conj...)
 			}
 		}
 		m.Processes = append(m.Processes, in.proc)
@@ -328,6 +473,17 @@ func lower(mod *Module, file, name string) (*ir.Model, []string, map[string][]in
 	return m, l.warnings, panLines, nil
 }
 
+func anyShared(m map[string]bool) bool {
+	for _, v := range m {
+		if v {
+			return true
+		}
+	}
+	return false
+}
+
+// collectRuns walks the whole body, options included: since G5 a `run` may
+// stand anywhere.
 func collectRuns(items []Item, out *[]*RunStmt) {
 	for _, it := range items {
 		switch s := it.Stmt.(type) {
@@ -335,6 +491,14 @@ func collectRuns(items []Item, out *[]*RunStmt) {
 			*out = append(*out, s)
 		case *Block:
 			collectRuns(s.Items, out)
+		case *If:
+			for _, o := range s.Options {
+				collectRuns(o, out)
+			}
+		case *Do:
+			for _, o := range s.Options {
+				collectRuns(o, out)
+			}
 		}
 	}
 }
@@ -350,12 +514,60 @@ func irType(t string) ir.Type {
 	case "int":
 		return ir.Int
 	}
-	return ir.Byte // byte, mtype, pid
+	// byte, mtype, pid, and chan — a channel-typed value is a channel id,
+	// which is a byte (G5).
+	return ir.Byte
+}
+
+// declChanObjects creates the ir.Channels of a `chan` declaration with a
+// `[cap] of { … }` initialiser: one for a scalar, Len for an array (named
+// "q[0]", "q[1]", … as pan prints them). It returns their ids.
+func (l *lowerer) declChanObjects(d *VarDecl, base string) ([]int64, *Error) {
+	n := d.Len
+	if n == 0 {
+		n = 1
+	}
+	var ids []int64
+	for k := 0; k < n; k++ {
+		name := base
+		if d.Len > 0 {
+			name = fmt.Sprintf("%s[%d]", base, k)
+		}
+		if _, dup := l.chans[name]; dup {
+			return nil, semanticErr(l.file, d.Pos.Line, d.Pos.Col, "%s declared twice", name)
+		}
+		ch := ir.Channel{Name: name, Capacity: d.Chan.Cap, Origin: &ir.Origin{File: l.file, Line: d.Pos.Line, Name: name}}
+		for _, f := range d.Chan.Fields {
+			ch.Fields = append(ch.Fields, irType(f))
+		}
+		l.model.Channels = append(l.model.Channels, ch)
+		ids = append(ids, ir.ChanID(len(l.model.Channels)-1))
+		l.chanCap[name] = d.Chan.Cap
+	}
+	// The slice may have been reallocated: re-point every pointer.
+	for i := range l.model.Channels {
+		l.chans[l.model.Channels[i].Name] = &l.model.Channels[i]
+	}
+	return ids, nil
 }
 
 // varDecl builds an ir.Var; pid >= 0 for locals (for _pid folding).
 func (l *lowerer) varDecl(d *VarDecl, pid int) (*ir.Var, *Error) {
 	v := &ir.Var{Name: d.Name, Type: irType(d.Type), Len: d.Len, Origin: &ir.Origin{File: l.file, Line: d.Pos.Line, Name: d.Name}}
+	if d.Init != nil && l.cur != nil && l.cur.runCreated && pid >= 0 {
+		e, err := l.expr(d.Init, pid, false)
+		if err != nil {
+			return nil, err
+		}
+		if d.Len > 0 {
+			for i := 0; i < d.Len; i++ {
+				l.cur.initAssigns = append(l.cur.initAssigns, ir.Assign{Var: d.Name, Index: ir.Const(int64(i)), Value: e})
+			}
+		} else {
+			l.cur.initAssigns = append(l.cur.initAssigns, ir.Assign{Var: d.Name, Value: e})
+		}
+		return v, nil
+	}
 	if d.Init != nil {
 		e, err := l.expr(d.Init, pid, true)
 		if err != nil {
@@ -363,7 +575,7 @@ func (l *lowerer) varDecl(d *VarDecl, pid int) (*ir.Var, *Error) {
 		}
 		val, ok := constValue(e)
 		if !ok {
-			return nil, outside(l.file, d.Pos.Line, d.Pos.Col, "non-constant initialiser", fmt.Sprintf("%s is initialised with an expression over variables; only constants and _pid are accepted", d.Name))
+			return nil, outside(l.file, d.Pos.Line, d.Pos.Col, "non-constant initialiser", fmt.Sprintf("%s is initialised with an expression over variables; only constants and _pid are accepted (a process created by run may also read its parameters)", d.Name))
 		}
 		min, max := v.Domain()
 		if val < min || val > max {
@@ -510,11 +722,14 @@ func (l *lowerer) lowerInstance(in *instance) *Error {
 	l.cur = in
 	l.curAtomic, l.curDStep = nil, nil
 	in.labels = map[string]int{}
+	in.defined = map[string]bool{}
 	in.declared = map[string]bool{}
 	in.final = map[int]int{}
 	in.endEdge = -1
 	pt := in.pt
-	in.proc = ir.Process{Name: in.name, Claim: in.claim, Origin: &ir.Origin{File: l.file, Line: pt.Pos.Line, Name: pt.Name}}
+	in.chanObj, in.chanArr = map[string]int{}, map[string]int{}
+	in.proc = ir.Process{Name: in.name, Claim: in.claim, Dynamic: in.runCreated,
+		Origin: &ir.Origin{File: l.file, Line: pt.Pos.Line, Name: pt.Name}}
 	// parameters
 	in.scopes = []map[string]bool{{}}
 	for _, d := range pt.Params {
@@ -522,7 +737,7 @@ func (l *lowerer) lowerInstance(in *instance) *Error {
 		if err != nil {
 			return err
 		}
-		if err := l.declare(v, d.Pos); err != nil {
+		if _, err := l.declare(v, d.Pos); err != nil {
 			return err
 		}
 	}
@@ -546,8 +761,21 @@ func (l *lowerer) lowerInstance(in *instance) *Error {
 	if err := l.lowerSeq(pt.Body.Items, in.entry, in.endNode, seqCtx{breakTo: -1}); err != nil {
 		return err
 	}
+	for _, g := range in.gotos {
+		if !in.defined[g.label] {
+			return semanticErr(l.file, g.pos.Line, g.pos.Col,
+				"undefined label %s: %s has no statement labelled %s, so the goto has no target (SPIN reports the same)", g.label, pt.Name, g.label)
+		}
+	}
 	if !in.claim {
-		e := ir.Edge{From: in.endNode, To: in.deadNode, Text: "-end-",
+		// A dynamic instance returns to its dormant location, so that the
+		// same pool slot can be started again: for pan the process has left
+		// the vector, and "dormant" is how this engine writes that.
+		to := in.deadNode
+		if in.runCreated {
+			to = in.dormant
+		}
+		e := ir.Edge{From: in.endNode, To: to, Text: "-end-", ClearChans: in.localChans,
 			Origin: &ir.Origin{File: l.file, Line: pt.End.Line, Name: "-end-"}}
 		for _, v := range in.locals {
 			if v.Len > 0 {
@@ -562,22 +790,50 @@ func (l *lowerer) lowerInstance(in *instance) *Error {
 		in.edges = append(in.edges, e)
 		in.panLines = append(in.panLines, pt.End.Line)
 	}
+	if pt.Provided != nil {
+		pv, err := l.expr(pt.Provided, in.pid, false)
+		if err != nil {
+			return err
+		}
+		in.proc.Provided = pv
+	}
 	in.proc.Locals = in.locals
 	return nil
 }
 
-func (l *lowerer) declare(v *ir.Var, at Pos) *Error {
+// declare adds a local; fresh is false when the name is already a local of
+// the process, which SPIN allows for a declaration in another scope (it
+// keeps one variable and re-initialises it). The types must agree: two
+// different types under one name would need two slots, which the flat
+// per-process set of locals cannot give.
+func (l *lowerer) declare(v *ir.Var, at Pos) (bool, *Error) {
 	in := l.cur
 	if in.declared[v.Name] {
-		return outside(l.file, at.Line, at.Col, "redeclaration of a local variable in another block",
-			fmt.Sprintf("%s is declared twice in %s; the engine keeps one flat set of locals per process", v.Name, in.pt.Name))
+		old := fresh0(in, v.Name)
+		if old.Type != v.Type || old.Len != v.Len {
+			return false, semanticErr(l.file, at.Line, at.Col,
+				"%s is declared twice in %s with different types (%s and %s); the engine keeps one flat set of locals per process",
+				v.Name, in.pt.Name, old.Type, v.Type)
+		}
+		in.scopes[len(in.scopes)-1][v.Name] = true
+		return false, nil
 	}
 	if l.chans[v.Name] != nil || l.mtype[v.Name] != 0 {
-		return semanticErr(l.file, at.Line, at.Col, "%s is already a channel or mtype constant", v.Name)
+		return false, semanticErr(l.file, at.Line, at.Col, "%s is already a channel or mtype constant", v.Name)
 	}
 	in.declared[v.Name] = true
 	in.scopes[len(in.scopes)-1][v.Name] = true
 	in.locals = append(in.locals, *v)
+	return true, nil
+}
+
+// fresh0 is the declaration of a local by name.
+func fresh0(in *instance, name string) *ir.Var {
+	for i := range in.locals {
+		if in.locals[i].Name == name {
+			return &in.locals[i]
+		}
+	}
 	return nil
 }
 
@@ -603,6 +859,7 @@ func (l *lowerer) lowerSeq(items []Item, from, to int, ctx seqCtx) *Error {
 	pos[len(items)] = to
 	for i, it := range items {
 		for _, lb := range it.Labels {
+			in.defined[lb] = true
 			n := pos[i]
 			if existing, ok := in.labels[lb]; ok {
 				if in.find(existing) != in.find(n) {
@@ -639,7 +896,11 @@ func (l *lowerer) lowerSeq(items []Item, from, to int, ctx seqCtx) *Error {
 		}
 	}
 	for i, it := range items {
-		if err := l.lowerStmt(it, pos[i], pos[i+1], ctx, i == 0 && ctx.isOption); err != nil {
+		c := ctx
+		if i+1 < len(items) {
+			c.nextLine = items[i+1].Pos.Line
+		}
+		if err := l.lowerStmt(it, pos[i], pos[i+1], c, i == 0 && ctx.isOption); err != nil {
 			return err
 		}
 	}
@@ -675,6 +936,7 @@ func (l *lowerer) lowerStmt(it Item, from, to int, ctx seqCtx, first bool) *Erro
 			return l.alias(from, to, it.Pos)
 		}
 		in.scopes = append(in.scopes, map[string]bool{})
+		l.declDepth++
 		saveA, saveD := l.curAtomic, l.curDStep
 		switch s.Kind {
 		case "atomic":
@@ -689,17 +951,82 @@ func (l *lowerer) lowerStmt(it Item, from, to int, ctx seqCtx, first bool) *Erro
 		// lone goto/break inside it is its own transition.
 		err := l.lowerSeq(s.Items, from, to, seqCtx{breakTo: ctx.breakTo, isOption: first, optLine: ctx.optLine})
 		l.curAtomic, l.curDStep = saveA, saveD
+		l.declDepth--
 		in.scopes = in.scopes[:len(in.scopes)-1]
 		return err
 	case *Decl:
+		if s.Var.Type == "chan" && s.Var.Chan != nil {
+			if in.runCreated {
+				return outside(l.file, s.Var.Pos.Line, s.Var.Pos.Col, "channel declared inside a process created by run",
+					fmt.Sprintf("%s owns channel %s, and this engine version gives a channel to a fixed instance, not to each incarnation of a pool slot; declare the channel globally and pass it as a parameter", in.pt.Name, s.Var.Name))
+			}
+			// A channel local to a process is one channel per instance: it
+			// is named "<instance>.<name>" in the IR, and the name the body
+			// uses stands for its id.
+			base := in.name + "." + s.Var.Name
+			ids, err := l.declChanObjects(s.Var, base)
+			if err != nil {
+				return err
+			}
+			for _, id := range ids {
+				in.localChans = append(in.localChans, int(id)-1)
+			}
+			if s.Var.Len > 0 {
+				in.chanArr[s.Var.Name] = s.Var.Len
+				v := &ir.Var{Name: s.Var.Name, Type: ir.Byte, Len: s.Var.Len, Init: ids,
+					Origin: &ir.Origin{File: l.file, Line: s.Var.Pos.Line, Name: s.Var.Name}}
+				if _, err := l.declare(v, s.Var.Pos); err != nil {
+					return err
+				}
+			} else {
+				in.chanObj[s.Var.Name] = int(ids[0]) - 1
+			}
+			return l.alias(from, to, it.Pos)
+		}
 		v, err := l.varDecl(s.Var, pid)
 		if err != nil {
 			return err
 		}
-		if err := l.declare(v, s.Var.Pos); err != nil {
+		fresh, err := l.declare(v, s.Var.Pos)
+		if err != nil {
 			return err
 		}
-		return l.alias(from, to, it.Pos)
+		if l.declDepth == 0 {
+			return l.alias(from, to, it.Pos)
+		}
+		// A declaration in a nested scope is a step that sets the initial
+		// value (pan does the same, and attributes it to the line of the
+		// statement that follows it).
+		if !fresh {
+			// The name is already a local of the process: SPIN keeps one
+			// variable and re-initialises it here.
+			v = fresh0(in, v.Name)
+		}
+		e := ir.Edge{From: from, To: to}
+		var texts []string
+		for i := 0; i < v.Count(); i++ {
+			val := int64(0)
+			if i < len(v.Init) {
+				val = v.Init[i]
+			}
+			a := ir.Assign{Var: v.Name, Value: ir.Const(val)}
+			target := v.Name
+			if v.Len > 0 {
+				a.Index = ir.Const(int64(i))
+				target = fmt.Sprintf("%s[%d]", v.Name, i)
+			}
+			e.Effect = append(e.Effect, a)
+			texts = append(texts, fmt.Sprintf("%s = %d", target, val))
+		}
+		line := it.Pos.Line
+		if ctx.nextLine > 0 {
+			line = ctx.nextLine
+		}
+		e.Text = strings.Join(texts, "; ")
+		e.Origin = &ir.Origin{File: l.file, Line: line, Name: e.Text}
+		l.cur.edges = append(l.cur.edges, e)
+		l.cur.panLines = append(l.cur.panLines, line)
+		return nil
 	case *If:
 		for _, opt := range s.Options {
 			if err := l.lowerSeq(opt, from, to, seqCtx{breakTo: ctx.breakTo, isOption: true, optLine: s.Options[0][0].Pos.Line}); err != nil {
@@ -715,6 +1042,7 @@ func (l *lowerer) lowerStmt(it Item, from, to int, ctx seqCtx, first bool) *Erro
 		}
 		return nil
 	case *Goto:
+		in.gotos = append(in.gotos, gotoRef{s.Label, it.Pos})
 		target := l.labelNode(s.Label)
 		if first {
 			l.addEdge(it, ir.Edge{From: from, To: target}, panLine)
@@ -775,17 +1103,14 @@ func (l *lowerer) lowerStmt(it Item, from, to int, ctx seqCtx, first bool) *Erro
 		l.addEdge(it, ir.Edge{From: from, To: to, Effect: []ir.Assign{a}}, panLine)
 		return nil
 	case *Send:
-		ch, err := l.channel(s.Chan, it.Pos)
+		name, sel, err := l.chanRef(s.Chan, s.Index, pid, it.Pos)
 		if err != nil {
 			return err
 		}
-		if ch.Capacity == 0 && len(l.curDStep) > 0 {
-			return outside(l.file, it.Pos.Line, it.Pos.Col, "rendezvous operation inside d_step", "outside the subset")
+		if err := l.checkChanUse(name, len(s.Args), "!", it.Pos); err != nil {
+			return err
 		}
-		if len(s.Args) != len(ch.Fields) {
-			return semanticErr(l.file, it.Pos.Line, it.Pos.Col, "%s!…: %d value(s) for %d field(s)", s.Chan, len(s.Args), len(ch.Fields))
-		}
-		op := &ir.ChanOp{Chan: s.Chan}
+		op := &ir.ChanOp{Chan: name, Sel: sel}
 		for _, a := range s.Args {
 			e, err := l.expr(a, pid, false)
 			if err != nil {
@@ -796,17 +1121,14 @@ func (l *lowerer) lowerStmt(it Item, from, to int, ctx seqCtx, first bool) *Erro
 		l.addEdge(it, ir.Edge{From: from, To: to, Send: op}, panLine)
 		return nil
 	case *Recv:
-		ch, err := l.channel(s.Chan, it.Pos)
+		name, sel, err := l.chanRef(s.Chan, s.Index, pid, it.Pos)
 		if err != nil {
 			return err
 		}
-		if ch.Capacity == 0 && len(l.curDStep) > 0 {
-			return outside(l.file, it.Pos.Line, it.Pos.Col, "rendezvous operation inside d_step", "outside the subset")
+		if err := l.checkChanUse(name, len(s.Args), "?", it.Pos); err != nil {
+			return err
 		}
-		if len(s.Args) != len(ch.Fields) {
-			return semanticErr(l.file, it.Pos.Line, it.Pos.Col, "%s?…: %d argument(s) for %d field(s)", s.Chan, len(s.Args), len(ch.Fields))
-		}
-		op := &ir.RecvOp{Chan: s.Chan}
+		op := &ir.RecvOp{Chan: name, Sel: sel}
 		for _, a := range s.Args {
 			var ra ir.RecvArg
 			switch {
@@ -835,11 +1157,23 @@ func (l *lowerer) lowerStmt(it Item, from, to int, ctx seqCtx, first bool) *Erro
 		l.addEdge(it, ir.Edge{From: from, To: to, Recv: op}, panLine)
 		return nil
 	case *RunStmt:
-		target := l.byRun[s]
-		if target == nil {
-			return semanticErr(l.file, it.Pos.Line, it.Pos.Col, "internal: run statement without an instance")
+		pool := l.pools[s.Proc]
+		if len(pool) == 0 {
+			return semanticErr(l.file, it.Pos.Line, it.Pos.Col, "internal: run statement without an instance pool")
 		}
-		r := &ir.RunOp{Proc: target.pid}
+		var r *ir.RunOp
+		target := l.byRun[s]
+		if target != nil {
+			// The frontend saw that this run is taken at most once: it gets
+			// its own instance, as in G1.
+			r = &ir.RunOp{Proc: target.pid}
+		} else {
+			target = pool[0]
+			r = &ir.RunOp{Proc: pool[0].pid}
+			for _, q := range pool {
+				r.Pool = append(r.Pool, q.pid)
+			}
+		}
 		for _, a := range s.Args {
 			e, err := l.expr(a, pid, false)
 			if err != nil {
@@ -853,7 +1187,9 @@ func (l *lowerer) lowerStmt(it Item, from, to int, ctx seqCtx, first bool) *Erro
 			if err != nil {
 				return err
 			}
-			a.Value = ir.Const(int64(target.pid))
+			// The pid of the process just started is the last of the live
+			// table, whichever pool slot it took.
+			a.Value = ir.Binary("sub", ir.NrPr(), ir.Const(1))
 			e.Effect = []ir.Assign{a}
 		}
 		in.runs = append(in.runs, pendingRun{edge: len(in.edges), target: target})
@@ -870,11 +1206,20 @@ func (l *lowerer) lowerStmt(it Item, from, to int, ctx seqCtx, first bool) *Erro
 		l.addEdge(it, ir.Edge{From: from, To: to, Guard: e}, panLine)
 		return nil
 	case *XrXs:
+		// `xr`/`xs` are hints for a later partial-order reduction and change
+		// nothing in the search. On a channel that is only known in a state
+		// (a parameter) there is no channel object to attach them to, so the
+		// hint is dropped with a warning rather than guessed at.
 		for _, c := range s.Chans {
-			ch, err := l.channel(c, it.Pos)
+			name, _, err := l.chanRef(c, nil, pid, it.Pos)
 			if err != nil {
 				return err
 			}
+			if name == "" {
+				l.warnings = append(l.warnings, fmt.Sprintf("%s %s (line %d): the channel is only known while the process runs, so the hint is recorded on no channel; it changes nothing in this engine version", s.Kind, c, it.Pos.Line))
+				continue
+			}
+			ch := l.chans[name]
 			if s.Kind == "xr" {
 				ch.XR = appendUnique(ch.XR, in.pt.Name)
 			} else {
@@ -895,19 +1240,77 @@ func appendUnique(xs []string, s string) []string {
 	return append(xs, s)
 }
 
-func (l *lowerer) channel(name string, at Pos) (*ir.Channel, *Error) {
-	ch := l.chans[name]
-	if ch == nil {
-		if l.globals[name] != nil || l.cur.declared[name] {
-			return nil, semanticErr(l.file, at.Line, at.Col, "%s is a variable, not a channel", name)
-		}
-		return nil, semanticErr(l.file, at.Line, at.Col, "undeclared channel %s", name)
+// chanRef resolves a channel reference `name` or `name[index]` to either
+// the name of a channel object (the static case, unchanged since G1) or a
+// selector expression yielding a channel id (the dynamic case of G5:
+// channel arrays, channel-typed variables, parameters and message fields).
+// Exactly one of the two results is non-empty.
+func (l *lowerer) chanRef(name string, index Expr, pid int, at Pos) (string, *ir.Expr, *Error) {
+	in := l.cur
+	if in == nil {
+		return "", nil, semanticErr(l.file, at.Line, at.Col, "channel %s used outside a process", name)
 	}
-	return ch, nil
+	if index == nil {
+		if ci, ok := in.chanObj[name]; ok {
+			return l.model.Channels[ci].Name, nil, nil
+		}
+		if ci, ok := l.gChanObj[name]; ok && !in.declared[name] {
+			return l.model.Channels[ci].Name, nil, nil
+		}
+	} else {
+		if _, ok := in.chanArr[name]; ok {
+			e, err := l.expr(&IndexExpr{Name: name, Index: index, Pos: at}, pid, false)
+			return "", e, err
+		}
+		if _, ok := l.gChanArr[name]; ok && !in.declared[name] {
+			e, err := l.expr(&IndexExpr{Name: name, Index: index, Pos: at}, pid, false)
+			return "", e, err
+		}
+	}
+	// Not a channel object: it must be a channel-typed variable holding an
+	// id — a local, a parameter, a struct field or an array element.
+	var src Expr = &VarRef{Name: name, Pos: at}
+	if index != nil {
+		src = &IndexExpr{Name: name, Index: index, Pos: at}
+	}
+	v, _ := l.resolve(name)
+	if v == nil {
+		if _, ok := in.chanArr[name]; ok {
+			return "", nil, semanticErr(l.file, at.Line, at.Col, "channel array %s used without an index", name)
+		}
+		if _, ok := l.gChanArr[name]; ok {
+			return "", nil, semanticErr(l.file, at.Line, at.Col, "channel array %s used without an index", name)
+		}
+		return "", nil, semanticErr(l.file, at.Line, at.Col, "undeclared channel %s", name)
+	}
+	e, err := l.expr(src, pid, false)
+	return "", e, err
 }
+
+// checkChanUse checks the arity of a channel operation when the channel is
+// known statically; for a dynamic channel the check is made in the state,
+// by the explorer, because only there is the channel known.
+func (l *lowerer) checkChanUse(name string, nargs int, op string, at Pos) *Error {
+	if name == "" {
+		return nil
+	}
+	ch := l.chans[name]
+	if ch.Capacity == 0 && len(l.curDStep) > 0 {
+		return outside(l.file, at.Line, at.Col, "rendezvous operation inside d_step", "outside the subset")
+	}
+	if nargs != len(ch.Fields) {
+		return semanticErr(l.file, at.Line, at.Col, "%s%s…: %d value(s) for %d field(s)", name, op, nargs, len(ch.Fields))
+	}
+	return nil
+}
+
+// chanCapOf is the capacity of a statically known channel.
+func (l *lowerer) chanCapOf(name string) int { return l.chans[name].Capacity }
 
 // resolve finds a variable name: the process's visible locals shadow
 // globals. It returns the declaration and whether it is a local.
+//
+//nolint:unparam // the bool is part of the contract even where unused
 func (l *lowerer) resolve(name string) (*ir.Var, bool) {
 	if l.cur != nil && l.cur.visible(name) {
 		for i := range l.cur.locals {
@@ -982,12 +1385,46 @@ func (l *lowerer) expr(e Expr, pid int, constOnly bool) (*ir.Expr, *Error) {
 			return nil, err
 		}
 		return ir.Binary(binOps[x.Op], a, b), nil
-	case *ChanExpr:
-		ch, err := l.channel(x.Chan, x.Pos)
+	case *NrPrExpr:
+		return ir.NrPr(), nil
+	case *PCValueExpr:
+		pe, err := l.expr(x.Proc, pid, constOnly)
 		if err != nil {
 			return nil, err
 		}
-		ln := ir.Len(x.Chan)
+		n, ok := constValue(pe)
+		if !ok {
+			return nil, outside(l.file, x.Pos.Line, x.Pos.Col, "pc_value with a computed process number",
+				"this engine version reads pc_value only of a process known when the model is built (a constant or _pid)")
+		}
+		if n < 0 || n >= int64(len(l.insts)) {
+			return nil, semanticErr(l.file, x.Pos.Line, x.Pos.Col, "pc_value(%d): the model has %d process instances", n, len(l.insts))
+		}
+		return ir.PC(int(n)), nil
+	case *ChanExpr:
+		name, sel, err := l.chanRef(x.Chan, x.Index, pid, x.Pos)
+		if err != nil {
+			return nil, err
+		}
+		if name != "" {
+			ln := ir.Len(name)
+			cap := int64(l.chanCapOf(name))
+			switch x.Fn {
+			case "len":
+				return ln, nil
+			case "empty":
+				return ir.Binary("eq", ln, ir.Const(0)), nil
+			case "nempty":
+				return ir.Binary("gt", ln, ir.Const(0)), nil
+			case "full":
+				return ir.Binary("eq", ln, ir.Const(cap)), nil
+			default: // nfull
+				return ir.Binary("lt", ln, ir.Const(cap)), nil
+			}
+		}
+		// The channel is only known in a state: its length and its capacity
+		// are read there too.
+		ln := ir.CLen(sel)
 		switch x.Fn {
 		case "len":
 			return ln, nil
@@ -996,9 +1433,9 @@ func (l *lowerer) expr(e Expr, pid int, constOnly bool) (*ir.Expr, *Error) {
 		case "nempty":
 			return ir.Binary("gt", ln, ir.Const(0)), nil
 		case "full":
-			return ir.Binary("eq", ln, ir.Const(int64(ch.Capacity))), nil
+			return ir.CFull(sel), nil
 		default: // nfull
-			return ir.Binary("lt", ln, ir.Const(int64(ch.Capacity))), nil
+			return ir.Unary("not", ir.CFull(sel)), nil
 		}
 	case *VarRef:
 		if x.Name == "_pid" {
@@ -1018,8 +1455,15 @@ func (l *lowerer) expr(e Expr, pid int, constOnly bool) (*ir.Expr, *Error) {
 		if v, ok := l.mtype[x.Name]; ok {
 			return ir.Const(v), nil
 		}
-		if l.chans[x.Name] != nil {
-			return nil, semanticErr(l.file, x.Pos.Line, x.Pos.Col, "channel %s used as a value", x.Name)
+		// A channel used as a value is its id (G5): that is what a
+		// channel-typed variable, parameter or message field carries.
+		if l.cur != nil {
+			if ci, ok := l.cur.chanObj[x.Name]; ok {
+				return ir.Const(ir.ChanID(ci)), nil
+			}
+		}
+		if ci, ok := l.gChanObj[x.Name]; ok && (l.cur == nil || !l.cur.declared[x.Name]) {
+			return ir.Const(ir.ChanID(ci)), nil
 		}
 		if constOnly {
 			return nil, outside(l.file, x.Pos.Line, x.Pos.Col, "non-constant initialiser", fmt.Sprintf("initialiser refers to %s", x.Name))

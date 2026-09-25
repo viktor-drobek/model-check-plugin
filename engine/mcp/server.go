@@ -55,6 +55,7 @@ import (
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"modelcheck/cli"
+	"modelcheck/frontend/promela"
 	"modelcheck/ir"
 	"modelcheck/report"
 )
@@ -88,7 +89,7 @@ func PromelaViaCLI(src string, defines map[string]string, file string) (*Promela
 			ds = append(ds, k+"="+v)
 		}
 	}
-	parsed, rej := cli.ParsePromela([]byte(src), file, ds)
+	parsed, rej := cli.ParsePromela([]byte(src), file, ds, promela.DefaultMaxProcs)
 	if rej != nil {
 		line := 0
 		if i := strings.LastIndex(rej.Path, ":"); i > 0 {

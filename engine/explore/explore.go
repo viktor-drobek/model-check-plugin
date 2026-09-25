@@ -93,6 +93,7 @@ package explore
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -131,12 +132,24 @@ type Options struct {
 	// verdicts do not change: the first one stands.
 	Sweep bool
 	// Fairness applies to ltl and progress properties: "" or "none",
-	// "weak" (pan -f, see cycle.go), "strong" (not executed, FR-008).
+	// "weak" (pan -f, see cycle.go), "strong" (not executed, FR-008). A ctl
+	// property asked with any fairness is not executed (ctlcheck.go).
 	Fairness string
 	// Defines are the object-like #define macros of a Promela input, for
-	// the atoms of ltl formulas.
+	// the atoms of ltl and ctl formulas.
 	Defines map[string]string
+	// Watch are boolean expressions whose truth is recorded over the stored
+	// states of the safety search, for the vacuity hints of FR-011. They do
+	// not influence the search in any way.
+	Watch []*ir.Expr
 }
+
+// Fairness values, shared with the CLI and the MCP server.
+const (
+	FairnessNone   = "none"
+	FairnessWeak   = "weak"
+	FairnessStrong = "strong"
+)
 
 // Status and Evidence values (11 §14).
 type Status string
@@ -171,8 +184,12 @@ type Outcome struct {
 	// Stats are the counters of the property's own search when it had
 	// one (ltl, progress: the product search); nil means the Result's.
 	Stats *Stats
-	// Temporal describes the claim used for an ltl / progress property.
+	// Temporal describes the claim used for an ltl / progress property or
+	// the formula used for a ctl one.
 	Temporal *TemporalInfo
+	// Warnings are notes that do not change the verdict but that a reader
+	// must know to interpret it — the vacuity hints of FR-011.
+	Warnings []string
 }
 
 // Result is the outcome of one run.
@@ -193,20 +210,53 @@ type Result struct {
 	// (by the safety search; a temporal property's own search reports its
 	// completeness in Outcome.Stats).
 	Complete bool
+	// Coverage is the record of Options.Watch over the stored states; it is
+	// meaningful only when Complete.
+	Coverage []Coverage
 	// Stop says why the search ended: "complete", "all properties decided",
 	// "invalid model", or the budget reason.
 	Stop string
 }
 
 // budgetEvidence maps a stop reason to the evidence of an inconclusive
-// verdict (plan 14 §6): a declared bound on states or depth was reached →
-// bounded; time or memory ran out → unknown (the bound was not declared as
-// a search bound but happened).
+// verdict (plan 14 §6): a declared bound on states, depth or the number of
+// process instances was reached → bounded; time or memory ran out →
+// unknown (the bound was not declared as a search bound but happened).
 func budgetEvidence(stop string) Evidence {
-	if strings.HasPrefix(stop, "state budget") || strings.HasPrefix(stop, "depth budget") {
-		return Bounded
+	for _, p := range []string{"state budget", "depth budget", "process budget"} {
+		if strings.HasPrefix(stop, p) {
+			return Bounded
+		}
 	}
 	return EvUnknown
+}
+
+// poolExhausted is a `run` that finds no dormant instance left in its pool
+// (G5). It is a declared engine bound, not a fault of the model: the
+// properties become inconclusive with evidence bounded, never invalid-model
+// and never a verdict. SPIN's pan aborts in the same situation ("too many
+// processes"), at its own fixed limit of 255.
+type poolExhausted struct {
+	proc string
+	n    int
+	step string
+}
+
+func (e *poolExhausted) Error() string {
+	return fmt.Sprintf("process budget exhausted: the step %q starts another %s, but the engine pre-instantiates at most %d instance(s) of it; raise the bound with --max-procs (mcd) or max_procs (mc_check) and rerun",
+		e.step, e.proc, e.n)
+}
+
+// handleErr routes an error raised while firing a step: an exhausted
+// process pool is a bound (the search stops and says so), anything else is
+// a model error (invalid-model with the run to the offending step).
+func (s *search) handleErr(err error, tr func() *cex.Trace) {
+	var pe *poolExhausted
+	if errors.As(err, &pe) {
+		s.budget(err.Error())
+		return
+	}
+	s.fail(err.Error(), tr())
 }
 
 // Run explores m from its initial state. Safety properties (deadlock,
@@ -241,14 +291,31 @@ func Run(ctx context.Context, m *ir.Model, opt Options) (*Result, error) {
 		res:     &Result{StateBytes: c.layout.Size},
 	}
 	s.initOutcomes()
-	var temporal []int
+	var temporal, ctls []int
 	for i, p := range c.props {
-		if p.Kind == KindLTL || p.Kind == KindProgress {
+		switch p.Kind {
+		case KindLTL, KindProgress:
 			temporal = append(temporal, i)
+		case KindCTL:
+			ctls = append(ctls, i)
 		}
 	}
 	hasSafety := s.undecided > 0
-	if hasSafety || len(temporal) == 0 {
+	if opt.Watch == nil {
+		// The atoms of the ltl properties, so that one safety search can
+		// answer the vacuity questions of FR-011 for all of them.
+		opt.Watch = WatchExprs(m, opt.Defines)
+	}
+	s.watch = make([]Coverage, len(opt.Watch))
+	for i, e := range opt.Watch {
+		ce, err := c.layout.Compile(e, -1)
+		if err != nil {
+			return nil, err
+		}
+		s.watched = append(s.watched, ce)
+		s.watch[i] = Coverage{Text: e.String()}
+	}
+	if hasSafety || (len(temporal) == 0 && len(ctls) == 0) {
 		if opt.Mode == BFS {
 			s.bfs()
 		} else {
@@ -256,8 +323,19 @@ func Run(ctx context.Context, m *ir.Model, opt Options) (*Result, error) {
 		}
 		s.finish()
 	}
+	if s.res.Complete {
+		s.res.Coverage = s.watch
+	}
 	for _, i := range temporal {
 		o, err := runCycle(s, m, c.props[i], i, opt)
+		if err != nil {
+			return nil, err
+		}
+		applyVacuity(&o, vacuityCoverage(s.res, o.Temporal), antecedentsOf(o.Temporal), s.res.States)
+		s.res.Outcomes[i] = o
+	}
+	for _, i := range ctls {
+		o, err := runCTL(s, m, c.props[i], opt)
 		if err != nil {
 			return nil, err
 		}
@@ -284,7 +362,8 @@ type cAssign struct {
 }
 
 type cSend struct {
-	ch   int
+	ch   int          // static channel index; -1 when sel is set
+	sel  *ir.Compiled // dynamic channel id (G5)
 	args []*ir.Compiled
 }
 
@@ -296,13 +375,20 @@ type cRecvArg struct {
 
 type cRecv struct {
 	ch   int
+	sel  *ir.Compiled
 	args []cRecvArg
 }
 
+// cRun is a compiled `run`: pool lists the interchangeable instances in
+// allocation order, params[k] are the parameter slots of pool[k].
 type cRun struct {
-	proc, entry int
-	args        []*ir.Compiled
-	params      []*ir.Slot
+	pool   []int
+	entry  int
+	args   []*ir.Compiled
+	params [][]*ir.Slot
+	// init[k] are the initialisers of pool[k]'s locals, compiled in that
+	// instance's own scope and applied after its parameters.
+	init [][]cAssign
 }
 
 type cEdge struct {
@@ -318,7 +404,11 @@ type cEdge struct {
 	usesTimeout bool
 	// rv: a send on a rendezvous channel; receivers lists every Recv edge
 	// on that channel in the other processes, in (process, edge) order.
+	// For a send on a dynamic channel (dyn) the capacity is only known in a
+	// state, so receivers lists every Recv edge of the other processes and
+	// rvMatch decides, in the state, whether the two channels are the same.
 	rv        bool
+	dyn       bool
 	receivers []*cEdge
 }
 
@@ -327,6 +417,9 @@ type cProc struct {
 	end   []bool  // per location: carries the end label
 	edge  []cEdge
 	claim bool
+	// provided is the compiled `provided (expr)` clause: while it is false
+	// no edge of the process is enabled (Promela's process-level guard).
+	provided *ir.Compiled
 }
 
 type cProp struct {
@@ -356,6 +449,9 @@ func compile(m *ir.Model) (*compiled, error) {
 	for p := range m.Processes {
 		pr := &m.Processes[p]
 		cp := cProc{out: make([][]int, len(pr.Locations)), end: make([]bool, len(pr.Locations)), claim: pr.Claim}
+		if cp.provided, err = l.Compile(pr.Provided, p); err != nil {
+			return nil, fmt.Errorf("%s provided: %w", pr.Name, err)
+		}
 		for i, loc := range pr.Locations {
 			for _, lb := range loc.Labels {
 				if lb == ir.End {
@@ -389,8 +485,16 @@ func compile(m *ir.Model) (*compiled, error) {
 				ce.effect = append(ce.effect, ca)
 			}
 			if e.Send != nil {
-				ci, _ := l.ChanIndex(e.Send.Chan)
-				cs := &cSend{ch: ci}
+				cs := &cSend{ch: -1}
+				if e.Send.Sel != nil {
+					if cs.sel, err = l.Compile(e.Send.Sel, p); err != nil {
+						return nil, err
+					}
+					ce.dyn, ce.rv = true, true
+				} else {
+					cs.ch, _ = l.ChanIndex(e.Send.Chan)
+					ce.rv = m.Channels[cs.ch].Capacity == 0
+				}
 				for _, a := range e.Send.Args {
 					ca, err := l.Compile(a, p)
 					if err != nil {
@@ -399,11 +503,18 @@ func compile(m *ir.Model) (*compiled, error) {
 					cs.args = append(cs.args, ca)
 				}
 				ce.send = cs
-				ce.rv = m.Channels[ci].Capacity == 0
 			}
 			if e.Recv != nil {
-				ci, _ := l.ChanIndex(e.Recv.Chan)
-				cr := &cRecv{ch: ci}
+				ci := -1
+				var sel *ir.Compiled
+				if e.Recv.Sel != nil {
+					if sel, err = l.Compile(e.Recv.Sel, p); err != nil {
+						return nil, err
+					}
+				} else {
+					ci, _ = l.ChanIndex(e.Recv.Chan)
+				}
+				cr := &cRecv{ch: ci, sel: sel}
 				for _, a := range e.Recv.Args {
 					var ra cRecvArg
 					if a.Var != "" {
@@ -420,15 +531,33 @@ func compile(m *ir.Model) (*compiled, error) {
 				ce.recv = cr
 			}
 			if e.Run != nil {
-				r := &cRun{proc: e.Run.Proc, entry: e.Run.Entry}
-				target := &m.Processes[e.Run.Proc]
-				for j, a := range e.Run.Args {
+				r := &cRun{pool: e.Run.Targets(), entry: e.Run.Entry}
+				for _, a := range e.Run.Args {
 					ca, err := l.Compile(a, p)
 					if err != nil {
 						return nil, err
 					}
 					r.args = append(r.args, ca)
-					r.params = append(r.params, l.Resolve(target.Locals[j].Name, e.Run.Proc))
+				}
+				for _, q := range r.pool {
+					target := &m.Processes[q]
+					var slots []*ir.Slot
+					for j := range e.Run.Args {
+						slots = append(slots, l.Resolve(target.Locals[j].Name, q))
+					}
+					r.params = append(r.params, slots)
+					var inits []cAssign
+					for _, a := range e.Run.Init {
+						ca := cAssign{slot: l.Resolve(a.Var, q)}
+						if ca.index, err = l.Compile(a.Index, q); err != nil {
+							return nil, err
+						}
+						if ca.value, err = l.Compile(a.Value, q); err != nil {
+							return nil, err
+						}
+						inits = append(inits, ca)
+					}
+					r.init = append(r.init, inits)
 				}
 				ce.run = r
 			}
@@ -438,7 +567,9 @@ func compile(m *ir.Model) (*compiled, error) {
 		c.procs = append(c.procs, cp)
 	}
 	// Rendezvous partners: every Recv edge on the channel in another,
-	// non-claim process, in (process, edge) order.
+	// non-claim process, in (process, edge) order. A send whose channel is
+	// dynamic cannot name the channel here, so it takes every Recv edge as
+	// a candidate and rvMatch decides in the state (see cEdge.dyn).
 	for p := range c.procs {
 		for i := range c.procs[p].edge {
 			e := &c.procs[p].edge[i]
@@ -451,7 +582,10 @@ func compile(m *ir.Model) (*compiled, error) {
 				}
 				for j := range c.procs[q].edge {
 					r := &c.procs[q].edge[j]
-					if r.recv != nil && r.recv.ch == e.send.ch {
+					if r.recv == nil {
+						continue
+					}
+					if e.dyn || r.recv.sel != nil || r.recv.ch == e.send.ch {
 						e.receivers = append(e.receivers, r)
 					}
 				}
@@ -546,6 +680,9 @@ type search struct {
 	chains [][]cex.Ref
 	depth  []int32
 
+	watched []*ir.Compiled
+	watch   []Coverage
+
 	undecided int
 	stop      string // set when the search must stop early
 	budgetHit bool
@@ -623,6 +760,14 @@ func (s *search) allTerminated(state []byte) bool {
 // enabled reports whether e can be taken in state (timeout as currently set
 // in the layout). For a rendezvous send it asks whether some partner exists.
 func (s *search) enabled(e *cEdge, state []byte) (bool, error) {
+	if pr := s.c.procs[e.proc].provided; pr != nil {
+		// `provided` gates every transition of the process, `else` and the
+		// `-end-` transition included.
+		ok, err := pr.Truth(state)
+		if err != nil || !ok {
+			return false, err
+		}
+	}
 	if e.e.Else {
 		loc := s.c.layout.ReadPC(state, e.proc)
 		for _, oi := range s.c.procs[e.proc].out[loc] {
@@ -643,26 +788,72 @@ func (s *search) enabled(e *cEdge, state []byte) (bool, error) {
 	}
 	l := s.c.layout
 	switch {
-	case e.send != nil && e.rv:
-		for _, r := range e.receivers {
-			ok, err := s.rvMatch(e, r, state)
-			if err != nil || ok {
-				return ok, err
-			}
-		}
-		return false, nil
 	case e.send != nil:
-		return l.ChanLen(state, e.send.ch) < s.c.m.Channels[e.send.ch].Capacity, nil
+		ci, err := s.sendChan(e, state)
+		if err != nil {
+			return false, err
+		}
+		if l.Chans[ci].Chan.Capacity == 0 {
+			for _, r := range e.receivers {
+				ok, err := s.rvMatch(e, r, state)
+				if err != nil || ok {
+					return ok, err
+				}
+			}
+			return false, nil
+		}
+		return l.ChanLen(state, ci) < l.Chans[ci].Chan.Capacity, nil
 	case e.recv != nil:
-		return s.recvMatch(e.recv, state)
+		ci, err := s.recvChan(e, state)
+		if err != nil {
+			return false, err
+		}
+		return s.recvMatch(e.recv, ci, state)
 	}
 	return true, nil
 }
 
+// sendChan resolves the channel of a send in state, checking the id and the
+// message shape: a send on the null channel or on a channel with a
+// different number of fields is a model error, not a blocked step.
+func (s *search) sendChan(e *cEdge, state []byte) (int, error) {
+	if e.send.sel == nil {
+		return e.send.ch, nil
+	}
+	id, err := e.send.sel.Eval(state)
+	if err != nil {
+		return 0, err
+	}
+	return s.resolveChan(id, len(e.send.args), e, "!")
+}
+
+func (s *search) recvChan(e *cEdge, state []byte) (int, error) {
+	if e.recv.sel == nil {
+		return e.recv.ch, nil
+	}
+	id, err := e.recv.sel.Eval(state)
+	if err != nil {
+		return 0, err
+	}
+	return s.resolveChan(id, len(e.recv.args), e, "?")
+}
+
+func (s *search) resolveChan(id int64, nargs int, e *cEdge, op string) (int, error) {
+	ci, ok := s.c.layout.ChanByID(id)
+	if !ok {
+		return 0, fmt.Errorf("channel id %d is not a channel of the model in step %q (0 is Promela's null channel: %s on it has no meaning)", id, cex.CommandText(e.e), op)
+	}
+	if got := len(s.c.layout.Chans[ci].Chan.Fields); got != nargs {
+		return 0, fmt.Errorf("channel %s has %d message field(s) but step %q uses %d: the engine does not guess a correspondence between differently shaped messages",
+			s.c.layout.Chans[ci].Chan.Name, got, cex.CommandText(e.e), nargs)
+	}
+	return ci, nil
+}
+
 // recvMatch: the buffer is not empty and the head satisfies every Match.
-func (s *search) recvMatch(r *cRecv, state []byte) (bool, error) {
+func (s *search) recvMatch(r *cRecv, ci int, state []byte) (bool, error) {
 	l := s.c.layout
-	if l.ChanLen(state, r.ch) == 0 {
+	if l.ChanLen(state, ci) == 0 {
 		return false, nil
 	}
 	for f, a := range r.args {
@@ -673,15 +864,16 @@ func (s *search) recvMatch(r *cRecv, state []byte) (bool, error) {
 		if err != nil {
 			return false, err
 		}
-		if l.ChanField(state, r.ch, 0, f) != want {
+		if l.ChanField(state, ci, 0, f) != want {
 			return false, nil
 		}
 	}
 	return true, nil
 }
 
-// rvMatch: receiver r is at the location of its edge, its own guard holds
-// and its Match values equal what e sends.
+// rvMatch: receiver r is at the location of its edge, it reads the same
+// channel as e writes, its own guard holds and its Match values equal what
+// e sends.
 func (s *search) rvMatch(e, r *cEdge, state []byte) (bool, error) {
 	if s.c.layout.ReadPC(state, r.proc) != r.e.From {
 		return false, nil
@@ -689,6 +881,17 @@ func (s *search) rvMatch(e, r *cEdge, state []byte) (bool, error) {
 	ok, err := r.guard.Truth(state)
 	if err != nil || !ok {
 		return false, err
+	}
+	sc, err := s.sendChan(e, state)
+	if err != nil {
+		return false, err
+	}
+	rc, err := s.recvChan(r, state)
+	if err != nil {
+		return false, err
+	}
+	if sc != rc {
+		return false, nil
 	}
 	for f, a := range r.recv.args {
 		if a.match == nil {
@@ -800,10 +1003,24 @@ func (s *search) nextEnabled(f *frame, state []byte) (move, bool, error) {
 			if err != nil {
 				return move{}, false, err
 			}
-			if ok {
-				f.pend, f.rv = e, 0
+			if !ok {
+				continue
 			}
-			continue
+			rv := true
+			if e.dyn {
+				// The capacity is a property of the channel the selector
+				// names in this state, so the choice between a handshake and
+				// a buffered send is made here, not at compile time.
+				ci, err := s.sendChan(e, state)
+				if err != nil {
+					return move{}, false, err
+				}
+				rv = l.Chans[ci].Chan.Capacity == 0
+			}
+			if rv {
+				f.pend, f.rv = e, 0
+				continue
+			}
 		}
 		ok, err := s.enabled(e, state)
 		if err != nil {
@@ -899,23 +1116,66 @@ func (s *search) apply(e, partner *cEdge) error {
 		}
 	}
 	st[l.Excl] = byte(excl)
+	if e.e.Leave {
+		l.Leave(st)
+	}
+	for _, ci := range e.e.ClearChans {
+		l.ClearChan(st, ci)
+	}
 	if r := e.run; r != nil {
-		target := &s.c.m.Processes[r.proc]
-		if l.ReadPC(st, r.proc) != target.Initial {
-			return fmt.Errorf("run: process %s is already running in step %q", target.Name, cex.CommandText(e.e))
+		// The first dormant instance of the pool becomes the new process:
+		// the k-th live instance of a proctype is its k-th pool slot, which
+		// is what keeps the vector in step with pan's process stack.
+		slot := -1
+		for k, q := range r.pool {
+			if l.ReadPC(st, q) == s.c.m.Processes[q].Initial && s.c.m.Processes[q].Dynamic {
+				slot = k
+				break
+			}
 		}
+		if slot < 0 {
+			return &poolExhausted{proc: s.c.m.Processes[r.pool[0]].Name, n: len(r.pool), step: cex.CommandText(e.e)}
+		}
+		q := r.pool[slot]
 		for i, a := range r.args {
 			v, err := a.Eval(st)
 			if err != nil {
 				return err
 			}
-			if err := s.store1(r.params[i], v, e); err != nil {
+			if err := s.store1(r.params[slot][i], v, e); err != nil {
 				return err
 			}
 		}
-		l.WritePC(st, r.proc, r.entry)
+		for _, a := range r.init[slot] {
+			slot2 := a.slot
+			if a.index != nil {
+				i, err := a.index.Eval(st)
+				if err != nil {
+					return err
+				}
+				if i < 0 || i >= int64(slot2.Var.Len) {
+					return fmt.Errorf("index %d out of range for %s[%d]", i, slot2.Var.Name, slot2.Var.Len)
+				}
+				slot2 = slot2.At(int(i))
+			}
+			v, err := a.value.Eval(st)
+			if err != nil {
+				return err
+			}
+			if err := s.store1(slot2, v, e); err != nil {
+				return err
+			}
+		}
+		l.WritePC(st, q, r.entry)
+		if l.HasTable() && !l.Enter(st, q) {
+			return &poolExhausted{proc: s.c.m.Processes[q].Name, n: len(s.c.m.Processes), step: cex.CommandText(e.e)}
+		}
 	}
 	if e.send != nil {
+		ci, err := s.sendChan(e, st)
+		if err != nil {
+			return err
+		}
 		vals := make([]int64, len(e.send.args))
 		for i, a := range e.send.args {
 			v, err := a.Eval(st)
@@ -925,7 +1185,7 @@ func (s *search) apply(e, partner *cEdge) error {
 			vals[i] = v
 		}
 		if partner == nil {
-			l.ChanPush(st, e.send.ch, vals)
+			l.ChanPush(st, ci, vals)
 		} else {
 			for f, a := range partner.recv.args {
 				if err := s.bind(a, vals[f], partner); err != nil {
@@ -935,12 +1195,16 @@ func (s *search) apply(e, partner *cEdge) error {
 		}
 	}
 	if e.recv != nil {
+		ci, err := s.recvChan(e, st)
+		if err != nil {
+			return err
+		}
 		for f, a := range e.recv.args {
-			if err := s.bind(a, l.ChanField(st, e.recv.ch, 0, f), e); err != nil {
+			if err := s.bind(a, l.ChanField(st, ci, 0, f), e); err != nil {
 				return err
 			}
 		}
-		l.ChanPop(st, e.recv.ch)
+		l.ChanPop(st, ci)
 	}
 	for _, a := range e.effect {
 		slot := a.slot
@@ -1007,6 +1271,17 @@ func domainNote(sl *ir.Slot) string {
 // state; path is the run that reaches it.
 func (s *search) checkState(state []byte, path func() *cex.Trace) error {
 	s.c.layout.Timeout = false
+	for i, w := range s.watched {
+		ok, err := w.Truth(state)
+		if err != nil {
+			return err
+		}
+		if ok {
+			s.watch[i].EverTrue = true
+		} else {
+			s.watch[i].EverFalse = true
+		}
+	}
 	for _, ip := range s.c.invs {
 		if s.res.Outcomes[ip.i].Status != "" {
 			continue
@@ -1157,7 +1432,7 @@ func (s *search) dfs() {
 		}
 		m, ok, err := s.nextEnabled(top, s.cur)
 		if err != nil {
-			s.fail(err.Error(), pathToTop())
+			s.handleErr(err, pathToTop)
 			break
 		}
 		if !ok {
@@ -1178,7 +1453,7 @@ func (s *search) dfs() {
 		// state.
 		failed, err := s.fire(m)
 		if err != nil {
-			s.fail(err.Error(), s.dfsPath(&m, s.next))
+			s.handleErr(err, func() *cex.Trace { return s.dfsPath(&m, s.next) })
 			break
 		}
 		if failed != nil {
@@ -1190,7 +1465,7 @@ func (s *search) dfs() {
 		depth := len(s.stack) // transitions from the initial state to next
 		inter, err := s.intermediate(s.next)
 		if err != nil {
-			s.fail(err.Error(), s.dfsPath(&m, s.next))
+			s.handleErr(err, func() *cex.Trace { return s.dfsPath(&m, s.next) })
 			break
 		}
 		if inter {
@@ -1310,7 +1585,7 @@ func (s *search) bfs() {
 			copy(s.cur, n.state)
 			m, ok, err := s.nextEnabled(&n.f, s.cur)
 			if err != nil {
-				s.fail(err.Error(), s.bfsPath(head, n.chain, nil))
+				s.handleErr(err, func() *cex.Trace { return s.bfsPath(head, n.chain, nil) })
 				break
 			}
 			if !ok {
@@ -1325,7 +1600,7 @@ func (s *search) bfs() {
 			chain := append(append([]cex.Ref(nil), n.chain...), s.ref(int32(m.e.proc), int32(m.e.idx), partnerCode(m)))
 			failed, err := s.fire(m)
 			if err != nil {
-				s.fail(err.Error(), s.bfsPath(head, chain, s.next))
+				s.handleErr(err, func() *cex.Trace { return s.bfsPath(head, chain, s.next) })
 				break
 			}
 			if failed != nil {
@@ -1336,7 +1611,7 @@ func (s *search) bfs() {
 			}
 			inter, err := s.intermediate(s.next)
 			if err != nil {
-				s.fail(err.Error(), s.bfsPath(head, chain, s.next))
+				s.handleErr(err, func() *cex.Trace { return s.bfsPath(head, chain, s.next) })
 				break
 			}
 			if inter {

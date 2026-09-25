@@ -20,10 +20,22 @@ type Result struct {
 	Defines map[string]string
 }
 
-// Parse runs the whole frontend on src: lexer, preprocessor (with -D
-// defines), parser, lowering. file is used for origins and messages; the
-// model's name is the file's base name without extension.
+// Options configures the frontend.
+type Options struct {
+	// MaxProcs is the size of the instance pool for a proctype whose `run`
+	// may be taken more than once; 0 means DefaultMaxProcs.
+	MaxProcs int
+}
+
+// Parse runs the whole frontend on src with the default options.
 func Parse(src []byte, file string, defines []string) (*Result, *Error) {
+	return ParseWith(src, file, defines, Options{})
+}
+
+// ParseWith runs the whole frontend on src: lexer, preprocessor (with -D
+// defines), inline expansion, parser, lowering. file is used for origins
+// and messages; the model's name is the file's base name without extension.
+func ParseWith(src []byte, file string, defines []string, opt Options) (*Result, *Error) {
 	toks, err := Lex(string(src), file)
 	if err != nil {
 		return nil, err
@@ -32,12 +44,16 @@ func Parse(src []byte, file string, defines []string) (*Result, *Error) {
 	if err != nil {
 		return nil, err
 	}
+	toks, err = ExpandInlines(toks, file)
+	if err != nil {
+		return nil, err
+	}
 	mod, err := ParseTokens(toks, file)
 	if err != nil {
 		return nil, err
 	}
 	name := strings.TrimSuffix(filepath.Base(file), filepath.Ext(file))
-	lw, err := Lower(mod, file, name)
+	lw, err := LowerWith(mod, file, name, opt.MaxProcs)
 	if err != nil {
 		return nil, err
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -134,25 +135,23 @@ func TestRejectionPositions(t *testing.T) {
 		{"syntax", "byte x;\nactive proctype A()\n{\tx = = 1\n}\n", KindSyntax, 3, 7, "unexpected ="},
 		{"c_code", "c_code { int x; }\n", KindOutside, 1, 1, "c_code"},
 		{"unless", "active proctype A() { { skip } unless { skip } }\n", KindOutside, 1, 32, "unless"},
-		{"inline", "inline f(x) { x = 1 }\n", KindOutside, 1, 1, "inline"},
-		{"typedef", "typedef T { byte a }\n", KindOutside, 1, 1, "typedef"},
-		{"provided", "active proctype A() provided (1) { skip }\n", KindOutside, 1, 21, "provided"},
+		{"inline call arity", "inline f(x) { x = 1 }\nbyte a;\ninit { f(a, a) }\n", KindSemantic, 3, 8, "1 parameter(s)"},
+		{"struct array", "typedef T { byte a }\nT v[2];\ninit { skip }\n", KindOutside, 2, 3, "array of structs"},
 		{"bitwise", "byte x;\nactive proctype A() { x = x & 1 }\n", KindOutside, 2, 29, "bitwise operator &"},
 		{"run in expr", "proctype B() { skip }\ninit { !run B() }\n", KindOutside, 2, 9, "run inside an expression"},
-		{"run outside init", "proctype B() { run B() }\ninit { run B() }\n", KindOutside, 1, 16, "run outside init"},
-		{"run in loop", "proctype B() { skip }\ninit { do :: run B() od }\n", KindOutside, 2, 14, "run inside an alternative or loop"},
-		{"chan field", "chan c = [0] of { chan };\n", KindOutside, 1, 19, "channel-typed message field"},
-		{"chan local", "active proctype A() { chan c = [0] of { byte }; skip }\n", KindOutside, 1, 28, "channel-typed variable"},
-		{"uninit chan", "chan STDIN;\n", KindOutside, 1, 6, "uninitialised channel"},
+		{"chan in a dynamic process", "proctype B() { chan c = [0] of { byte }; skip }\ninit { run B() }\n", KindOutside, 1, 21, "channel declared inside a process created by run"},
+		{"struct message field", "typedef T { byte a }\nchan c = [0] of { T };\ninit { skip }\n", KindOutside, 2, 19, "user-defined message field type T"},
 		{"eval", "chan c = [1] of { byte }; byte x;\nactive proctype A() { c?eval(x) }\n", KindOutside, 2, 25, "eval"},
 		{"poll", "chan c = [1] of { byte };\nactive proctype A() { c?[1] }\n", KindOutside, 2, 23, "channel poll"},
 		{"sorted send", "chan c = [1] of { byte };\nactive proctype A() { c!!1 }\n", KindOutside, 2, 23, "sorted send"},
 		{"ternary", "byte x;\nactive proctype A() { x = (x -> 1 : 2) }\n", KindOutside, 2, 27, "conditional expression"},
 		{"remote ref", "active proctype A() { L: skip; A@L }\n", KindOutside, 1, 32, "remote reference"},
-		{"_nr_pr", "active proctype A() { _nr_pr > 0 }\n", KindOutside, 1, 23, "_nr_pr"},
+		{"random receive", "chan c = [1] of { byte };\nactive proctype A() { c??1 }\n", KindOutside, 2, 23, "random receive"},
+		{"pc_value of a computed process", "byte x;\nactive proctype A() { pc_value(x) > 0 }\n", KindOutside, 2, 23, "pc_value with a computed process number"},
 		{"undeclared", "active proctype A() { y = 1 }\n", KindSemantic, 1, 23, "undeclared variable y"},
 		{"undeclared in printf", "active proctype A() { printf(\"%d\", y) }\n", KindSemantic, 1, 36, "undeclared variable y"},
 		{"block scope", "init { { int y; y++ } y = 1 }\n", KindSemantic, 1, 23, "undeclared variable y"},
+		{"redeclared with another type", "init { { int y; y++ }; { byte y; y++ } }\n", KindSemantic, 1, 31, "different types"},
 		{"send arity", "chan c = [1] of { byte, byte };\nactive proctype A() { c!1 }\n", KindSemantic, 2, 23, "1 value(s) for 2 field(s)"},
 		{"break outside do", "active proctype A() { break }\n", KindSemantic, 1, 23, "break outside"},
 		{"rendezvous in d_step", "chan c = [0] of { byte };\nactive proctype A() { d_step { c!1; skip } }\nactive proctype B() { c?_ }\n", KindOutside, 2, 32, "rendezvous operation inside d_step"},
@@ -258,18 +257,39 @@ func TestRunInstancesAndEndGuards(t *testing.T) {
 	if initP.Edges[0].Run == nil || initP.Edges[0].Run.Proc != 2 || initP.Edges[1].Run.Proc != 3 || len(initP.Edges[0].Run.Args) != 2 {
 		t.Fatalf("init run edges: %+v %+v", initP.Edges[0].Run, initP.Edges[1].Run)
 	}
-	// A's -end- waits for every younger process to be dead or dormant; the
-	// last process has no condition.
+	// With dynamic processes the model carries the live-process table, and
+	// SPIN's rule is stated once: only the youngest live process may leave.
+	for k, p := range m.Processes {
+		end := p.Edges[len(p.Edges)-1]
+		if end.Text != "-end-" || !end.Leave || end.Guard == nil || !end.Guard.Uses("youngest") {
+			t.Fatalf("%s's -end- edge: %+v", p.Name, end)
+		}
+		if end.Guard.String() != "youngest("+strconv.Itoa(k)+")" {
+			t.Fatalf("%s's -end- guard is %s", p.Name, end.Guard)
+		}
+	}
+	// A dynamic instance returns to its dormant location, so the pool slot
+	// can be started again.
+	endE := e.Edges[len(e.Edges)-1]
+	if e.Locations[endE.To].Name != "-dormant-" {
+		t.Fatalf("E:2's -end- goes to %q, want -dormant-", e.Locations[endE.To].Name)
+	}
+}
+
+// TestStaticModelHasNoProcessTable: a model without `run` keeps exactly the
+// encoding G1 fixed against pan — no table, and the -end- guard written as
+// the conjunction over the younger processes.
+func TestStaticModelHasNoProcessTable(t *testing.T) {
+	m, _, err := parseSrc(t, "active proctype A() { skip }\nactive proctype B() { skip }\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ir.NeedsTable(m) {
+		t.Fatal("a model without run must not carry the live-process table")
+	}
 	endA := m.Processes[0].Edges[len(m.Processes[0].Edges)-1]
-	if endA.Text != "-end-" || endA.Guard == nil || !endA.Guard.Uses("pc") {
+	if endA.Leave || endA.Guard == nil || !endA.Guard.Uses("pc") {
 		t.Fatalf("A's -end- edge: %+v", endA)
-	}
-	endLast := e.Edges[len(e.Edges)-1]
-	if endLast.Text != "-end-" || m.Processes[3].Edges[len(m.Processes[3].Edges)-1].Guard != nil {
-		t.Fatalf("the last process's -end- must be unconditional")
-	}
-	if !strings.Contains(endLast.Guard.String(), "pc(3)") {
-		t.Fatalf("E:2's -end- guard %s should mention pc(3)", endLast.Guard)
 	}
 }
 
@@ -433,16 +453,9 @@ func TestCorpusRejections(t *testing.T) {
 		file, kind, construct string
 		line                  int
 	}{
-		{"CH3/inline.pml", KindOutside, "inline", 1},
-		{"CH3/inline2.pml", KindOutside, "inline", 1},
-		{"CH2/prodcons2.pml", KindOutside, "inline", 6},
-		{"CH3/typedef.pml", KindOutside, "typedef", 1},
-		{"CH3/toggle.pml", KindOutside, "provided", 4},
-		{"CH3/pots.pml", KindOutside, "channel-typed message field", 4},
-		{"CH3/rendezvous2.pml", KindOutside, "channel-typed message field", 3},
-		{"CH3/splurge.pml", KindOutside, "run outside init", 4},
-		{"CH3/splurge2.pml", KindOutside, "run outside init", 4},
-		{"CH3/wc.pml", KindOutside, "uninitialised channel", 1},
+		{"CH3/pots.pml", KindOutside, "unless", 20},
+		{"CH14/version5", KindOutside, "random receive", 211},
+		{"CH14/version6", KindOutside, "remote reference", 231},
 		{"CH3/notpossible.pml", KindOutside, "run inside an expression", 3},
 		{"CH3/scope.pml", KindSemantic, "undeclared variable y", 11},
 		{"CH17/simple1.pr", KindOutside, "c_code", 1},

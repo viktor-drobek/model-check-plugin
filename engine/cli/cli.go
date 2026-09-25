@@ -8,10 +8,13 @@
 //	mcd parse   --petri file.json | --ir file.json | --promela file.pml [-D NAME[=val]]…
 //	                                                            → IR JSON
 //	mcd check  (--petri file.json | --ir file.json | --promela file.pml [-D …])
-//	           [--ltl 'formula']… [--progress] [--fairness none|weak|strong]
+//	           [--ltl 'formula']… [--ctl 'formula']… [--progress]
+//	           [--fairness none|weak|strong] [--max-procs N]
 //	           [--budget-states N] [--budget-depth N] [--budget-ms N]
 //	           [--budget-mem-mb N] [--unlimited] [--bfs] [--sweep] [--no-timing]
 //	                                                            → report JSON
+//	mcd check  --estimate [--estimate-ms N] [--target-depth N] (input flags)
+//	                                                            → estimate JSON
 //	mcd version                                                → "mcd <version>"
 //
 // Budgets (plan 14 §6 as amended in G4): a budget flag that is absent or 0
@@ -57,6 +60,7 @@ import (
 	"strings"
 	"time"
 
+	"modelcheck/estimate"
 	"modelcheck/explore"
 	"modelcheck/frontend/petri"
 	"modelcheck/frontend/promela"
@@ -124,10 +128,11 @@ func Run(args []string, stdout, stderr io.Writer) int {
 }
 
 type input struct {
-	kind    string
-	path    string
-	data    []byte
-	defines []string
+	kind     string
+	path     string
+	data     []byte
+	defines  []string
+	maxProcs int
 }
 
 // Parsed is the frontend's output: the model, its warnings and, for a
@@ -175,7 +180,7 @@ func toIR(in *input) (*Parsed, *rejectionBody) {
 		}
 		return &Parsed{Model: net.ToIR(in.path)}, nil
 	case "promela":
-		res, perr := ParsePromela(in.data, in.path, in.defines)
+		res, perr := ParsePromela(in.data, in.path, in.defines, in.maxProcs)
 		if perr != nil {
 			return nil, perr
 		}
@@ -192,8 +197,8 @@ func toIR(in *input) (*Parsed, *rejectionBody) {
 // ParsePromela runs the Promela frontend and maps its error to a
 // rejection; the MCP server uses it too, so both interfaces reject the
 // same inputs with the same words.
-func ParsePromela(src []byte, path string, defines []string) (*Parsed, *rejectionBody) {
-	res, perr := promela.Parse(src, path, defines)
+func ParsePromela(src []byte, path string, defines []string, maxProcs int) (*Parsed, *rejectionBody) {
+	res, perr := promela.ParseWith(src, path, defines, promela.Options{MaxProcs: maxProcs})
 	if perr != nil {
 		return nil, &rejectionBody{
 			Kind:    perr.Kind,
@@ -235,6 +240,7 @@ func runParse(args []string, stdout, stderr io.Writer) int {
 	promelaPath := fs.String("promela", "", "Promela file (the subset of plan 14 §5.2)")
 	var defines defineList
 	fs.Var(&defines, "D", "preprocessor symbol NAME or NAME=value (repeatable)")
+	maxProcs := fs.Int("max-procs", promela.DefaultMaxProcs, "instances pre-instantiated per proctype that a run can create repeatedly")
 	if err := fs.Parse(args); err != nil {
 		return ExitTool
 	}
@@ -243,6 +249,7 @@ func runParse(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "mcd parse:", err)
 		return ExitTool
 	}
+	in.maxProcs = *maxProcs
 	parsed, rej := toIR(in)
 	if rej != nil {
 		return reject(stdout, rej)
@@ -267,6 +274,12 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 	fs.Var(&defines, "D", "preprocessor symbol NAME or NAME=value (repeatable)")
 	var ltls defineList
 	fs.Var(&ltls, "ltl", "LTL formula in SPIN syntax to check (repeatable; properties ltl1, ltl2, …)")
+	var ctls defineList
+	fs.Var(&ctls, "ctl", "CTL formula to check by graph labelling (repeatable; properties ctl1, ctl2, …)")
+	maxProcs := fs.Int("max-procs", promela.DefaultMaxProcs, "instances pre-instantiated per proctype that a run can create repeatedly")
+	doEstimate := fs.Bool("estimate", false, "print the state-space growth estimate (plan 14 §6) instead of checking properties")
+	estimateMS := fs.Int64("estimate-ms", 0, "time limit of --estimate in milliseconds (absent or 0 = 1000)")
+	targetDepth := fs.Int("target-depth", 0, "depth --estimate projects the growth to (absent or 0 = only the next level)")
 	progress := fs.Bool("progress", false, "check for non-progress cycles (property progress; SPIN pan -l)")
 	fairness := fs.String("fairness", FairnessNone, "none | weak | strong: fairness for ltl and progress properties (strong is not executed, FR-008)")
 	sweep := fs.Bool("sweep", false, "keep searching after every property is decided (state count of the whole graph, as pan -c0)")
@@ -291,16 +304,20 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "mcd check:", err)
 		return ExitTool
 	}
+	in.maxProcs = *maxProcs
 	parsed, rej := toIR(in)
 	if rej != nil {
 		return reject(stdout, rej)
 	}
 	m := parsed.Model
-	if len(ltls) > 0 || *progress {
+	if len(ltls) > 0 || len(ctls) > 0 || *progress {
 		mm := *m
 		mm.Properties = append([]ir.Property(nil), m.Properties...)
 		for i, f := range ltls {
 			mm.Properties = append(mm.Properties, ir.Property{ID: fmt.Sprintf("ltl%d", i+1), Kind: ir.KindLTL, Formula: f, Text: f})
+		}
+		for i, f := range ctls {
+			mm.Properties = append(mm.Properties, ir.Property{ID: fmt.Sprintf("ctl%d", i+1), Kind: ir.KindCTL, Formula: f, Text: f})
 		}
 		if *progress && !hasKind(mm.Properties, ir.KindProgress) {
 			mm.Properties = append(mm.Properties, ir.Property{ID: "progress", Kind: ir.KindProgress,
@@ -309,6 +326,9 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 		m = &mm
 	}
 	printWarnings(stderr, parsed.Warnings)
+	if *doEstimate {
+		return runEstimate(m, *estimateMS, *targetDepth, Budgets(*states, *depth, *ms, *memMB, *unlimited), stdout, stderr)
+	}
 	mode := explore.DFS
 	if *bfs {
 		mode = explore.BFS
@@ -328,7 +348,7 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 		kind := "ir"
 		var fe *explore.FormulaError
 		if errors.As(err, &fe) {
-			kind = "ltl"
+			kind = fe.Kind()
 		}
 		return reject(stdout, &rejectionBody{Kind: kind, Status: "not-executed", Message: err.Error()})
 	}
@@ -350,6 +370,29 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 		return ExitTool
 	}
 	stdout.Write(out)
+	return ExitOK
+}
+
+// runEstimate prints the growth estimate document (plan 14 §6). It is not
+// a report: no property gets a status here, which the document says.
+func runEstimate(m *ir.Model, ms int64, targetDepth int, b report.Budget, stdout, stderr io.Writer) int {
+	ctx := context.Background()
+	if b.TimeMS > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, time.Duration(b.TimeMS)*time.Millisecond)
+		defer cancel()
+	}
+	res, err := estimate.Run(ctx, m, estimate.Options{TimeLimitMS: ms, TargetDepth: targetDepth, Budget: b.Explore()})
+	if err != nil {
+		return reject(stdout, &rejectionBody{Kind: "ir", Status: "not-executed", Message: err.Error()})
+	}
+	enc := json.NewEncoder(stdout)
+	enc.SetIndent("", "  ")
+	enc.SetEscapeHTML(false)
+	if err := enc.Encode(res); err != nil {
+		fmt.Fprintln(stderr, "mcd check --estimate:", err)
+		return ExitTool
+	}
 	return ExitOK
 }
 

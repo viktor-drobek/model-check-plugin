@@ -306,11 +306,13 @@ func TestBlockedAtomicLosesExclusivity(t *testing.T) {
 
 func TestUnsupportedKindIsNotExecuted(t *testing.T) {
 	m := petrinet1()
-	// ltl and progress are executed since G4; ctl is the remaining
-	// unsupported kind of plan 14 §6 until G5.
-	m.Properties = append(m.Properties, ir.Property{ID: "live", Kind: "ctl", Text: "AG EF fire(t1)"})
+	// Every kind of plan 14 §6 is executed since G5 (ltl and progress in
+	// G4, ctl here), so the case this test guards is a kind the IR carries
+	// but the engine does not know — the answer must be a status with a
+	// reason, never silence and never a verdict.
+	m.Properties = append(m.Properties, ir.Property{ID: "live", Kind: "refinement", Text: "P refines Q"})
 	r := run(t, m, Options{})
-	if o := outcome(t, r, "live"); o.Status != NotExecuted || o.Evidence != EvUnknown || !strings.Contains(o.Reason, "ctl") {
+	if o := outcome(t, r, "live"); o.Status != NotExecuted || o.Evidence != EvUnknown || !strings.Contains(o.Reason, "refinement") {
 		t.Fatalf("%s/%s: %s", o.Status, o.Evidence, o.Reason)
 	}
 }

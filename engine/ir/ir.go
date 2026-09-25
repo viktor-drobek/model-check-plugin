@@ -142,8 +142,16 @@ type Channel struct {
 // same channel whose Match values equal the sent values — the two edges are
 // then one indivisible step (the handshake) in which the receiver's
 // variables are bound and both processes advance.
+//
+// Sel (G5) makes the channel dynamic: it is an expression whose value is a
+// channel id (1 + the channel's index in Model.Channels; 0 is Promela's
+// null channel). Chan is then empty. A send or receive on the null channel,
+// or on a channel whose field count differs from len(Args), is a model
+// error (invalid-model): the engine refuses to guess a correspondence
+// between differently shaped messages.
 type ChanOp struct {
-	Chan string  `json:"chan"`
+	Chan string  `json:"chan,omitempty"`
+	Sel  *Expr   `json:"sel,omitempty"`
 	Args []*Expr `json:"args"`
 }
 
@@ -153,7 +161,9 @@ type ChanOp struct {
 // rendezvous channel a Recv edge is never taken on its own: it is the
 // partner half of a Send (see ChanOp).
 type RecvOp struct {
-	Chan string    `json:"chan"`
+	Chan string `json:"chan,omitempty"`
+	// Sel makes the channel dynamic; see ChanOp.Sel.
+	Sel  *Expr     `json:"sel,omitempty"`
 	Args []RecvArg `json:"args"`
 }
 
@@ -166,16 +176,41 @@ type RecvArg struct {
 	Match *Expr  `json:"match,omitempty"`
 }
 
-// RunOp starts process Proc (Promela `run`): its program counter moves
-// from its Initial (dormant) location to Entry, and Args, evaluated in the
+// RunOp starts a process (Promela `run`): its program counter moves from
+// its Initial (dormant) location to Entry, and Args, evaluated in the
 // source state, are written to its first len(Args) locals (the
-// parameters). The frontend pre-instantiates every process a `run` can
-// create, so Proc is a static index; the explorer reports an already
-// started target as an evaluation error.
+// parameters).
+//
+// The frontend pre-instantiates every process a `run` can create, so the
+// target is always a static index. Proc is the single target of a `run`
+// that the frontend could see is taken at most once. Pool (G5) is the
+// ordered pool of interchangeable instances of one proctype for a `run`
+// that may be taken many times (inside a loop, or in a process that itself
+// exists many times): the explorer takes the first instance of Pool that is
+// still dormant, which keeps the invariant "the k-th live instance of a
+// proctype is the k-th instance of its pool" and therefore keeps the state
+// vector in bijection with pan's process table. A `run` with no dormant
+// instance left in Pool exhausts a declared engine bound (see
+// Model.MaxProcs), reported as inconclusive, never as a verdict.
 type RunOp struct {
 	Proc  int     `json:"proc"`
+	Pool  []int   `json:"pool,omitempty"`
 	Entry int     `json:"entry"`
 	Args  []*Expr `json:"args,omitempty"`
+	// Init are assignments run on the *new* process, in its own scope,
+	// after its parameters are written: the initialisers of its locals. A
+	// dynamic instance keeps everything at zero while it is dormant, so its
+	// initialisers belong to the step that starts it, and they may read its
+	// parameters (`byte maximum = mynumber`).
+	Init []Assign `json:"init,omitempty"`
+}
+
+// Targets is Pool, or the single Proc when Pool is empty.
+func (r *RunOp) Targets() []int {
+	if len(r.Pool) > 0 {
+		return r.Pool
+	}
+	return []int{r.Proc}
 }
 
 // Label marks a control location.
@@ -239,6 +274,17 @@ type Edge struct {
 	// package comment). False for single-step commands such as a Petri
 	// transition.
 	Atomic bool `json:"atomic,omitempty"`
+	// ClearChans empties these channels (by index into Model.Channels) as
+	// part of the step. The Promela frontend puts the local channels of a
+	// process on its `-end-` edge: a process that dies releases its
+	// channels, so that a pool instance started again by `run` begins with
+	// empty ones (G5).
+	ClearChans []int `json:"clear_chans,omitempty"`
+	// Leave marks the `-end-` edge: the process leaves the live-process
+	// table (Layout.NrPr / Layout.Table). Only a process that is currently
+	// the youngest live one may leave, which is SPIN's rule and is checked
+	// by the edge's own guard (the `youngest` op).
+	Leave bool `json:"leave,omitempty"`
 	// Text is the command as the user would recognise it (e.g. "t1" or
 	// "(x > 0) -> x--"). It is what a counterexample step shows.
 	Text   string  `json:"text,omitempty"`
@@ -256,11 +302,21 @@ type Process struct {
 	Locations []Location `json:"locations"`
 	Initial   int        `json:"initial"`
 	Edges     []Edge     `json:"edges"`
+	// Provided is Promela's `provided (expr)` clause (G5): no edge of this
+	// process is enabled in a state where it is false. It is a process-level
+	// guard rather than a conjunct of every edge's guard, because an `else`
+	// edge has no guard of its own and must be gated all the same.
+	Provided *Expr `json:"provided,omitempty"`
 	// Claim marks a Promela never claim. G1 stores it and does not execute
 	// it: the explorer never takes its edges and ignores it in the deadlock
 	// rule; its synchronous product with the system is G4.
-	Claim  bool    `json:"claim,omitempty"`
-	Origin *Origin `json:"origin,omitempty"`
+	Claim bool `json:"claim,omitempty"`
+	// Dynamic marks an instance that exists only after a `run` created it
+	// (G5): its Initial location is the dormant one, it is absent from the
+	// live-process table until then, and it returns to the dormant location
+	// when it dies, so that the same pool slot can be started again.
+	Dynamic bool    `json:"dynamic,omitempty"`
+	Origin  *Origin `json:"origin,omitempty"`
 }
 
 // Property kinds the IR can carry. The explorer executes Deadlock,
@@ -273,6 +329,7 @@ const (
 	KindAssert    = "assert"    // no edge assert fails on any reachable step
 	KindLTL       = "ltl"       // Formula holds on every infinite run (explore/cycle.go)
 	KindProgress  = "progress"  // no non-progress cycle (explore/cycle.go)
+	KindCTL       = "ctl"       // Formula (CTL syntax) holds at the initial state (explore/ctlcheck.go)
 )
 
 // Property is a verification question about the model.
@@ -281,9 +338,10 @@ type Property struct {
 	Kind string `json:"kind"`
 	// Expr is required for invariant and reach, ignored for the others.
 	Expr *Expr `json:"expr,omitempty"`
-	// Formula is the LTL formula of an `ltl` property in SPIN syntax (G4).
-	// An `ltl` property without a formula means "the model as written":
-	// its never claim, else its accept labels (SPIN's pan -a).
+	// Formula is the temporal formula: LTL in SPIN syntax for an `ltl`
+	// property (G4), CTL for a `ctl` property (G5). An `ltl` property
+	// without a formula means "the model as written": its never claim, else
+	// its accept labels (SPIN's pan -a). A `ctl` property always needs one.
 	Formula string `json:"formula,omitempty"`
 	// Text is the user-facing statement of the property.
 	Text   string  `json:"text,omitempty"`

@@ -182,7 +182,12 @@ func chanCap(toks []Token, toZero bool) []edit {
 		default:
 			continue
 		}
-		out = append(out, edit{from: t.Off, to: t.End, repl: repl, line: t.Line, col: t.Col})
+		// The recorded span is the whole `[N]`, not the bare number: an
+		// entry reading `2 → 1` would be indistinguishable from an
+		// off-by-one, while `[2] → [1]` names the construct that changed.
+		// The bytes produced are the same either way.
+		out = append(out, edit{from: toks[i-1].Off, to: toks[i+1].End, repl: "[" + repl + "]",
+			line: toks[i-1].Line, col: toks[i-1].Col})
 	}
 	return out
 }

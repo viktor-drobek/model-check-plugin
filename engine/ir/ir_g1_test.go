@@ -11,7 +11,7 @@ func g1Base() *Model {
 		Channels: []Channel{{Name: "c", Capacity: 2, Fields: []Type{Byte, Short}}},
 		Processes: []Process{
 			{Name: "A", Locations: []Location{{}, {}}, Edges: []Edge{{From: 0, To: 1}}},
-			{Name: "B", Params: 1, Locals: []Var{{Name: "p", Type: Byte}}, Locations: []Location{{}, {}}, Edges: []Edge{{From: 0, To: 1}}},
+			{Name: "B", Params: 1, Dynamic: true, Locals: []Var{{Name: "p", Type: Byte}}, Locations: []Location{{}, {}}, Edges: []Edge{{From: 0, To: 1}}},
 		},
 	}
 }
@@ -46,9 +46,20 @@ func TestValidateG1Constructs(t *testing.T) {
 		{"run ok", func(m *Model) {
 			m.Processes[0].Edges[0].Run = &RunOp{Proc: 1, Entry: 0, Args: []*Expr{Const(3)}}
 		}, ""},
-		{"run self", func(m *Model) {
+		{"run of a static process", func(m *Model) {
 			m.Processes[0].Edges[0].Run = &RunOp{Proc: 0, Entry: 0}
-		}, "not another process"},
+		}, "is not a dynamic instance"},
+		{"run pool", func(m *Model) {
+			m.Processes[0].Edges[0].Run = &RunOp{Proc: 1, Pool: []int{1}, Entry: 0, Args: []*Expr{Const(3)}}
+		}, ""},
+		{"run init in the target's scope", func(m *Model) {
+			m.Processes[0].Edges[0].Run = &RunOp{Proc: 1, Entry: 0, Args: []*Expr{Const(3)},
+				Init: []Assign{{Var: "p", Value: Binary("add", Ref("p"), Const(1))}}}
+		}, ""},
+		{"run init names an unknown variable", func(m *Model) {
+			m.Processes[0].Edges[0].Run = &RunOp{Proc: 1, Entry: 0, Args: []*Expr{Const(3)},
+				Init: []Assign{{Var: "zz", Value: Const(1)}}}
+		}, "has no variable"},
 		{"run args", func(m *Model) {
 			m.Processes[0].Edges[0].Run = &RunOp{Proc: 1, Entry: 0}
 		}, "0 argument(s) for 1 parameter(s)"},

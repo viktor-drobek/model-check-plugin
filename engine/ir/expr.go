@@ -26,6 +26,20 @@ import (
 //	                                           edge whose guard is free of it
 //	pc               Value (a process index)   kind Int: the control location
 //	                                           of that process
+//	clen             Args[0]                   kind Int: messages in the buffer
+//	                                           of the channel whose id Args[0]
+//	                                           evaluates to (0 = null channel:
+//	                                           length 0, as SPIN reads it)
+//	cfull            Args[0]                   kind Bool: that channel is full
+//	nrpr             —                         kind Int: live processes
+//	                                           (Promela `_nr_pr`)
+//	pid              Value (a process index)   kind Int: the pid of that
+//	                                           process — its position in the
+//	                                           live-process table, -1 when it
+//	                                           is not live
+//	youngest         Value (a process index)   kind Bool: that process is the
+//	                                           youngest live one (SPIN's
+//	                                           condition for `-end-`)
 //
 // bit/bool variables are integers 0/1 (Promela convention); where a Bool is
 // required, an Int operand is accepted and read as "non-zero". Where an Int
@@ -82,6 +96,13 @@ func Len(name string) *Expr { return &Expr{Op: "len", Var: name} }
 func Timeout() *Expr        { return &Expr{Op: "timeout"} }
 func PC(proc int) *Expr     { return &Expr{Op: "pc", Value: int64(proc)} }
 
+// Dynamic channel and process reads (G5); see the op table.
+func CLen(sel *Expr) *Expr    { return &Expr{Op: "clen", Args: []*Expr{sel}} }
+func CFull(sel *Expr) *Expr   { return &Expr{Op: "cfull", Args: []*Expr{sel}} }
+func NrPr() *Expr             { return &Expr{Op: "nrpr"} }
+func PID(proc int) *Expr      { return &Expr{Op: "pid", Value: int64(proc)} }
+func Youngest(proc int) *Expr { return &Expr{Op: "youngest", Value: int64(proc)} }
+
 // Uses reports whether e mentions op anywhere.
 func (e *Expr) Uses(op string) bool {
 	if e == nil {
@@ -101,6 +122,7 @@ func (e *Expr) Uses(op string) bool {
 var arity = map[string]int{
 	"const": 0, "var": 0, "index": 1,
 	"len": 0, "timeout": 0, "pc": 0,
+	"clen": 1, "cfull": 1, "nrpr": 0, "pid": 0, "youngest": 0,
 	"neg": 1, "not": 1,
 	"add": 2, "sub": 2, "mul": 2, "div": 2, "mod": 2,
 	"eq": 2, "ne": 2, "lt": 2, "le": 2, "gt": 2, "ge": 2,
@@ -139,9 +161,22 @@ func Check(e *Expr, scope Scope) (Kind, error) {
 			return KInt, fmt.Errorf("undeclared channel %q", e.Var)
 		}
 		return KInt, nil
-	case "pc":
+	case "pc", "pid", "youngest":
 		if e.Value < 0 || e.Value >= int64(scope.ProcessCount()) {
-			return KInt, fmt.Errorf("pc of process %d: no such process", e.Value)
+			return KInt, fmt.Errorf("%s of process %d: no such process", e.Op, e.Value)
+		}
+		if e.Op == "youngest" {
+			return KBool, nil
+		}
+		return KInt, nil
+	case "nrpr":
+		return KInt, nil
+	case "clen", "cfull":
+		if _, err := Check(e.Args[0], scope); err != nil {
+			return KInt, err
+		}
+		if e.Op == "cfull" {
+			return KBool, nil
 		}
 		return KInt, nil
 	case "var", "index":
@@ -192,6 +227,16 @@ func (e *Expr) String() string {
 		return "timeout"
 	case "pc":
 		return "pc(" + strconv.FormatInt(e.Value, 10) + ")"
+	case "pid":
+		return "pid(" + strconv.FormatInt(e.Value, 10) + ")"
+	case "youngest":
+		return "youngest(" + strconv.FormatInt(e.Value, 10) + ")"
+	case "nrpr":
+		return "_nr_pr"
+	case "clen":
+		return "len(" + e.Args[0].String() + ")"
+	case "cfull":
+		return "full(" + e.Args[0].String() + ")"
 	case "neg":
 		return "-" + paren(e.Args[0])
 	case "not":
@@ -210,10 +255,13 @@ func (e *Expr) String() string {
 
 func paren(e *Expr) string {
 	s := e.String()
-	if e != nil && len(e.Args) > 0 && e.Op != "index" {
-		return "(" + s + ")"
+	switch {
+	case e == nil, len(e.Args) == 0:
+		return s
+	case e.Op == "index", e.Op == "clen", e.Op == "cfull":
+		return s // already written as name(...) or a[i]
 	}
-	return s
+	return "(" + s + ")"
 }
 
 // EvalError is an evaluation failure that makes the model invalid.
@@ -274,6 +322,32 @@ func (c *Compiled) Eval(state []byte) (int64, error) {
 		return b2i(c.l.Timeout), nil
 	case "pc":
 		return int64(c.l.ReadPC(state, int(c.val))), nil
+	case "nrpr":
+		return int64(c.l.NrPr(state)), nil
+	case "pid":
+		return int64(c.l.PIDOf(state, int(c.val))), nil
+	case "youngest":
+		return b2i(c.l.Youngest(state, int(c.val))), nil
+	case "clen":
+		id, err := c.args[0].Eval(state)
+		if err != nil {
+			return 0, err
+		}
+		ci, ok := c.l.ChanByID(id)
+		if !ok {
+			return 0, nil // the null channel is empty, as SPIN reads len(0)
+		}
+		return int64(c.l.ChanLen(state, ci)), nil
+	case "cfull":
+		id, err := c.args[0].Eval(state)
+		if err != nil {
+			return 0, err
+		}
+		ci, ok := c.l.ChanByID(id)
+		if !ok {
+			return 0, nil
+		}
+		return b2i(c.l.ChanLen(state, ci) >= c.l.Chans[ci].Chan.Capacity), nil
 	case "index":
 		i, err := c.args[0].Eval(state)
 		if err != nil {

@@ -1,7 +1,6 @@
 package promela
 
 import (
-	"fmt"
 	"strings"
 )
 
@@ -16,15 +15,12 @@ import (
 // outsideKeywords maps a keyword that starts a construct outside the MVP
 // subset to the construct's name and the plan's note.
 var outsideKeywords = map[string][2]string{
-	"inline":       {"inline", "plan 14 §5.2: v1 (G5)"},
-	"typedef":      {"typedef", "plan 14 §5.2: v1 (G5)"},
 	"c_code":       {"c_code", "embedded C is outside the subset"},
 	"c_decl":       {"c_decl", "embedded C is outside the subset"},
 	"c_state":      {"c_state", "embedded C is outside the subset"},
 	"c_track":      {"c_track", "embedded C is outside the subset"},
 	"c_expr":       {"c_expr", "embedded C is outside the subset"},
 	"unless":       {"unless", "plan 14 §5.2: outside the subset"},
-	"provided":     {"provided", "plan 14 §5.2: v1 (G5)"},
 	"priority":     {"priority", "process priorities are outside the subset"},
 	"ltl":          {"ltl", "inline LTL blocks are outside the subset; use never { }"},
 	"trace":        {"trace", "event traces are outside the subset"},
@@ -37,8 +33,6 @@ var outsideKeywords = map[string][2]string{
 	"unsigned":     {"unsigned", "outside the subset"},
 	"eval":         {"eval", "plan 14 §5.2: not in the corpus, outside the subset"},
 	"enabled":      {"enabled()", "outside the subset"},
-	"pc_value":     {"pc_value()", "outside the subset"},
-	"_nr_pr":       {"_nr_pr", "plan 14 §5.2: v1 (G5)"},
 	"_last":        {"_last", "outside the subset"},
 	"np_":          {"np_", "outside the subset"},
 	"get_priority": {"get_priority()", "outside the subset"},
@@ -60,11 +54,19 @@ type parser struct {
 	optDepth  int  // inside if/do options
 	noCall    bool // parsing a channel argument: ident( is not a call
 	procNames map[string]bool
+	// typedefs maps a typedef name to its fields, already flattened: the
+	// field name is the path under the instance ("fld2.f"), so declaring
+	// `Record goo` declares "goo.fld2.f" and the rest (G5).
+	typedefs map[string][]*VarDecl
+	// structVars records the instances of a typedef, so that `run me(foo)`
+	// can be expanded to the fields SPIN passes ("run me(foo.f,foo.g)").
+	structVars map[string][]string
 }
 
 // parseModule builds the AST of preprocessed tokens.
 func parseModule(toks []Token, file string) (*Module, *Error) {
-	p := &parser{toks: toks, file: file, mod: &Module{Text: &TextSource{Toks: toks}}, procNames: map[string]bool{}}
+	p := &parser{toks: toks, file: file, mod: &Module{Text: &TextSource{Toks: toks}}, procNames: map[string]bool{},
+		typedefs: map[string][]*VarDecl{}, structVars: map[string][]string{}}
 	if err := p.module(); err != nil {
 		return nil, err
 	}
@@ -129,7 +131,11 @@ func (p *parser) module() *Error {
 			}
 		case t.isIdent("mtype") && p.peekN(1).is(":"):
 			return outside(p.file, t.Line, t.Col, "typed mtype (mtype:name)", "outside the subset")
-		case t.Kind == Ident && typeKeywords[t.Text]:
+		case t.isIdent("typedef"):
+			if err := p.typedefDecl(); err != nil {
+				return err
+			}
+		case t.Kind == Ident && (typeKeywords[t.Text] || p.typedefs[t.Text] != nil):
 			decls, err := p.varDecls(true)
 			if err != nil {
 				return err
@@ -151,6 +157,57 @@ func (p *parser) module() *Error {
 			return p.errAt(t, "unexpected %s at the top level (expected a declaration, proctype, init or never)", t)
 		}
 	}
+}
+
+// typedefDecl reads `typedef Name { fields };` and stores the fields
+// flattened: a nested struct contributes its own fields with a dotted path,
+// so that the IR sees plain variables and pan's own flattening ("z.g",
+// "goo.fld2.f") is reproduced name for name.
+func (p *parser) typedefDecl() *Error {
+	kw := p.next()
+	name, err := p.expectIdent()
+	if err != nil {
+		return err
+	}
+	if p.typedefs[name.Text] != nil {
+		return semanticErr(p.file, name.Line, name.Col, "typedef %s declared twice", name.Text)
+	}
+	if _, err := p.expect("{"); err != nil {
+		return err
+	}
+	var fields []*VarDecl
+	for !p.peek().is("}") {
+		if p.peek().Kind == EOF {
+			return syntaxErr(p.file, kw.Line, kw.Col, "unterminated typedef %s", name.Text)
+		}
+		if p.peek().is(";") {
+			p.next()
+			continue
+		}
+		t := p.peek()
+		if t.Kind != Ident || (!typeKeywords[t.Text] && p.typedefs[t.Text] == nil) {
+			if t.Kind == Ident && outsideKeywords[t.Text] != [2]string{} {
+				return p.outsideAt(t)
+			}
+			return p.errAt(t, "expected a field type in typedef %s, got %s", name.Text, t)
+		}
+		decls, err := p.varDecls(true)
+		if err != nil {
+			return err
+		}
+		fields = append(fields, decls...)
+	}
+	if _, err := p.expect("}"); err != nil {
+		return err
+	}
+	if p.peek().is(";") {
+		p.next()
+	}
+	if len(fields) == 0 {
+		return semanticErr(p.file, name.Line, name.Col, "typedef %s has no fields", name.Text)
+	}
+	p.typedefs[name.Text] = fields
+	return nil
 }
 
 func (p *parser) mtypeDecl() *Error {
@@ -191,6 +248,7 @@ func (p *parser) mtypeDecl() *Error {
 // separator. global selects the channel rules.
 func (p *parser) varDecls(global bool) ([]*VarDecl, *Error) {
 	typ := p.next()
+	fields := p.typedefs[typ.Text]
 	var out []*VarDecl
 	for {
 		name, err := p.expectIdent()
@@ -212,22 +270,33 @@ func (p *parser) varDecls(global bool) ([]*VarDecl, *Error) {
 				return nil, err
 			}
 		}
-		if typ.Text == "chan" {
+		if fields != nil {
 			if d.Len > 0 {
-				return nil, outside(p.file, name.Line, name.Col, "array of channels", "outside the subset")
+				return nil, outside(p.file, name.Line, name.Col, "array of structs", "arrays of typedef instances are outside the subset; declare the fields as arrays instead")
 			}
-			if !global {
-				return nil, outside(p.file, name.Line, name.Col, "channel-typed variable", "local channels and channel variables are outside the subset; declare channels globally")
-			}
-			if !p.peek().is("=") {
-				return nil, outside(p.file, name.Line, name.Col, "uninitialised channel", fmt.Sprintf("channel %s has no [capacity] of { … }", d.Name))
-			}
-			p.next()
-			ci, err := p.chanInit()
+			inst, err := p.instantiate(d.Name, fields, name)
 			if err != nil {
 				return nil, err
 			}
-			d.Chan = ci
+			out = append(out, inst...)
+			if p.peek().is(",") {
+				p.next()
+				continue
+			}
+			return out, nil
+		}
+		if typ.Text == "chan" {
+			if p.peek().is("=") {
+				p.next()
+				ci, err := p.chanInit()
+				if err != nil {
+					return nil, err
+				}
+				d.Chan = ci
+			}
+			// Without `= [cap] of { … }` this declares a channel-typed
+			// variable (or an array of them): it holds a channel id, which
+			// the lowering stores as a byte.
 		} else if p.peek().is("=") {
 			p.next()
 			e, err := p.expr()
@@ -243,6 +312,22 @@ func (p *parser) varDecls(global bool) ([]*VarDecl, *Error) {
 		}
 		return out, nil
 	}
+}
+
+// instantiate expands a typedef instance into its flattened fields.
+func (p *parser) instantiate(base string, fields []*VarDecl, at Token) ([]*VarDecl, *Error) {
+	var out []string
+	var decls []*VarDecl
+	for _, f := range fields {
+		c := *f
+		c.Name = base + "." + f.Name
+		c.Pos = Pos{at.Line, at.Col}
+		c.FromStruct = true
+		decls = append(decls, &c)
+		out = append(out, c.Name)
+	}
+	p.structVars[base] = out
+	return decls, nil
 }
 
 func (p *parser) chanInit() (*ChanInit, *Error) {
@@ -274,14 +359,14 @@ func (p *parser) chanInit() (*ChanInit, *Error) {
 			return nil, p.errAt(t, "expected a message field type, got %s", t)
 		}
 		switch t.Text {
-		case "chan":
-			return nil, outside(p.file, t.Line, t.Col, "channel-typed message field", "plan 14 §5.2: v1 (G5)")
 		case "unsigned":
 			return nil, outside(p.file, t.Line, t.Col, "unsigned", "outside the subset")
-		case "bit", "bool", "byte", "short", "int", "mtype", "pid":
+		case "bit", "bool", "byte", "short", "int", "mtype", "pid", "chan":
+			// A `chan` field carries a channel id, stored as a byte (G5).
 			ci.Fields = append(ci.Fields, t.Text)
 		default:
-			return nil, outside(p.file, t.Line, t.Col, "user-defined message field type "+t.Text, "typedef is v1 (G5)")
+			return nil, outside(p.file, t.Line, t.Col, "user-defined message field type "+t.Text,
+				"a typedef instance cannot be a channel message field in this engine version; send its fields separately")
 		}
 		if p.peek().is(",") {
 			p.next()
@@ -418,7 +503,7 @@ func (p *parser) proctype() *Error {
 			return p.errAt(p.peek(), "unterminated parameter list of %s", pt.Name)
 		}
 		t := p.peek()
-		if t.Kind != Ident || !typeKeywords[t.Text] {
+		if t.Kind != Ident || (!typeKeywords[t.Text] && p.typedefs[t.Text] == nil) {
 			if t.Kind == Ident && outsideKeywords[t.Text] != [2]string{} {
 				return p.outsideAt(t)
 			}
@@ -429,6 +514,11 @@ func (p *parser) proctype() *Error {
 			return err
 		}
 		for _, d := range decls {
+			if d.Init != nil && d.FromStruct {
+				// A typedef field may carry an initialiser; as a parameter
+				// its value comes from the call, so SPIN ignores it.
+				d.Init = nil
+			}
 			if d.Init != nil {
 				return semanticErr(p.file, d.Pos.Line, d.Pos.Col, "parameter %s cannot have an initialiser", d.Name)
 			}
@@ -442,6 +532,20 @@ func (p *parser) proctype() *Error {
 		}
 	}
 	p.next() // )
+	if p.peek().isIdent("provided") {
+		p.next()
+		if _, err := p.expect("("); err != nil {
+			return err
+		}
+		e, err := p.expr()
+		if err != nil {
+			return err
+		}
+		if _, err := p.expect(")"); err != nil {
+			return err
+		}
+		pt.Provided = e
+	}
 	if t := p.peek(); t.Kind == Ident && outsideKeywords[t.Text] != [2]string{} {
 		return p.outsideAt(t)
 	}
@@ -638,7 +742,7 @@ func (p *parser) stmt() (Stmt, *Error) {
 			break
 		}
 		return x, nil
-	case t.Kind == Ident && typeKeywords[t.Text]:
+	case t.Kind == Ident && (typeKeywords[t.Text] || p.typedefs[t.Text] != nil):
 		if p.inNever {
 			return nil, outside(p.file, t.Line, t.Col, "local variable in a never claim", "outside the subset")
 		}
@@ -658,30 +762,36 @@ func (p *parser) stmt() (Stmt, *Error) {
 		return b, nil
 	case t.Kind == Ident && outsideKeywords[t.Text] != [2]string{}:
 		return nil, p.outsideAt(t)
-	case t.Kind == Ident && p.peekN(1).is("!!"):
+	case p.chanOpKind() == "!!":
 		return nil, outside(p.file, t.Line, t.Col, "sorted send (!!)", "outside the subset")
-	case t.Kind == Ident && p.peekN(1).is("??"):
+	case p.chanOpKind() == "??":
 		return nil, outside(p.file, t.Line, t.Col, "random receive (??)", "outside the subset")
-	case t.Kind == Ident && p.peekN(1).is("?") && p.peekN(2).is("<"):
+	case p.chanOpKind() == "?<":
 		return nil, outside(p.file, t.Line, t.Col, "copy receive (?<…>)", "outside the subset")
-	case t.Kind == Ident && p.peekN(1).is("?") && p.peekN(2).is("["):
+	case p.chanOpKind() == "?[":
 		return nil, outside(p.file, t.Line, t.Col, "channel poll (?[…])", "outside the subset")
-	case t.Kind == Ident && p.peekN(1).is("!"):
-		p.next()
-		p.next()
+	case p.chanOpKind() == "!":
+		lv, err := p.chanTarget()
+		if err != nil {
+			return nil, err
+		}
+		p.next() // !
 		args, err := p.chanArgs()
 		if err != nil {
 			return nil, err
 		}
-		return &Send{Chan: t.Text, Args: args}, nil
-	case t.Kind == Ident && p.peekN(1).is("?"):
-		p.next()
-		p.next()
+		return &Send{Chan: lv.Name, Index: lv.Index, Args: args, Pos: lv.Pos}, nil
+	case p.chanOpKind() == "?":
+		lv, err := p.chanTarget()
+		if err != nil {
+			return nil, err
+		}
+		p.next() // ?
 		args, err := p.chanArgs()
 		if err != nil {
 			return nil, err
 		}
-		r := &Recv{Chan: t.Text}
+		r := &Recv{Chan: lv.Name, Index: lv.Index, Pos: lv.Pos}
 		for _, a := range args {
 			ra := RecvArg{Pos: exprPos(a, t)}
 			switch x := a.(type) {
@@ -703,7 +813,7 @@ func (p *parser) stmt() (Stmt, *Error) {
 			r.Args = append(r.Args, ra)
 		}
 		return r, nil
-	case t.Kind == Ident && (p.peekN(1).is("=") || p.peekN(1).is("++") || p.peekN(1).is("--") || p.peekN(1).is("[")):
+	case t.Kind == Ident && (p.peekN(1).is("=") || p.peekN(1).is("++") || p.peekN(1).is("--") || p.peekN(1).is("[") || p.peekN(1).is(".")):
 		// assignment, or an indexed expression statement
 		save := p.i
 		lv, err := p.lvalue()
@@ -740,6 +850,66 @@ func (p *parser) stmt() (Stmt, *Error) {
 	return &ExprStmt{X: e}, nil
 }
 
+// chanOpKind looks ahead over a channel name — an identifier with optional
+// struct fields (`r.c`) and an optional array index (`q[i]`) — and reports
+// the channel operator that follows it, or "" when the statement is not a
+// channel operation. The lookahead is what allows `q[proc-1]!one(x)` to be
+// told apart from an assignment to an array element.
+func (p *parser) chanOpKind() string {
+	i := p.i
+	if p.toks[i].Kind != Ident {
+		return ""
+	}
+	i++
+	for i < len(p.toks) {
+		switch {
+		case p.toks[i].is(".") && i+1 < len(p.toks) && p.toks[i+1].Kind == Ident:
+			i += 2
+		case p.toks[i].is("["):
+			depth := 0
+			for ; i < len(p.toks); i++ {
+				if p.toks[i].is("[") {
+					depth++
+				} else if p.toks[i].is("]") {
+					depth--
+					if depth == 0 {
+						i++
+						break
+					}
+				} else if p.toks[i].Kind == EOF {
+					return ""
+				}
+			}
+		default:
+			goto done
+		}
+	}
+done:
+	if i >= len(p.toks) {
+		return ""
+	}
+	switch {
+	case p.toks[i].is("!!"):
+		return "!!"
+	case p.toks[i].is("??"):
+		return "??"
+	case p.toks[i].is("?") && i+1 < len(p.toks) && p.toks[i+1].is("<"):
+		return "?<"
+	case p.toks[i].is("?") && i+1 < len(p.toks) && p.toks[i+1].is("["):
+		return "?["
+	case p.toks[i].is("!"):
+		return "!"
+	case p.toks[i].is("?"):
+		return "?"
+	}
+	return ""
+}
+
+// chanTarget parses the channel name of a channel operation.
+func (p *parser) chanTarget() (*LValue, *Error) {
+	return p.lvalue()
+}
+
 func exprPos(e Expr, fallback Token) Pos {
 	switch x := e.(type) {
 	case *VarRef:
@@ -755,7 +925,7 @@ func (p *parser) lvalue() (*LValue, *Error) {
 	if err != nil {
 		return nil, err
 	}
-	lv := &LValue{Name: name.Text, Pos: Pos{name.Line, name.Col}}
+	lv := &LValue{Name: p.dotted(name), Pos: Pos{name.Line, name.Col}}
 	if p.peek().is("[") {
 		p.next()
 		e, err := p.expr()
@@ -768,6 +938,17 @@ func (p *parser) lvalue() (*LValue, *Error) {
 		lv.Index = e
 	}
 	return lv, nil
+}
+
+// dotted reads the rest of a struct field path after first; the flattened
+// name is the one the lowering declared ("goo.fld2.f").
+func (p *parser) dotted(first Token) string {
+	name := first.Text
+	for p.peek().is(".") && p.peekN(1).Kind == Ident {
+		p.next()
+		name += "." + p.next().Text
+	}
+	return name
 }
 
 func (p *parser) options() (Stmt, *Error) {
@@ -843,12 +1024,6 @@ func (p *parser) printf() (Stmt, *Error) {
 // run parses "run P(args)" as a statement (target != nil for x = run …).
 func (p *parser) run(target *LValue) (Stmt, *Error) {
 	kw := p.next()
-	if !p.inInit {
-		return nil, outside(p.file, kw.Line, kw.Col, "run outside init", "the engine instantiates processes statically: run is accepted only as a straight-line statement of init")
-	}
-	if p.optDepth > 0 {
-		return nil, outside(p.file, kw.Line, kw.Col, "run inside an alternative or loop", "the engine instantiates processes statically: run is accepted only as a straight-line statement of init")
-	}
 	name, err := p.expectIdent()
 	if err != nil {
 		return nil, err
@@ -856,11 +1031,28 @@ func (p *parser) run(target *LValue) (Stmt, *Error) {
 	if _, err := p.expect("("); err != nil {
 		return nil, err
 	}
-	rs := &RunStmt{Proc: name.Text, Target: target, Pos: Pos{kw.Line, kw.Col}}
+	rs := &RunStmt{Proc: name.Text, Target: target, Pos: Pos{kw.Line, kw.Col}, InLoop: p.optDepth > 0}
 	for !p.peek().is(")") {
 		e, err := p.expr()
 		if err != nil {
 			return nil, err
+		}
+		// A struct passed by value is passed field by field, as SPIN does
+		// (probe: pan -d on CH3/typedef.pml prints "run me(foo.f,foo.g)").
+		if v, ok := e.(*VarRef); ok {
+			if fields := p.structVars[v.Name]; fields != nil {
+				for _, f := range fields {
+					rs.Args = append(rs.Args, &VarRef{Name: f, Pos: v.Pos})
+				}
+				if p.peek().is(",") {
+					p.next()
+					continue
+				}
+				if !p.peek().is(")") {
+					return nil, p.errAt(p.peek(), "expected \",\" or \")\" in run arguments, got %s", p.peek())
+				}
+				continue
+			}
 		}
 		rs.Args = append(rs.Args, e)
 		if p.peek().is(",") {
@@ -1084,7 +1276,7 @@ func (p *parser) primary() (Expr, *Error) {
 		case "timeout":
 			return &TimeoutExpr{}, nil
 		case "run":
-			return nil, outside(p.file, t.Line, t.Col, "run inside an expression", "run is accepted only as a statement of init")
+			return nil, outside(p.file, t.Line, t.Col, "run inside an expression", "run is accepted as a statement, on its own or as `pid = run P(...)`, not inside a larger expression")
 		case "len", "empty", "nempty", "full", "nfull":
 			if _, err := p.expect("("); err != nil {
 				return nil, err
@@ -1093,10 +1285,36 @@ func (p *parser) primary() (Expr, *Error) {
 			if err != nil {
 				return nil, err
 			}
+			ce := &ChanExpr{Fn: t.Text, Chan: p.dotted(c), Pos: Pos{t.Line, t.Col}}
+			if p.peek().is("[") {
+				p.next()
+				idx, err := p.expr()
+				if err != nil {
+					return nil, err
+				}
+				if _, err := p.expect("]"); err != nil {
+					return nil, err
+				}
+				ce.Index = idx
+			}
 			if _, err := p.expect(")"); err != nil {
 				return nil, err
 			}
-			return &ChanExpr{Fn: t.Text, Chan: c.Text, Pos: Pos{t.Line, t.Col}}, nil
+			return ce, nil
+		case "_nr_pr":
+			return &NrPrExpr{Pos: Pos{t.Line, t.Col}}, nil
+		case "pc_value":
+			if _, err := p.expect("("); err != nil {
+				return nil, err
+			}
+			e, err := p.expr()
+			if err != nil {
+				return nil, err
+			}
+			if _, err := p.expect(")"); err != nil {
+				return nil, err
+			}
+			return &PCValueExpr{Proc: e, Pos: Pos{t.Line, t.Col}}, nil
 		}
 		if outsideKeywords[t.Text] != [2]string{} {
 			return nil, p.outsideAt(t)
@@ -1109,6 +1327,10 @@ func (p *parser) primary() (Expr, *Error) {
 			return nil, outside(p.file, t.Line, t.Col, "remote variable reference (P:x)", "outside the subset")
 		case n.is("?") && p.peekN(1).is("["):
 			return nil, outside(p.file, t.Line, t.Col, "channel poll (?[…])", "outside the subset")
+		case n.is("??"):
+			return nil, outside(p.file, t.Line, t.Col, "random receive (??)", "outside the subset")
+		case n.is("!!"):
+			return nil, outside(p.file, t.Line, t.Col, "sorted send (!!)", "outside the subset")
 		case n.is("["):
 			p.next()
 			e, err := p.expr()

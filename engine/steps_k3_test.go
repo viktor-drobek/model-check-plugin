@@ -100,7 +100,7 @@ func registerK3Steps(sc *godog.ScenarioContext) {
 	sc.Step(`^the K3 mutator built from "([^"]*)"$`, func(pkg string) error {
 		// The mutator is linked into this test binary; the step records which
 		// package the scenarios are about and fails if it has moved.
-		if _, err := os.Stat(filepath.Join("..", "..", pkg)); err != nil {
+		if _, err := os.Stat(filepath.Join("..", pkg)); err != nil {
 			return fmt.Errorf("the K3 mutator is expected in %s: %w", pkg, err)
 		}
 		if len(mutate.Operators) != 10 {
@@ -425,7 +425,7 @@ func registerK3Steps(sc *godog.ScenarioContext) {
 		return nil
 	})
 
-	sc.Step(`^the rejection message mentions "([^"]*)"$`, func(text string) error {
+	sc.Step(`^the K3 rejection message mentions "([^"]*)"$`, func(text string) error {
 		if !strings.Contains(w.stdout.String(), text) {
 			return fmt.Errorf("the rejection does not mention %q: %s", text, strings.TrimSpace(w.stdout.String()))
 		}
@@ -485,11 +485,11 @@ func registerK3Steps(sc *godog.ScenarioContext) {
 		return nil
 	})
 
-	sc.Step(`^every row names an engine outcome that is one of "([^"]*)"$`, func(list string) error {
+	sc.Step(`^every row names an engine outcome that is one of (.+)$`, func(list string) error {
 		return k3column(w.listing, 3, list)
 	})
 
-	sc.Step(`^every row names a pan outcome that is one of "([^"]*)"$`, func(list string) error {
+	sc.Step(`^every row names a pan outcome that is one of (.+)$`, func(list string) error {
 		return k3column(w.listing, 4, list)
 	})
 
@@ -755,7 +755,7 @@ func k3column(root string, col int, list string) error {
 		if len(word) == 0 {
 			return fmt.Errorf("%s: column %d is empty", name, col+1)
 		}
-		if !allowed[strings.Trim(word[0], "`*,.")] {
+		if !allowed[strings.Trim(word[0], "`*,.:")] {
 			return fmt.Errorf("%s: column %d says %q, which is not one of %s", name, col+1, cells[col], list)
 		}
 	}

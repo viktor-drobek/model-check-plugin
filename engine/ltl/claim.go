@@ -1,6 +1,8 @@
 package ltl
 
 import (
+	"sort"
+
 	"modelcheck/ir"
 )
 
@@ -38,7 +40,30 @@ func ForProperty(name, formula string, opt Options) (*Claim, error) {
 	for _, at := range f.Atoms() {
 		c.Info.Atoms = append(c.Info.Atoms, at.Text)
 	}
+	c.Info.Antecedents = Antecedents(f)
 	return c, nil
+}
+
+// Antecedents lists the left-hand sides of the implications of f, sorted so
+// that the result is deterministic. `[](a -> b)` yields "a".
+func Antecedents(f *Formula) []string {
+	var out []string
+	seen := map[string]bool{}
+	var walk func(g *Formula)
+	walk = func(g *Formula) {
+		if g == nil {
+			return
+		}
+		if g.Op == Impl && !seen[g.L.String()] {
+			seen[g.L.String()] = true
+			out = append(out, g.L.String())
+		}
+		walk(g.L)
+		walk(g.R)
+	}
+	walk(f)
+	sort.Strings(out)
+	return out
 }
 
 // Lower turns a into a claim process. The edge order is the automaton's

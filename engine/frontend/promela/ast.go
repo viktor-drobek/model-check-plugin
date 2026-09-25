@@ -28,10 +28,13 @@ type Proctype struct {
 	IsInit  bool
 	IsNever bool
 	Params  []*VarDecl
-	Body    *Block
-	Pos     Pos
-	End     Pos // the closing brace (pan's line for -end-)
-	Hints   []*XrXs
+	// Provided is the `provided (expr)` clause (G5): no transition of the
+	// process is executable unless it holds.
+	Provided Expr
+	Body     *Block
+	Pos      Pos
+	End      Pos // the closing brace (pan's line for -end-)
+	Hints    []*XrXs
 }
 
 // VarDecl declares a variable or channel.
@@ -40,8 +43,13 @@ type VarDecl struct {
 	Type string // bit bool byte short int mtype pid chan
 	Len  int    // array length; 0 = scalar
 	Init Expr   // initialiser, or nil
+	// Chan is the `[cap] of { types }` of a channel *object*. A `chan`
+	// declaration without it declares a channel-typed *variable*, which
+	// holds a channel id and is stored as a byte (G5).
 	Chan *ChanInit
-	Pos  Pos
+	// FromStruct marks a field of a flattened typedef instance.
+	FromStruct bool
+	Pos        Pos
 }
 
 // ChanInit is `[cap] of { types }`.
@@ -88,18 +96,30 @@ type (
 		Op     string // "=", "++", "--"
 		Value  Expr
 	}
+	// Send and Recv name the channel by a variable, which may be an array
+	// element (`q[i]!x`) or a struct field (`r.c!x`); Index is the array
+	// index when there is one. Whether that names a channel object or a
+	// channel-typed variable is decided by the lowering.
 	Send struct {
-		Chan string
-		Args []Expr
+		Chan  string
+		Index Expr
+		Args  []Expr
+		Pos   Pos
 	}
 	Recv struct {
-		Chan string
-		Args []RecvArg
+		Chan  string
+		Index Expr
+		Args  []RecvArg
+		Pos   Pos
 	}
 	RunStmt struct {
 		Proc   string
 		Args   []Expr
 		Target *LValue // for `x = run P()`
+		// InLoop marks a `run` inside an if/do option: it may be taken more
+		// than once, so the lowering gives its proctype a pool of instances
+		// rather than one (G5).
+		InLoop bool
 		Pos    Pos
 	}
 	ExprStmt struct{ X Expr }
@@ -164,11 +184,20 @@ type (
 		X, Y Expr
 	}
 	ChanExpr struct { // len empty nempty full nfull
-		Fn   string
-		Chan string
-		Pos  Pos
+		Fn    string
+		Chan  string
+		Index Expr // array element of a channel array, or nil
+		Pos   Pos
 	}
 	TimeoutExpr struct{}
+	// NrPrExpr is Promela's `_nr_pr`: the number of live processes (G5).
+	NrPrExpr struct{ Pos Pos }
+	// PCValueExpr is `pc_value(n)`: the control location of process n. The
+	// argument must be a constant process number (`_pid` folds to one).
+	PCValueExpr struct {
+		Proc Expr
+		Pos  Pos
+	}
 )
 
 func (*Num) expr()         {}
@@ -178,3 +207,5 @@ func (*Unary) expr()       {}
 func (*Binary) expr()      {}
 func (*ChanExpr) expr()    {}
 func (*TimeoutExpr) expr() {}
+func (*NrPrExpr) expr()    {}
+func (*PCValueExpr) expr() {}

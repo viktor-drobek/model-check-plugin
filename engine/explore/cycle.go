@@ -101,14 +101,23 @@ type Stats struct {
 	Stop        string
 }
 
-// TemporalInfo describes how an ltl / progress property was checked.
+// TemporalInfo describes how an ltl / progress / ctl property was checked.
 type TemporalInfo struct {
+	// Logic names the logic that answered the property: "ltl" for ltl and
+	// progress (an automaton in synchronous product, cycle.go), "ctl" for
+	// ctl (graph labelling, ctlcheck.go). The engine never answers a
+	// question of one logic with the machinery of the other, and this field
+	// is how a caller checks that.
+	Logic string
 	// Source: "formula" (an automaton built from Formula), "never-claim"
 	// (the model's own claim), "accept-labels" (no claim: accept labels of
 	// the processes), "np" (the non-progress automaton).
-	Source           string
-	Formula          string
-	Negated          string
+	Source  string
+	Formula string
+	// Negated is the LTL formula whose automaton was run (ltl only).
+	Negated string
+	// Normalised is the CTL formula in the EX/EU/EG basis (ctl only).
+	Normalised       string
 	Atoms            []string
 	StutterInvariant *bool
 	AutomatonStates  int
@@ -116,17 +125,41 @@ type TemporalInfo struct {
 	AutomatonAccept  int
 	Fairness         string
 	Claim            string // name of the claim process in the trace
+	// Note records a semantic decision the reader must know to read the
+	// verdict (ctl: the self-loop that makes the relation total).
+	Note string
+	// WitnessNote is set when the verdict carries no run: it says which
+	// rule of the witness division applies, in the engine's own words.
+	WitnessNote string
+	// Antecedents are the left-hand sides of the formula's implications.
+	Antecedents []string
+	// Vacuous and VacuousAtom are the FR-011 hint: the implication's
+	// antecedent named here is never true in any reachable state. They never
+	// change Status or Evidence.
+	Vacuous     bool
+	VacuousAtom string
 }
 
-// FormulaError is returned by Run when an ltl formula cannot be parsed or
-// resolved against the model; the input is rejected, nothing is claimed.
+// FormulaError is returned by Run when a temporal formula cannot be parsed
+// or resolved against the model; the input is rejected, nothing is claimed.
+// Logic is "ltl" or "ctl" and becomes the `kind` of the rejection, so that
+// a caller is told which of the two logics refused the text.
 type FormulaError struct {
 	PropertyID string
+	Logic      string
 	Err        error
 }
 
 func (e *FormulaError) Error() string {
 	return fmt.Sprintf("property %s: %v", e.PropertyID, e.Err)
+}
+
+// Kind is the rejection kind of the error ("ltl" or "ctl").
+func (e *FormulaError) Kind() string {
+	if e.Logic == "" {
+		return "ltl"
+	}
+	return e.Logic
 }
 
 func (e *FormulaError) Unwrap() error { return e.Err }
@@ -225,7 +258,7 @@ type cycleSearch struct {
 func runCycle(ctx0 *search, base *ir.Model, prop ir.Property, propIndex int, opt Options) (Outcome, error) {
 	start := time.Now()
 	o := Outcome{Property: prop}
-	info := &TemporalInfo{Fairness: opt.Fairness, Atoms: []string{}}
+	info := &TemporalInfo{Logic: "ltl", Fairness: opt.Fairness, Atoms: []string{}}
 	if info.Fairness == "" {
 		info.Fairness = "none"
 	}
@@ -252,7 +285,7 @@ func runCycle(ctx0 *search, base *ir.Model, prop ir.Property, propIndex int, opt
 		claimName = "never:" + prop.ID
 		c, err := ltl.ForProperty(claimName, prop.Formula, ltl.Options{Defines: opt.Defines, Scope: l0.Scope(-1)})
 		if err != nil {
-			return o, &FormulaError{PropertyID: prop.ID, Err: err}
+			return o, &FormulaError{PropertyID: prop.ID, Logic: "ltl", Err: err}
 		}
 		mm := *base
 		mm.Processes = append(append([]ir.Process(nil), base.Processes...), c.Process)

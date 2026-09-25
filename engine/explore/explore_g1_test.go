@@ -200,7 +200,7 @@ func TestRunStartsDormantProcessWithArguments(t *testing.T) {
 			{Name: "init", Locations: procLocs(2), Edges: []ir.Edge{
 				{From: 0, To: 1, Run: &ir.RunOp{Proc: 1, Entry: 1, Args: []*ir.Expr{ir.Const(36), ir.Const(12)}}, Text: "run E(36, 12)"},
 			}},
-			{Name: "E", Params: 2, Locals: []ir.Var{{Name: "x", Type: ir.Int}, {Name: "y", Type: ir.Int}},
+			{Name: "E", Params: 2, Dynamic: true, Locals: []ir.Var{{Name: "x", Type: ir.Int}, {Name: "y", Type: ir.Int}},
 				Locations: append(procLocs(3), ir.Location{}), Initial: 0, Edges: []ir.Edge{
 					{From: 1, To: 2, Guard: ir.Binary("gt", ir.Ref("x"), ir.Ref("y")), Effect: []ir.Assign{{Var: "x", Value: ir.Binary("sub", ir.Ref("x"), ir.Ref("y"))}}, Text: "x = x - y"},
 					{From: 2, To: 1, Text: "loop"},

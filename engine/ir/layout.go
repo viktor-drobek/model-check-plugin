@@ -10,21 +10,33 @@ import (
 //
 //  1. one byte Excl: 0 = no process holds exclusive control, p+1 = process p
 //     is inside an atomic sequence (see Edge.Atomic);
-//  2. for each process: its program counter (1 byte if the process has at
+//  2. when the model creates processes dynamically (some Process has
+//     Dynamic, or some expression reads `nrpr` / `pid` / `youngest`): the
+//     live-process table — one byte holding the number of live processes
+//     and one byte per process holding, at position k, the index of the
+//     process whose pid is k. Positions from the count on are zero. The
+//     table is what makes the vector a faithful image of pan's process
+//     stack: creation pushes, and only the youngest process may pop;
+//  3. for each process: its program counter (1 byte if the process has at
 //     most 256 locations, else 2), then its locals;
-//  3. the globals;
-//  4. for each channel: one length byte, then Capacity × message width
+//  4. the globals;
+//  5. for each channel: one length byte, then Capacity × message width
 //     bytes of buffer (rendezvous channels, capacity 0, take one byte).
 //
 // Scalars occupy Type.Width() bytes little-endian; arrays are contiguous.
 // The layout is a pure function of the Model, so equal models give equal
 // vectors and state counts are comparable across runs and versions.
+//
+// A model without dynamic processes has no table, so its vector — and every
+// count derived from it — is exactly the one G1 fixed against pan.
 type Layout struct {
-	Model *Model
-	Size  int
-	Excl  int   // offset of the exclusive-control byte
-	PC    []int // per process: offset of its program counter
-	PCW   []int // per process: width of the program counter (1 or 2)
+	Model  *Model
+	Size   int
+	Excl   int   // offset of the exclusive-control byte
+	NrOff  int   // offset of the live-process count byte, -1 when there is no table
+	TabOff int   // offset of the table, -1 when there is none
+	PC     []int // per process: offset of its program counter
+	PCW    []int // per process: width of the program counter (1 or 2)
 	// Slots lists every scalar slot in layout order (array elements are
 	// separate slots sharing one Var). Counterexample diffs walk this list.
 	Slots []*Slot
@@ -35,9 +47,10 @@ type Layout struct {
 	// part of the state vector (as in pan).
 	Timeout bool
 
-	globals map[string]*Slot
-	locals  []map[string]*Slot
-	chans   map[string]int
+	globals    map[string]*Slot
+	locals     []map[string]*Slot
+	chans      map[string]int
+	staticLive int // non-claim processes, for a model without a table
 }
 
 // ChanLayout is a channel's place in the vector: the length byte at Off,
@@ -54,6 +67,102 @@ type ChanLayout struct {
 func (l *Layout) ChanIndex(name string) (int, bool) {
 	i, ok := l.chans[name]
 	return i, ok
+}
+
+// ChanID is the value a channel-typed variable holds for channel index ci:
+// ci + 1, so that 0 stays Promela's null channel.
+func ChanID(ci int) int64 { return int64(ci) + 1 }
+
+// ChanByID maps a channel id back to an index; ok is false for the null
+// channel and for an id outside the table.
+func (l *Layout) ChanByID(id int64) (int, bool) {
+	if id <= 0 || id > int64(len(l.Chans)) {
+		return 0, false
+	}
+	return int(id) - 1, true
+}
+
+// HasTable reports whether the vector carries the live-process table.
+func (l *Layout) HasTable() bool { return l.TabOff >= 0 }
+
+// NrPr is the number of live processes. Without a table every non-claim
+// process is live by construction (nothing is ever created or removed from
+// the table), so the static count is the answer.
+func (l *Layout) NrPr(state []byte) int {
+	if l.TabOff < 0 {
+		return l.staticLive
+	}
+	return int(state[l.NrOff])
+}
+
+// PIDAt returns the index of the process whose pid is k (k < NrPr).
+func (l *Layout) PIDAt(state []byte, k int) int {
+	if l.TabOff < 0 {
+		return k
+	}
+	return int(state[l.TabOff+k])
+}
+
+// PIDOf is the pid of process p, or -1 when p is not live.
+func (l *Layout) PIDOf(state []byte, p int) int {
+	if l.TabOff < 0 {
+		return p
+	}
+	n := int(state[l.NrOff])
+	for k := 0; k < n; k++ {
+		if int(state[l.TabOff+k]) == p {
+			return k
+		}
+	}
+	return -1
+}
+
+// Youngest reports whether p is the youngest live process — SPIN's
+// condition for a process to leave the vector.
+func (l *Layout) Youngest(state []byte, p int) bool {
+	if l.TabOff < 0 {
+		return false
+	}
+	n := int(state[l.NrOff])
+	return n > 0 && int(state[l.TabOff+n-1]) == p
+}
+
+// Enter appends p to the live-process table; ok is false when the table is
+// full (which the caller reports as an exhausted bound, not as a verdict).
+func (l *Layout) Enter(state []byte, p int) bool {
+	if l.TabOff < 0 {
+		return false
+	}
+	n := int(state[l.NrOff])
+	if n >= len(l.Model.Processes) {
+		return false
+	}
+	state[l.TabOff+n] = byte(p)
+	state[l.NrOff] = byte(n + 1)
+	return true
+}
+
+// Leave removes the youngest live process (the caller has checked that it
+// is the one that is leaving) and zeroes the freed slot, so that equal
+// tables give equal vectors.
+func (l *Layout) Leave(state []byte) {
+	if l.TabOff < 0 {
+		return
+	}
+	n := int(state[l.NrOff])
+	if n == 0 {
+		return
+	}
+	state[l.TabOff+n-1] = 0
+	state[l.NrOff] = byte(n - 1)
+}
+
+// ClearChan empties channel ci, zeroing the whole buffer.
+func (l *Layout) ClearChan(state []byte, ci int) {
+	c := &l.Chans[ci]
+	for k := c.Off; k < c.Off+1+c.Chan.Capacity*c.Width; k++ {
+		state[k] = 0
+	}
 }
 
 // ChanLen is the number of messages in channel ci.
@@ -191,10 +300,21 @@ func NewLayout(m *Model) (*Layout, error) {
 	if err := Validate(m); err != nil {
 		return nil, err
 	}
-	l := &Layout{Model: m, globals: map[string]*Slot{}, chans: map[string]int{}}
+	l := &Layout{Model: m, globals: map[string]*Slot{}, chans: map[string]int{}, NrOff: -1, TabOff: -1}
+	for p := range m.Processes {
+		if !m.Processes[p].Claim {
+			l.staticLive++
+		}
+	}
 	off := 0
 	l.Excl = off
 	off++
+	if NeedsTable(m) {
+		l.NrOff = off
+		off++
+		l.TabOff = off
+		off += len(m.Processes)
+	}
 	for p := range m.Processes {
 		pr := &m.Processes[p]
 		w := 1
@@ -299,12 +419,101 @@ func (l *Layout) WritePC(state []byte, p, loc int) {
 	binary.LittleEndian.PutUint16(state[l.PC[p]:], uint16(loc))
 }
 
+// NeedsTable reports whether m's vector must carry the live-process table:
+// some instance is created by `run` at runtime, or some expression asks a
+// question the table alone answers (`_nr_pr`, a runtime pid, "is this the
+// youngest process").
+func NeedsTable(m *Model) bool {
+	for i := range m.Processes {
+		if m.Processes[i].Dynamic {
+			return true
+		}
+	}
+	found := false
+	walkExprs(m, func(e *Expr) {
+		switch e.Op {
+		case "nrpr", "pid", "youngest":
+			found = true
+		}
+	})
+	return found
+}
+
+// walkExprs visits every expression of m.
+func walkExprs(m *Model, f func(*Expr)) {
+	var walk func(e *Expr)
+	walk = func(e *Expr) {
+		if e == nil {
+			return
+		}
+		f(e)
+		for _, a := range e.Args {
+			walk(a)
+		}
+	}
+	for i := range m.Globals {
+		_ = i
+	}
+	for p := range m.Processes {
+		pr := &m.Processes[p]
+		walk(pr.Provided)
+		for i := range pr.Edges {
+			e := &pr.Edges[i]
+			walk(e.Guard)
+			walk(e.Assert)
+			for _, a := range e.Effect {
+				walk(a.Index)
+				walk(a.Value)
+			}
+			if e.Send != nil {
+				walk(e.Send.Sel)
+				for _, a := range e.Send.Args {
+					walk(a)
+				}
+			}
+			if e.Recv != nil {
+				walk(e.Recv.Sel)
+				for _, a := range e.Recv.Args {
+					walk(a.Index)
+					walk(a.Match)
+				}
+			}
+			if e.Run != nil {
+				for _, a := range e.Run.Args {
+					walk(a)
+				}
+				for _, a := range e.Run.Init {
+					walk(a.Index)
+					walk(a.Value)
+				}
+			}
+		}
+	}
+	for i := range m.Properties {
+		walk(m.Properties[i].Expr)
+	}
+}
+
 // Initial builds the initial state vector: initial locations, Init values,
-// empty channels, no exclusive holder.
+// empty channels, no exclusive holder, and the live-process table holding
+// the processes that exist from the start (every non-claim, non-dynamic
+// instance, in declaration order — SPIN's pid order).
 func (l *Layout) Initial() []byte {
 	s := make([]byte, l.Size)
 	for p := range l.Model.Processes {
 		l.WritePC(s, p, l.Model.Processes[p].Initial)
+	}
+	if l.TabOff >= 0 {
+		n := 0
+		for p := range l.Model.Processes {
+			pr := &l.Model.Processes[p]
+			if pr.Claim || pr.Dynamic {
+				continue
+			}
+			s[l.TabOff+n] = byte(p)
+			n++
+		}
+		s[l.NrOff] = byte(n)
 	}
 	for _, sl := range l.Slots {
 		if sl.Index < len(sl.Var.Init) {
@@ -361,6 +570,9 @@ func Validate(m *Model) error {
 		l.chans[m.Channels[i].Name] = i
 	}
 	pnames := map[string]bool{}
+	// Every process's locals are placed before any edge is checked: a `run`
+	// carries initialisers evaluated in the *target's* scope, so the scopes
+	// of later processes must already exist when an earlier one is checked.
 	for p := range m.Processes {
 		pr := &m.Processes[p]
 		if pr.Name == "" || pnames[pr.Name] {
@@ -376,6 +588,9 @@ func Validate(m *Model) error {
 			l.place(&pr.Locals[i], p, 0, loc)
 		}
 		l.locals = append(l.locals, loc)
+	}
+	for p := range m.Processes {
+		pr := &m.Processes[p]
 		if pr.Params < 0 || pr.Params > len(pr.Locals) {
 			return fmt.Errorf("processes[%d].params: %d outside 0..%d", p, pr.Params, len(pr.Locals))
 		}
@@ -394,6 +609,11 @@ func Validate(m *Model) error {
 				if lb != End && lb != Progress && lb != Accept {
 					return fmt.Errorf("processes[%d].locations[%d]: unknown label %q", p, i, lb)
 				}
+			}
+		}
+		if pr.Provided != nil {
+			if _, err := Check(pr.Provided, l.scope(p)); err != nil {
+				return fmt.Errorf("processes[%d].provided: %w", p, err)
 			}
 		}
 		for i := range pr.Edges {
@@ -415,15 +635,29 @@ func Validate(m *Model) error {
 			if e.Else && e.Guard != nil {
 				return fmt.Errorf("%s: an else edge has no guard", path)
 			}
+			for j, ci := range e.ClearChans {
+				if ci < 0 || ci >= len(m.Channels) {
+					return fmt.Errorf("%s.clear_chans[%d]: channel %d outside 0..%d", path, j, ci, len(m.Channels)-1)
+				}
+			}
 			ops := 0
 			if e.Send != nil {
 				ops++
-				ch := l.scope(p).LookupChan(e.Send.Chan)
-				if ch == nil {
-					return fmt.Errorf("%s.send: undeclared channel %q", path, e.Send.Chan)
-				}
-				if len(e.Send.Args) != len(ch.Fields) {
-					return fmt.Errorf("%s.send: %d argument(s) for %d field(s) of %s", path, len(e.Send.Args), len(ch.Fields), ch.Name)
+				if e.Send.Sel != nil {
+					if e.Send.Chan != "" {
+						return fmt.Errorf("%s.send: a dynamic channel (sel) has no name", path)
+					}
+					if _, err := Check(e.Send.Sel, l.scope(p)); err != nil {
+						return fmt.Errorf("%s.send.sel: %w", path, err)
+					}
+				} else {
+					ch := l.scope(p).LookupChan(e.Send.Chan)
+					if ch == nil {
+						return fmt.Errorf("%s.send: undeclared channel %q", path, e.Send.Chan)
+					}
+					if len(e.Send.Args) != len(ch.Fields) {
+						return fmt.Errorf("%s.send: %d argument(s) for %d field(s) of %s", path, len(e.Send.Args), len(ch.Fields), ch.Name)
+					}
 				}
 				for j, a := range e.Send.Args {
 					if _, err := Check(a, l.scope(p)); err != nil {
@@ -433,12 +667,21 @@ func Validate(m *Model) error {
 			}
 			if e.Recv != nil {
 				ops++
-				ch := l.scope(p).LookupChan(e.Recv.Chan)
-				if ch == nil {
-					return fmt.Errorf("%s.recv: undeclared channel %q", path, e.Recv.Chan)
-				}
-				if len(e.Recv.Args) != len(ch.Fields) {
-					return fmt.Errorf("%s.recv: %d argument(s) for %d field(s) of %s", path, len(e.Recv.Args), len(ch.Fields), ch.Name)
+				if e.Recv.Sel != nil {
+					if e.Recv.Chan != "" {
+						return fmt.Errorf("%s.recv: a dynamic channel (sel) has no name", path)
+					}
+					if _, err := Check(e.Recv.Sel, l.scope(p)); err != nil {
+						return fmt.Errorf("%s.recv.sel: %w", path, err)
+					}
+				} else {
+					ch := l.scope(p).LookupChan(e.Recv.Chan)
+					if ch == nil {
+						return fmt.Errorf("%s.recv: undeclared channel %q", path, e.Recv.Chan)
+					}
+					if len(e.Recv.Args) != len(ch.Fields) {
+						return fmt.Errorf("%s.recv: %d argument(s) for %d field(s) of %s", path, len(e.Recv.Args), len(ch.Fields), ch.Name)
+					}
 				}
 				for j, a := range e.Recv.Args {
 					apath := fmt.Sprintf("%s.recv.args[%d]", path, j)
@@ -469,10 +712,16 @@ func Validate(m *Model) error {
 			if e.Run != nil {
 				ops++
 				r := e.Run
-				if r.Proc < 0 || r.Proc >= len(m.Processes) || r.Proc == p {
-					return fmt.Errorf("%s.run: process %d is not another process of the model", path, r.Proc)
+				targets := r.Targets()
+				for _, q := range targets {
+					if q < 0 || q >= len(m.Processes) {
+						return fmt.Errorf("%s.run: process %d is not a process of the model", path, q)
+					}
+					if !m.Processes[q].Dynamic {
+						return fmt.Errorf("%s.run: process %d (%s) is not a dynamic instance", path, q, m.Processes[q].Name)
+					}
 				}
-				target := &m.Processes[r.Proc]
+				target := &m.Processes[targets[0]]
 				if r.Entry < 0 || r.Entry >= len(target.Locations) {
 					return fmt.Errorf("%s.run.entry: %d outside 0..%d", path, r.Entry, len(target.Locations)-1)
 				}
@@ -482,6 +731,21 @@ func Validate(m *Model) error {
 				for j, a := range r.Args {
 					if _, err := Check(a, l.scope(p)); err != nil {
 						return fmt.Errorf("%s.run.args[%d]: %w", path, j, err)
+					}
+				}
+				for _, q := range targets {
+					for j, a := range r.Init {
+						if _, err := Check(a.Value, l.scope(q)); err != nil {
+							return fmt.Errorf("%s.run.init[%d].value: %w", path, j, err)
+						}
+						if a.Index != nil {
+							if _, err := Check(a.Index, l.scope(q)); err != nil {
+								return fmt.Errorf("%s.run.init[%d].index: %w", path, j, err)
+							}
+						}
+						if l.scope(q).LookupVar(a.Var) == nil {
+							return fmt.Errorf("%s.run.init[%d]: %s has no variable %q", path, j, m.Processes[q].Name, a.Var)
+						}
 					}
 				}
 			}

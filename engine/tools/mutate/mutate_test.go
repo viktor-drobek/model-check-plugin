@@ -54,14 +54,14 @@ func TestChanCap(t *testing.T) {
 	if len(minus) != 1 {
 		t.Fatalf("chan-cap-minus: %d mutants, want 1 (the [0] channel and the array must be skipped)", len(minus))
 	}
-	if minus[0].Original != "2" || minus[0].Mutated != "1" {
+	if minus[0].Original != "[2]" || minus[0].Mutated != "[1]" {
 		t.Fatalf("manifest %+v", minus[0].Entry)
 	}
 	if !strings.Contains(string(minus[0].Src), "[1] of { mtype, bit }") {
 		t.Fatalf("got %q", string(minus[0].Src))
 	}
 	zero := Generate([]byte(src), "t.pml", ChanCapZero)
-	if len(zero) != 1 || zero[0].Mutated != "0" {
+	if len(zero) != 1 || zero[0].Mutated != "[0]" {
 		t.Fatalf("chan-cap-zero: %+v", zero)
 	}
 	// Capacity 1: minus gives 0, and chan-cap-zero would repeat it, so it
