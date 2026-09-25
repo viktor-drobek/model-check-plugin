@@ -1,0 +1,113 @@
+# Intake card — CH2/mutex_flaw.pml (FR-001, FR-002).
+# Пользователь недоступен для вопросов: поля, которые нельзя было безопасно вывести
+# из запроса и файла, заполнены явно помеченными значениями по умолчанию
+# ("DEFAULT (assumed)"). Это учебный пример из корпуса, поэтому умолчания допустимы
+# (workflow.md §2); для критической проверки их нужно было бы подтвердить.
+
+system:
+  name: "mutex_flaw (Promela - examples/CH2/mutex_flaw.pml)"
+  boundary: "Два одинаковых процесса user (active [2]), общие байтовые переменные x, y, z (протокол входа) и cnt (счётчик процессов в критической секции). Весь файл целиком."
+  environment: "Внешней среды нет: только планировщик (произвольное чередование одиночных операторов двух процессов)."
+  excluded: []            # ничего не исключено; файл проверяется как есть, без правок
+  relation_to_implementation: "hand-written model (учебный пример из корпуса CH2); реализации нет, перенос результата на неё не заявляется"
+
+state:
+  variables:
+    - "cnt: byte, 0..255, число процессов в критической секции (инкремент при входе, декремент при выходе)"
+    - "x, y, z: byte, 0..255, фактически принимают значения 0/1/2 — флаги протокола входа (me пишущего процесса)"
+    - "user:0.me = 1, user:1.me = 2: byte, константа на процесс (_pid + 1)"
+  processes:
+    - "user:0 (me = 1), user:1 (me = 2): метки L1–L7, бесконечный цикл через goto L1"
+  channels: []
+  initial_states: "единственное: cnt = x = y = z = 0, оба процесса в L1"
+  observables:
+    - "cnt <= 1 → cnt → «в критической секции не более одного процесса»"
+    - "cnt >= 1 → cnt → «кто-то вошёл в критическую секцию»"
+    - "pc(0) == 6 && pc(1) == 6 → оба процесса в локации L7 → «оба прошли протокол входа»"
+
+transitions:
+  semantics: "interleaving (чередование), общие переменные; каналов нет"
+  atomic_step: "один оператор Promela одного процесса — DEFAULT (assumed): в файле нет atomic/d_step, значит модель намеренно показывает чередование чтений и записей"
+  terminal_states: "end-меток нет; процессы не завершаются (goto L1) — DEFAULT (assumed): любое состояние без включённых переходов считается тупиком (ошибкой)"
+  nondeterminism: "только планировщик; ветвления if детерминированы по значениям переменных"
+
+properties:
+  - id: P1
+    wording: "Два процесса не должны одновременно попадать в критическую секцию (формулировка автора модели: assert(cnt == 1) в критической секции)"
+    class: safety
+    logic: assert (встроенная проверка на каждом шаге)
+    extension: untimed
+    formula: "assert(cnt == 1) на строке 23 никогда не нарушается"
+    atoms: [cnt]
+    expected_evidence: "finite trace"
+    sanity_companion: "P4 (cnt >= 1 достижимо)"
+  - id: P2
+    wording: "Модель не зависает (неявное требование любой Promela-модели; вход в CS и выход из неё возможны всегда)"
+    class: safety
+    logic: deadlock
+    extension: untimed
+    formula: "нет достижимого состояния без включённых переходов при незавершённых процессах"
+    atoms: []
+    expected_evidence: "finite trace"
+    sanity_companion: "—"
+  - id: P3
+    wording: "Два процесса не должны одновременно попадать в критическую секцию (требование пользователя, записанное напрямую)"
+    class: safety
+    logic: invariant
+    extension: untimed
+    formula: "cnt <= 1 во всех сохранённых состояниях"
+    atoms: [cnt]
+    expected_evidence: "finite trace"
+    sanity_companion: "P4"
+  - id: P4
+    wording: "Проверка на пустоту: хотя бы один процесс вообще входит в критическую секцию"
+    class: reachability
+    logic: reach
+    extension: untimed
+    formula: "reach: cnt >= 1"
+    atoms: [cnt]
+    expected_evidence: "finite trace (witness)"
+    sanity_companion: "—"
+  - id: P5
+    wording: "Регрессионная метка сценария: оба процесса одновременно стоят на L7 (оба прошли протокол входа)"
+    class: reachability
+    logic: reach
+    extension: untimed
+    formula: "reach: pc(0) == 6 && pc(1) == 6   (локация с индексом 6 = метка L7 в обоих процессах)"
+    atoms: [pc(0), pc(1)]
+    expected_evidence: "finite trace (witness)"
+    sanity_companion: "—"
+
+assumptions:
+  scheduler: "произвольное чередование, без приоритетов и справедливости"
+  delivery: "не применимо (каналов нет)"
+  failures: "нет"
+  environment_inputs: "нет"
+  bounds:
+    - "2 процесса (active [2]) — фиксировано файлом"
+    - "byte для cnt, x, y, z — фактические значения 0..2, переполнение невозможно (движок остановился бы с invalid-model)"
+
+fairness:
+  required: none          # проверяются только safety/reachability; liveness (отсутствие голодания) пользователь не запрашивал
+  justification: "не требуется для safety-свойств; вопрос о справедливости стал бы обязательным при проверке liveness"
+  confirmed_by_user: false
+
+backend:
+  engine: mcd 0.1.0-g0 (CLI /tmp/mcd; MCP-сервер в сессии не зарегистрирован)
+  search_mode: "dfs (основной) и bfs (кратчайший контрпример)"
+  reductions: none
+
+budget:
+  time: "60 000 мс (умолчание CLI)"
+  states: "1 000 000 (умолчание CLI); пилот 200"
+  depth: "1 000 000 (умолчание CLI)"
+  memory: "1 GiB (умолчание CLI)"
+  repeats: 1
+
+evidence:
+  expected: exhaustive
+  goal: "exhaustive result — DEFAULT (assumed): пользователь просит «проверить», а не «найти сценарий»; модель мала (пилот показал 200 состояний за <1 мс)"
+
+artefacts:
+  may_store_models_and_traces: true   # DEFAULT (assumed): учебный пример из открытого корпуса
+  contains_secrets_or_personal_data: "нет"

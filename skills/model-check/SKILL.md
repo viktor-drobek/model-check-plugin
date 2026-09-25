@@ -88,14 +88,18 @@ tool class would fit), no imitation of a result. Details and the branch table:
 
 ### 3. Model → IR with `mc_parse`
 
-Until the MCP server exists (build step G2) every `mc_*` name in this file means its
-`mcd` CLI equivalent from `references/engine-tools.md` §1–§2: today that is
-`mcd parse --petri|--ir` and `mcd check --petri|--ir [--budget-*] [--bfs] [--no-timing]`
-(Promela input `--promela` arrives with G1); exit code 2 with a JSON `error` is the
-parser rejection meant below, exit code 0 is a report even when it says `invalid-model`.
+Two layers reach the same engine (`references/engine-tools.md`). When the plugin's MCP
+server is registered in the session, call the `mc_*` tools; otherwise every `mc_*` name
+in this file means its `mcd` CLI equivalent: `mcd parse --petri|--ir|--promela [-D …]`
+and `mcd check --petri|--ir|--promela [-D …] [--budget-*] [--bfs] [--sweep] [--no-timing]`.
+Promela input goes through the `promela` field of `mc_parse` — or, since the server of
+this build does not link the Promela frontend yet, through `mcd parse --promela` /
+`mcd check --promela`. A Petri net goes through `petri` / `--petri`. Exit code 2 (CLI)
+or `outcome: rejected` (MCP) is the parser rejection meant below; exit code 0 /
+`outcome: report` is a result even when it says `invalid-model`.
 
 Call `mc_parse` on the Promela text or the Petri JSON. Read the warnings, not just the
-success flag: `printf` ignored, capacity defaults applied, labels without references.
+success flag: `printf` ignored, never claim not executed, capacity defaults applied.
 If the parser rejects a construct, the choices are to rewrite the model inside the
 subset or to explain the boundary; working around the parser (hand-editing its
 output, faking the construct) is not one of them, because the differential tests that

@@ -1,4 +1,4 @@
-# Promela subset accepted by the engine
+# Promela subset accepted by the engine (as built in G1)
 
 Sources: `model-check-skill-notes/14-skill-building-plan.md` §5.2 (grammar by
 version), §4.1 (deadlock, overflow), §2.1 (corpus rows); semantics from
@@ -8,155 +8,139 @@ blocking, `if`/`do`/`else`, channels, rendezvous, program-graph semantics) and
 (validation models), гл. 6 (`assert`, `end`, `progress`, `accept`), гл. 13
 (`timeout` becomes available only after the ordinary transitions failed);
 `model-check-skill-notes/03-karpov-model-checking.md` гл. 5 (`atomic`, `d_step`).
+Engine as built: `model-check-plugin/engine/frontend/promela/` (parser, preprocessor,
+lowering), `model-check-plugin/steps/g1-confirmation.md` §1, §3.1 (coverage of
+chapters 2–3 against SPIN 6.5.2), §4 (semantic decisions), §5 (narrowings).
 
 The engine parses a **fixed subset** of Promela. Everything outside it is rejected
-with the line and the construct named, and the property gets `not-executed` — not
+with the construct and the line named (exit code 2, `kind: outside-subset`,
+`status: not-executed`), and the property gets `not-executed` — not
 `invalid-model`: a model that uses `unless` is a fine model that this engine cannot
 read (11 §19, plan §2.1). Do not work around the parser; rewrite inside the subset
-or explain the boundary.
+or explain the boundary. A construct outside the subset gives `not-executed` for
+**every** property of the model, because nothing was executed.
 
-## 1. Grammar by version
+## 1. What the parser accepts (MVP, built in G1)
 
-Three tiers. MVP is what G0–G1 deliver (chapters 2–3 of the corpus without `inline`,
-`typedef`, `unless`, `provided`); v1 is what G5 adds; "excluded" never enters.
-
-### MVP
+Most rows are exercised by the corpus files of chapters 2–3 that agree with SPIN state
+for state (`steps/g1-confirmation.md` §3.1: 21 files agree, 3 differ only by the
+overflow policy of §2); `#elif`, `#undef`, `nempty`/`nfull`, `xr`/`xs` (in the corpus
+only under `#if 0`) and remote references are covered by the engine's own test models
+(`engine/testdata/promela/`) and unit tests, not by the corpus.
 
 | Area | Accepted |
 |---|---|
-| Processes | `proctype`, `active proctype`, `active [N] proctype`, `init`, `run P(args)`; parameters of the scalar types below; `_pid` |
-| Types | `bit`, `bool`, `byte`, `short`, `int`, `mtype`; one-dimensional arrays of fixed length; `mtype = { a, b }` and `mtype { a, b }` declarations |
-| Channels | `chan c = [N] of { t1, t2, … }` with `N ≥ 0` (`0` = rendezvous); `c!e1,e2` / `c!e1(e2,…)`; `c?x,y` with constants (pattern match) and variables; `len(c)`, `empty(c)`, `full(c)`; `nempty(c)`, `nfull(c)` as their negations |
+| Processes | `proctype`, `active proctype`, `active [N] proctype`, `init`; parameters of the scalar types below; `_pid` (a constant per instance); `run P(args)` **only as a straight-line statement in `init`** — not inside a `proctype`, not inside an `if`/`do` option (§5) |
+| Types | `bit`, `bool`, `byte`, `short`, `int`, `mtype`, `pid`; one-dimensional arrays of fixed length; local variables with a constant or `_pid` initialiser |
+| mtype | both declaration forms, `mtype = { a, b }` and `mtype { a, b }`; several declarations (numbering as SPIN: last name of a declaration = 1, upward; the next declaration continues above) |
+| Channels | `chan` declarations `chan c = [N] of { t1, t2, … }` with `N ≥ 0` (`0` = rendezvous); `c!e1,e2` / `c!e1(e2,…)`; `c?x,y` with constants (pattern match) and variables; the predicates `len`, `empty`, `full`, `nempty`, `nfull` (as `len(c)`, `empty(c)`, …); `xr c` / `xs c` — `xr` and `xs` are parsed and kept as **hints** (recorded in the IR, no effect on the search) |
 | Control | `if … fi`, `do … od`, `::` options, `->` and `;` as separators, `else`, `break`, `goto`, labels; label prefixes `end`, `progress`, `accept` |
-| Atomicity | `atomic { … }`, `d_step { … }` |
-| Statements | assignment, expression statements (guards), `assert(e)`, `skip`, `true`, `false`, `timeout` |
-| Preprocessor | `#define NAME body` and `#define NAME(args) body` (needed by `App_C/petrinet1`), `#ifdef`/`#ifndef`/`#if 0`/`#else`/`#endif` as used by `CH4/prop.pml`; macro names are expanded before parsing and are not visible in traces (07 лекция 4) |
-| Properties | `never { … }` claim, `assert`, `end`/`progress`/`accept` labels |
-| Expressions | integer arithmetic and comparison, `&&`, `||`, `!`, `%`, remote label references `P@label`, `P[i]@label` in never claims |
+| Atomicity | `atomic { … }`, `d_step { … }` (semantics in §2) |
+| Statements | assignment, expression statements (guards), `assert(e)`, `skip`, `true`, `false`, `timeout`, `printf` (a step with no effect; warning) |
+| Preprocessor | `#define` (object-like `#define NAME body` and function-like `#define NAME(args) body`, with `\` continuation), `#undef`, `#ifdef`/`#ifndef`/`#if`/`#elif`/`#else`/`#endif` with constant expressions and `defined()`; symbols from the command line with `-D` (`-D NAME` / `-D NAME=value`, repeatable; MCP: `defines`); expanded tokens keep the line of the macro call for traces |
+| Properties | `never` claim (`never { … }`; parsed and stored as a claim process, **not executed** until G4 — the engine emits a warning and **no property record** for the claim; `#ifdef` pairs select claims, as `CH4/prop.pml` with `-D PHI`), `assert`, `end`/`progress`/`accept` labels |
+| Expressions | integer arithmetic and comparison, `&&`, `||`, `!`, `%`; remote label references `P@label` inside never claims |
 
-### v1 (G5)
+## 2. Semantic decisions users will notice against SPIN
 
-| Construct | Why later | Corpus file |
+All of these were settled by probes against `pan` (SPIN 6.5.2, `-DNOREDUCE`); for the
+24 files of chapters 2–3 that the parser accepts, the state counts match `pan -c0`
+exactly except where this table says otherwise (the other 12 files are rejected before
+any search, §3).
+
+| Topic | Engine | SPIN (`pan`) | What to tell the user |
+|---|---|---|---|
+| **Byte/short/int overflow** (`byte` leaving 0–255, channel capacity exceeded) | `invalid-model`, evidence `unknown`, the run to the offending step attached as `counterexample`, the overflow named in `reason`; every property still undecided at that point gets `invalid-model` (plan §4.1) | **wraps silently** (`255 + 1 = 0`) and keeps searching | Say it explicitly: `CH3/counter.pml`, `counter2.pml`, `xr.pml` give `invalid-model` here and "no errors" in SPIN. The model's domain, not the engine, is what differs; fix or justify the domain before any property claim |
+| **Blocking inside `d_step`** | `invalid-model` with reason "block in d_step seq" (03 гл. 5: a modelling error) | run-time error, search aborts | Same verdict class; the engine attaches the run |
+| **Nondeterminism inside `d_step`** | the first executable alternative is taken (as SPIN) | same | — |
+| **`atomic` storage rule** (explanatory) | intermediate states inside an `atomic` sequence are **not stored** while the holder can move; the state where an `atomic` sequence is interrupted (its statement blocks) **is stored** | same rule | This is why `App_C/petrinet1` has 8 states, not 28: the marking updates inside `atomic` are one stored step. Invariants and `reach` are checked on **stored** states; `assert` on every step. Counters compare with `pan -c0`, not with the number of statements executed |
+| **`run`** | accepted only as a straight-line statement in `init`; pids: `active`/`init` in textual order, then the `run` statements in textual order; a pid is never reused | dynamic creation anywhere, pid reuse | `CH3/splurge.pml` (recursive `run`) and `CH15/eratosthenes` are rejected as outside the subset the engine accepts (§5, a narrowing of plan §5.2 recorded for the owner) |
+| **Rendezvous** | one step for sender and receiver; each matching receiver is a separate transition; the trace step carries `partner`; rendezvous inside `d_step` is outside the subset | same | — |
+| **`else`** | dynamic: executable iff no other option of the same `if`/`do` is | same | — |
+| **`timeout`** | two-phase: true iff nothing at all is executable with `timeout` false (02 гл. 13) | same | an abstraction of "stuck", not a clock |
+| **Process termination** | the `-end-` transition of a process is executable only when no younger process is alive (SPIN removes only the last process of the vector); locals are zeroed | same | end states are valid only when every process is terminated or at an `end` label |
+| **Never claim** | parsed as a process with `claim: true`, **not executed**; the report carries the warning "never claim (line N) parsed and stored as a claim process; not executed in this engine version — safety properties only; the claim's product with the system is G4" and **no record** for the claim; the search is the safety search of G0/G1 | executed in lockstep | until G4 you assign `not-executed` yourself to the property the claim expresses, quoting the warning as the reason; the `deadlock`/`assert` properties of the same model are still checked and reported |
+| **`printf`** | a step without effect; warning "printf ignored" | prints | properties cannot observe it |
+| **Undeclared variable** (`CH3/scope.pml`) | `kind: semantic` rejection | SPIN also refuses | fix the model |
+
+Unchanged from the notes: state = globals + per process (location, locals) + channel
+contents; step = one executable statement of one process; executability is the only
+synchronisation (an expression statement executes iff non-zero; `c!` iff the channel is
+not full, rendezvous iff a matching `c?` is executable now; `c?` iff the head message
+matches the constants of the pattern); a state with nothing executable is a deadlock
+unless every process is terminated or at an `end` label (02 гл. 6); channels are FIFO
+and lossless (no SPIN `-m` mode); `progress`/`accept` labels are parsed and become
+meaningful with G4.
+
+## 3. Outside the subset — the `not-executed` rule
+
+The parser refuses these with `kind: outside-subset` and names the construct and the
+line; the honest report is `not-executed` for every property, with the construct, the
+line, and (where one exists) the rewrite. `kind: syntax` and `kind: semantic` refusals
+are model errors to fix, not boundaries to explain.
+
+| Construct | Tier | Corpus file | Rewrite to offer |
+|---|---|---|---|
+| `inline name(args) { … }` | v1 (G5) | `CH3/inline.pml`, `CH2/prodcons2.pml` | paste the body by hand (say so in the report) |
+| `typedef` | v1 (G5) | `CH3/typedef.pml` | flatten into scalars/arrays |
+| `provided (e)` | v1 (G5) | `CH3/toggle.pml`, `CH5/pathfinder.pml` | an explicit turn variable, if the priority matters to the property |
+| channels as message fields, arrays of channels, channel variables, uninitialised channels | v1 (G5) | `CH3/rendezvous2.pml`, `CH3/pots.pml`, `CH3/wc.pml`, `CH15/client_server.pml` | static channels per pair |
+| `_nr_pr` | v1 (G5) | `CH15/client_server.pml` | a counter the model maintains itself |
+| `run` outside straight-line `init` (in a `proctype`, in an option, recursive) | engine narrowing awaiting the plan owner, §5 | `CH3/splurge.pml`, `CH15/eratosthenes` | `active [N] proctype` with a fixed N |
+| `unless` | excluded | `CH7/example1.pml`–`example3.pml`, `CH3/pots.pml` | explicit `do` with a guard on the escape condition |
+| `c_code`, `c_expr`, `c_decl`, `c_state`, `c_track` | excluded (NFR-004: no host code) | `CH17/simple1.pr` (line 1), `CH17/simple2.pr`, `CH10/fahr.pml` | model the C effect as Promela assignments and guards |
+| `eval(e)` in receive, `priority`, bit operators, `?:`, `run` inside an expression, remote variable references, `c?[…]`/`c??`/`c?<…>` (poll, sorted, random, copy), `unsigned`, `hidden`/`show`/`local` qualifiers | excluded / not in the plan | `CH3/notpossible.pml` (`run` in an expression — SPIN refuses too) | — |
+| `ltl name { … }` blocks | excluded (plan gives `never { }` priority) | — | a never claim (G4) |
+| `#include` | outside | `CH15/*` | paste the included text |
+| block-scoped redeclaration of a local (SPIN 6 allows) | outside, with a message | none in the corpus | rename |
+
+## 4. Reading a rejection
+
+The CLI prints `{"error": {"kind", "status", "path", "message"}}` on stdout with exit
+code 2; the MCP `mc_parse` answers `outcome: rejected` with `rejection {kind,
+construct, file, line, reason}` (see `engine-tools.md` §2 and §4). Real example,
+`CH17/simple1.pr`:
+
+```
+kind    outside-subset          status  not-executed
+path    Promela - examples/CH17/simple1.pr:1:1
+message construct outside subset: c_code (embedded C is outside the subset) (simple1.pr, line 1)
+```
+
+| `kind` | Meaning | Answer |
 |---|---|---|
-| `inline name(args) { … }` | macro-like expansion with its own scoping | `CH3/inline.pml`, `CH3/inline2.pml` |
-| `typedef` | structured state vector | `CH3/typedef.pml` |
-| `provided (e)` on a proctype | priorities; also forbids POR | `CH5/pathfinder.pml` |
-| channels as message fields, arrays of channels | dynamic channel passing | `CH15/client_server.pml` |
-| `_nr_pr` | process counting | `CH15/client_server.pml` |
-| `run` inside loops (dynamic process creation) | bound on `_nr_pr` needed for finiteness | `CH15/client_server.pml` |
+| `outside-subset` | the grammar is not accepted (§3) | `not-executed` with construct and line; rewrite from §3 |
+| `syntax` | the text is not Promela the parser can read | fix the model; quote the position |
+| `semantic` | undeclared variable, type mismatch, bad `run` arity | fix the model |
 
-### Excluded (never)
+`invalid-model` never comes from the parser: it is a verdict of the **execution**
+(overflow, blocked `d_step`), with the run attached.
 
-| Construct | Reason | Corpus file |
-|---|---|---|
-| `c_code`, `c_expr`, `c_decl`, `c_state`, `c_track` | embedded C is host code; the engine executes no host code (NFR-004) | `CH17/simple1.pr`, `CH17/simple2.pr`, `CH10/fahr.pml`, `CH15/uts_model` |
-| `unless` | escape semantics outside the guarded-command IR | `CH7/example1.pml`–`example3.pml`, `CH3/*` where used |
-| `eval(e)` in receive | not in the corpus; not in the plan | — |
-| `ltl name { … }` blocks | the corpus states properties as never claims, and the plan gives `never { }` priority | — |
-| `xr c` / `xs c` channel assertions | not listed in plan §5.2; `CH3/xr.pml` keeps them under `#if 0` | `CH3/xr.pml` |
+## 5. Narrowings relative to plan §5.2 (recorded for the plan owner)
 
-### Accepted and ignored
+- **`run` only as a straight-line statement in `init`.** The engine instantiates
+  processes statically (pids and process count are fixed before the search); `run`
+  from several processes or inside options would make both depend on the
+  interleaving. The G1 confirmation asks the owner either to record the narrowing in
+  §5.2 (MVP) or to move dynamic creation with `_nr_pr` to v1 (G5).
+- **Overflow policy.** Plan §4.1 (`invalid-model`) is implemented; SPIN wraps. A
+  "wrap like SPIN" mode would be one flag at the store; it does not exist today.
+- **`_pid`, the `mtype { }` form, `nempty`/`nfull`, `#ifdef` family, `xr`/`xs`** are
+  accepted although §5.2 does not list them literally, because the MVP corpus files
+  need them (`CH2/mutex_flaw.pml`, `CH2/mutex.pml`, `CH4/dijkstra_progress.pml`,
+  `CH4/prop.pml`, `CH3/xr.pml`). Recorded in `steps/g3-docs-confirmation.md` and
+  `steps/g1-confirmation.md` as plan questions; the engine's behaviour is the fact.
 
-| Construct | Behaviour | Corpus file |
-|---|---|---|
-| `printf` | accepted syntactically and **ignored with a warning** (plan §5.2); it has no effect on the state, so properties cannot observe it | `CH14/version1` (MSC prints) |
-
-### Items in the MVP table that plan §5.2 does not list literally
-
-`_pid`, the `mtype { … }` declaration form without `=`, `nempty`/`nfull`, and the
-preprocessor conditionals (`#ifdef`, `#if 0`, `#else`, `#endif`) are not named in
-plan §5.2. They are listed as MVP here because the MVP corpus files need them
-(`CH2/mutex_flaw.pml` uses `_pid`, `CH4/dijkstra_progress.pml` the `mtype { }`
-form, `CH4/prop.pml` the conditionals). Until the plan confirms them, treat a parser
-rejection of one of them as a plan question, not as a user error.
-
-If a rejected construct is needed for the user's model, the honest report is
-`not-executed` with the construct, the line, and (where one exists) the rewrite:
-`unless` → an explicit `do` with a guard on the escape condition; `inline` → paste
-the body (MVP) or wait for v1; `provided` → an explicit turn variable if the
-priority is essential to the property.
-
-## 2. Semantics the engine implements
-
-The reference semantics is the program-graph / transition-system semantics of
-07 лекция 5 and the operational reading of 02 гл. 5 and 13.
-
-- **State** = the values of all global variables, for each running process its
-  control location and local variables, and the contents of every channel
-  (plan §4.1). Two states are equal when all of these are equal.
-- **Step** = one executable statement of one process (interleaving). Which process
-  moves is a nondeterministic choice; which option of an `if`/`do` is taken is a
-  second, independent choice (07 лекция 4). The engine enumerates both in a fixed
-  order (by process, then by option), which makes results deterministic.
-- **Executability** is the only synchronisation primitive: an expression statement
-  is executable iff its value is non-zero; an assignment is always executable;
-  `c!` is executable iff the channel is not full (rendezvous: iff a matching `c?` is
-  executable in another process right now); `c?` is executable iff the head message
-  matches the constants in the pattern; `assert(e)` is always executable and reports
-  a violation iff `e` is zero. A process whose current statement is not executable
-  is blocked and simply does not move (07 лекция 4).
-- **`if`/`do`**: any option whose first statement (the guard) is executable may be
-  chosen; `else` is executable iff no other option is. `do` repeats until `break`
-  or `goto` leaves it. Nondeterminism here models an unknown environment; do not
-  turn it into a "typical" scenario (02 гл. 5).
-- **`timeout`** is true iff **no statement of any process** is executable in the
-  current state (02 гл. 13). It is an abstraction of "the system is stuck", not a
-  clock (10 §13). A model that uses `timeout` for recovery is untimed.
-- **`atomic { … }`**: the sequence executes without interleaving as long as its
-  statements are executable; if a statement inside blocks, the atomic sequence is
-  interrupted, other processes may run, and it resumes later (plan §5.2). Wrapping
-  code in `atomic` removes interleavings — see `pitfalls.md` §5 before you do it.
-- **`d_step { … }`**: like `atomic` but deterministic and non-blocking; a blocking
-  statement inside `d_step` is a modelling error (03 гл. 5); the engine is expected to
-  report it as `invalid-model` (to be confirmed in G1).
-- **Channels** are FIFO. Capacity `0` is rendezvous: send and receive happen in one
-  step of both processes. Capacity `N > 0` is asynchronous; a send on a full channel
-  blocks; the plan defines no message-loss mode (SPIN's `-m`), so do not assume one.
-- **Termination and deadlock**: a process that reaches its end is done. A state in
-  which no statement is executable is a **deadlock** unless every remaining process
-  is at an `end`-labelled location (or has terminated) — then it is a valid end state
-  (02 гл. 6; plan §4.1).
-- **`progress` labels** mark locations that must be visited infinitely often; a
-  reachable cycle that visits none is a non-progress cycle (v1 search mode).
-- **`accept` labels** mark Büchi acceptance in never claims: a reachable cycle
-  through an `accept` location of the claim is an acceptance cycle — a violation
-  of the property the claim negates (07 лекция 7).
-- **Domains**: `bit`/`bool` 0–1, `byte` 0–255, `short` and `int` machine ranges as
-  in SPIN. Leaving the domain (wrap-around) is reported as `invalid-model`, not as a
-  property violation (plan §4.1). `App_C/ex1` (a `byte` incremented forever) is the
-  corpus detector for this; `App_C/ex2` fills a channel of capacity `N` — read the
-  engine's report to see whether it hit a domain overflow (`invalid-model`) or a
-  blocked send with nothing else enabled (deadlock); do not guess.
-- **`never` claim**: executes in lockstep with the system, one claim step per system
-  step, observing but never changing the state. A claim that blocks stops the
-  exploration of that path (07 лекция 7).
-
-## 3. Reading `mc_parse` output
-
-| Field | Meaning | Do |
-|---|---|---|
-| `ir` | the intermediate representation | pass it on unchanged |
-| `mapping` | IR element → file, line, user name | keep it for `mc_explain`; it is what makes traces readable (NFR-011) |
-| `warnings` | `printf` ignored, unused labels, capacity defaults, unreferenced `mtype` values | mention the ones that affect the property in the report |
-| `error` | position and construct | classify: outside subset → `not-executed`; syntax error → fix the model |
-
-## 4. Typical parser rejections and what to answer
-
-| Message names | Tier | Answer |
-|---|---|---|
-| `c_code`/`c_expr` | excluded | `not-executed`; the engine runs no C; offer to model the C effect as Promela statements |
-| `unless` | excluded | `not-executed`; offer the `do`/guard rewrite |
-| `inline`, `typedef`, `provided`, channel in message | v1 | `not-executed` until v1; for `inline`, offer manual expansion |
-| unknown identifier in a never claim | MVP | the atom is undefined: fix the `#define` or the label name; do not run |
-| domain overflow at parse time (constant too large) | MVP | `invalid-model` |
-
-## 5. Style rules that keep models checkable (02 гл. 5, 07 лекция 6)
+## 6. Style rules that keep models checkable (02 гл. 5, 07 лекция 6)
 
 - Only control data in the state; small domains; queues as small as the property
   allows — record every size as a parameter of the result.
 - Nondeterministic environment for losses, duplicates, inputs.
-- `atomic` only where the real system is indivisible.
+- `atomic` only where the real system is indivisible (`pitfalls.md` §5).
 - Labels (`end`, `progress`, `accept`) placed deliberately; a missing `end` label
   turns a legitimate final state into a deadlock report.
 - One `proctype` per component; a monitor process for a global invariant only if you
   checked it does not add interleavings the property can observe (07 лекция 6).
+- Watch the domain: a `byte` counter that the real system lets wrap must be modelled
+  with an explicit `% 256`, or the engine stops with `invalid-model` where SPIN
+  would silently continue.

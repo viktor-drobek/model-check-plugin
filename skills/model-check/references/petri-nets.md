@@ -19,7 +19,7 @@ Holzmann (§8.10, via plan §2.2) introduces Petri nets as a *restricted* kind o
 finite-state machine and concludes that for protocols they give a picture, not
 analytical power. The engine follows that conclusion: the Petri frontend
 translates a place/transition net into the same intermediate representation the
-Promela frontend will produce (G1), and the same explorer checks it. What you gain
+Promela frontend produces (G1), and the same explorer checks it. What you gain
 is a natural notation for token games, resources and causal concurrency; what you
 do not gain is any new kind of result.
 
@@ -192,11 +192,11 @@ offending transition when it refuses the net. `mcd` exits with code 2 and
 the message explains that the accepted formalism is Holzmann's basic
 place/transition net, in which negation — a test for the absence of a token — is
 not expressible (claim 5). Setting `inhibitor` on an output arc is a schema error.
-The honest alternative is to write the system in the Promela subset (G1), where a
-guard `p == 0` is ordinary and the same explorer checks it; offer that rewrite, and
-note in the report that the result is then about a guarded-command model, not about
-a Petri net. Until G1 the properties of such a net are `not-executed` with the
-rejection message as reason.
+The honest alternative is to write the system in the Promela subset
+(`promela-subset.md`, `--promela`), where a guard `p == 0` is ordinary and the same
+explorer checks it; offer that rewrite, and note in the report that the result is
+then about a guarded-command model, not about a Petri net. As a Petri net the
+properties stay `not-executed` with the rejection message as reason.
 
 ## 8. Second corpus model: `petrinet2` — golden since G0
 

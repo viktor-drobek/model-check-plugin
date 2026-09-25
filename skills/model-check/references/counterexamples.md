@@ -79,6 +79,8 @@ after the first is fixed, rerun and classify the new trace afresh.
 | 3 | Does the loop rely on a scheduling that the user's stated assumptions exclude? (a ready process never runs; a message is lost forever) | **fairness / environment artefact** — logically a sub-case of 2, singled out because the remedy differs (a justified assumption, not a model change); handled by `fairness.md` §3: rerun with the assumption and report both | the starved transition in the loop |
 | 4 | None of the above: every step is possible in the real system and the formula says what the requirement says | **system defect** | the trace replayed by `mc_simulate` in `guided` mode from the counterexample id |
 
+When the model **is** the object — a Petri net or an algorithm the user gave in words, with no real system behind it (E3 of the evals) — the row-4 class still applies, but write it as "defect of the described object" and say in the report that no real system is known: "system defect" alone reads as a statement about an implementation, and the intake card's "relation to the implementation" field is then empty by construction.
+
 "Spurious" in the sense of abstraction refinement (11 §12, FR-018) is class 2: the
 engine performs no abstraction itself, so a spurious trace can only come from the
 user's or your abstraction of the system. The check is feasibility: walk the trace

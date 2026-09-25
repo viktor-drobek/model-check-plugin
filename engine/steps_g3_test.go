@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -1215,4 +1216,488 @@ func registerG3Steps(sc *godog.ScenarioContext) {
 		}
 		return nil
 	})
+
+	// ------------------------------------------- G3 evals, stage 2 (after G1)
+	evalsList := func() ([]map[string]any, error) {
+		v, err := skillcheck.ParseJSONFile(filepath.Join(w.skillDir, "evals", "evals.json"))
+		if err != nil {
+			return nil, err
+		}
+		arr, ok := skillcheck.Get(v, "evals")
+		if !ok {
+			return nil, fmt.Errorf("evals.json has no evals")
+		}
+		list, _ := arr.([]any)
+		var out []map[string]any
+		for _, e := range list {
+			m, _ := e.(map[string]any)
+			out = append(out, m)
+		}
+		return out, nil
+	}
+	evalID := func(e map[string]any) int {
+		f, _ := e["id"].(float64)
+		return int(f)
+	}
+	findEval := func(id int) (map[string]any, error) {
+		list, err := evalsList()
+		if err != nil {
+			return nil, err
+		}
+		for _, e := range list {
+			if evalID(e) == id {
+				return e, nil
+			}
+		}
+		return nil, fmt.Errorf("evals.json has no eval with id %d", id)
+	}
+	// Build steps in the order the plan delivers them; "at or before G1" is a
+	// rank comparison, not a string comparison.
+	stepRank := map[string]int{"G0": 0, "G1": 1, "G4": 4, "G5": 5}
+	evalsUpTo := func(step string) ([]map[string]any, error) {
+		list, err := evalsList()
+		if err != nil {
+			return nil, err
+		}
+		limit, ok := stepRank[step]
+		if !ok {
+			return nil, fmt.Errorf("unknown build step %q", step)
+		}
+		var out []map[string]any
+		for _, e := range list {
+			r, ok := stepRank[fmt.Sprint(e["runnable_from"])]
+			if !ok {
+				return nil, fmt.Errorf("eval %d: runnable_from %v is not a known build step", evalID(e), e["runnable_from"])
+			}
+			if r <= limit {
+				out = append(out, e)
+			}
+		}
+		return out, nil
+	}
+	sc.Step(`^the evals in "([^"]+)" with "runnable_from" at or before "([^"]+)" are exactly ids "([^"]+)"$`, func(_, step, want string) error {
+		list, err := evalsUpTo(step)
+		if err != nil {
+			return err
+		}
+		var ids []string
+		for _, e := range list {
+			ids = append(ids, fmt.Sprint(evalID(e)))
+		}
+		if got := strings.Join(ids, ", "); got != want {
+			return fmt.Errorf("evals runnable from %s or earlier: got ids %q, want %q", step, got, want)
+		}
+		return nil
+	})
+	evalDir := func(workspace string, id int) (string, error) {
+		entries, err := os.ReadDir(filepath.Join(w.pluginDir, workspace))
+		if err != nil {
+			return "", err
+		}
+		prefix := fmt.Sprintf("eval-%d-", id)
+		for _, e := range entries {
+			if e.IsDir() && strings.HasPrefix(e.Name(), prefix) {
+				return filepath.Join(w.pluginDir, workspace, e.Name()), nil
+			}
+		}
+		return "", fmt.Errorf("no directory %s* under %s", prefix, workspace)
+	}
+	sc.Step(`^every eval in "([^"]+)" with "runnable_from" at or before "([^"]+)" has a graded run under the workspace "([^"]+)" with "([^"]+)" and "([^"]+)"$`, func(_, step, workspace, a, b string) error {
+		list, err := evalsUpTo(step)
+		if err != nil {
+			return err
+		}
+		if len(list) == 0 {
+			return fmt.Errorf("no eval is runnable from %s or earlier", step)
+		}
+		for _, e := range list {
+			id := evalID(e)
+			dir, err := evalDir(workspace, id)
+			if err != nil {
+				return err
+			}
+			for _, conf := range []string{a, b} {
+				p := filepath.Join(dir, conf, "grading.json")
+				v, err := skillcheck.ParseJSONFile(p)
+				if err != nil {
+					return fmt.Errorf("eval %d, %s: %v", id, conf, err)
+				}
+				if got, _ := skillcheck.Get(v, "eval_id"); got != float64(id) {
+					return fmt.Errorf("%s grades eval %v, want %d", p, got, id)
+				}
+				exp, _ := skillcheck.Get(v, "expectations")
+				if l, _ := exp.([]any); len(l) == 0 {
+					return fmt.Errorf("%s has no expectations", p)
+				}
+			}
+		}
+		return nil
+	})
+	sc.Step(`^"([^"]+)" names eval id (\d+) and the prompt of that eval in "([^"]+)"$`, func(rel string, id int, _ string) error {
+		v, err := skillcheck.ParseJSONFile(filepath.Join(w.workDir, rel))
+		if err != nil {
+			return err
+		}
+		if got, _ := skillcheck.Get(v, "eval_id"); got != float64(id) {
+			return fmt.Errorf("%s: eval_id = %v, want %d", rel, got, id)
+		}
+		e, err := findEval(id)
+		if err != nil {
+			return err
+		}
+		if got, _ := skillcheck.Get(v, "prompt"); got != e["prompt"] {
+			return fmt.Errorf("%s: prompt differs from evals.json eval %d", rel, id)
+		}
+		return nil
+	})
+	sc.Step(`^"([^"]+)" grades every assertion of eval (\d+) in "([^"]+)"$`, func(rel string, id int, _ string) error {
+		list, err := grading(rel)
+		if err != nil {
+			return err
+		}
+		e, err := findEval(id)
+		if err != nil {
+			return err
+		}
+		asserts, _ := e["assertions"].([]any)
+		if len(asserts) != len(list) {
+			return fmt.Errorf("%s grades %d expectations, eval %d has %d assertions", rel, len(list), id, len(asserts))
+		}
+		for i, a := range asserts {
+			am, _ := a.(map[string]any)
+			if fmt.Sprint(am["text"]) != fmt.Sprint(list[i]["text"]) {
+				return fmt.Errorf("%s entry %d: text %q, assertion says %q", rel, i+1, list[i]["text"], am["text"])
+			}
+		}
+		return nil
+	})
+	sc.Step(`^"([^"]+)" exists in the workspace$`, func(rel string) error {
+		if _, err := os.Stat(filepath.Join(w.workDir, rel)); err != nil {
+			return err
+		}
+		return nil
+	})
+	workspaceJSON := func(rel string) (any, []byte, error) {
+		raw, err := os.ReadFile(filepath.Join(w.workDir, rel))
+		if err != nil {
+			return nil, nil, err
+		}
+		var v any
+		if err := json.Unmarshal(raw, &v); err != nil {
+			return nil, nil, fmt.Errorf("%s: %v", rel, err)
+		}
+		return v, raw, nil
+	}
+	sc.Step(`^the workspace file "([^"]+)" parses as JSON$`, func(rel string) error {
+		_, _, err := workspaceJSON(rel)
+		return err
+	})
+	sc.Step(`^in the workspace file "([^"]+)" the "run_summary" keys begin with "([^"]+)" then "([^"]+)"$`, func(rel, a, b string) error {
+		_, raw, err := workspaceJSON(rel)
+		if err != nil {
+			return err
+		}
+		keys, err := objectKeysInOrder(raw, "run_summary")
+		if err != nil {
+			return fmt.Errorf("%s: %v", rel, err)
+		}
+		if len(keys) < 2 || keys[0] != a || keys[1] != b {
+			return fmt.Errorf("%s: run_summary keys are %v, want %s then %s first", rel, keys, a, b)
+		}
+		return nil
+	})
+	runsOf := func(rel string) ([]map[string]any, error) {
+		v, _, err := workspaceJSON(rel)
+		if err != nil {
+			return nil, err
+		}
+		arr, ok := skillcheck.Get(v, "runs")
+		list, _ := arr.([]any)
+		if !ok || len(list) == 0 {
+			return nil, fmt.Errorf("%s has no runs", rel)
+		}
+		var out []map[string]any
+		for _, r := range list {
+			m, _ := r.(map[string]any)
+			out = append(out, m)
+		}
+		return out, nil
+	}
+	sc.Step(`^in the workspace file "([^"]+)" the runs of "([^"]+)" come before the runs of "([^"]+)"$`, func(rel, a, b string) error {
+		runs, err := runsOf(rel)
+		if err != nil {
+			return err
+		}
+		lastA, firstB := -1, -1
+		for i, r := range runs {
+			switch r["configuration"] {
+			case a:
+				lastA = i
+			case b:
+				if firstB < 0 {
+					firstB = i
+				}
+			}
+		}
+		if lastA < 0 || firstB < 0 {
+			return fmt.Errorf("%s: runs lack a %s or a %s configuration", rel, a, b)
+		}
+		if lastA > firstB {
+			return fmt.Errorf("%s: a %s run (index %d) follows a %s run (index %d)", rel, a, lastA, b, firstB)
+		}
+		return nil
+	})
+	sc.Step(`^every run in the workspace file "([^"]+)" has a "configuration" of "([^"]+)" or "([^"]+)" and a "result" with "([^"]+)", "([^"]+)", "([^"]+)", "([^"]+)" and "([^"]+)"$`, func(rel, a, b, f1, f2, f3, f4, f5 string) error {
+		runs, err := runsOf(rel)
+		if err != nil {
+			return err
+		}
+		for i, r := range runs {
+			if r["configuration"] != a && r["configuration"] != b {
+				return fmt.Errorf("%s: run %d has configuration %v", rel, i, r["configuration"])
+			}
+			res, _ := r["result"].(map[string]any)
+			for _, f := range []string{f1, f2, f3, f4, f5} {
+				if _, ok := res[f]; !ok {
+					return fmt.Errorf("%s: run %d result lacks %q", rel, i, f)
+				}
+			}
+		}
+		return nil
+	})
+	sc.Step(`^the workspace file "([^"]+)" lists "evals_run" equal to "([^"]+)"$`, func(rel, want string) error {
+		v, _, err := workspaceJSON(rel)
+		if err != nil {
+			return err
+		}
+		arr, _ := skillcheck.Get(v, "metadata", "evals_run")
+		list, _ := arr.([]any)
+		var ids []string
+		for _, x := range list {
+			f, _ := x.(float64)
+			ids = append(ids, fmt.Sprint(int(f)))
+		}
+		if got := strings.Join(ids, ", "); got != want {
+			return fmt.Errorf("%s: evals_run = %q, want %q", rel, got, want)
+		}
+		return nil
+	})
+
+	// ------------------------------------------------ CLI on corpus files
+	sc.Step(`^running "([^"]+)" on the repository file "([^"]+)" exits (\d+)$`, func(cmd, rel string, want int) error {
+		args := append(strings.Fields(cmd)[1:], filepath.Join(w.repoDir, rel))
+		var stdout, stderr bytes.Buffer
+		if code := cli.Run(args, &stdout, &stderr); code != want {
+			return fmt.Errorf("%s exited %d, want %d; stderr: %s; stdout: %.300s", cmd, code, want, stderr.String(), stdout.String())
+		}
+		var doc map[string]any
+		if err := json.Unmarshal(stdout.Bytes(), &doc); err != nil {
+			return fmt.Errorf("stdout is not JSON: %v", err)
+		}
+		w.report = doc
+		w.property = nil
+		return nil
+	})
+	sc.Step(`^the rejection has kind "([^"]+)", status "([^"]+)", names construct "([^"]+)" and points to line (\d+) of "([^"]+)"$`, func(kind, status, construct string, line int, file string) error {
+		if w.report == nil {
+			return fmt.Errorf("no CLI output captured")
+		}
+		e, _ := w.report["error"].(map[string]any)
+		if e == nil {
+			return fmt.Errorf("stdout has no error object: %v", w.report)
+		}
+		if e["kind"] != kind || e["status"] != status {
+			return fmt.Errorf("rejection kind/status = %v/%v, want %s/%s", e["kind"], e["status"], kind, status)
+		}
+		msg, path := fmt.Sprint(e["message"]), fmt.Sprint(e["path"])
+		if !strings.Contains(msg, construct) {
+			return fmt.Errorf("message %q does not name %s", msg, construct)
+		}
+		if !strings.Contains(path, fmt.Sprintf("%s:%d:", file, line)) {
+			return fmt.Errorf("path %q does not point to %s line %d", path, file, line)
+		}
+		if !strings.Contains(msg, fmt.Sprintf("(%s, line %d)", file, line)) {
+			return fmt.Errorf("message %q does not say (%s, line %d)", msg, file, line)
+		}
+		return nil
+	})
+	sc.Step(`^the report counters show (\d+) states and the counterexample ends at line (\d+)$`, func(states, line int) error {
+		if w.property == nil {
+			return fmt.Errorf("no property selected")
+		}
+		counters, _ := w.property["counters"].(map[string]any)
+		if got, _ := counters["states"].(float64); int(got) != states {
+			return fmt.Errorf("counters.states = %v, want %d", counters["states"], states)
+		}
+		cex, _ := w.property["counterexample"].(map[string]any)
+		steps, _ := cex["steps"].([]any)
+		if len(steps) == 0 {
+			return fmt.Errorf("property %v has no counterexample steps", w.property["id"])
+		}
+		last, _ := steps[len(steps)-1].(map[string]any)
+		origin, _ := last["origin"].(map[string]any)
+		if got, _ := origin["line"].(float64); int(got) != line {
+			return fmt.Errorf("last step origin line = %v, want %d", origin["line"], line)
+		}
+		return nil
+	})
+
+	// ------------------------------------------ reference wording (G1/G2)
+	sc.Step(`^"([^"]+)" says that run is accepted only as a straight-line statement in init$`, func(rel string) error {
+		return statesRule(rel, phrase("(?is)`run[^\n]{0,120}only as a straight-line statement in `init`"), "run is accepted only as a straight-line statement in init")
+	})
+	sc.Step(`^"([^"]+)" says that a blocking statement inside d_step gives invalid-model$`, func(rel string) error {
+		return statesRule(rel, regexp.MustCompile("(?is)block\\w*[^\n]{0,60}`d_step`[^\n]{0,80}`invalid-model`"), "a blocking statement inside d_step gives invalid-model")
+	})
+	sc.Step(`^"([^"]+)" says that a byte overflow gives invalid-model while pan wraps silently$`, func(rel string) error {
+		return statesRule(rel, regexp.MustCompile("(?is)overflow[^\n]{0,300}`invalid-model`[^\n]{0,600}wraps silently"), "a byte overflow gives invalid-model while pan wraps silently")
+	})
+	sc.Step(`^"([^"]+)" explains the atomic storage rule$`, func(rel string) error {
+		return statesRule(rel, regexp.MustCompile("(?is)`atomic` storage rule[^\n]{0,200}not stored"), "the atomic storage rule (intermediate states not stored) is explained")
+	})
+	sc.Step(`^"([^"]+)" says that xr and xs are accepted as hints$`, func(rel string) error {
+		return statesRule(rel, regexp.MustCompile("(?is)`xr`[^\n]{0,60}`xs`[^\n]{0,120}hints?"), "xr and xs are accepted as hints")
+	})
+	sc.Step(`^"([^"]+)" lists these constructs as outside the subset:$`, func(rel string, t *godog.Table) error {
+		s, err := read(rel)
+		if err != nil {
+			return err
+		}
+		var body string
+		for _, sec := range skillcheck.Sections(s, 2) {
+			if strings.Contains(strings.ToLower(sec.Title), "outside the subset") {
+				body = sec.Body
+			}
+		}
+		if body == "" {
+			return fmt.Errorf("%s has no level-2 section titled 'Outside the subset'", rel)
+		}
+		var missing []string
+		for _, c := range tableColumn(t) {
+			if !strings.Contains(body, "`"+c+"`") && !strings.Contains(body, "`"+c+" ") && !strings.Contains(body, "`"+c+"(") {
+				missing = append(missing, c)
+			}
+		}
+		if len(missing) > 0 {
+			return fmt.Errorf("%s, section 'Outside the subset', does not list: %v", rel, missing)
+		}
+		return nil
+	})
+	sc.Step(`^"([^"]+)" has at most (\d+) lines or a table of contents$`, func(rel string, max int) error {
+		s, err := read(rel)
+		if err != nil {
+			return err
+		}
+		if n := skillcheck.LineCount(s); n > max && !skillcheck.HasTOC(s, 40) {
+			return fmt.Errorf("%s has %d lines (> %d) and no table of contents in its first 40 lines", rel, n, max)
+		}
+		return nil
+	})
+	sc.Step(`^"([^"]+)" mentions every flag that "mcd ([a-z]+)" accepts according to its usage text$`, func(rel, command string) error {
+		s, err := read(rel)
+		if err != nil {
+			return err
+		}
+		var stdout, stderr bytes.Buffer
+		cli.Run([]string{command, "-h"}, &stdout, &stderr)
+		flagRe := regexp.MustCompile(`(?m)^\s+-([A-Za-z][A-Za-z0-9-]*)`)
+		var flags, missing []string
+		for _, m := range flagRe.FindAllStringSubmatch(stderr.String(), -1) {
+			name := m[1]
+			flags = append(flags, name)
+			spelled := "--" + name
+			if len(name) == 1 {
+				spelled = "-" + name
+			}
+			if !strings.Contains(s, spelled) {
+				missing = append(missing, spelled)
+			}
+		}
+		if len(flags) == 0 {
+			return fmt.Errorf("mcd %s -h printed no flags: %s", command, stderr.String())
+		}
+		if len(missing) > 0 {
+			return fmt.Errorf("%s does not mention the mcd %s flags %v (usage lists %v)", rel, command, missing, flags)
+		}
+		return nil
+	})
+	sc.Step(`^"([^"]+)" says that property kinds ltl, progress and ctl are not-executed until G4 or G5$`, func(rel string) error {
+		return statesRule(rel, regexp.MustCompile("(?is)`ltl`[^\n]{0,40}`progress`[^\n]{0,40}`ctl`[^\n]{0,120}`not-executed`[^\n]{0,300}G[45]"), "ltl, progress and ctl are not-executed until G4/G5")
+	})
+	sc.Step(`^"([^"]+)" states that an absent or zero MCP budget field means the server default$`, func(rel string) error {
+		return statesRule(rel, phrase("(?i)absent or zero[^.]{0,60}server default"), "an absent or zero budget field means the server default")
+	})
+	sc.Step(`^"([^"]+)" says that the CLI budget unification arrives with G4$`, func(rel string) error {
+		return statesRule(rel, phrase("(?is)CLI budget unification[^.]{0,80}arrives with G4"), "the CLI budget unification arrives with G4")
+	})
+	sc.Step(`^"([^"]+)" says that mcd serve in this build does not link the Promela frontend$`, func(rel string) error {
+		return statesRule(rel, phrase("(?is)`mcd serve` does not link the Promela frontend"), "mcd serve in this build does not link the Promela frontend")
+	})
+	sc.Step(`^"([^"]+)" says that Promela input goes through the promela field of mc_parse or through "([^"]+)"$`, func(rel, cliForm string) error {
+		if err := statesRule(rel, phrase("(?is)Promela input goes through the `promela` field of `mc_parse`"), "Promela input goes through the promela field of mc_parse"); err != nil {
+			return err
+		}
+		s, err := read(rel)
+		if err != nil {
+			return err
+		}
+		if !strings.Contains(s, cliForm) {
+			return fmt.Errorf("%s does not mention %q", rel, cliForm)
+		}
+		return nil
+	})
+}
+
+// objectKeysInOrder returns the keys of the top-level object member `key` in
+// the order they appear in raw — Go maps lose that order, and the benchmark
+// contract says with_skill is listed before without_skill.
+func objectKeysInOrder(raw []byte, key string) ([]string, error) {
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	type frame struct{ obj, expectKey, collect bool }
+	var stack []frame
+	var keys []string
+	pendingCollect := false
+	for {
+		tok, err := dec.Token()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		if d, ok := tok.(json.Delim); ok {
+			switch d {
+			case '{':
+				stack = append(stack, frame{obj: true, expectKey: true, collect: pendingCollect})
+			case '[':
+				stack = append(stack, frame{})
+			default:
+				if len(stack) > 0 && stack[len(stack)-1].collect {
+					return keys, nil
+				}
+				stack = stack[:len(stack)-1]
+				if len(stack) > 0 && stack[len(stack)-1].obj {
+					stack[len(stack)-1].expectKey = true
+				}
+			}
+			pendingCollect = false
+			continue
+		}
+		if len(stack) == 0 {
+			continue
+		}
+		top := &stack[len(stack)-1]
+		if top.obj && top.expectKey {
+			k, _ := tok.(string)
+			if top.collect {
+				keys = append(keys, k)
+			}
+			pendingCollect = len(stack) == 1 && k == key
+			top.expectKey = false
+		} else if top.obj {
+			top.expectKey = true
+			pendingCollect = false
+		}
+	}
+	return nil, fmt.Errorf("key %q not found", key)
 }

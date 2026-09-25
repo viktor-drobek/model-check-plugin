@@ -1,0 +1,64 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0-g0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "promela",
+      "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-2/eval-5-c-code-boundary/with_skill/outputs/mc-session-2026-09-25/simple1-rewrite.pml",
+      "sha256": "4831423a929538ceb331eaa56f8dd15c960ab71b943d5184b880caf3d66f1509"
+    }
+  ],
+  "model": {
+    "name": "simple1-rewrite",
+    "state_bytes": 6,
+    "processes": 1,
+    "variables": 1
+  },
+  "search": {
+    "mode": "dfs",
+    "budget": {
+      "states": 1000000,
+      "depth": 1000000,
+      "time_ms": 60000,
+      "mem_bytes": 1073741824
+    },
+    "stop": "complete",
+    "complete": true
+  },
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 8,
+        "transitions": 7,
+        "depth": 4,
+        "time_ms": 0,
+        "memory_bytes_est": 25024
+      },
+      "complete": true
+    },
+    {
+      "id": "assert",
+      "kind": "assert",
+      "text": "no assert statement fails (SPIN: assertion violations)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 8,
+        "transitions": 7,
+        "depth": 4,
+        "time_ms": 0,
+        "memory_bytes_est": 25024
+      },
+      "complete": true
+    }
+  ]
+}

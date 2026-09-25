@@ -1,0 +1,225 @@
+{
+  "schema": "mcd-ir/1",
+  "name": "simple1-rewrite",
+  "globals": [
+    {
+      "name": "x",
+      "type": "int",
+      "origin": {
+        "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-2/eval-5-c-code-boundary/with_skill/outputs/mc-session-2026-09-25/simple1-rewrite.pml",
+        "line": 8,
+        "name": "x"
+      }
+    }
+  ],
+  "processes": [
+    {
+      "name": "simple:0",
+      "locations": [
+        {},
+        {
+          "labels": [
+            "end"
+          ]
+        },
+        {
+          "name": "-dead-"
+        },
+        {},
+        {},
+        {}
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 3,
+          "effect": [
+            {
+              "var": "x",
+              "value": {
+                "op": "const",
+                "value": 2
+              }
+            }
+          ],
+          "text": "x = 2",
+          "origin": {
+            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-2/eval-5-c-code-boundary/with_skill/outputs/mc-session-2026-09-25/simple1-rewrite.pml",
+            "line": 12,
+            "name": "x = 2"
+          }
+        },
+        {
+          "from": 3,
+          "to": 4,
+          "effect": [
+            {
+              "var": "x",
+              "value": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "x"
+                  },
+                  {
+                    "op": "const",
+                    "value": 2
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "x = x + 2",
+          "origin": {
+            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-2/eval-5-c-code-boundary/with_skill/outputs/mc-session-2026-09-25/simple1-rewrite.pml",
+            "line": 14,
+            "name": "x = x + 2"
+          }
+        },
+        {
+          "from": 4,
+          "to": 1,
+          "assert": {
+            "op": "eq",
+            "args": [
+              {
+                "op": "var",
+                "var": "x"
+              },
+              {
+                "op": "const",
+                "value": 4
+              }
+            ]
+          },
+          "text": "assert(x == 4)",
+          "origin": {
+            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-2/eval-5-c-code-boundary/with_skill/outputs/mc-session-2026-09-25/simple1-rewrite.pml",
+            "line": 14,
+            "name": "assert(x == 4)"
+          }
+        },
+        {
+          "from": 3,
+          "to": 5,
+          "effect": [
+            {
+              "var": "x",
+              "value": {
+                "op": "mul",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "x"
+                  },
+                  {
+                    "op": "const",
+                    "value": 3
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "x = x * 3",
+          "origin": {
+            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-2/eval-5-c-code-boundary/with_skill/outputs/mc-session-2026-09-25/simple1-rewrite.pml",
+            "line": 15,
+            "name": "x = x * 3"
+          }
+        },
+        {
+          "from": 5,
+          "to": 1,
+          "assert": {
+            "op": "eq",
+            "args": [
+              {
+                "op": "var",
+                "var": "x"
+              },
+              {
+                "op": "const",
+                "value": 6
+              }
+            ]
+          },
+          "text": "assert(x == 6)",
+          "origin": {
+            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-2/eval-5-c-code-boundary/with_skill/outputs/mc-session-2026-09-25/simple1-rewrite.pml",
+            "line": 15,
+            "name": "assert(x == 6)"
+          }
+        },
+        {
+          "from": 1,
+          "to": 2,
+          "text": "-end-",
+          "origin": {
+            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-2/eval-5-c-code-boundary/with_skill/outputs/mc-session-2026-09-25/simple1-rewrite.pml",
+            "line": 17,
+            "name": "-end-"
+          }
+        }
+      ],
+      "origin": {
+        "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-2/eval-5-c-code-boundary/with_skill/outputs/mc-session-2026-09-25/simple1-rewrite.pml",
+        "line": 10,
+        "name": "simple"
+      }
+    }
+  ],
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)"
+    },
+    {
+      "id": "assert",
+      "kind": "assert",
+      "text": "no assert statement fails (SPIN: assertion violations)"
+    },
+    {
+      "id": "reach_x4",
+      "kind": "reach",
+      "expr": {
+        "op": "eq",
+        "args": [
+          {
+            "op": "var",
+            "var": "x"
+          },
+          {
+            "op": "const",
+            "value": 4
+          }
+        ]
+      },
+      "text": "sanity: a state with x == 4 is reachable (branch 1 taken)"
+    },
+    {
+      "id": "reach_x6",
+      "kind": "reach",
+      "expr": {
+        "op": "eq",
+        "args": [
+          {
+            "op": "var",
+            "var": "x"
+          },
+          {
+            "op": "const",
+            "value": 6
+          }
+        ]
+      },
+      "text": "sanity: a state with x == 6 is reachable (branch 2 taken)"
+    }
+  ],
+  "origin": {
+    "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-2/eval-5-c-code-boundary/with_skill/outputs/mc-session-2026-09-25/simple1-rewrite.pml",
+    "name": "simple1-rewrite"
+  }
+}

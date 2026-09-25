@@ -28,8 +28,8 @@ Hashes computed with `sha256sum` on 2026-09-24.
 | E4, E6 | `Promela - examples/CH14/version1` | `acdfcacad083c29ff47cba18de2fb84ec784e9e064e0b64c435497e07121ec3b` | 752 |
 | E5 | `Promela - examples/CH17/simple1.pr` | `d7a34d649c9cc83ecb852dd2ca584c1ce3b977fceb5a2dbb5d09db542b2d4b70` | 184 |
 
-Which evals can run today: E3 only (Petri JSON through `mcd check --petri`, build step
-G0). E1 and E5 need the Promela frontend (`--promela`, G1); E2 and E4 need `ltl` /
+Which evals can run today: E3 (Petri JSON through `mcd check --petri`, build step G0),
+E1 and E5 (Promela through `--promela`, build step G1). E2 and E4 need `ltl` /
 `progress` and weak fairness (G4); E6 needs `ctl` (G5). The `runnable_from` field of
 each eval records this.
 
@@ -40,6 +40,48 @@ violated through `L1`–`L4` (429 states, matches `pan`); `simple1.pr` → parse
 rejection (`c_code`), status `not-executed`. `App_C/petrinet2`
 (`19aff7aa4b92b7db14999b9339aeb95fe17c251f36e71a2c3be1b5ea2df2a1b5`) has its golden
 report in `engine/testdata/golden/petrinet2.report.json` since G0.
+
+## E1 — exact command line and what it returns (mcd 0.1.0-g0, 2026-09-25)
+
+Run from the repository root; `mcd` is the binary built with
+`go build -o /tmp/mcd ./cmd/mcd` in `model-check-plugin/engine`:
+
+```
+mcd check --no-timing --promela "Promela - examples/CH2/mutex_flaw.pml"
+```
+
+Exit code 0. Report: `inputs[0]` = `{kind: promela, sha256: b9cb0230…8fdac4}`;
+`model` = `{name: mutex_flaw, state_bytes: 9, processes: 2, variables: 6}`;
+`search.stop` = `complete`, `search.complete` = true; counters 429 states, 858
+transitions, depth 65 (the same for both properties; `pan -c0 -DNOREDUCE` stores
+429 too). Properties: `deadlock` → `verified` / `exhaustive`; `assert` → `violated`
+/ `exhaustive`, reason "assert(cnt == 1) fails in the last step of the
+counterexample", counterexample of 54 steps whose last step is `user:0` executing
+`assert(cnt == 1)` at `origin` line 23 of the file (label `L7`, the critical
+section), with `final_state` `cnt = 2`, `x = y = z = 1`, `user:0.me = 1`,
+`user:1.me = 2` — both users inside the section at once. The with-skill answer of
+E1 must decode this run through the labels `L1`–`L4` and `L7` of the source.
+
+## E5 — expected rejection (mcd 0.1.0-g0, 2026-09-25)
+
+```
+mcd check --no-timing --promela "Promela - examples/CH17/simple1.pr"
+```
+
+The result is exit code 2 and, on stdout,
+
+```json
+{"error": {"kind": "outside-subset", "status": "not-executed",
+           "path": "Promela - examples/CH17/simple1.pr:1:1",
+           "message": "construct outside subset: c_code (embedded C is outside the subset) (simple1.pr, line 1)"}}
+```
+
+`mcd parse --promela` on the same file gives the same document. The construct is
+`c_code`, the file `CH17/simple1.pr`, the line 1 (the global `c_code { int x; }`;
+the `c_expr` inside the `assert` on lines 6–7 is never reached because the parser
+stops at the first construct outside the subset). No property record exists, so the
+with-skill answer assigns `not-executed` itself, names the construct and the line,
+says no host code is executed, and offers a rewrite of the C effect as Promela.
 
 How to add a corpus fixture: add a row with path, hash and size; never add the file
 itself. Models from the second corpus (lectures 07, Karpov 03, Velder 09 — extracted

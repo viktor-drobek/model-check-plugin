@@ -27,8 +27,8 @@ rejected with exit code 2, no binary, user declined): then the status is
 `not-executed` with evidence `unknown`, and the report says the engine did not assign
 it. Anything you derive beyond that — a reading under an
 assumption the engine did not check — is a sentence in the report, never a status.
-The same words are used by the CLI, by the MCP tools when they arrive (G2) and in
-the report (plan §6). Statistical or numerical evidence is not produced by the
+The same words are used by the CLI, by the MCP tools (G2, `mc_check`'s `status`
+field) and in the report (plan §6). Statistical or numerical evidence is not produced by the
 engine — it checks no probabilistic models — so the fifth kind of positive result
 in 11 §1.1 (a statistical or numerical estimate) never appears; if a user asks for
 a probability, the route is `not-executed` (see `model-classification.md`).
@@ -66,6 +66,7 @@ Notes on exclusivity:
   before completion. A search that hit the depth bound and found nothing is 5,
   not 4 (11 §10; AC-11). The depth budget is a budget of its own: states deeper
   than D are stored and counted but not expanded, and `reason` says how many.
+- For `reach` write the status with its gloss — `verified` (reachable) / `violated` (unreachable): the bare word reads as "no violation found" / "a bad state was found", the opposite of what a reachability result can mean when the reached state is the defect scenario itself (E1 of the evals: "both users at L7" is `verified`, and that is the bad news).
 - 6 is the remainder (11 §12); with the G0 engine it can only come from you, and
   only when neither a bound nor a construct can be named.
 

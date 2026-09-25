@@ -1,0 +1,44 @@
+{
+  "eval_id": 5,
+  "eval_name": "c-code-out-of-subset",
+  "run": "without_skill",
+  "passed_count": 5,
+  "total": 7,
+  "expectations": [
+    {
+      "text": "Status not-executed is reported",
+      "passed": true,
+      "evidence": "matched 'not-executed' at 1038"
+    },
+    {
+      "text": "The rejected construct c_code is named",
+      "passed": true,
+      "evidence": "matched 'c_code' at 78"
+    },
+    {
+      "text": "The rejection is attributed to the parser/frontend (exit code 2 or an explicit rejection)",
+      "passed": false,
+      "evidence": "pattern '(?i)exit code 2|rejected|rejection|отверг|отклон' not found"
+    },
+    {
+      "text": "A source line of the construct is given",
+      "passed": true,
+      "evidence": "matched 'строка 1' at 1100"
+    },
+    {
+      "text": "No property result is imitated for the original model: no line of the answer attributes verified/violated/inconclusive to simple1.pr, c_code/c_expr or the original (a verdict about a clearly separate rewrite is allowed; iteration-2 refinement, see evals-workspace/iteration-2)",
+      "passed": true,
+      "evidence": "pattern '(?im)^(?=.*\\\\b(verified|violated|inconclusive)\\\\b)(?=.*(simple1\\\\.pr|c_code|c_expr|исходн|original|оригинал)).*$' absent"
+    },
+    {
+      "text": "A rewrite of the C effect as Promela statements is offered",
+      "passed": false,
+      "evidence": "pattern '(?i)rewrite|rewritten|перепис|переписать' not found"
+    },
+    {
+      "text": "No host code is executed and the answer says so",
+      "passed": true,
+      "evidence": "matched 'not-execut' at 1038"
+    }
+  ]
+}

@@ -1,0 +1,182 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0-g0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "ir",
+      "path": "ir-rewrite-with-reach.json",
+      "sha256": "ff076cf78384eaa696160a36c75c606e72f5b9f1a0f55b4bb570613a21f11190"
+    }
+  ],
+  "model": {
+    "name": "simple1-rewrite",
+    "state_bytes": 6,
+    "processes": 1,
+    "variables": 1
+  },
+  "search": {
+    "mode": "dfs",
+    "budget": {
+      "states": 1000000,
+      "depth": 1000000,
+      "time_ms": 60000,
+      "mem_bytes": 1073741824
+    },
+    "stop": "complete",
+    "complete": true
+  },
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 8,
+        "transitions": 7,
+        "depth": 4,
+        "memory_bytes_est": 25024
+      },
+      "complete": true
+    },
+    {
+      "id": "assert",
+      "kind": "assert",
+      "text": "no assert statement fails (SPIN: assertion violations)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 8,
+        "transitions": 7,
+        "depth": 4,
+        "memory_bytes_est": 25024
+      },
+      "complete": true
+    },
+    {
+      "id": "reach_x4",
+      "kind": "reach",
+      "text": "sanity: a state with x == 4 is reachable (branch 1 taken)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 8,
+        "transitions": 7,
+        "depth": 4,
+        "memory_bytes_est": 25024
+      },
+      "complete": true,
+      "witness": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "simple:0",
+            "command": "x = 2",
+            "changes": [
+              {
+                "var": "x",
+                "before": 0,
+                "after": 2
+              }
+            ],
+            "origin": {
+              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-2/eval-5-c-code-boundary/with_skill/outputs/mc-session-2026-09-25/simple1-rewrite.pml",
+              "line": 12,
+              "name": "x = 2"
+            }
+          },
+          {
+            "index": 2,
+            "process": "simple:0",
+            "command": "x = x + 2",
+            "changes": [
+              {
+                "var": "x",
+                "before": 2,
+                "after": 4
+              }
+            ],
+            "origin": {
+              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-2/eval-5-c-code-boundary/with_skill/outputs/mc-session-2026-09-25/simple1-rewrite.pml",
+              "line": 14,
+              "name": "x = x + 2"
+            }
+          }
+        ],
+        "final_state": [
+          {
+            "var": "x",
+            "value": 4
+          }
+        ],
+        "summary": "x = 2, x = x + 2"
+      },
+      "reason": "a reachable state satisfies x == 4; see the witness"
+    },
+    {
+      "id": "reach_x6",
+      "kind": "reach",
+      "text": "sanity: a state with x == 6 is reachable (branch 2 taken)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 8,
+        "transitions": 7,
+        "depth": 4,
+        "memory_bytes_est": 25024
+      },
+      "complete": true,
+      "witness": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "simple:0",
+            "command": "x = 2",
+            "changes": [
+              {
+                "var": "x",
+                "before": 0,
+                "after": 2
+              }
+            ],
+            "origin": {
+              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-2/eval-5-c-code-boundary/with_skill/outputs/mc-session-2026-09-25/simple1-rewrite.pml",
+              "line": 12,
+              "name": "x = 2"
+            }
+          },
+          {
+            "index": 2,
+            "process": "simple:0",
+            "command": "x = x * 3",
+            "changes": [
+              {
+                "var": "x",
+                "before": 2,
+                "after": 6
+              }
+            ],
+            "origin": {
+              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-2/eval-5-c-code-boundary/with_skill/outputs/mc-session-2026-09-25/simple1-rewrite.pml",
+              "line": 15,
+              "name": "x = x * 3"
+            }
+          }
+        ],
+        "final_state": [
+          {
+            "var": "x",
+            "value": 6
+          }
+        ],
+        "summary": "x = 2, x = x * 3"
+      },
+      "reason": "a reachable state satisfies x == 6; see the witness"
+    }
+  ]
+}

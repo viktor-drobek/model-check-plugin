@@ -1,0 +1,128 @@
+$ spin -a simple1.pr
+exit=0
+
+$ gcc -o pan pan.c
+pan.c: In function ‘make_trail’:
+pan.c:1894:33: warning: ‘%d’ directive writing between 1 and 11 bytes into a region of size between 1 and 512 [-Wformat-overflow=]
+ 1894 |                 sprintf(fnm, "%s%d.%s",
+      |                                 ^~
+pan.c:1894:30: note: directive argument in the range [-2147483648, 2147483646]
+ 1894 |                 sprintf(fnm, "%s%d.%s",
+      |                              ^~~~~~~~~
+pan.c:1894:17: note: ‘sprintf’ output 3 or more bytes (assuming 524) into a destination of size 512
+ 1894 |                 sprintf(fnm, "%s%d.%s",
+      |                 ^~~~~~~~~~~~~~~~~~~~~~~
+ 1895 |                         MyFile, Nr_Trails-1, tprefix);
+      |                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+pan.c:1902:36: warning: ‘sprintf’ may write a terminating nul past the end of the destination [-Wformat-overflow=]
+ 1902 |                 sprintf(fnm, "%s.%s", MyFile, tprefix);
+      |                                    ^
+pan.c:1902:17: note: ‘sprintf’ output 2 or more bytes (assuming 513) into a destination of size 512
+ 1902 |                 sprintf(fnm, "%s.%s", MyFile, tprefix);
+      |                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+pan.c:1909:49: warning: ‘%d’ directive writing between 1 and 11 bytes into a region of size between 1 and 512 [-Wformat-overflow=]
+ 1909 |                                 sprintf(fnm, "%s%d.%s",
+      |                                                 ^~
+pan.c:1909:46: note: directive argument in the range [-2147483648, 2147483646]
+ 1909 |                                 sprintf(fnm, "%s%d.%s",
+      |                                              ^~~~~~~~~
+pan.c:1909:33: note: ‘sprintf’ output 3 or more bytes (assuming 524) into a destination of size 512
+ 1909 |                                 sprintf(fnm, "%s%d.%s",
+      |                                 ^~~~~~~~~~~~~~~~~~~~~~~
+ 1910 |                                         MyFile, Nr_Trails-1, tprefix);
+      |                                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+pan.c:1912:52: warning: ‘sprintf’ may write a terminating nul past the end of the destination [-Wformat-overflow=]
+ 1912 |                                 sprintf(fnm, "%s.%s", MyFile, tprefix);
+      |                                                    ^
+pan.c:1912:33: note: ‘sprintf’ output 2 or more bytes (assuming 513) into a destination of size 512
+ 1912 |                                 sprintf(fnm, "%s.%s", MyFile, tprefix);
+      |                                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+pan.c: In function ‘findtrail’:
+pan.c:1498:44: warning: ‘sprintf’ may write a terminating nul past the end of the destination [-Wformat-overflow=]
+ 1498 |                 {       sprintf(fnm, "%s.%s", MyFile, tprefix);
+      |                                            ^
+pan.c:1498:25: note: ‘sprintf’ output 2 or more bytes (assuming 513) into a destination of size 512
+ 1498 |                 {       sprintf(fnm, "%s.%s", MyFile, tprefix);
+      |                         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+pan.c:1509:52: warning: ‘sprintf’ may write a terminating nul past the end of the destination [-Wformat-overflow=]
+ 1509 |                                 sprintf(fnm, "%s.%s", MyFile, tprefix);
+      |                                                    ^
+pan.c:1509:33: note: ‘sprintf’ output 2 or more bytes (assuming 513) into a destination of size 512
+ 1509 |                                 sprintf(fnm, "%s.%s", MyFile, tprefix);
+      |                                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+pan.c:1474:43: warning: ‘.’ directive writing 1 byte into a region of size between 0 and 511 [-Wformat-overflow=]
+ 1474 |                 {       sprintf(fnm, "%s%d.%s",
+      |                                           ^
+pan.c:1474:25: note: ‘sprintf’ output 3 or more bytes (assuming 514) into a destination of size 512
+ 1474 |                 {       sprintf(fnm, "%s%d.%s",
+      |                         ^~~~~~~~~~~~~~~~~~~~~~~
+ 1475 |                                 MyFile, whichtrail, tprefix);
+      |                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+pan.c:1486:51: warning: ‘.’ directive writing 1 byte into a region of size between 0 and 511 [-Wformat-overflow=]
+ 1486 |                                 sprintf(fnm, "%s%d.%s",
+      |                                                   ^
+pan.c:1486:33: note: ‘sprintf’ output 3 or more bytes (assuming 514) into a destination of size 512
+ 1486 |                                 sprintf(fnm, "%s%d.%s",
+      |                                 ^~~~~~~~~~~~~~~~~~~~~~~
+ 1487 |                                         MyFile, whichtrail, tprefix);
+      |                                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+pan.c:1548:36: warning: ‘sprintf’ may write a terminating nul past the end of the destination [-Wformat-overflow=]
+ 1548 |         {       sprintf(fnm, "%s.%s", MyFile, tprefix);
+      |                                    ^
+pan.c:1548:17: note: ‘sprintf’ output 2 or more bytes (assuming 513) into a destination of size 512
+ 1548 |         {       sprintf(fnm, "%s.%s", MyFile, tprefix);
+      |                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+pan.c:1552:44: warning: ‘sprintf’ may write a terminating nul past the end of the destination [-Wformat-overflow=]
+ 1552 |                         sprintf(fnm, "%s.%s", MyFile, tprefix);
+      |                                            ^
+pan.c:1552:25: note: ‘sprintf’ output 2 or more bytes (assuming 513) into a destination of size 512
+ 1552 |                         sprintf(fnm, "%s.%s", MyFile, tprefix);
+      |                         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+pan.c:1538:35: warning: ‘.’ directive writing 1 byte into a region of size between 0 and 511 [-Wformat-overflow=]
+ 1538 |         {       sprintf(fnm, "%s%d.%s", MyFile, whichtrail, tprefix);
+      |                                   ^
+pan.c:1538:17: note: ‘sprintf’ output 3 or more bytes (assuming 514) into a destination of size 512
+ 1538 |         {       sprintf(fnm, "%s%d.%s", MyFile, whichtrail, tprefix);
+      |                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+pan.c:1542:43: warning: ‘.’ directive writing 1 byte into a region of size between 0 and 511 [-Wformat-overflow=]
+ 1542 |                         sprintf(fnm, "%s%d.%s",
+      |                                           ^
+pan.c:1542:25: note: ‘sprintf’ output 3 or more bytes (assuming 514) into a destination of size 512
+ 1542 |                         sprintf(fnm, "%s%d.%s",
+      |                         ^~~~~~~~~~~~~~~~~~~~~~~
+ 1543 |                                 MyFile, whichtrail, tprefix);
+      |                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+exit=0
+
+$ ./pan
+pan:1: assertion violated ( x==6 ) (at depth 2)
+pan: wrote simple1.pr.trail
+
+(Spin Version 6.5.2 -- 6 December 2019)
+Warning: Search not completed
+	+ Partial Order Reduction
+
+Full statespace search for:
+	never claim         	- (none specified)
+	assertion violations	+
+	acceptance   cycles 	- (not selected)
+	invalid end states	+
+
+State-vector 12 byte, depth reached 4, errors: 1
+        6 states, stored
+        0 states, matched
+        6 transitions (= stored+matched)
+        0 atomic steps
+hash conflicts:         0 (resolved)
+
+Stats on memory usage (in Megabytes):
+    0.000	equivalent memory usage for states (stored*(State-vector + overhead))
+    0.292	actual memory usage for states
+  128.000	memory used for hash table (-w24)
+    0.534	memory used for DFS stack (-m10000)
+  128.730	total actual memory usage
+
+
+
+pan: elapsed time 0.01 seconds
+exit=0

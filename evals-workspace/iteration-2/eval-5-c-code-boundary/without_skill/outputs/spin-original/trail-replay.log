@@ -1,0 +1,22 @@
+spin: warning: c_code fragments remain uninterpreted
+      in random simulations with spin; use ./pan -r instead
+spin: important:
+  =======================================warning====
+  this model contains embedded c code statements
+  these statements will not be executed when the trail
+  is replayed in this way -- they are just printed,
+  which will likely lead to inaccurate variable values.
+  for an accurate replay use: ./pan -r
+  =======================================warning====
+
+spin: warning, "simple1.pr" is newer than simple1.pr.trail
+c_code2:	{  x = 2;  }
+  1:	proc  0 (simple:1) simple1.pr:5 (state 1)	[{c_code2}]
+c_code5:	{  x = x*3;  }
+  2:	proc  0 (simple:1) simple1.pr:8 (state 4)	[{c_code5}]
+c_code6:	 x==6 
+  3:	proc  0 (simple:1) simple1.pr:8 (state 5)	[assert({c_code6})]
+spin: trail ends after 3 steps
+#processes: 1
+  3:	proc  0 (simple:1) simple1.pr:10 (state 8) <valid end state>
+1 process created

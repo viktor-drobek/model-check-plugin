@@ -1,0 +1,42 @@
+{
+  "eval_id": 1,
+  "eval_name": "mutex-invariant-violated",
+  "iteration": 2,
+  "date": "2026-09-25",
+  "prompt": "Два процесса не должны одновременно попадать в критическую секцию. Проверь эту модель: Promela - examples/CH2/mutex_flaw.pml",
+  "expected_output": "Invariant violated; status `violated`, evidence `exhaustive`; counterexample decoded through labels L1–L4 with both users at L7; cause class: system defect; the report's engine/inputs sections (manifest) attached; no forbidden phrasing.",
+  "fixture": "Promela - examples/CH2/mutex_flaw.pml",
+  "runnable_from": "G1",
+  "engine": "mcd 0.1.0-g0 built from model-check-plugin/engine at commit a51ce00 (go build -o /tmp/mcd ./cmd/mcd)",
+  "protocol": {
+    "executor": "one general-purpose subagent per configuration, run in parallel, same model as the coordinating session",
+    "with_skill": "prompt + repository root + output directory + path of skills/model-check/SKILL.md ('follow it literally, including the references') + path of the built binary /tmp/mcd; told that the MCP server is not registered (CLI fallback of SKILL.md step 3)",
+    "without_skill": "prompt + repository root + output directory only (as in iteration-1)",
+    "mcp": "not exercised: an MCP server cannot be registered into a subagent's session dynamically; every engine call went through the mcd CLI",
+    "questions": "the user is not available; both configurations were told to record an explicitly labelled assumption instead of asking",
+    "grading": "evals-workspace/grader.py over outputs/answer.md and the outputs directory; assertions from skills/model-check/evals/evals.json",
+    "timing": "tokens, duration and tool uses copied from the Agent task-completion notifications; no other measurement"
+  },
+  "removed_after_run": {
+    "with_skill": {
+      "files": [
+        "outputs/input-mutex_flaw.pml.copy"
+      ],
+      "reason": "verbatim copies of corpus files (plan 14 §2.1 licence note: the corpus is referenced by path and SHA-256, never copied) and, for the E1 baseline, SPIN-generated C sources and pan executables; removed by the coordinator after grading inputs were fixed — grading uses outputs/answer.md only for this eval"
+    },
+    "without_skill": {
+      "files": [
+        "outputs/mutex_flaw.pml",
+        "outputs/pan",
+        "outputs/pan_bfs",
+        "outputs/pan.b",
+        "outputs/pan.c",
+        "outputs/pan.h",
+        "outputs/pan.m",
+        "outputs/pan.p",
+        "outputs/pan.t"
+      ],
+      "reason": "verbatim copies of corpus files (plan 14 §2.1 licence note: the corpus is referenced by path and SHA-256, never copied) and, for the E1 baseline, SPIN-generated C sources and pan executables; removed by the coordinator after grading inputs were fixed — grading uses outputs/answer.md only for this eval"
+    }
+  }
+}

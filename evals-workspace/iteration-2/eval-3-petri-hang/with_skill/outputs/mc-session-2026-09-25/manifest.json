@@ -1,0 +1,33 @@
+{
+  "note": "Assembled by hand: the MCP server (mc_manifest) is not registered in this session; the CLI fallback of engine-tools.md §4 applies. Engine versions, input hashes and budgets are copied from the reports' `engine`, `inputs` and `search.budget`; command lines and UTC wall-clock times were recorded by the assistant. No seed: mc_simulate has no CLI equivalent and was not run.",
+  "session_id": "mc-session-2026-09-25 (eval-3-petri-hang/with_skill)",
+  "created": "2026-09-25T09:46:55Z",
+  "host": "Linux 7.0.0-31-generic aarch64",
+  "engine": {"name": "mcd", "version": "0.1.0-g0", "ir_schema": "mcd-ir/1", "report_schema": "mcd-report/1", "binary": "/tmp/mcd", "layer": "CLI (MCP server not registered)"},
+  "inputs": [
+    {"kind": "petri", "path": "net.json", "sha256": "3841c79adb38e3ebb318e69834e2bc5231b73dba0276542361ebda7dc9aa7ab5", "source": "the user's message of 2026-09-25, transcribed by the assistant"},
+    {"kind": "ir", "path": "ir.json", "sha256": "cbf78665ec469772ea5506012976bdf8c3e3c91c49748d15e24b2290132934e7", "source": "mcd parse --petri net.json"},
+    {"kind": "ir", "path": "ir-with-reach.json", "sha256": "25e583f4ff137360eeb9c08b6c67dd967fc5ada88bf7ae67c7010f8fb055ccc3", "source": "ir.json plus six `reach` properties reach_enabled_t1..t6 appended by the assistant (petri-nets.md §4: sanity check that no transition is dead; a manual IR step)"}
+  ],
+  "calls": [
+    {"n": 1, "tool": "mcd version", "outcome": "ok", "output": "mcd 0.1.0-g0 (ir mcd-ir/1, report mcd-report/1)"},
+    {"n": 2, "tool": "mc_parse (CLI: mcd parse --petri net.json > ir.json)", "started": "2026-09-25T09:46:55.165Z", "ended": "2026-09-25T09:46:55.180Z", "exit_code": 0, "outcome": "ok", "warnings": [], "artifacts": ["ir.json"]},
+    {"n": 3, "tool": "mc_estimate stand-in (CLI: mcd check --petri net.json --budget-states 3 --no-timing)", "started": "2026-09-25T09:46:58.198Z", "ended": "2026-09-25T09:46:58.210Z", "exit_code": 0, "outcome": "ok", "params": {"search": "dfs", "fairness": "none", "budget_applied": {"states": 3, "depth": 1000000, "time_ms": 60000, "mem_bytes": 1073741824}}, "result": "both properties inconclusive/bounded: state budget exhausted: 3 states stored (depth 2, 4 transitions)", "artifacts": ["check-pilot-states3.json"]},
+    {"n": 4, "tool": "mc_check (CLI: mcd check --petri net.json --no-timing)", "started": "2026-09-25T09:47:01.065Z", "ended": "2026-09-25T09:47:01.074Z", "exit_code": 0, "outcome": "ok", "params": {"search": "dfs", "fairness": "none", "budget_applied": {"states": 1000000, "depth": 1000000, "time_ms": 60000, "mem_bytes": 1073741824}}, "result": "stop=complete; deadlock violated/exhaustive (t1, t4); safe verified/exhaustive; 6 states, 8 transitions, depth 2", "artifacts": ["check-dfs.json"]},
+    {"n": 5, "tool": "mc_check (CLI: mcd check --petri net.json --bfs --no-timing)", "started": "2026-09-25T09:47:03.757Z", "ended": "2026-09-25T09:47:03.768Z", "exit_code": 0, "outcome": "ok", "params": {"search": "bfs", "fairness": "none", "budget_applied": {"states": 1000000, "depth": 1000000, "time_ms": 60000, "mem_bytes": 1073741824}}, "result": "same verdicts and the same shortest counterexample t1, t4 (2 steps)", "artifacts": ["check-bfs.json"]},
+    {"n": 6, "tool": "mc_check (CLI: mcd check --petri net.json --sweep --no-timing)", "started": "2026-09-25T09:47:06.734Z", "ended": "2026-09-25T09:47:06.746Z", "exit_code": 0, "outcome": "ok", "params": {"search": "dfs", "sweep": true, "fairness": "none"}, "result": "byte-for-byte identical to check-dfs.json (the whole graph is 6 states / 8 transitions)", "artifacts": ["check-sweep.json"]},
+    {"n": 7, "tool": "mc_check (CLI: mcd check --petri net.json)", "started": "2026-09-25T09:47:09.702Z", "ended": "2026-09-25T09:47:09.732Z", "exit_code": 0, "outcome": "ok", "params": {"search": "dfs", "fairness": "none"}, "result": "same verdicts; time_ms 0 (below 1 ms)", "artifacts": ["check-dfs-timed.json"]},
+    {"n": 8, "tool": "mc_check (CLI: mcd check --ir ir-with-reach.json --no-timing)", "started": "2026-09-25T09:47:52.951Z", "ended": "2026-09-25T09:47:52.961Z", "exit_code": 0, "outcome": "ok", "params": {"search": "dfs", "fairness": "none", "budget_applied": {"states": 1000000, "depth": 1000000, "time_ms": 60000, "mem_bytes": 1073741824}}, "result": "stop=complete; deadlock violated, safe verified, reach_enabled_t1..t6 all verified/exhaustive with witnesses ('' , 't1', 't1, t2', '', 't4', 't4, t5')", "artifacts": ["check-ir-reach.json"]},
+    {"n": "-", "tool": "mc_simulate", "outcome": "not run", "reason": "no CLI equivalent (engine-tools.md §4); the sanity walk was skipped"},
+    {"n": "-", "tool": "mc_lint_property", "outcome": "not run", "reason": "no CLI equivalent; the properties were classified by hand (properties-ltl-ctl.md)"},
+    {"n": "-", "tool": "mc_explain", "outcome": "stand-in", "reason": "no CLI equivalent; the counterexample was read from counterexample.steps / final_state in check-dfs.json"}
+  ],
+  "report_hashes": {
+    "check-pilot-states3.json": "03df777acf153ad87a6ebe53ced649c51e879de66ae327719003b316084e2717",
+    "check-dfs.json": "a6f69de7092496e70e692be184495f778fe886b7ced34ebc3bf3227bf44e567e",
+    "check-bfs.json": "8fcdc3c9da71f2e92dc13258c7d2aed8c20fc8071035344c61ac8fb317385a86",
+    "check-sweep.json": "a6f69de7092496e70e692be184495f778fe886b7ced34ebc3bf3227bf44e567e",
+    "check-dfs-timed.json": "fd3f85cca67dbed1c949edee6dbe2d406b03c336e64dcc7ce7b41eb223f51a87",
+    "check-ir-reach.json": "8e11fef402a81f0fba8429a1e3ee844256d87085a73d64abed8903723b82d255"
+  }
+}

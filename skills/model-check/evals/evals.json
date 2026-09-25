@@ -91,7 +91,7 @@
         {"text": "The rejected construct c_code is named", "check": {"type": "regex", "pattern": "c_code"}},
         {"text": "The rejection is attributed to the parser/frontend (exit code 2 or an explicit rejection)", "check": {"type": "regex", "pattern": "(?i)exit code 2|rejected|rejection|отверг|отклон"}},
         {"text": "A source line of the construct is given", "check": {"type": "regex", "pattern": "(?i)(line|строк\\w*)\\s*\\d+"}},
-        {"text": "No property result is imitated: none of verified/violated/inconclusive appears", "check": {"type": "not_regex", "pattern": "\\b(verified|violated|inconclusive)\\b"}},
+        {"text": "No property result is imitated for the original model: no line of the answer attributes verified/violated/inconclusive to simple1.pr, c_code/c_expr or the original (a verdict about a clearly separate rewrite is allowed; iteration-2 refinement, see evals-workspace/iteration-2)", "check": {"type": "not_regex", "pattern": "(?im)^(?=.*\\b(verified|violated|inconclusive)\\b)(?=.*(simple1\\.pr|c_code|c_expr|исходн|original|оригинал)).*$"}},
         {"text": "A rewrite of the C effect as Promela statements is offered", "check": {"type": "regex", "pattern": "(?i)rewrite|rewritten|перепис|переписать"}},
         {"text": "No host code is executed and the answer says so", "check": {"type": "regex", "pattern": "(?i)(not|never|no)[^\\n]{0,30}(execut|run|compile)|не (исполня|выполня|компилир)"}}
       ]

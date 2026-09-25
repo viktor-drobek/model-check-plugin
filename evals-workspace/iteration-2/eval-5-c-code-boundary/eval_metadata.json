@@ -1,0 +1,35 @@
+{
+  "eval_id": 5,
+  "eval_name": "c-code-out-of-subset",
+  "iteration": 2,
+  "date": "2026-09-25",
+  "prompt": "Проверь эту модель с c_code: Promela - examples/CH17/simple1.pr",
+  "expected_output": "Parser rejection explained (c_code/c_expr are outside the subset; no host code is executed); status `not-executed` with the construct and line; no imitation of a result; a rewrite of the C effect as Promela statements offered.",
+  "fixture": "Promela - examples/CH17/simple1.pr",
+  "runnable_from": "G1",
+  "engine": "mcd 0.1.0-g0 built from model-check-plugin/engine at commit a51ce00 (go build -o /tmp/mcd ./cmd/mcd)",
+  "protocol": {
+    "executor": "one general-purpose subagent per configuration, run in parallel, same model as the coordinating session",
+    "with_skill": "prompt + repository root + output directory + path of skills/model-check/SKILL.md ('follow it literally, including the references') + path of the built binary /tmp/mcd; told that the MCP server is not registered (CLI fallback of SKILL.md step 3)",
+    "without_skill": "prompt + repository root + output directory only (as in iteration-1)",
+    "mcp": "not exercised: an MCP server cannot be registered into a subagent's session dynamically; every engine call went through the mcd CLI",
+    "questions": "the user is not available; both configurations were told to record an explicitly labelled assumption instead of asking",
+    "grading": "evals-workspace/grader.py over outputs/answer.md and the outputs directory; assertions from skills/model-check/evals/evals.json",
+    "timing": "tokens, duration and tool uses copied from the Agent task-completion notifications; no other measurement"
+  },
+  "removed_after_run": {
+    "with_skill": {
+      "files": [
+        "outputs/mc-session-2026-09-25/simple1.pr.input"
+      ],
+      "reason": "verbatim copies of corpus files (plan 14 §2.1 licence note: the corpus is referenced by path and SHA-256, never copied) and, for the E1 baseline, SPIN-generated C sources and pan executables; removed by the coordinator after grading inputs were fixed — grading uses outputs/answer.md only for this eval"
+    },
+    "without_skill": {
+      "files": [
+        "outputs/simple1.pr",
+        "outputs/spin-original/simple1.pr"
+      ],
+      "reason": "verbatim copies of corpus files (plan 14 §2.1 licence note: the corpus is referenced by path and SHA-256, never copied) and, for the E1 baseline, SPIN-generated C sources and pan executables; removed by the coordinator after grading inputs were fixed — grading uses outputs/answer.md only for this eval"
+    }
+  }
+}

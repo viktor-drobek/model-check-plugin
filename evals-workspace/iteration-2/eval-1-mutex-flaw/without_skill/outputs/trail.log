@@ -1,0 +1,88 @@
+  1:	proc  1 (user:1) mutex_flaw.pml:5 (state 1)	[x = me]
+		x = 2
+  2:	proc  1 (user:1) mutex_flaw.pml:8 (state 4)	[(((y==0)||(y==me)))]
+  3:	proc  1 (user:1) mutex_flaw.pml:10 (state 7)	[z = me]
+		z = 2
+  4:	proc  1 (user:1) mutex_flaw.pml:13 (state 10)	[((x==me))]
+  5:	proc  0 (user:1) mutex_flaw.pml:5 (state 1)	[x = me]
+		x = 1
+  6:	proc  0 (user:1) mutex_flaw.pml:8 (state 4)	[(((y==0)||(y==me)))]
+  7:	proc  1 (user:1) mutex_flaw.pml:15 (state 13)	[y = me]
+		y = 2
+  8:	proc  1 (user:1) mutex_flaw.pml:18 (state 16)	[((z==me))]
+  9:	proc  1 (user:1) mutex_flaw.pml:22 (state 19)	[cnt = (cnt+1)]
+		cnt = 1
+ 10:	proc  1 (user:1) mutex_flaw.pml:23 (state 20)	[assert((cnt==1))]
+ 11:	proc  1 (user:1) mutex_flaw.pml:24 (state 21)	[cnt = (cnt-1)]
+		cnt = 0
+ 12:	proc  0 (user:1) mutex_flaw.pml:10 (state 7)	[z = me]
+		z = 1
+ 13:	proc  0 (user:1) mutex_flaw.pml:13 (state 10)	[((x==me))]
+ 14:	proc  1 (user:1) mutex_flaw.pml:5 (state 1)	[x = me]
+		x = 2
+ 15:	proc  1 (user:1) mutex_flaw.pml:8 (state 4)	[(((y==0)||(y==me)))]
+ 16:	proc  1 (user:1) mutex_flaw.pml:10 (state 7)	[z = me]
+		z = 2
+ 17:	proc  1 (user:1) mutex_flaw.pml:13 (state 10)	[((x==me))]
+ 18:	proc  1 (user:1) mutex_flaw.pml:15 (state 13)	[y = me]
+ 19:	proc  1 (user:1) mutex_flaw.pml:18 (state 16)	[((z==me))]
+ 20:	proc  1 (user:1) mutex_flaw.pml:22 (state 19)	[cnt = (cnt+1)]
+		cnt = 1
+ 21:	proc  1 (user:1) mutex_flaw.pml:23 (state 20)	[assert((cnt==1))]
+ 22:	proc  1 (user:1) mutex_flaw.pml:24 (state 21)	[cnt = (cnt-1)]
+		cnt = 0
+ 23:	proc  1 (user:1) mutex_flaw.pml:5 (state 1)	[x = me]
+ 24:	proc  1 (user:1) mutex_flaw.pml:8 (state 4)	[(((y==0)||(y==me)))]
+ 25:	proc  0 (user:1) mutex_flaw.pml:15 (state 13)	[y = me]
+		y = 1
+ 26:	proc  1 (user:1) mutex_flaw.pml:10 (state 7)	[z = me]
+ 27:	proc  1 (user:1) mutex_flaw.pml:13 (state 10)	[((x==me))]
+ 28:	proc  0 (user:1) mutex_flaw.pml:17 (state 14)	[((z!=me))]
+ 29:	proc  0 (user:1) mutex_flaw.pml:5 (state 1)	[x = me]
+		x = 1
+ 30:	proc  0 (user:1) mutex_flaw.pml:8 (state 4)	[(((y==0)||(y==me)))]
+ 31:	proc  0 (user:1) mutex_flaw.pml:10 (state 7)	[z = me]
+		z = 1
+ 32:	proc  0 (user:1) mutex_flaw.pml:13 (state 10)	[((x==me))]
+ 33:	proc  0 (user:1) mutex_flaw.pml:15 (state 13)	[y = me]
+ 34:	proc  1 (user:1) mutex_flaw.pml:15 (state 13)	[y = me]
+		y = 2
+ 35:	proc  1 (user:1) mutex_flaw.pml:17 (state 14)	[((z!=me))]
+ 36:	proc  1 (user:1) mutex_flaw.pml:5 (state 1)	[x = me]
+		x = 2
+ 37:	proc  1 (user:1) mutex_flaw.pml:8 (state 4)	[(((y==0)||(y==me)))]
+ 38:	proc  0 (user:1) mutex_flaw.pml:18 (state 16)	[((z==me))]
+ 39:	proc  1 (user:1) mutex_flaw.pml:10 (state 7)	[z = me]
+		z = 2
+ 40:	proc  1 (user:1) mutex_flaw.pml:13 (state 10)	[((x==me))]
+ 41:	proc  1 (user:1) mutex_flaw.pml:15 (state 13)	[y = me]
+ 42:	proc  1 (user:1) mutex_flaw.pml:18 (state 16)	[((z==me))]
+ 43:	proc  1 (user:1) mutex_flaw.pml:22 (state 19)	[cnt = (cnt+1)]
+		cnt = 1
+ 44:	proc  1 (user:1) mutex_flaw.pml:23 (state 20)	[assert((cnt==1))]
+ 45:	proc  1 (user:1) mutex_flaw.pml:24 (state 21)	[cnt = (cnt-1)]
+		cnt = 0
+ 46:	proc  1 (user:1) mutex_flaw.pml:5 (state 1)	[x = me]
+ 47:	proc  1 (user:1) mutex_flaw.pml:8 (state 4)	[(((y==0)||(y==me)))]
+ 48:	proc  0 (user:1) mutex_flaw.pml:22 (state 19)	[cnt = (cnt+1)]
+		cnt = 1
+ 49:	proc  1 (user:1) mutex_flaw.pml:10 (state 7)	[z = me]
+ 50:	proc  1 (user:1) mutex_flaw.pml:13 (state 10)	[((x==me))]
+ 51:	proc  1 (user:1) mutex_flaw.pml:15 (state 13)	[y = me]
+ 52:	proc  1 (user:1) mutex_flaw.pml:18 (state 16)	[((z==me))]
+ 53:	proc  1 (user:1) mutex_flaw.pml:22 (state 19)	[cnt = (cnt+1)]
+		cnt = 2
+spin: mutex_flaw.pml:23, Error: assertion violated
+spin: text of failed assertion: assert((cnt==1))
+ 54:	proc  1 (user:1) mutex_flaw.pml:23 (state 20)	[assert((cnt==1))]
+spin: trail ends after 54 steps
+#processes: 2
+		cnt = 2
+		x = 2
+		y = 2
+		z = 2
+ 54:	proc  1 (user:1) mutex_flaw.pml:24 (state 21)
+		user(1):me = 2
+ 54:	proc  0 (user:1) mutex_flaw.pml:23 (state 20)
+		user(0):me = 1
+2 processes created

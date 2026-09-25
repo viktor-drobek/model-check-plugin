@@ -1,0 +1,105 @@
+# Intake card — CH17/simple1.pr (FR-001, FR-002).
+# Filled from the model text; the user was not available, so every value marked
+# "inferred"/"default" is an explicitly labelled assumption, not a confirmation.
+# This is a teaching example from the Spin book corpus (CH17 = embedded C code).
+
+system:
+  name: "CH17/simple1.pr — один процесс simple, переменная x во встроенном C"
+  boundary: "один процесс `simple`; переменная `x`, объявленная внутри c_code { int x; } (inferred: единственный компонент)"
+  environment: "нет: ни входов, ни каналов, ни второго процесса"
+  excluded: []
+  relation_to_implementation: "hand-written model (учебный пример из корпуса Spin, гл. 17: встроенный C)"
+
+state:
+  variables:
+    - name: x
+      domain: "C `int` (в исходном файле объявлен внутри c_code — в SPIN НЕ входит в вектор состояния без c_track/c_state)"
+      encoding: "в переписанной версии: Promela `int x` (входит в вектор состояния)"
+      source_meaning: "рабочая переменная примера"
+  processes:
+    - "simple (active proctype, 1 экземпляр)"
+  channels: []
+  initial_states: "x = 0 (C static/глобальная инициализация — inferred); первый шаг присваивает x = 2"
+  observables:
+    - "x == 4 (c_expr в первой ветви) → в переписи `x == 4`"
+    - "x == 6 (c_expr во второй ветви) → в переписи `x == 6`"
+
+transitions:
+  semantics: "interleaving (один процесс — тривиально)"
+  atomic_step: "один оператор Promela; в SPIN каждый блок c_code выполняется как один атомарный шаг (default: перепись `x = x+2` как один оператор совпадает с этим)"
+  terminal_states: "нормальное завершение процесса после fi; тупик — ошибка"
+  nondeterminism: "выбор ветви `if` (обе гарды пусты — обе ветви исполнимы всегда)"
+
+properties:
+  - id: P1
+    wording: "неявное свойство Promela: нет недопустимых конечных состояний (тупиков)"
+    class: safety
+    logic: deadlock
+    extension: untimed
+    formula: "engine-generated `deadlock`"
+    atoms: []
+    expected_evidence: "finite trace"
+    sanity_companion: "P3/P4"
+  - id: P2
+    wording: "assert(c_expr { x==4 }) в ветви 1 и assert(c_expr { x==6 }) в ветви 2 не нарушаются"
+    class: safety
+    logic: invariant   # assert на шаге
+    extension: untimed
+    formula: "engine-generated `assert`: x == 4 после x = x+2; x == 6 после x = x*3"
+    atoms: ["x"]
+    expected_evidence: "finite trace"
+    sanity_companion: "P3/P4"
+  - id: P3
+    wording: "sanity: состояние с x == 4 достижимо (ветвь 1 реально проходится)"
+    class: reachability
+    logic: reach
+    extension: untimed
+    formula: "reach x == 4"
+    atoms: ["x"]
+    expected_evidence: "witness (finite trace)"
+    sanity_companion: ""
+  - id: P4
+    wording: "sanity: состояние с x == 6 достижимо (ветвь 2 реально проходится)"
+    class: reachability
+    logic: reach
+    extension: untimed
+    formula: "reach x == 6"
+    atoms: ["x"]
+    expected_evidence: "witness (finite trace)"
+    sanity_companion: ""
+
+assumptions:
+  scheduler: "не важен (один процесс)"
+  delivery: "нет каналов"
+  failures: "нет"
+  environment_inputs: "нет"
+  bounds:
+    - "x: int; в переписи значения 0, 2, 4, 6 — переполнения нет"
+    - "1 процесс, 0 каналов"
+  default_assumption_A1: "Блоки c_code не имеют побочных эффектов, кроме показанного изменения x (DEFAULT — пользователь не подтвердил)"
+  default_assumption_A2: "Каждый блок c_code — один атомарный шаг, как в SPIN (DEFAULT)"
+
+fairness:
+  required: none          # только safety-свойства; liveness нет
+  justification: "не требуется: нет liveness-свойств"
+  confirmed_by_user: false
+
+backend:
+  engine: mcd             # CLI fallback: /tmp/mcd 0.1.0-g0; MCP-сервер в сессии не зарегистрирован
+  search_mode: dfs        # плюс контрольный прогон bfs
+  reductions: none
+
+budget:
+  time: "пилот 10 000 мс; цель 60 000 мс (умолчание CLI)"
+  states: "пилот 1 000; цель 1 000 000 (умолчание CLI)"
+  depth: "пилот 1 000; цель 1 000 000 (умолчание CLI)"
+  memory: "1024 MiB (умолчание CLI)"
+  repeats: 1
+
+evidence:
+  expected: "исходный файл: unknown (ожидалось отклонение парсером — c_code вне подмножества); перепись: exhaustive"
+  goal: "exhaustive result (по умолчанию для учебного примера; цель пользователя не уточнялась — вопрос записан в answer.md)"
+
+artefacts:
+  may_store_models_and_traces: true   # DEFAULT: учебный корпусный файл, секретов нет
+  contains_secrets_or_personal_data: "нет (учебный пример)"
