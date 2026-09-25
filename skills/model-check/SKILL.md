@@ -122,10 +122,11 @@ An LTL property is passed as `formula` (SPIN syntax), never as `expr`; the engin
 checks it by searching the product with the automaton for its **negation**, and the
 record it returns carries `temporal` — the formula, the atoms, the fairness, and
 `stutter_invariant`, which is false exactly when the formula uses `X`. Control-label
-atoms (`proc@label`) are **not** accepted by this build; a requirement about a
-control location needs a `progress` label or a variable added to the model, declared
-as a change to the model. A `ctl` property is `not-executed` until G5 — say so and
-say what was checked instead.
+atoms (`proc@label`) are rejected by the **LTL** parser (`kind: "ltl"`, "unexpected
+character '@'") but **accepted in CTL**, where they normalise to `pc(…)`. So a
+requirement about a control location is asked either in CTL directly, or in LTL
+after adding a `progress` label or a variable to the model — and that addition is a
+change to the model, which you declare. `ctl` is executed since G5.
 
 LTL and CTL are not interchangeable (FR-007). Keep the logic the user chose or the
 requirement implies; the table of equivalent and diverging patterns is in

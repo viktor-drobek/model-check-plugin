@@ -45,13 +45,22 @@ names work as atoms. A ready-made `never { }` claim is accepted as an alternativ
 a formula (§6); the corpus uses never claims, not `ltl { }` blocks, and the engine
 follows that priority.
 
-**Control-label atoms (`proc@label`, `proc[i]@label`) are not accepted by this
-build.** SPIN has them; `mcd` rejects the whole run with `kind: "ltl"` ("unexpected
-character '@'"). When the requirement is about a control location — "the phone is in
-`Busy`" — you cannot write it as an atom. The two ways round it, both of which
-change the model and must be declared as such in the report: add a `progress` label
-and use the non-progress search (§7), or add a variable the process sets at that
-location and write the atom over the variable.
+**Control-label atoms (`proc@label`, `proc[i]@label`): rejected in LTL, accepted in
+CTL.** In an `--ltl` formula `mcd` rejects the whole run with `kind: "ltl"`
+("unexpected character '@'") and produces no report. In a `--ctl` formula the same
+atom is accepted and normalised to a program-counter test: `AG EF (subscriber@Idle)`
+on `CH14/version1` is evaluated as `!E[true U !E[true U (pc(0) == 0)]]` and comes
+back `verified` / `exhaustive`. So when the requirement is about a control location —
+"the phone is in `Busy`" — there are three routes, and only the first leaves the
+model alone:
+
+1. ask it in **CTL**, over the label itself;
+2. add a `progress` label and use the non-progress search (§7);
+3. add a variable the process sets at that location and write an LTL atom over it.
+
+Routes 2 and 3 change the model and must be declared as such in the report; route 1
+does not, and is the one to reach for first when the question is branching anyway
+("from every state, can it get back to `Idle`?").
 
 **`stutter_invariant`.** Every temporal property record carries it (`temporal`,
 `engine-tools.md` §5.2). It is `false` exactly when the formula uses `X`, and true
@@ -62,12 +71,17 @@ about. When you see `stutter_invariant: false`, either justify the atomic step i
 the report or rewrite the requirement without `X` (checklist step 6).
 
 CTL — `A`/`E` path quantifiers directly followed by `X`, `F`, `G`, `U`: `AG p`,
-`EF p`, `AG(p -> AF q)`, `E(p U q)`, `AG EF p` — is **not executed by this build**.
-A `ctl` property comes back `not-executed` with evidence `unknown` and G5 named in
-the `reason`; the classification below is what the skill still owes the user, and
-the route is to state the property, say it was not checked, and — if and only if the
-requirement is one of the "yes" rows of §3 — offer the LTL reading as a *different*
-property with its own result.
+`EF p`, `AG(p -> AF q)`, `E(p U q)`, `AG EF p` — **is executed since G5**, by
+labelling the reachable graph (`--ctl 'φ'`, properties `ctl1`, `ctl2`, …; over MCP a
+property of kind `ctl` with `formula`, not `expr`). The record carries
+`temporal.logic` = `ctl`, the `normalised` form the engine actually evaluated
+(`AG (cnt <= 1)` → `!E[true U !(cnt <= 1)]`), and a `note`. The classification of §3
+and §4 is therefore about **choosing** the logic, not about routing round a missing
+one: keep the logic the requirement implies instead of offering the LTL reading as a
+substitute. For the full CTL vocabulary — witness and counterexample shapes, the
+vacuity fields, the division of evidence — the authority is
+`steps/g5-confirmation.md` §8 and `features/g5-ctl-v1.feature`; this file has not
+yet had its row-by-row pass against them.
 
 Polarity: for an LTL property the engine builds the automaton for the **negation**
 and searches for an accepting cycle in the product; a `never { }` claim you pass is
@@ -162,12 +176,18 @@ says so.
    process runs off its last statement, the negated property is satisfied by the
    prefix alone: the counterexample is finite and has **no `loop`**. Report it as a
    bad prefix, not as "the loop was too short to find".
-4. **Stutter extension.** SPIN calls it the stutter extension, and so does the
-   engine's step text. A run that cannot be continued (all processes terminated,
-   or a deadlock) is extended by repeating the final state forever, so that the
-   formula can be evaluated on an infinite run. In the trace that is a step of
-   process `-` whose command text says "stutter"; see `counterexamples.md` §2a for
-   what it means and what it does not.
+4. **Stutter extension — for a claim, and not for the `np_` search.** SPIN calls it
+   the stutter extension, and so does the engine's step text. For an `ltl` property
+   or a model's own `never` claim, a run that cannot be continued (all processes
+   terminated, or a deadlock) is extended by repeating the final state forever, so
+   that the formula can be evaluated on an infinite run; in the trace that is a step
+   of process `-` whose command text says "stutter", exactly as under `pan -a`.
+   The non-progress search does **not** do this: there a state where no process can
+   move has no successors at all, as under `pan -l` (§7). A third mechanism serves
+   the same end for `ctl`: a blocked state carries a self-loop, so that the
+   transition relation is total and `EG`/`AF` are defined on it, and the property
+   record's `temporal.note` says so. The three cases are tabulated in
+   `counterexamples.md` §2a, which is also where you read a `-` step.
 5. **`assert` scope — the one place the engine deliberately differs from `pan -a`
    in what it reports.** SPIN's `pan -a` evaluates `assert` statements only while a
    claim is in scope, so a run cut off by the claim never reports an assertion that
@@ -184,7 +204,7 @@ When you hand-write a claim, state in the report which language it accepts: the
 corpus file `CH4/prop.pml` carries both `[]p` and `![]p` as never claims under
 `#ifdef PHI`, and reading one for the other inverts the verdict.
 
-## 7. `progress` labels and the non-progress search (G4)
+## 7. `progress` labels and the non-progress search (G4, amended by the G5 addendum)
 
 "The system cannot run forever without making progress" is not written as a formula.
 You mark the statements that count as progress with labels whose name begins with
@@ -210,6 +230,16 @@ You mark the statements that count as progress with labels whose name begins wit
   that choice at least as much as on the system.
 - The claim process in a non-progress counterexample is `np_`, the automaton the
   engine synthesises; fairness applies to this search exactly as it does to `ltl`.
+- **A blocked system is not a non-progress cycle.** In the `np_` product a state
+  where no process can move has **no successors**, so no cycle runs through it and
+  no counterexample can be built from it — the same rule as `pan -l`. A model that
+  can deadlock therefore answers `--progress` with `progress` `verified` beside
+  `deadlock` `violated`, and that pair is the correct reading: the system stops, it
+  does not spin. This is the one place where the `np_` search deliberately differs
+  from the `ltl` product, which *does* extend such a run (§6 item 4); the difference
+  exists because "stuck" and "running without progressing" are different defects
+  with different fixes, and reporting the first as the second hides it
+  (`steps/g5-addendum-confirmation.md` §1).
 
 ## 8. Formalisation checklist (11 §8, 07 лекция 8)
 
@@ -220,6 +250,6 @@ You mark the statements that count as progress with labels whose name begins wit
 5. Test the formula mentally on one good trace, one bad trace and one vacuous trace.
 6. Ask whether `X` is really part of the requirement; if not, remove it.
 7. For liveness: which fairness, and why is it realistic (see `fairness.md`).
-8. For CTL: is one trace enough as a witness, or is a tree needed? — and remember
-   that this build answers `not-executed` for `ctl` (G5), so the checklist item is
-   about what you write in the report, not about a run.
+8. For CTL: is one trace enough as a witness, or is a tree needed? Since G5 this is
+   a question about a real run — check what the record's `witness` / `counterexample`
+   and `temporal.note` actually contain rather than assuming the shape.

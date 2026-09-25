@@ -30,7 +30,7 @@ only under `#if 0`) and remote references are covered by the engine's own test m
 
 | Area | Accepted |
 |---|---|
-| Processes | `proctype`, `active proctype`, `active [N] proctype`, `init`; parameters of the scalar types below; `_pid` (a constant per instance); `run P(args)` **only as a straight-line statement in `init`** — not inside a `proctype`, not inside an `if`/`do` option (§5) |
+| Processes | `proctype`, `active proctype`, `active [N] proctype`, `init`; parameters of the scalar types below; `_pid` (a constant per instance); `run P(args)`, including inside a loop and recursively — the G5 step lifted the G1 narrowing to straight-line `init` (§2, `run`) |
 | Types | `bit`, `bool`, `byte`, `short`, `int`, `mtype`, `pid`; one-dimensional arrays of fixed length; local variables with a constant or `_pid` initialiser |
 | mtype | both declaration forms, `mtype = { a, b }` and `mtype { a, b }`; several declarations (numbering as SPIN: last name of a declaration = 1, upward; the next declaration continues above) |
 | Channels | `chan` declarations `chan c = [N] of { t1, t2, … }` with `N ≥ 0` (`0` = rendezvous); `c!e1,e2` / `c!e1(e2,…)`; `c?x,y` with constants (pattern match) and variables; the predicates `len`, `empty`, `full`, `nempty`, `nfull` (as `len(c)`, `empty(c)`, …); `xr c` / `xs c` — `xr` and `xs` are parsed and kept as **hints** (recorded in the IR, no effect on the search) |
@@ -54,7 +54,7 @@ any search, §3).
 | **Blocking inside `d_step`** | `invalid-model` with reason "block in d_step seq" (03 гл. 5: a modelling error) | run-time error, search aborts | Same verdict class; the engine attaches the run |
 | **Nondeterminism inside `d_step`** | the first executable alternative is taken (as SPIN) | same | — |
 | **`atomic` storage rule** (explanatory) | intermediate states inside an `atomic` sequence are **not stored** while the holder can move; the state where an `atomic` sequence is interrupted (its statement blocks) **is stored** | same rule | This is why `App_C/petrinet1` has 8 states, not 28: the marking updates inside `atomic` are one stored step. Invariants and `reach` are checked on **stored** states; `assert` on every step. Counters compare with `pan -c0`, not with the number of statements executed |
-| **`run`** | accepted only as a straight-line statement in `init`; pids: `active`/`init` in textual order, then the `run` statements in textual order; a pid is never reused | dynamic creation anywhere, pid reuse | `CH3/splurge.pml` (recursive `run`) and `CH15/eratosthenes` are rejected as outside the subset the engine accepts (§5, a narrowing of plan §5.2 recorded for the owner) |
+| **`run`** | every proctype has a **pool** of instances (`--max-procs`, default 8, bounds it); the static processes (`active`, `init`) come first in textual order, then each proctype's pool; **every `run` draws from its own proctype's pool and takes the first dormant slot at the moment it fires** | same, including that a slot — and so a pid — is **reused** once its process has died | The choice of slot is made during the search, not by the frontend: two `run`s of the same proctype with **equal arguments** are the case that shows it. `engine/testdata/mutate/state-count/you_run2-equal-run-arguments.pml` gives 12 states, exactly `pan -c0`; a per-statement slot gave 14 and was a real divergence, found by the K3 mutation campaign and fixed in the G5 addendum (`steps/g5-addendum-confirmation.md` §4). Never tell a user that pids are not recycled, and do not read two instances of one proctype as two distinct identities unless the model stores the pid itself |
 | **Rendezvous** | one step for sender and receiver; each matching receiver is a separate transition; the trace step carries `partner`; rendezvous inside `d_step` is outside the subset | same | — |
 | **`else`** | dynamic: executable iff no other option of the same `if`/`do` is | same | — |
 | **`timeout`** | two-phase: true iff nothing at all is executable with `timeout` false (02 гл. 13) | same | an abstraction of "stuck", not a clock |
@@ -79,6 +79,17 @@ line; the honest report is `not-executed` for every property, with the construct
 line, and (where one exists) the rewrite. `kind: syntax` and `kind: semantic` refusals
 are model errors to fix, not boundaries to explain.
 
+> **This table predates the G5 subset extension and is wider than the engine's
+> refusals now are.** Rows marked "v1 (G5)" were written when G5 was unbuilt; probes
+> of the current binary accept `provided` (`CH3/toggle.pml`), `inline`
+> (`CH3/inline.pml`), `typedef` (`CH3/typedef.pml`) and channels carried in messages
+> (`CH3/rendezvous2.pml`, `CH15/client_server.pml`), all of which this table still
+> calls deferred. `unless` and `c_code` are still refused, as the plan intends.
+> Until the row-by-row pass against `steps/g5-confirmation.md` is done, **do not
+> report a construct as outside the subset on the strength of this table alone** —
+> run `mcd parse` and quote what the engine actually says. A construct wrongly
+> called `not-executed` is the same kind of error as a verdict wrongly claimed.
+
 | Construct | Tier | Corpus file | Rewrite to offer |
 |---|---|---|---|
 | `inline name(args) { … }` | v1 (G5) | `CH3/inline.pml`, `CH2/prodcons2.pml` | paste the body by hand (say so in the report) |
@@ -86,7 +97,6 @@ are model errors to fix, not boundaries to explain.
 | `provided (e)` | v1 (G5) | `CH3/toggle.pml`, `CH5/pathfinder.pml` | an explicit turn variable, if the priority matters to the property |
 | channels as message fields, arrays of channels, channel variables, uninitialised channels | v1 (G5) | `CH3/rendezvous2.pml`, `CH3/pots.pml`, `CH3/wc.pml`, `CH15/client_server.pml` | static channels per pair |
 | `_nr_pr` | v1 (G5) | `CH15/client_server.pml` | a counter the model maintains itself |
-| `run` outside straight-line `init` (in a `proctype`, in an option, recursive) | engine narrowing awaiting the plan owner, §5 | `CH3/splurge.pml`, `CH15/eratosthenes` | `active [N] proctype` with a fixed N |
 | `unless` | excluded | `CH7/example1.pml`–`example3.pml`, `CH3/pots.pml` | explicit `do` with a guard on the escape condition |
 | `c_code`, `c_expr`, `c_decl`, `c_state`, `c_track` | excluded (NFR-004: no host code) | `CH17/simple1.pr` (line 1), `CH17/simple2.pr`, `CH10/fahr.pml` | model the C effect as Promela assignments and guards |
 | `eval(e)` in receive, `priority`, bit operators, `?:`, `run` inside an expression, remote variable references, `c?[…]`/`c??`/`c?<…>` (poll, sorted, random, copy), `unsigned`, `hidden`/`show`/`local` qualifiers | excluded / not in the plan | `CH3/notpossible.pml` (`run` in an expression — SPIN refuses too) | — |
@@ -118,11 +128,11 @@ message construct outside subset: c_code (embedded C is outside the subset) (sim
 
 ## 5. Narrowings relative to plan §5.2 (recorded for the plan owner)
 
-- **`run` only as a straight-line statement in `init`.** The engine instantiates
-  processes statically (pids and process count are fixed before the search); `run`
-  from several processes or inside options would make both depend on the
-  interleaving. The G1 confirmation asks the owner either to record the narrowing in
-  §5.2 (MVP) or to move dynamic creation with `_nr_pr` to v1 (G5).
+- **`run` only as a straight-line statement in `init`** — a G1 narrowing, **lifted
+  in G5**: `run` is now accepted in a loop and recursively, each proctype has a pool
+  of `--max-procs` instances (default 8), and the pool bound is what keeps the state
+  vector finite. The entry is kept here because the plan's §5.2 still records the
+  narrowing; it no longer describes the engine.
 - **Overflow policy.** Plan §4.1 (`invalid-model`) is implemented; SPIN wraps. A
   "wrap like SPIN" mode would be one flag at the store; it does not exist today.
 - **`_pid`, the `mtype { }` form, `nempty`/`nfull`, `#ifdef` family, `xr`/`xs`** are

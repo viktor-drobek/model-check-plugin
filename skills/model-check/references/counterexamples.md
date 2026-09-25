@@ -90,15 +90,31 @@ three must be dropped or explained rather than narrated as actions:
 **Reading a stuttering process in a lasso.** A step of process `-` appears in two
 situations, and confusing them inverts the diagnosis:
 
-1. **Stutter extension.** The command text says so: `(stutter: no process can move,
-   the system state repeats forever; SPIN's stutter extension)`. The system has
-   *stopped* — every process terminated or the state is a deadlock — and the engine
-   extends the finite run into an infinite one by repeating the final state, because
-   an LTL formula is evaluated on infinite runs. A loop made only of the claim and
-   such a step means: **nothing further happens, and the promise is never kept**.
-   Report it as "the system reaches a state from which nothing can happen, and `q`
-   never occurs", and check the `deadlock` property next to it — a stutter loop on a
-   non-terminated state is a deadlock wearing a liveness costume.
+1. **Stutter extension — and it exists for `ltl` only.** The command text says so:
+   `(stutter: no process can move, the system state repeats forever; SPIN's stutter
+   extension)`. The system has *stopped* — every process terminated, or the state is
+   a deadlock — and the engine extends the finite run into an infinite one by
+   repeating the final state, because an LTL formula is evaluated on infinite runs.
+   A loop made only of the claim and such a step means: **nothing further happens,
+   and the promise is never kept**. Report it as "the system reaches a state from
+   which nothing can happen, and `q` never occurs", and check the `deadlock`
+   property next to it — for an `ltl` property, a stutter loop on a non-terminated
+   state is a deadlock wearing a liveness costume.
+
+   **Which searches extend and which do not** (the rule, not an exception to one):
+
+   | Property kind | A state where no process can move | Why |
+   |---|---|---|
+   | `ltl`, and a model's own `never` claim | extended: the final state repeats forever, and the trace shows it as a step of process `-` | an LTL formula is evaluated on infinite runs, and `pan -a` does the same |
+   | `progress` (the `np_` search) | **not** extended: the state has no successors at all, so no cycle passes through it and no such counterexample exists | `pan -l` does the same. A blocked system is a *deadlock*, and reporting it as a non-progress cycle would hide one defect behind another — they have different fixes (10 §10). The deadlock still reaches you, from the safety search, as `deadlock` `violated` |
+   | `ctl` | the state carries a **self-loop**, so the transition relation is total and `EG`/`AF` are defined there; the property record's `temporal.note` says so | the same purpose as the extension, by the mechanism CTL needs |
+
+   So a `progress` counterexample never contains a stutter step, and a blocked model
+   answers `--progress` with `progress` `verified` beside `deadlock` `violated`. If
+   you meet a `progress` `violated` whose loop looks like "nothing happens", the loop
+   is a real cycle of the model, not a stopped system — read it again.
+   (Engine: `explore/cycle.go`, `noStutter`, set exactly when the property kind is
+   `progress`; `steps/g5-addendum-confirmation.md` §1–§3.)
 2. **Weak-fairness bookkeeping.** Under `fairness: weak` the copies construction
    inserts null steps to advance the fairness copy. They carry no system meaning at
    all; drop them silently.

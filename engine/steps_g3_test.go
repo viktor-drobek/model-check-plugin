@@ -1621,8 +1621,20 @@ func registerG3Steps(sc *godog.ScenarioContext) {
 		}
 		return nil
 	})
-	sc.Step(`^"([^"]+)" says that property kind ctl is not-executed until G5$`, func(rel string) error {
-		return statesRule(rel, phrase("(?is)`ctl`[^.]{0,200}`not-executed`[^.]{0,200}G5|(?is)`not-executed`[^.]{0,120}`ctl`[^.]{0,200}G5"), "the property kind ctl is not-executed until G5")
+	// CTL is executed since G5; the earlier steps asserted the opposite and were
+	// green and wrong (steps/g5-confirmation.md §8).
+	sc.Step(`^"([^"]+)" says that ctl is executed since G5$`, func(rel string) error {
+		body, err := read(rel)
+		if err != nil {
+			return err
+		}
+		if !phrase("(?is)`ctl`[^.]{0,120}(is executed|executed) since G5|(?is)since G5[^.]{0,80}`ctl`|(?is)is executed since G5|(?is)\\*\\*is executed since G5\\*\\*").MatchString(body) {
+			return fmt.Errorf("%s does not say that ctl is executed since G5", rel)
+		}
+		if phrase("(?is)`ctl`[^.]{0,60}(is |returns |comes back )?`not-executed`[^.]{0,80}(until )?G5").MatchString(body) {
+			return fmt.Errorf("%s still says that ctl is not-executed until G5", rel)
+		}
+		return nil
 	})
 	sc.Step(`^"([^"]+)" states that an absent or zero MCP budget field means the server default$`, func(rel string) error {
 		return statesRule(rel, phrase("(?i)absent or zero[^.]{0,60}server default"), "an absent or zero budget field means the server default")
@@ -1716,8 +1728,8 @@ func registerG3Steps(sc *godog.ScenarioContext) {
 	sc.Step(`^"([^"]+)" says that a claim reaching its end is a violation on a finite prefix$`, func(rel string) error {
 		return statesRule(rel, phrase("(?is)claim reaching its end is a violation on a finite prefix"), "a claim reaching its end is a violation on a finite prefix")
 	})
-	sc.Step(`^"([^"]+)" says that label atoms are not accepted by this build$`, func(rel string) error {
-		return statesRule(rel, phrase("(?is)Control-label atoms \\(`proc@label`, `proc\\[i\\]@label`\\) are not accepted by this\\s+build"), "label atoms are not accepted by this build")
+	sc.Step(`^"([^"]+)" says that label atoms are rejected in ltl and accepted in ctl$`, func(rel string) error {
+		return statesRule(rel, phrase("(?is)Control-label atoms \\(`proc@label`, `proc\\[i\\]@label`\\): rejected in LTL, accepted in\\s+CTL"), "label atoms are rejected in ltl and accepted in ctl")
 	})
 	sc.Step(`^"([^"]+)" says that the progress property is added when the model has progress labels$`, func(rel string) error {
 		return statesRule(rel, phrase("(?is)`progress` property is added automatically when the model has progress\\s+labels"), "the progress property is added when the model has progress labels")
@@ -1728,9 +1740,7 @@ func registerG3Steps(sc *godog.ScenarioContext) {
 	sc.Step(`^"([^"]+)" says that ltl results carry evidence exhaustive after the G4 oracle$`, func(rel string) error {
 		return statesRule(rel, phrase("(?is)LTL results therefore\\s+carry the ordinary evidence levels"), "ltl results carry the ordinary evidence levels after the G4 oracle")
 	})
-	sc.Step(`^"([^"]+)" says that ctl is not-executed until G5$`, func(rel string) error {
-		return statesRule(rel, phrase("(?is)`ctl`[^.]{0,200}`not-executed`[^.]{0,200}G5|(?is)`not-executed`[^.]{0,120}`ctl`[^.]{0,200}G5|(?is)`ctl` property comes back `not-executed`"), "ctl is not-executed until G5")
-	})
+
 	// The same check as "no file under X is a copy of …", but over the evals
 	// workspace set by the Given step instead of a path inside the skill.
 	sc.Step(`^no file under the workspace is a copy of a file under "([^"]+)"$`, func(corpusRel string) error {
@@ -1983,6 +1993,91 @@ func registerG3Steps(sc *godog.ScenarioContext) {
 		}
 		if len(missing) > 0 {
 			return fmt.Errorf("%s does not mention: %v", rel, missing)
+		}
+		return nil
+	})
+
+	// ------------------------------- the G5 addendum: stutter and the pool
+	sc.Step(`^running "([^"]+)" on the engine file "([^"]+)" exits (\d+)$`, func(cmd, rel string, want int) error {
+		args := append(strings.Fields(cmd)[1:], filepath.Join(w.pluginDir, "engine", rel))
+		var stdout, stderr bytes.Buffer
+		if code := cli.Run(args, &stdout, &stderr); code != want {
+			return fmt.Errorf("%s exited %d, want %d; stderr: %s; stdout: %.300s", cmd, code, want, stderr.String(), stdout.String())
+		}
+		var doc map[string]any
+		if err := json.Unmarshal(stdout.Bytes(), &doc); err != nil {
+			return fmt.Errorf("stdout is not JSON: %v", err)
+		}
+		w.report = doc
+		w.property = nil
+		return nil
+	})
+	sc.Step(`^running "([^"]+)" on the engine file "([^"]+)" with the ltl formula "([^"]+)" and fairness "([^"]+)" exits (\d+)$`, func(base, rel, formula, fairness string, want int) error {
+		return runLTL(base, filepath.Join(w.pluginDir, "engine", rel), formula, fairness, want)
+	})
+	sc.Step(`^that property has no counterexample$`, func() error {
+		if w.property == nil {
+			return fmt.Errorf("no property selected")
+		}
+		if cex, ok := w.property["counterexample"]; ok && cex != nil {
+			return fmt.Errorf("property %v carries a counterexample: %.200v", w.property["id"], cex)
+		}
+		return nil
+	})
+	sc.Step(`^that property's counterexample has no loop$`, func() error {
+		if w.property == nil {
+			return fmt.Errorf("no property selected")
+		}
+		cex, _ := w.property["counterexample"].(map[string]any)
+		if cex == nil {
+			return fmt.Errorf("property %v has no counterexample at all", w.property["id"])
+		}
+		if loop, ok := cex["loop"]; ok && loop != nil {
+			return fmt.Errorf("property %v has a loop %v; a finite counterexample must have none", w.property["id"], loop)
+		}
+		return nil
+	})
+	// The stutter extension must still reach an ltl counterexample: the G5
+	// addendum suppressed it in the np_ product only.
+	sc.Step(`^the loop of that property contains a stutter step of process "([^"]+)"$`, func(proc string) error {
+		loop, steps, err := cexLoop()
+		if err != nil {
+			return err
+		}
+		start, _ := loop["start"].(float64)
+		n, _ := loop["steps"].(float64)
+		for i := int(start) - 1; i < int(start)-1+int(n) && i < len(steps); i++ {
+			sm, _ := steps[i].(map[string]any)
+			if fmt.Sprint(sm["process"]) != proc {
+				continue
+			}
+			if strings.Contains(fmt.Sprint(sm["command"]), "stutter") {
+				return nil
+			}
+		}
+		return fmt.Errorf("no step of process %q whose command says \"stutter\" in the loop of property %v", proc, w.property["id"])
+	})
+	sc.Step(`^"([^"]+)" says that the np_ search does not extend a blocked state$`, func(rel string) error {
+		return statesRule(rel, phrase(`(?is)\*\*not\*\* extended: the state has no successors at all`), "the np_ search does not extend a blocked state")
+	})
+	sc.Step(`^"([^"]+)" says that a blocked system is a deadlock and not a non-progress cycle$`, func(rel string) error {
+		return statesRule(rel, phrase(`(?is)\*\*A blocked system is not a non-progress cycle\.\*\*`), "a blocked system is a deadlock and not a non-progress cycle")
+	})
+	sc.Step(`^"([^"]+)" says that every run draws from its proctype's pool and a pid is reused$`, func(rel string) error {
+		body, err := read(rel)
+		if err != nil {
+			return err
+		}
+		for _, re := range []*regexp.Regexp{
+			phrase(`(?is)every .run. draws from its own proctype's pool and takes the first dormant\s+slot`),
+			phrase(`(?is)a slot — and so a pid — is \*\*reused\*\*`),
+		} {
+			if !re.MatchString(body) {
+				return fmt.Errorf("%s does not state the pool rule (missing %s)", rel, re)
+			}
+		}
+		if phrase(`(?is)a pid is never reused`).MatchString(body) {
+			return fmt.Errorf("%s still says that a pid is never reused", rel)
 		}
 		return nil
 	})

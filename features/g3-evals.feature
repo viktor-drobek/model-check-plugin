@@ -212,6 +212,8 @@ Feature: G3 evals — stage 2 after G1: E1 and E5 with and without the skill
       | `projection`         |
       | `calls`              |
       | `allow_read`         |
+    # Amended again after the G5 addendum: CTL is executed too, so the "ctl is
+    # not-executed until G5" step became green and wrong and was retargeted.
     # Amended in G3 evals stage 3: G4 executes ltl and progress, unified the budget
     # rule across the two layers and linked the Promela frontend into mcd serve
     # (steps/g4-confirmation.md §7; the MCP call is recorded in
@@ -219,7 +221,7 @@ Feature: G3 evals — stage 2 after G1: E1 and E5 with and without the skill
     # forms of "ltl/progress/ctl are not-executed until G4 or G5", "the CLI budget
     # unification arrives with G4" and "mcd serve does not link the Promela
     # frontend"; only ctl is still a boundary.
-    And "references/engine-tools.md" says that property kind ctl is not-executed until G5
+    And "references/engine-tools.md" says that ctl is executed since G5
     And "references/engine-tools.md" states that an absent or zero MCP budget field means the server default
     And "references/engine-tools.md" says that the budget rule is the same in the CLI and in MCP
     And "references/engine-tools.md" says that mcd serve links the Promela frontend

@@ -85,13 +85,13 @@ Two more limits, both consequences of the definition above:
   still forever pick the same alternative (07 лекция 6). If the requirement needs
   fair choice among branches, model it explicitly (a counter, a turn variable) and
   say so.
-- CTL is not executed by this build at all (`ctl` → `not-executed` until G5), so
-  the question "with which fairness was the CTL property checked?" has no answer
-  here. When CTL arrives, fairness in CTL changes the domain of the path quantifiers
-  (05 гл. 6) and is a separate mechanism from the copies construction; do not
-  promise it. A branching requirement that also needs fairness must today be moved
-  to LTL with `fairness: weak`, with the change of meaning stated
-  (`properties-ltl-ctl.md` §3), or reported as `not-executed`.
+- CTL is executed since G5, but **the copies construction is not wired into it**:
+  fairness in CTL changes the domain of the path quantifiers (05 гл. 6) and is a
+  different mechanism. Do not assume `fairness: weak` reaches a `ctl` property —
+  check the record's `temporal.fairness` and say in the report which paths the
+  verdict quantifies over. A branching requirement that genuinely needs fair paths
+  must be moved to LTL with `fairness: weak`, with the change of meaning stated
+  (`properties-ltl-ctl.md` §3), or reported as not answered.
 
 ## 3. Protocol for every liveness property (07 лекция 6; 10 §9; 11 §6 step 7)
 

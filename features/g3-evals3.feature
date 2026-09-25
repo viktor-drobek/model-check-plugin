@@ -71,7 +71,9 @@ Feature: G3 evals — stage 3 after G4: E2, E2b and E4 with and without the skil
     And "references/engine-tools.md" says that the budget rule is the same in the CLI and in MCP
     And "references/engine-tools.md" says that mcd serve links the Promela frontend
     And "references/engine-tools.md" says that fairness strong gives not-executed
-    And "references/engine-tools.md" says that property kind ctl is not-executed until G5
+    # Amended by the G5 addendum pass: CTL is executed since G5, so the old step
+    # ("ctl is not-executed until G5") was green and wrong (g5-confirmation.md §8).
+    And "references/engine-tools.md" says that ctl is executed since G5
     And "references/engine-tools.md" has at most 300 lines or a table of contents
 
   Scenario: The engine-tools reference copies its MCP examples from the recorded session, not from memory
@@ -117,9 +119,9 @@ Feature: G3 evals — stage 3 after G4: E2, E2b and E4 with and without the skil
     And "references/properties-ltl-ctl.md" says that a formula with X gives stutter_invariant false
     And "references/properties-ltl-ctl.md" says that the engine checks asserts over the whole state space while pan -a checks them in claim scope
     And "references/properties-ltl-ctl.md" says that a claim reaching its end is a violation on a finite prefix
-    And "references/properties-ltl-ctl.md" says that label atoms are not accepted by this build
+    And "references/properties-ltl-ctl.md" says that label atoms are rejected in ltl and accepted in ctl
     And "references/properties-ltl-ctl.md" says that the progress property is added when the model has progress labels
-    And "references/properties-ltl-ctl.md" says that ctl is not-executed until G5
+    And "references/properties-ltl-ctl.md" says that ctl is executed since G5
 
   # ------------------------------------------------------------ evidence
   Scenario: The evidence reference carries the G4 budget rule
@@ -196,6 +198,42 @@ Feature: G3 evals — stage 3 after G4: E2, E2b and E4 with and without the skil
     And that property's temporal record has source "np" and claim "np_"
     And that property's counterexample has a loop of 16 steps
     And the report has property "deadlock" with status "verified" and evidence "exhaustive" and complete true
+
+  # ------------------------------------ the G5 addendum: stutter and the pool
+  # After G4 the engine extended every finite run into an infinite one, in every
+  # product. K3's mutation campaign showed that this reported a deadlock as a
+  # non-progress cycle on eight mutants of CH4/dijkstra_progress.pml where pan
+  # reported no error, and the G5 addendum suppressed the extension in the np_
+  # product only (steps/g5-addendum-confirmation.md §1-§3). The two scenarios
+  # below pin both halves of that distinction on one of those eight mutants, so
+  # that a future change cannot quietly restore either behaviour, and the third
+  # checks that the references teach the distinction rather than the old rule.
+
+  Scenario: A blocked system is a deadlock, and the np_ search builds no cycle through it
+    Then running "mcd check --no-timing --progress --sweep --promela" on the engine file "testdata/mutate/disagreements/CH4_dijkstra_progress/m002-invert-guard.pml" exits 0
+    And the report has property "progress" with status "verified" and evidence "exhaustive" and complete true
+    And that property has no counterexample
+    And the report has property "deadlock" with status "violated" and evidence "exhaustive" and complete true
+    And that property's counterexample has no loop
+
+  Scenario: The stutter extension stays where G4 put it, for an ltl property on the same model
+    Then running "mcd check --no-timing --promela" on the engine file "testdata/mutate/disagreements/CH4_dijkstra_progress/m002-invert-guard.pml" with the ltl formula "[]<> nempty(sema)" and fairness "none" exits 0
+    And the report has property "ltl1" with status "violated" and evidence "exhaustive" and complete false
+    And that property's counterexample has a loop starting at step 11 of 2 steps
+    And the loop of that property contains a stutter step of process "-"
+
+  Scenario: The references teach the difference between the two searches, not a rule with an exception
+    Then "references/counterexamples.md" says that the np_ search does not extend a blocked state
+    And "references/counterexamples.md" mentions each of:
+      | `progress` (the `np_` search) |
+      | self-loop                     |
+    And "references/properties-ltl-ctl.md" says that a blocked system is a deadlock and not a non-progress cycle
+
+  Scenario: Every run draws from its proctype's pool, so equal arguments do not split the state space
+    Then running "mcd check --no-timing --sweep --promela" on the engine file "testdata/mutate/state-count/you_run2-equal-run-arguments.pml" exits 0
+    And the report has property "deadlock" with status "verified" and evidence "exhaustive" and complete true
+    And that property's counters show 12 states
+    And "references/promela-subset.md" says that every run draws from its proctype's pool and a pid is reused
 
   # ---------------------------------------------------------- graded runs
   Scenario: Every eval runnable from G4 or earlier has a graded run in iteration-3 in both configurations
