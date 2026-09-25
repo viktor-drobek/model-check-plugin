@@ -1,0 +1,27 @@
+#!/bin/sh
+# Wrapper: exec the mcd binary matching this machine (runtime.GOOS/GOARCH names).
+set -e
+# ${0%/*} rather than dirname(1): the wrapper is the plugin's MCP command and
+# must not depend on more of the host than a POSIX shell and uname.
+case "$0" in
+  */*) dir=$(CDPATH= cd -- "${0%/*}" && pwd) ;;
+  *)   dir=$(pwd) ;;
+esac
+case "$(uname -s)" in
+  Linux)   goos=linux ;;
+  Darwin)  goos=darwin ;;
+  MINGW*|MSYS*|CYGWIN*) goos=windows ;;
+  *) echo "mcd: unsupported operating system $(uname -s)" >&2; exit 127 ;;
+esac
+case "$(uname -m)" in
+  x86_64|amd64)   goarch=amd64 ;;
+  arm64|aarch64)  goarch=arm64 ;;
+  *) echo "mcd: unsupported architecture $(uname -m)" >&2; exit 127 ;;
+esac
+bin="$dir/mcd-$goos-$goarch"
+[ "$goos" = windows ] && bin="$bin.exe"
+if [ ! -x "$bin" ]; then
+  echo "mcd: no binary for $goos/$goarch at $bin; run model-check-plugin/build.sh" >&2
+  exit 127
+fi
+exec "$bin" "$@"
