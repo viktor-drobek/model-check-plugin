@@ -50,6 +50,22 @@ import (
 // (pan: "accept stutter"). This is what makes []p on a terminating model
 // violated when p fails in the final state, as SPIN reports it.
 //
+// The np_ product is the exception, and it is pan's exception too: under
+// `pan -l` a state with no enabled transition has no successors at all, so
+// no cycle passes through it and a blocked system is not a non-progress
+// cycle. The engine did extend it (G4 applied the rule to every product),
+// and eight mutants of CH4/dijkstra_progress.pml found the consequence:
+// each mutation deadlocks the system, the stuttering run visits no
+// progress label, and the engine reported a non-progress cycle where pan
+// reported none (K3's campaign, steps/k3-mutation-report.md). The two
+// readings are not equally good. "The system is stuck" and "the system
+// runs forever without progressing" are different defects with different
+// repairs, and the skill teaches them apart (notes 10 §10); reporting the
+// first as the second hides a deadlock behind a liveness verdict. So
+// cycleSearch.noStutter turns the extension off for the np_ product and
+// only for it — the deadlock is still reported, by the safety search that
+// owns that question.
+//
 // # Acceptance and the direction of the negation
 //
 // A stored state is accepting when the claim's location carries `accept`;
@@ -238,11 +254,15 @@ type cycleSearch struct {
 	cEnd   []bool
 	sysAcc [][]bool
 	fair   bool
-	nproc  int
-	size   int // layout size
-	pl     int // product vector length
-	pcur   []byte
-	pnext  []byte
+	// noStutter turns the stutter extension off for this product. It is set
+	// for the np_ (non-progress) product and for nothing else; see the
+	// "Stutter extension" note above for why the two cases differ.
+	noStutter bool
+	nproc     int
+	size      int // layout size
+	pl        int // product vector length
+	pcur      []byte
+	pnext     []byte
 	// per stored state
 	inner   []bool
 	onStack []bool
@@ -313,7 +333,8 @@ func runCycle(ctx0 *search, base *ir.Model, prop ir.Property, propIndex int, opt
 		return o, err
 	}
 	s := &search{c: c, opt: opt, ctx: ctx0.ctx, res: &Result{StateBytes: c.layout.Size}}
-	cs := &cycleSearch{s: s, prop: propIndex, kind: prop.Kind, claim: -1, fair: opt.Fairness == "weak", size: c.layout.Size, info: info}
+	cs := &cycleSearch{s: s, prop: propIndex, kind: prop.Kind, claim: -1, fair: opt.Fairness == "weak",
+		noStutter: prop.Kind == KindProgress, size: c.layout.Size, info: info}
 	cs.res = &Stats{StateBytes: c.layout.Size}
 	for p := range c.procs {
 		if c.procs[p].claim && m.Processes[p].Name == claimName {
@@ -505,7 +526,7 @@ func (cs *cycleSearch) nextProduct(f *frame, st []byte) (productMove, error) {
 				f.sysSeen = true
 				return productMove{claim: f.cedge, claimTo: int(f.cto), m: m}, nil
 			}
-			if !f.sysSeen && !f.stut {
+			if !f.sysSeen && !f.stut && !cs.noStutter {
 				// The system cannot move: stutter extension, once per claim edge.
 				f.stut = true
 				return productMove{stutter: true, claim: f.cedge, claimTo: int(f.cto)}, nil
@@ -521,7 +542,7 @@ func (cs *cycleSearch) nextProduct(f *frame, st []byte) (productMove, error) {
 			f.sysSeen = true
 			return productMove{claim: -1, m: m}, nil
 		}
-		if !f.sysSeen && !f.stut {
+		if !f.sysSeen && !f.stut && !cs.noStutter {
 			f.stut = true
 			return productMove{stutter: true, claim: -1}, nil
 		}

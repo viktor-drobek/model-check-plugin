@@ -254,8 +254,17 @@ func TestRunInstancesAndEndGuards(t *testing.T) {
 		t.Fatalf("run-created process: params %d locals %d initial %q", e.Params, len(e.Locals), e.Locations[e.Initial].Name)
 	}
 	initP := m.Processes[1]
-	if initP.Edges[0].Run == nil || initP.Edges[0].Run.Proc != 2 || initP.Edges[1].Run.Proc != 3 || len(initP.Edges[0].Run.Args) != 2 {
-		t.Fatalf("init run edges: %+v %+v", initP.Edges[0].Run, initP.Edges[1].Run)
+	// Both runs draw from the same pool of E instances; the explorer takes
+	// the first slot still dormant, which is what frees a slot again when a
+	// process dies, as pan frees its pid (G5 addendum).
+	for i := 0; i < 2; i++ {
+		r := initP.Edges[i].Run
+		if r == nil || len(r.Args) != 2 {
+			t.Fatalf("init run edge %d: %+v", i, r)
+		}
+		if got := r.Targets(); len(got) != 2 || got[0] != 2 || got[1] != 3 {
+			t.Fatalf("init run edge %d draws from %v, want the pool [2 3]", i, got)
+		}
 	}
 	// With dynamic processes the model carries the live-process table, and
 	// SPIN's rule is stated once: only the youngest live process may leave.

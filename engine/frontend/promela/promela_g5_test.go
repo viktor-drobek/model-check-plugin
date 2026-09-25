@@ -242,23 +242,26 @@ func TestProvidedIsAProcessLevelGuard(t *testing.T) {
 	}
 }
 
-// TestRunAllocationOrderMatchesPan: a `run` the frontend can see is taken
-// at most once gets its own instance, in the textual order of the run
-// statements (pan's pid order); a `run` inside a loop draws from a pool,
-// and the explorer takes the first dormant slot, so that the k-th live
-// instance of a proctype is the k-th slot of its pool.
+// TestRunAllocationOrderMatchesPan: every `run` draws from the pool of its
+// proctype and the explorer takes the first instance still dormant, so the
+// k-th live instance of a proctype is the k-th slot of its pool. That
+// invariant is what keeps the vector an image of pan's process stack: when
+// a process dies, pan frees its pid and the next `run` takes it back, and
+// the pool does the same with its slot. A `run` taken at most once gets a
+// pool of one; a `run` inside a loop gets DefaultMaxProcs.
 func TestRunAllocationOrderMatchesPan(t *testing.T) {
-	// Straight-line runs: one dedicated instance each, in textual order.
+	// Straight-line runs: as many instances as run statements, in textual
+	// order, and both runs draw from the same pool.
 	m := lowerSrc(t, "proctype E(int x) { x = 1 }\nactive proctype A() { skip }\ninit { run E(3); run E(5) }\n")
 	if got := strings.Join(procNames(m), ","); got != "A:0,init:1,E:2,E:3" {
 		t.Fatalf("processes %s; want the static ones first in textual order, then the pool", got)
 	}
 	init := findProc(t, m, "init:1")
-	if init.Edges[0].Run.Proc != 2 || len(init.Edges[0].Run.Pool) != 0 {
-		t.Errorf("the first run targets %v; a single run has one dedicated instance", init.Edges[0].Run)
-	}
-	if init.Edges[1].Run.Proc != 3 {
-		t.Errorf("the second run targets %v, want instance 3", init.Edges[1].Run)
+	for i := range []int{0, 1} {
+		pool := init.Edges[i].Run.Targets()
+		if len(pool) != 2 || pool[0] != 2 || pool[1] != 3 {
+			t.Fatalf("run %d draws from %v; both runs share the proctype's pool, in allocation order", i, pool)
+		}
 	}
 	for _, name := range []string{"E:2", "E:3"} {
 		p := findProc(t, m, name)
@@ -267,7 +270,7 @@ func TestRunAllocationOrderMatchesPan(t *testing.T) {
 		}
 	}
 
-	// A run inside a loop: a pool, listed in allocation order.
+	// A run inside a loop: a pool of DefaultMaxProcs, in allocation order.
 	m2 := lowerSrc(t, "byte n;\nproctype W() { skip }\ninit {\n\tdo\n\t:: n < 2 -> n++; run W()\n\t:: else -> break\n\tod\n}\n")
 	initP := findProc(t, m2, "init:0")
 	var runEdge *ir.Edge

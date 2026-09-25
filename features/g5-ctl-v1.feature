@@ -378,6 +378,33 @@ Feature: G5 CTL labelling, vacuity hints, mc_estimate growth model, Promela v1
     And the G5 warnings mention "pc_value"
     And the G5 warnings mention "numbering"
 
+  # Addendum to G5, from the mutation campaign of K3 (steps/k3-mutation-report.md).
+  # Each of the eight saved mutants of CH4/dijkstra_progress.pml deadlocks the
+  # system. G4's stutter extension turned that blocked state into an infinite
+  # run visiting no `progress` label, so the engine reported a non-progress
+  # cycle where pan reports none: under `pan -l` a state with no enabled
+  # transition has no successors at all. The extension is now off for the np_
+  # product and only for it. The point of the scenario is that the defect does
+  # not disappear — it is reported as what it is, a deadlock, by the search
+  # that owns that question. "The system is stuck" and "the system runs
+  # forever without progressing" are different defects with different repairs
+  # (notes 10 §10), and the engine must not hand the user one for the other.
+  Scenario: a deadlocked system is a deadlock, not a non-progress cycle
+    Given the model "mutate/disagreements/CH4_dijkstra_progress/m004-off-by-one.pml" of the engine testdata
+    When I check it for non-progress cycles
+    Then the run exits with 0
+    And the G5 property "progress" is "verified" with evidence "exhaustive"
+    And the G5 property "progress" carries no run
+    And the G5 property "deadlock" is "violated" with evidence "exhaustive"
+    And the reason of the G5 property "progress" mentions "no non-progress cycle"
+
+  Scenario: the stutter extension stays where G4 put it, for ltl
+    Given the model "ctl-trap.pml" of the engine testdata
+    When I check it with the LTL formula "[](x == 0)"
+    Then the run exits with 0
+    And the G5 property "ltl1" is "violated" with evidence "exhaustive"
+    And the run of the G5 property "ltl1" is a lasso
+
   Scenario: a goto to a label no statement carries is rejected, not silently dropped
     Given the model "goto-undefined.pml" of the engine testdata
     When I parse it

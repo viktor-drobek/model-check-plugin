@@ -319,3 +319,89 @@ func asFormulaError(err error, target **FormulaError) bool {
 	}
 	return ok
 }
+
+// TestBlockedStateHasNoSuccessorInTheNPProduct is the G5 addendum: under
+// `pan -l` a state with no enabled transition has no successors at all, so
+// no cycle passes through it and a deadlocked system is not a non-progress
+// cycle. G4 applied the stutter extension to every product, which turned
+// every deadlock into a non-progress cycle; eight mutants of
+// CH4/dijkstra_progress.pml found it (K3's campaign). The model below is
+// the smallest shape of those eight: one process that blocks for good,
+// with a progress label it never reaches.
+func TestBlockedStateHasNoSuccessorInTheNPProduct(t *testing.T) {
+	// P: x == 1 -> (blocks forever, x is 0); the progress label is on the
+	// statement it can never take.
+	m := &ir.Model{Schema: ir.Schema, Name: "blocked",
+		Globals: []ir.Var{{Name: "x", Type: ir.Byte}},
+		Processes: []ir.Process{{
+			Name:      "P",
+			Locations: []ir.Location{{Name: "loop"}, {Name: "run", Labels: []ir.Label{ir.Progress}}},
+			Edges: []ir.Edge{
+				{From: 0, To: 1, Guard: ir.Binary("eq", ir.Ref("x"), ir.Const(1)), Text: "(x == 1)"},
+				{From: 1, To: 0, Text: "skip"},
+			},
+		}},
+		Properties: []ir.Property{
+			{ID: "deadlock", Kind: ir.KindDeadlock},
+			{ID: "progress", Kind: ir.KindProgress},
+		}}
+	res, err := Run(context.Background(), m, Options{Sweep: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The blocked state is a deadlock, and the deadlock is reported — by the
+	// search that owns that question.
+	if o := outcomeOf(t, res, "deadlock"); o.Status != Violated {
+		t.Fatalf("deadlock: %s / %q; a system that cannot move is a deadlock", o.Status, o.Reason)
+	}
+	// It is NOT a non-progress cycle: there is no cycle through it.
+	o := outcomeOf(t, res, "progress")
+	if o.Status != Verified {
+		t.Fatalf("progress: %s / %q; a blocked state has no successor in the np_ product, so no cycle passes through it", o.Status, o.Reason)
+	}
+	if o.Trace != nil {
+		t.Fatalf("a verified progress property carries no counterexample: %+v", o.Trace)
+	}
+
+	// The same model without the progress label still has no non-progress
+	// cycle, and still deadlocks: the rule is about successors, not labels.
+	m2 := *m
+	m2.Processes = append([]ir.Process(nil), m.Processes...)
+	m2.Processes[0].Locations = []ir.Location{{Name: "loop"}, {Name: "run"}}
+	res2, err := Run(context.Background(), &m2, Options{Sweep: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if o := outcomeOf(t, res2, "progress"); o.Status != Verified {
+		t.Fatalf("progress without a label: %s / %q", o.Status, o.Reason)
+	}
+}
+
+// TestStutterExtensionStaysForLTL: the addendum turns the extension off for
+// the np_ product and for nothing else. On the same blocked model, `[]p`
+// with p false in the blocked state is still violated — that is pan's
+// answer, and it is what makes a terminating or blocked run testable at all.
+func TestStutterExtensionStaysForLTL(t *testing.T) {
+	m := &ir.Model{Schema: ir.Schema, Name: "blocked",
+		Globals: []ir.Var{{Name: "x", Type: ir.Byte}},
+		Processes: []ir.Process{{
+			Name:      "P",
+			Locations: []ir.Location{{Name: "loop"}, {Name: "run"}},
+			Edges: []ir.Edge{
+				{From: 0, To: 1, Guard: ir.Binary("eq", ir.Ref("x"), ir.Const(1)), Text: "(x == 1)"},
+				{From: 1, To: 0, Text: "skip"},
+			},
+		}},
+		Properties: []ir.Property{{ID: "live", Kind: ir.KindLTL, Formula: "[](x == 1)"}}}
+	res, err := Run(context.Background(), m, Options{Sweep: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	o := outcomeOf(t, res, "live")
+	if o.Status != Violated {
+		t.Fatalf("ltl on a blocked model: %s / %q; the stutter extension belongs here", o.Status, o.Reason)
+	}
+	if o.Trace == nil || o.Trace.Loop == nil {
+		t.Fatalf("the counterexample of an acceptance cycle is a lasso: %+v", o.Trace)
+	}
+}

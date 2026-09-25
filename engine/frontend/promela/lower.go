@@ -1164,18 +1164,21 @@ func (l *lowerer) lowerStmt(it Item, from, to int, ctx seqCtx, first bool) *Erro
 		if len(pool) == 0 {
 			return semanticErr(l.file, it.Pos.Line, it.Pos.Col, "internal: run statement without an instance pool")
 		}
-		var r *ir.RunOp
-		target := l.byRun[s]
-		if target != nil {
-			// The frontend saw that this run is taken at most once: it gets
-			// its own instance, as in G1.
-			r = &ir.RunOp{Proc: target.pid}
-		} else {
-			target = pool[0]
-			r = &ir.RunOp{Proc: pool[0].pid}
-			for _, q := range pool {
-				r.Pool = append(r.Pool, q.pid)
-			}
+		// Every `run` draws from the pool of its proctype, and the explorer
+		// takes the first instance that is still dormant. Giving a run that
+		// is taken at most once its *own* instance would be simpler, and G1
+		// did that — but it breaks the invariant the whole encoding rests
+		// on ("the k-th live instance of a proctype is the k-th slot of its
+		// pool"), and with it the agreement with pan: if the first instance
+		// dies before the second `run` fires, pan starts the new process at
+		// the pid the dead one freed, while a dedicated second instance
+		// keeps the two apart and counts states pan counts once. K3's
+		// mutation campaign found exactly that (two `run`s with equal
+		// arguments: 14 states here against pan's 12).
+		target := pool[0]
+		r := &ir.RunOp{Proc: pool[0].pid}
+		for _, q := range pool {
+			r.Pool = append(r.Pool, q.pid)
 		}
 		for _, a := range s.Args {
 			e, err := l.expr(a, pid, false)

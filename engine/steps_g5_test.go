@@ -108,8 +108,14 @@ func registerG5Steps(sc *godog.ScenarioContext) {
 		w.model, w.isIR = p, false
 		return nil
 	})
+	// A name with a directory in it is taken relative to testdata/ (the saved
+	// mutants live under testdata/mutate/…); a bare name is a Promela model
+	// of testdata/promela/.
 	sc.Step(`^the model "([^"]*)" of the engine testdata$`, func(name string) error {
 		p := filepath.Join("testdata/promela", name)
+		if strings.Contains(name, "/") {
+			p = filepath.Join("testdata", name)
+		}
 		if _, err := os.Stat(p); err != nil {
 			return err
 		}
@@ -290,6 +296,10 @@ func registerG5Steps(sc *godog.ScenarioContext) {
 		run(append([]string{"check"}, append(input(), "--sweep", "--max-procs", strconv.Itoa(n), "--no-timing")...)...)
 		return nil
 	})
+	sc.Step(`^I check it for non-progress cycles$`, func() error {
+		run(append([]string{"check"}, append(input(), "--progress", "--sweep", "--no-timing")...)...)
+		return nil
+	})
 	sc.Step(`^I parse it$`, func() error {
 		run(append([]string{"parse"}, input()...)...)
 		return nil
@@ -410,6 +420,16 @@ func registerG5Steps(sc *godog.ScenarioContext) {
 		}
 		if t["normalised"] != want {
 			return fmt.Errorf("property %s normalises to %v, want %s", id, t["normalised"], want)
+		}
+		return nil
+	})
+	sc.Step(`^the G5 property "([^"]*)" carries no run$`, func(id string) error {
+		p, err := prop(id)
+		if err != nil {
+			return err
+		}
+		if p["counterexample"] != nil || p["witness"] != nil {
+			return fmt.Errorf("property %s carries a run", id)
 		}
 		return nil
 	})
