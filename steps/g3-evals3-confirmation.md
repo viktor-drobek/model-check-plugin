@@ -31,7 +31,7 @@ E6 — после G5. Эта половина закрывает стадию G4
 ## 1. Что сделано
 
 1. **Cucumber сначала** — `features/g3-evals3.feature`, написан до правок справок и до
-   прогонов: 16 сценариев (один outline на шесть прогонов). Фиксирует: `engine-tools.md`
+   прогонов: 17 сценариев (из них один outline на шесть прогонов, то есть 22 проверки). Фиксирует: `engine-tools.md`
    называет каждый флаг `mcd check`/`mcd parse` из их собственного usage (новый флаг без
    документации ломает сценарий) и новые поля отчёта; `--unlimited` только в CLI; правило
    бюджета одинаково в обоих слоях; `mcd serve` **подключает** Promela-фронтенд;
@@ -160,7 +160,7 @@ go vet .                                             чисто
 godog (общий harness, go test -run TestFeatures -count=1), последний прогон:
   299 scenarios (233 passed, 26 failed, 54 undefined), 1677 steps (1429 passed, …)
   — **все четыре моих feature-файла зелёные целиком**: g3-evals3.feature (17 сценариев,
-    считая шесть строк outline), g3-evals.feature, g3-align.feature, g3-skill-package.feature;
+    один из них — outline на шесть прогонов), g3-evals.feature, g3-align.feature, g3-skill-package.feature;
     ambiguous-шагов не осталось;
   — 26 failed / 54 undefined — целиком чужие файлы параллельно работающих агентов:
     k3-mutation.feature (56 записей: нет step-определений и нет engine/tools/mutate),
