@@ -222,6 +222,7 @@ func lower(mod *Module, file, name string, maxProcs int) (*ir.Model, []string, m
 	}
 
 	// globals and channels
+	seenGlobals := map[string]bool{}
 	for _, d := range mod.Globals {
 		if d.Type == "chan" && d.Chan != nil {
 			if _, dup := l.chans[d.Name]; dup || l.globals[d.Name] != nil || l.mtype[d.Name] != 0 {
@@ -247,9 +248,15 @@ func lower(mod *Module, file, name string, maxProcs int) (*ir.Model, []string, m
 		if err != nil {
 			return nil, nil, nil, err
 		}
-		if l.globals[v.Name] != nil || l.mtype[v.Name] != 0 || l.chans[v.Name] != nil {
-			return nil, nil, nil, semanticErr(file, d.Pos.Line, d.Pos.Col, "%s declared twice", d.Name)
+		// l.globals is filled after this loop (the slice moves as it grows),
+		// so the duplicate check needs its own set: without it a second
+		// global of the same name reached ir.Validate and came back as
+		// "internal: lowered IR does not validate", which reads as an engine
+		// fault for what is a fault in the model.
+		if seenGlobals[v.Name] || l.mtype[v.Name] != 0 || l.chans[v.Name] != nil {
+			return nil, nil, nil, semanticErr(file, d.Pos.Line, d.Pos.Col, "redeclaration of %s: the name is already a global variable, channel or mtype constant (SPIN: \"redeclaration of '%s'\")", d.Name, d.Name)
 		}
+		seenGlobals[v.Name] = true
 		m.Globals = append(m.Globals, *v)
 	}
 	// re-point channel pointers after appends
@@ -265,6 +272,21 @@ func lower(mod *Module, file, name string, maxProcs int) (*ir.Model, []string, m
 	byName := map[string]*Proctype{}
 	for _, pt := range mod.Procs {
 		byName[pt.Name] = pt
+	}
+	// A proctype name lives in the same namespace as the mtype constants,
+	// the globals and the channels: SPIN keeps one symbol table, and a
+	// proctype that shares a name with any of them is refused there. Letting
+	// it through here would leave `run P()` and the constant `P` meaning
+	// different things under one identifier.
+	for _, pt := range mod.Procs {
+		if err := l.checkProctypeName(pt, seenGlobals); err != nil {
+			return nil, nil, nil, err
+		}
+	}
+	if mod.Never != nil {
+		if err := l.checkProctypeName(mod.Never, seenGlobals); err != nil {
+			return nil, nil, nil, err
+		}
 	}
 	for _, pt := range mod.Procs {
 		for k := 0; k < pt.Active; k++ {
@@ -471,6 +493,49 @@ func lower(mod *Module, file, name string, maxProcs int) (*ir.Model, []string, m
 		panLines[in.name] = in.finalPanLines
 	}
 	return m, l.warnings, panLines, nil
+}
+
+// labelNameTaken names what already owns an identifier a statement wants to
+// use as a label, or "" when nothing does. SPIN keeps one symbol table, so
+// a label may not share a name with a variable, a channel, an mtype
+// constant or a proctype; letting one through would leave `goto L` and
+// `L = 1` meaning different things under one identifier.
+func (l *lowerer) labelNameTaken(in *instance, lb string) string {
+	switch {
+	case in.declared[lb]:
+		return "a variable of " + in.pt.Name
+	case l.globals[lb] != nil:
+		return "a global variable"
+	case l.chans[lb] != nil:
+		return "a channel"
+	case l.mtype[lb] != 0:
+		return "an mtype constant"
+	}
+	for _, pt := range l.mod.Procs {
+		if pt.Name == lb {
+			return "a proctype"
+		}
+	}
+	return ""
+}
+
+// checkProctypeName refuses a proctype whose name is already taken by an
+// mtype constant, a global variable or a channel.
+func (l *lowerer) checkProctypeName(pt *Proctype, globals map[string]bool) *Error {
+	what := ""
+	switch {
+	case l.mtype[pt.Name] != 0:
+		what = "an mtype constant"
+	case l.chans[pt.Name] != nil:
+		what = "a channel"
+	case globals[pt.Name]:
+		what = "a global variable"
+	}
+	if what == "" {
+		return nil
+	}
+	return semanticErr(l.file, pt.Pos.Line, pt.Pos.Col,
+		"proctype %s: the name is already %s, and SPIN keeps one namespace for both", pt.Name, what)
 }
 
 func anyShared(m map[string]bool) bool {
@@ -801,17 +866,44 @@ func (l *lowerer) lowerInstance(in *instance) *Error {
 	return nil
 }
 
-// declare adds a local; fresh is false when the name is already a local of
-// the process, which SPIN allows for a declaration in another scope: it
-// keeps one variable and re-initialises it at each declaration (probes
-// against SPIN 6.5.2 on both shapes of nested scope — two calls of an
-// inline that declares a variable, and two plain `{ }` blocks that declare
-// the same name; see the tests in promela_g5_test.go). The types must
-// agree: two different types under one name would need two slots, which the
-// flat per-process set of locals cannot give.
+// declare adds a local; fresh is false when the variable already exists and
+// this declaration only re-initialises it.
+//
+// SPIN's rule, established by probing SPIN 6.5.2 shape by shape rather than
+// guessed (steps/g5-addendum2-confirmation.md §2): a declaration is an
+// error when the name is *visible* where it stands — declared in the same
+// scope, or in a scope still open around it (an enclosing block, the
+// proctype body, a parameter, a global) — and legal when the only earlier
+// declaration was in a scope that has since closed. Only `{ }` opens a
+// scope: the options of an `if`/`do` do not, so two options declaring one
+// name are a redeclaration for SPIN and are one here too.
+//
+// For the legal case — two sibling blocks, or two expansions of an inline
+// that declares a variable — SPIN keeps one variable and re-initialises it
+// at each declaration, and so does this frontend (the initialisation is the
+// step lowerStmt emits). The types must then agree: two different types
+// under one name would need two slots, which the flat per-process set of
+// locals cannot give.
 func (l *lowerer) declare(v *ir.Var, at Pos) (bool, *Error) {
 	in := l.cur
+	if in.visible(v.Name) {
+		return false, semanticErr(l.file, at.Line, at.Col,
+			"redeclaration of %s: the name is already declared in this scope or in one still open around it (SPIN: \"redeclaration of '%s'\"); only a block that has closed frees the name",
+			v.Name, v.Name)
+	}
+	if l.globals[v.Name] != nil {
+		return false, semanticErr(l.file, at.Line, at.Col,
+			"redeclaration of %s: it is already a global variable, and a local of that name would shadow it (SPIN refuses the same)", v.Name)
+	}
+	if l.chans[v.Name] != nil || l.mtype[v.Name] != 0 {
+		return false, semanticErr(l.file, at.Line, at.Col, "%s is already a channel or mtype constant", v.Name)
+	}
+	if in.defined[v.Name] {
+		return false, semanticErr(l.file, at.Line, at.Col,
+			"%s is already a label of %s: one identifier cannot be both a variable and a control location (SPIN refuses the same)", v.Name, in.pt.Name)
+	}
 	if in.declared[v.Name] {
+		// A closed sibling scope used the name: one variable, re-initialised.
 		old := fresh0(in, v.Name)
 		if old.Type != v.Type || old.Len != v.Len {
 			return false, semanticErr(l.file, at.Line, at.Col,
@@ -820,9 +912,6 @@ func (l *lowerer) declare(v *ir.Var, at Pos) (bool, *Error) {
 		}
 		in.scopes[len(in.scopes)-1][v.Name] = true
 		return false, nil
-	}
-	if l.chans[v.Name] != nil || l.mtype[v.Name] != 0 {
-		return false, semanticErr(l.file, at.Line, at.Col, "%s is already a channel or mtype constant", v.Name)
 	}
 	in.declared[v.Name] = true
 	in.scopes[len(in.scopes)-1][v.Name] = true
@@ -861,7 +950,23 @@ func (l *lowerer) lowerSeq(items []Item, from, to int, ctx seqCtx) *Error {
 	}
 	pos[len(items)] = to
 	for i, it := range items {
-		for _, lb := range it.Labels {
+		for li, lb := range it.Labels {
+			at := it.Pos
+			if li < len(it.LabelPos) {
+				at = it.LabelPos[li]
+			}
+			if what := l.labelNameTaken(in, lb); what != "" {
+				return semanticErr(l.file, at.Line, at.Col,
+					"label %s: the name is already %s, and SPIN keeps one namespace for both (it reports \"bad label-name %s\")", lb, what, lb)
+			}
+			if in.defined[lb] {
+				// Two statements of one process carrying the same label:
+				// SPIN refuses it ("label L redeclared"), and folding the
+				// two locations into one — which is what the alias below
+				// would do — would silently check a different model.
+				return semanticErr(l.file, at.Line, at.Col,
+					"label %s redeclared: %s already has a statement labelled %s (SPIN reports the same)", lb, in.pt.Name, lb)
+			}
 			in.defined[lb] = true
 			n := pos[i]
 			if existing, ok := in.labels[lb]; ok {

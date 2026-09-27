@@ -667,6 +667,7 @@ func (p *parser) item() (Item, *Error) {
 		l := p.next()
 		p.next() // :
 		it.Labels = append(it.Labels, l.Text)
+		it.LabelPos = append(it.LabelPos, Pos{l.Line, l.Col})
 	}
 	t := p.peek()
 	it.Pos = Pos{t.Line, t.Col}

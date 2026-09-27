@@ -405,6 +405,30 @@ Feature: G5 CTL labelling, vacuity hints, mc_estimate growth model, Promela v1
     And the G5 property "ltl1" is "violated" with evidence "exhaustive"
     And the run of the G5 property "ltl1" is a lasso
 
+  # Second addendum to G5, from the G3 agent's subset probes
+  # (steps/g3-evals3-subset-probe.md, steps/g5-addendum2-confirmation.md).
+  # The two scenarios are one rule seen from both sides. SPIN keeps ordinary
+  # lexical scoping: a declaration is an error when the name is visible where
+  # it stands — the same scope, or one still open around it — and legal when
+  # the only earlier declaration was in a scope that has since closed. The
+  # frontend used to accept every redeclaration and collapse the variables
+  # into one, so the model checked was not the model written; it now refuses
+  # the first shape by name, file and line, and keeps accepting the second,
+  # where SPIN itself keeps one variable and re-initialises it.
+  Scenario: a redeclaration in an open scope is refused, as SPIN refuses it
+    Given the model "redeclared-local.pml" of the engine testdata
+    When I parse it
+    Then the run exits with 2
+    And the G5 rejection has kind "semantic" and status "not-executed"
+    And the G5 rejection mentions "redeclaration of n"
+    And the G5 rejection points at line 15
+
+  Scenario: two sibling blocks may reuse a name, and share one variable
+    Given the model "redeclared-siblings.pml" of the engine testdata
+    When I check it sweeping the whole graph
+    Then the run exits with 0
+    And the G5 state count is 6
+
   Scenario: a goto to a label no statement carries is rejected, not silently dropped
     Given the model "goto-undefined.pml" of the engine testdata
     When I parse it

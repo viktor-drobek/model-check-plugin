@@ -443,3 +443,128 @@ func TestUndefinedGotoIsRejected(t *testing.T) {
 		t.Fatalf("a forward goto must be accepted: %v", err)
 	}
 }
+
+// TestNameChecksAgainstSPIN is the second G5 addendum: the family of name
+// checks the frontend was missing. Every row was probed against SPIN 6.5.2
+// (`spin -a -o1 -o2 -o3`) shape by shape and the engine's answer set beside
+// it; the probes and their output are in
+// steps/g5-addendum2-confirmation.md §2. `want` empty means SPIN accepts
+// the file and so must the engine.
+//
+// The rule the rows establish: SPIN keeps one symbol table and ordinary
+// lexical scoping. A declaration is an error when the name is visible where
+// it stands — same scope, or a scope still open around it — and legal when
+// the only earlier declaration was in a scope that has since closed. Only
+// `{ }` opens a scope: the options of an `if`/`do` do not.
+func TestNameChecksAgainstSPIN(t *testing.T) {
+	cases := []struct {
+		name string
+		src  string
+		want string // substring of the message; "" = must be accepted
+		line int
+		col  int
+	}{
+		// --- redeclaration: the scope rule -------------------------------
+		{"enclosing scope", "active proctype P() { byte n; n = 1; { byte n; n = 2 } }\n",
+			"redeclaration of n", 1, 45},
+		{"same scope", "active proctype P() { byte n; byte n; n = 1 }\n",
+			"redeclaration of n", 1, 36},
+		{"block inside block", "active proctype P() { { byte n; { byte n; n = 2 } } }\n",
+			"redeclaration of n", 1, 40},
+		{"a parameter is in scope", "active proctype P(byte n) { byte n; n = 1 }\n",
+			"redeclaration of n", 1, 34},
+		{"a global is in scope", "byte n;\nactive proctype P() { byte n; n = 1 }\n",
+			"already a global variable", 2, 28},
+		{"two options of one if", "active proctype P() { if :: byte n; n = 1 :: byte n; n = 2 fi }\n",
+			"redeclaration of n", 1, 51},
+		{"an option then the body", "active proctype P() { if :: byte n; n = 1 :: skip fi; byte n; n = 2 }\n",
+			"redeclaration of n", 1, 60},
+		// --- redeclaration: what SPIN allows ------------------------------
+		{"sibling blocks", "active proctype P() { { byte n; n = 1 }; { byte n; n = 2 } }\n", "", 0, 0},
+		{"one option only", "active proctype P() { do :: byte n; n = 1 :: break od }\n", "", 0, 0},
+		{"another proctype", "active proctype P() { byte n; n = 1 }\nactive proctype Q() { byte n; n = 2 }\n", "", 0, 0},
+		{"an inline called twice", "inline f(v) { int y; y = v }\ninit { byte n; f(n); f(n) }\n", "", 0, 0},
+		// --- labels -------------------------------------------------------
+		{"label twice", "active proctype P() { L: skip; L: skip }\n",
+			"label L redeclared", 1, 32},
+		{"label twice with a goto", "active proctype P() { goto L; L: skip; L: skip }\n",
+			"label L redeclared", 1, 40},
+		{"label of a variable", "active proctype P() { byte L; L = 1; L: skip }\n",
+			"already a label of P", 1, 28},
+		{"variable of a label", "active proctype P() { L: skip; byte L; L = 1 }\n",
+			"already a label of P", 1, 37},
+		{"label of a global", "byte g;\nactive proctype P() { g: skip }\n",
+			"already a global variable", 2, 23},
+		{"label of a channel", "chan c = [1] of { byte };\nactive proctype P() { c: skip }\n",
+			"already a channel", 2, 23},
+		{"label of an mtype constant", "mtype = { L };\nactive proctype P() { L: skip }\n",
+			"already an mtype constant", 2, 23},
+		{"label of a proctype", "proctype Q() { skip }\nactive proctype P() { Q: skip }\ninit { run Q() }\n",
+			"already a proctype", 2, 23},
+		{"the same label in two proctypes", "active proctype P() { L: skip }\nactive proctype Q() { L: skip }\n", "", 0, 0},
+		// --- the model-wide namespace --------------------------------------
+		{"two globals", "byte n; byte n;\nactive proctype P() { skip }\n", "redeclaration of n", 1, 14},
+		{"proctype of an mtype constant", "mtype = { P };\nactive proctype P() { skip }\n",
+			"already an mtype constant", 2, 1},
+		{"proctype of a channel", "chan P = [1] of { byte };\nactive proctype P() { skip }\n",
+			"already a channel", 2, 1},
+		{"proctype of a global", "byte P;\nactive proctype P() { skip }\n",
+			"already a global variable", 2, 1},
+		// --- checks that were already right (negative results) -------------
+		{"undeclared read", "active proctype P() { byte a; a = y }\n", "undeclared variable y", 1, 35},
+		{"undeclared after its block closed", "active proctype P() { { byte y; y = 1 }; y = 2 }\n",
+			"undeclared variable y", 1, 42},
+		{"goto into another proctype", "active proctype P() { goto L }\nactive proctype Q() { L: skip }\n",
+			"undefined label L", 1, 23},
+		{"duplicate proctype", "proctype P() { skip }\nproctype P() { skip }\ninit { run P() }\n",
+			"proctype P declared twice", 2, 10},
+		{"duplicate mtype constant", "mtype = { a, b, a };\nactive proctype P() { skip }\n", "mtype a declared twice", 0, 0},
+		{"mtype constant in a second declaration", "mtype = { a, b };\nmtype = { b, c };\nactive proctype P() { skip }\n",
+			"mtype b declared twice", 0, 0},
+		{"duplicate inline", "inline f(x) { x = 1 }\ninline f(y) { y = 2 }\ninit { byte n; f(n) }\n",
+			"inline f declared twice", 2, 8},
+		{"run of an undeclared proctype", "init { run Nope() }\n", "run of undeclared proctype Nope", 1, 8},
+		{"a variable named like an mtype constant", "mtype = { a };\nactive proctype P() { byte a; a = 1 }\n",
+			"already a channel or mtype constant", 2, 28},
+	}
+	for _, c := range cases {
+		_, _, err := parseSrc(t, c.src)
+		if c.want == "" {
+			if err != nil {
+				t.Errorf("%s: rejected (%v); SPIN accepts this file", c.name, err)
+			}
+			continue
+		}
+		if err == nil {
+			t.Errorf("%s: accepted; SPIN refuses this file", c.name)
+			continue
+		}
+		if !strings.Contains(err.Message, c.want) {
+			t.Errorf("%s: %q, want it to mention %q", c.name, err.Message, c.want)
+			continue
+		}
+		if c.line > 0 && (err.Line != c.line || (c.col > 0 && err.Col != c.col)) {
+			t.Errorf("%s: reported at %d:%d, want %d:%d", c.name, err.Line, err.Col, c.line, c.col)
+		}
+	}
+}
+
+// TestSiblingRedeclarationWithAnotherTypeIsRefused records a divergence the
+// engine keeps on purpose. SPIN accepts two *sibling* blocks that declare
+// one name with different types, giving them two separate variables; this
+// frontend keeps one flat set of locals per process, where a name is one
+// slot, so it refuses instead of quietly picking one of the two types.
+// Renaming the second would change the state vector and every
+// counterexample that mentions it, which is a worse trade for a shape no
+// corpus model uses.
+func TestSiblingRedeclarationWithAnotherTypeIsRefused(t *testing.T) {
+	for _, src := range []string{
+		"active proctype P() { { int y; y = 1 }; { byte y; y = 2 } }\n",
+		"active proctype P() { { byte y; y = 1 }; { byte y[3]; y[0] = 2 } }\n",
+	} {
+		_, _, err := parseSrc(t, src)
+		if err == nil || !strings.Contains(err.Message, "different types") {
+			t.Fatalf("%s: %v; want a refusal naming the types", src, err)
+		}
+	}
+}

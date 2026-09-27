@@ -61,8 +61,12 @@ type ChanInit struct {
 // Item is a statement with its labels.
 type Item struct {
 	Labels []string
-	Stmt   Stmt
-	Pos    Pos
+	// LabelPos is the position of each label, parallel to Labels, so that a
+	// complaint about a label points at the label and not at the statement
+	// that happens to follow it.
+	LabelPos []Pos
+	Stmt     Stmt
+	Pos      Pos
 	// Tok range in Module.Text for the statement text.
 	From, To int
 }
