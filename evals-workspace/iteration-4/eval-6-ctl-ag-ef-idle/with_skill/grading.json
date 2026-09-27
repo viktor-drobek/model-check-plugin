@@ -1,0 +1,44 @@
+{
+  "eval_id": 6,
+  "eval_name": "ctl-ag-ef-idle",
+  "run": "eval-6-ctl-ag-ef-idle/with_skill",
+  "passed_count": 7,
+  "total": 7,
+  "expectations": [
+    {
+      "text": "The property is handled as CTL",
+      "passed": true,
+      "evidence": "matched 'CTL' at 1511"
+    },
+    {
+      "text": "The formula AG EF idle is kept as written",
+      "passed": true,
+      "evidence": "matched 'AG EF idle' at 87"
+    },
+    {
+      "text": "No LTL formula on idle is substituted for it",
+      "passed": true,
+      "evidence": "pattern '\\\\[\\\\]\\\\s*<>\\\\s*idle|<>\\\\s*\\\\[\\\\]\\\\s*idle|G\\\\s*F\\\\s*idle' absent"
+    },
+    {
+      "text": "The branching-time meaning (from every reachable state some path reaches idle) is explained",
+      "passed": true,
+      "evidence": "matched 'из каждого достижимого состояния' at 3029"
+    },
+    {
+      "text": "The result is stated to be fairness-free",
+      "passed": true,
+      "evidence": "matched 'без fairness' at 3192"
+    },
+    {
+      "text": "The answer says whether the witness or counterexample is a path or a tree",
+      "passed": true,
+      "evidence": "matched 'путь' at 303"
+    },
+    {
+      "text": "A status from the vocabulary is given",
+      "passed": true,
+      "evidence": "matched 'verified' at 338"
+    }
+  ]
+}

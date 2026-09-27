@@ -1,0 +1,70 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "promela",
+      "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/engine/testdata/promela/starvation.pml",
+      "sha256": "43092539c371572b0314278ddd7ba4bddd7c8af66a6f5362fb37ca62f4397c0b"
+    }
+  ],
+  "model": {
+    "name": "starvation",
+    "state_bytes": 5,
+    "processes": 2,
+    "variables": 2
+  },
+  "search": {
+    "mode": "dfs",
+    "budget": {
+      "states": 1000000,
+      "depth": 1000000,
+      "time_ms": 60000,
+      "mem_bytes": 1073741824
+    },
+    "stop": "complete",
+    "complete": true
+  },
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 6,
+        "transitions": 10,
+        "depth": 5,
+        "time_ms": 0,
+        "memory_bytes_est": 25120
+      },
+      "complete": true
+    },
+    {
+      "id": "ltl1",
+      "kind": "ltl",
+      "text": "<> done",
+      "status": "not-executed",
+      "evidence": "unknown",
+      "counters": {
+        "states": 6,
+        "transitions": 10,
+        "depth": 5,
+        "time_ms": 0,
+        "memory_bytes_est": 25120
+      },
+      "complete": true,
+      "reason": "strong fairness is not executed by this engine version (plan 14 §4.2, and FR-008 requires saying so rather than answering as if the assumption had been honoured): only weak fairness (every continuously enabled process eventually moves; pan -f) is implemented, by the n+2 copies construction; rerun with fairness weak or none",
+      "temporal": {
+        "logic": "ltl",
+        "source": "",
+        "fairness": "strong"
+      }
+    }
+  ]
+}

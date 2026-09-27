@@ -1,0 +1,114 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "ir",
+      "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-4/eval-2b-starvation-loop/with_skill/outputs/mc-session-2026-09-27/ir-2-with-reach.json",
+      "sha256": "2267e00aea09ae07b4f0aae035b26b35351be9db4f41d893708c38294690cf7a"
+    }
+  ],
+  "model": {
+    "name": "starvation",
+    "state_bytes": 5,
+    "processes": 2,
+    "variables": 2
+  },
+  "search": {
+    "mode": "dfs",
+    "budget": {
+      "states": 1000000,
+      "depth": 1000000,
+      "time_ms": 60000,
+      "mem_bytes": 1073741824
+    },
+    "stop": "complete",
+    "complete": true
+  },
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 6,
+        "transitions": 10,
+        "depth": 5,
+        "time_ms": 0,
+        "memory_bytes_est": 25120
+      },
+      "complete": true
+    },
+    {
+      "id": "reach_done",
+      "kind": "reach",
+      "text": "sanity: a state with done == 1 is reachable",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 6,
+        "transitions": 10,
+        "depth": 5,
+        "time_ms": 0,
+        "memory_bytes_est": 25120
+      },
+      "complete": true,
+      "witness": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "A:0",
+            "command": "t = 1 - t",
+            "changes": [
+              {
+                "var": "A:0.t",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/engine/testdata/promela/starvation.pml",
+              "line": 11,
+              "name": "t = 1 - t"
+            }
+          },
+          {
+            "index": 2,
+            "process": "B:1",
+            "command": "done = 1",
+            "changes": [
+              {
+                "var": "done",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/engine/testdata/promela/starvation.pml",
+              "line": 17,
+              "name": "done = 1"
+            }
+          }
+        ],
+        "final_state": [
+          {
+            "var": "A:0.t",
+            "value": 1
+          },
+          {
+            "var": "done",
+            "value": 1
+          }
+        ],
+        "summary": "t = 1 - t, done = 1"
+      },
+      "reason": "a reachable state satisfies done == 1; see the witness"
+    }
+  ]
+}

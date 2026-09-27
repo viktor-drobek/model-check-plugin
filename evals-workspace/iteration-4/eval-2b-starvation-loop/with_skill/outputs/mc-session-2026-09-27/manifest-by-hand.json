@@ -1,0 +1,139 @@
+{
+  "note": "Манифест собран вручную: MCP-сервер в сессии не зарегистрирован, поэтому mc_manifest недоступен. Версии, хеши входа и применённые бюджеты взяты из полей engine/inputs/search каждого отчёта (references/engine-tools.md §4, «CLI stand-ins»); seed отсутствует, потому что mc_simulate не запускался — у него нет эквивалента в CLI.",
+  "assembled": "2026-09-27",
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1",
+    "binary": "model-check-plugin/engine/bin/mcd",
+    "layer": "CLI"
+  },
+  "inputs": [
+    {
+      "kind": "promela",
+      "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/engine/testdata/promela/starvation.pml",
+      "sha256": "43092539c371572b0314278ddd7ba4bddd7c8af66a6f5362fb37ca62f4397c0b"
+    }
+  ],
+  "calls": [
+    {
+      "n": 1,
+      "command": "parse --promela",
+      "outcome": "ok",
+      "exit_code": 0,
+      "artifact": "ir-1.json",
+      "params": {
+        "defines": null
+      },
+      "artifact_sha256": "0683b8d8f748b9f2056d2ee3a37b7d6a375052c75d8157aea70c9558aac3a838"
+    },
+    {
+      "n": 2,
+      "command": "check --estimate --estimate-ms 1000",
+      "outcome": "ok",
+      "exit_code": 0,
+      "artifact": "estimate-1.json",
+      "params": {
+        "estimate_ms": 1000
+      },
+      "artifact_sha256": "82b28137c2d39aa4cea4c5a830706cb436530acf190ce978464823b549f223ca"
+    },
+    {
+      "n": 3,
+      "command": "check --ir ir-2-with-reach.json",
+      "outcome": "ok",
+      "exit_code": 0,
+      "artifact": "check-1-safety-reach.json",
+      "params": {
+        "search": "dfs",
+        "fairness": "none",
+        "budget_applied": {
+          "states": 1000000,
+          "depth": 1000000,
+          "time_ms": 60000,
+          "mem_bytes": 1073741824
+        },
+        "stop": "complete",
+        "complete": true
+      },
+      "artifact_sha256": "c20172bf09cba72ee1093c09ef4a306c70959473b40b2dce685b955bbf643e09"
+    },
+    {
+      "n": 4,
+      "command": "check --promela --ltl '<> done' --fairness none",
+      "outcome": "ok",
+      "exit_code": 0,
+      "artifact": "check-ltl-none.json",
+      "params": {
+        "search": "dfs",
+        "fairness": "none",
+        "budget_applied": {
+          "states": 1000000,
+          "depth": 1000000,
+          "time_ms": 60000,
+          "mem_bytes": 1073741824
+        },
+        "stop": "complete",
+        "complete": true
+      },
+      "artifact_sha256": "cfa1b3c5d0ea45ec8eb4600c1ce2c0e113a8ed8a66524c64e6ad75c2da2ea1bf"
+    },
+    {
+      "n": 5,
+      "command": "check --promela --ltl '<> done' --fairness weak",
+      "outcome": "ok",
+      "exit_code": 0,
+      "artifact": "check-ltl-weak.json",
+      "params": {
+        "search": "dfs",
+        "fairness": "weak",
+        "budget_applied": {
+          "states": 1000000,
+          "depth": 1000000,
+          "time_ms": 60000,
+          "mem_bytes": 1073741824
+        },
+        "stop": "complete",
+        "complete": true
+      },
+      "artifact_sha256": "95b75dc6470e6e797f0d915069a6edd94c11cdda70c2f60d1559eb955bbc91da"
+    },
+    {
+      "n": 6,
+      "command": "check --promela --ltl '<> done' --fairness strong",
+      "outcome": "ok",
+      "exit_code": 0,
+      "artifact": "check-ltl-strong.json",
+      "params": {
+        "search": "dfs",
+        "fairness": "strong",
+        "budget_applied": {
+          "states": 1000000,
+          "depth": 1000000,
+          "time_ms": 60000,
+          "mem_bytes": 1073741824
+        },
+        "stop": "complete",
+        "complete": true
+      },
+      "artifact_sha256": "2f77c041801576eb0108c91a75e7b17c5f0fb277719a126a0743711b6497a8ba"
+    }
+  ],
+  "artifacts": [
+    "check-1-safety-reach.json",
+    "check-1.stderr",
+    "check-ltl-none.json",
+    "check-ltl-none.stderr",
+    "check-ltl-strong.json",
+    "check-ltl-strong.stderr",
+    "check-ltl-weak.json",
+    "check-ltl-weak.stderr",
+    "commands.txt",
+    "estimate-1.json",
+    "estimate-1.stderr",
+    "ir-1.json",
+    "ir-2-with-reach.json",
+    "parse-1.stderr"
+  ]
+}

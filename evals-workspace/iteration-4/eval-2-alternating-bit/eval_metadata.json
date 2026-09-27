@@ -1,0 +1,56 @@
+{
+  "eval_id": 2,
+  "eval_name": "alternating-bit-liveness-fairness",
+  "iteration": 4,
+  "date": "2026-09-26",
+  "prompt": "Докажи, что alternating bit доставляет каждое сообщение. Модель: Promela - examples/CH3/alternatingbit.pml",
+  "expected_output": "Delivery is formalised as an LTL formula over the model and checked; the fairness question is raised (as a question or as an explicitly labelled assumption) before the liveness run; the result is `verified` with evidence `exhaustive`, and the answer says the verdict does not depend on the fairness setting because sender and receiver alternate in lock-step. The claim is limited to this model: it has no message loss, no retransmission and no timeout, so nothing is said about the alternating-bit protocol's behaviour on a lossy channel. The word \"proved\" is not used for the model result.",
+  "fixture": "Promela - examples/CH3/alternatingbit.pml",
+  "runnable_from": "G4",
+  "engine": "mcd 0.1.0 — the packaged binary engine/bin/mcd (wrapper -> mcd-linux-arm64), built by model-check-plugin/build.sh from commit 244aaa8, i.e. after the G5 addendum e61f5da that removed stutter extension from the np_ product",
+  "protocol": {
+    "executor": "one general-purpose subagent per configuration, all fourteen launched in parallel from the G6 session, same model as the coordinating session",
+    "with_skill": "prompt + repository root + output directory + path of skills/model-check/SKILL.md ('follow it literally, including the references') + path of the packaged binary engine/bin/mcd; told the MCP server is not registered (CLI fallback of SKILL.md step 3) and not to run SPIN",
+    "without_skill": "prompt + repository root + output directory only, as in iterations 1-3; SPIN was not forbidden",
+    "mcp": "not exercised by the runs: an MCP server cannot be registered into a subagent's session. In G6 the MCP path was instead confirmed with a real client (`claude --plugin-dir ... mcp list` -> one server, health-checked Connected) and by driving the packaged server over stdio inside a Go-less sandbox (steps/g6-confirmation.md §2)",
+    "questions": "the user is not available; both configurations were told to record an explicitly labelled assumption instead of asking",
+    "grading": "evals-workspace/grader.py over outputs/answer.md and the outputs directory; assertions from skills/model-check/evals/evals.json",
+    "timing": "tokens, duration and tool uses copied from the Agent task-completion notifications; no other measurement"
+  },
+  "removed_before_grading": {
+    "with_skill": {
+      "files": [
+        "mc-session-2026-09-26/check-A-ltl-none.json",
+        "mc-session-2026-09-26/check-A.stderr",
+        "mc-session-2026-09-26/check-B-ltl-weak.json",
+        "mc-session-2026-09-26/check-B.stderr",
+        "mc-session-2026-09-26/check-C-state.json",
+        "mc-session-2026-09-26/check-C.stderr",
+        "mc-session-2026-09-26/check-D-progress-nolabels.json",
+        "mc-session-2026-09-26/check-D.stderr",
+        "mc-session-2026-09-26/check-E-ctl.json",
+        "mc-session-2026-09-26/check-E.stderr",
+        "mc-session-2026-09-26/estimate-1.json",
+        "mc-session-2026-09-26/ir-1.json",
+        "mc-session-2026-09-26/ir-props.json",
+        "mc-session-2026-09-26/parse-1.stderr",
+        "models/alternatingbit-progress.pml"
+      ],
+      "reason": "artefacts of a with_skill run that a session rate limit aborted on 2026-09-26 before it wrote answer.md; the graded run is the complete re-run of 2026-09-27. Removed BEFORE grading, not after, because grader.py also scans the outputs directory (petri_json_valid, json_field), and a file left by an aborted run could satisfy an assertion the graded run did not. The three without_skill runs dated 2026-09-26 (evals 3, 5, 7) are NOT of this kind: they completed before the limit and are the graded runs."
+    }
+  },
+  "removed_after_run": {
+    "without_skill": {
+      "files": [
+        "without_skill/outputs/models/ab-original.pml"
+      ],
+      "reason": "verbatim copies of corpus files. Plan 14 §2.1 licence note: the corpus is referenced by path and SHA-256, never copied into the delivery. Removed by the coordinator AFTER grading (grading reads outputs/answer.md and, for the JSON checks, *.json files only, so removing these .pml files cannot change any score). Only without_skill runs are affected: the with_skill prompt told the run to reference corpus files by path, the baseline prompt deliberately did not, so that the baseline stayed identical to iterations 1-3.",
+      "detail": [
+        {
+          "path": "without_skill/outputs/models/ab-original.pml",
+          "copy_of": "Promela - examples/CH3/alternatingbit.pml"
+        }
+      ]
+    }
+  }
+}

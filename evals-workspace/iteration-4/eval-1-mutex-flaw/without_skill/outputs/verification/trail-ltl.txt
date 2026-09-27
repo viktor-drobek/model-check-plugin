@@ -1,0 +1,72 @@
+ltl mutex: [] (! (((user[0]@L7)) && ((user[1]@L7))))
+starting claim 1
+  1:	proc  1 (user:1) mutex_flaw_ltl.pml:4 (state 1)	[x = me]
+		x = 2
+		y = 0
+		z = 0
+		L7 = 0
+  2:	proc  1 (user:1) mutex_flaw_ltl.pml:7 (state 4)	[(((y==0)||(y==me)))]
+		x = 2
+		y = 0
+		z = 0
+		L7 = 0
+  3:	proc  1 (user:1) mutex_flaw_ltl.pml:9 (state 7)	[z = me]
+		x = 2
+		y = 0
+		z = 2
+		L7 = 0
+  4:	proc  1 (user:1) mutex_flaw_ltl.pml:12 (state 10)	[((x==me))]
+		x = 2
+		y = 0
+		z = 2
+		L7 = 0
+  5:	proc  0 (user:1) mutex_flaw_ltl.pml:4 (state 1)	[x = me]
+		x = 1
+		y = 0
+		z = 2
+		L7 = 0
+  6:	proc  0 (user:1) mutex_flaw_ltl.pml:7 (state 4)	[(((y==0)||(y==me)))]
+		x = 1
+		y = 0
+		z = 2
+		L7 = 0
+  7:	proc  1 (user:1) mutex_flaw_ltl.pml:14 (state 13)	[y = me]
+		x = 1
+		y = 2
+		z = 2
+		L7 = 0
+  8:	proc  1 (user:1) mutex_flaw_ltl.pml:17 (state 16)	[((z==me))]
+		x = 1
+		y = 2
+		z = 2
+		L7 = 0
+  9:	proc  0 (user:1) mutex_flaw_ltl.pml:9 (state 7)	[z = me]
+		x = 1
+		y = 2
+		z = 1
+		L7 = 0
+ 10:	proc  0 (user:1) mutex_flaw_ltl.pml:12 (state 10)	[((x==me))]
+		x = 1
+		y = 2
+		z = 1
+		L7 = 0
+ 11:	proc  0 (user:1) mutex_flaw_ltl.pml:14 (state 13)	[y = me]
+		x = 1
+		y = 1
+		z = 1
+		L7 = 0
+ 12:	proc  0 (user:1) mutex_flaw_ltl.pml:17 (state 16)	[((z==me))]
+		x = 1
+		y = 1
+		z = 1
+		L7 = 0
+spin: trail ends after 12 steps
+#processes: 2
+		x = 1
+		y = 1
+		z = 1
+		L7 = 0
+ 12:	proc  1 (user:1) mutex_flaw_ltl.pml:22 (state 19)
+ 12:	proc  0 (user:1) mutex_flaw_ltl.pml:22 (state 19)
+ 12:	proc  - (mutex:1) _spin_nvr.tmp:2 (state 6)
+2 processes created

@@ -1,0 +1,105 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "promela",
+      "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH3/alternatingbit.pml",
+      "sha256": "09006d65d6619931809544f074da440a9f3758e7715d7cc7493657164267698d"
+    }
+  ],
+  "model": {
+    "name": "alternatingbit",
+    "state_bytes": 9,
+    "processes": 2,
+    "variables": 0
+  },
+  "search": {
+    "mode": "dfs",
+    "budget": {
+      "states": 1000000,
+      "depth": 1000000,
+      "time_ms": 60000,
+      "mem_bytes": 1073741824
+    },
+    "stop": "complete",
+    "complete": true
+  },
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 8,
+        "transitions": 8,
+        "depth": 7,
+        "time_ms": 0,
+        "memory_bytes_est": 25216
+      },
+      "complete": true
+    },
+    {
+      "id": "ctl1",
+      "kind": "ctl",
+      "text": "AG AF (Receiver@again)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 8,
+        "transitions": 8,
+        "depth": 7,
+        "time_ms": 0,
+        "memory_bytes_est": 25248
+      },
+      "complete": true,
+      "reason": "the initial state satisfies AG AF (pc(1) == 0) on the complete reachable graph (8 states)",
+      "temporal": {
+        "logic": "ctl",
+        "source": "formula",
+        "formula": "AG AF (Receiver@again)",
+        "normalised": "!E[true U EG !(pc(1) == 0)]",
+        "atoms": [
+          "pc(1) == 0"
+        ],
+        "fairness": "none",
+        "note": "CTL is evaluated over the whole reachable graph; a state in which no process can move (a deadlock, or a system whose processes have all terminated) carries a self-loop, so that the transition relation is total and EG/AF are defined there — the same stutter extension the LTL product uses",
+        "witness_note": "not available: a universal property that holds is justified by the complete reachable graph, not by one run — there is no single run to show"
+      }
+    },
+    {
+      "id": "ctl2",
+      "kind": "ctl",
+      "text": "AG AF (Sender@again)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 8,
+        "transitions": 8,
+        "depth": 7,
+        "time_ms": 0,
+        "memory_bytes_est": 25248
+      },
+      "complete": true,
+      "reason": "the initial state satisfies AG AF (pc(0) == 0) on the complete reachable graph (8 states)",
+      "temporal": {
+        "logic": "ctl",
+        "source": "formula",
+        "formula": "AG AF (Sender@again)",
+        "normalised": "!E[true U EG !(pc(0) == 0)]",
+        "atoms": [
+          "pc(0) == 0"
+        ],
+        "fairness": "none",
+        "note": "CTL is evaluated over the whole reachable graph; a state in which no process can move (a deadlock, or a system whose processes have all terminated) carries a self-loop, so that the transition relation is total and EG/AF are defined there — the same stutter extension the LTL product uses",
+        "witness_note": "not available: a universal property that holds is justified by the complete reachable graph, not by one run — there is no single run to show"
+      }
+    }
+  ]
+}

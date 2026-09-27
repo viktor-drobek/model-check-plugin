@@ -1,0 +1,94 @@
+# Intake card — Promela - examples/CH17/simple1.pr
+# Заполнена по assets/intake-card.yaml. Пользователь недоступен для вопросов,
+# поэтому незаполнимые поля закрыты ЯВНО ПОМЕЧЕННЫМИ допущениями (A1…A6),
+# см. блок `labelled_assumptions` в конце. Ни одно из них не является
+# business-critical допущением — модель учебная (гл. 17 книги о SPIN,
+# "Using Embedded C Code").
+
+system:
+  name: "CH17/simple1 — учебный пример встроенного C-кода"
+  boundary: "один процесс `active proctype simple()`; переменная x объявлена в C-блоке `c_code { int x; }`"
+  environment: "нет; процесс не взаимодействует ни с чем"
+  excluded:
+    - "ничего не исключено намеренно: модель состоит из одного процесса"
+  relation_to_implementation: "hand-written teaching model (пример из корпуса книги)"
+
+state:
+  variables:
+    - name: x
+      domain: "C `int` (хост), НЕ переменная Promela; в simple1.pr не объявлена через c_track"
+      encoding: "вне вектора состояния Promela (см. A3)"
+      source_meaning: "счётчик примера"
+  processes:
+    - "simple:0 — единственный, `active proctype`"
+  channels: []
+  initial_states: "единственное: процесс в начале тела; значение x до `c_code { x = 2; }` не определено моделью"
+  observables:
+    - "x == 4 и x == 6 — в оригинале это `c_expr`, то есть C-выражения, а не атомы Promela"
+
+transitions:
+  semantics: "interleaving (процесс один, чередования нет)"
+  atomic_step: "один оператор Promela; каждый `c_code {...}` в SPIN — один неделимый шаг"
+  terminal_states: "нормальное завершение процесса допустимо"
+  nondeterminism: "одна точка: выбор между двумя ветвями `if`"
+
+properties:
+  - id: P1
+    wording: "«Проверь эту модель» — то есть свойства, которые модель заявляет сама"
+    class: safety
+    logic: invariant
+    extension: untimed
+    formula: "assert(c_expr { x==4 }) в ветви 1 и assert(c_expr { x==6 }) в ветви 2"
+    atoms: ["x==4", "x==6"]
+    expected_evidence: "finite trace"
+    sanity_companion: "достижимость каждой из двух ветвей (reach x==4, reach x==6)"
+  - id: P2
+    wording: "неявное требование любого прогона: нет тупика / невалидного конечного состояния"
+    class: safety
+    logic: deadlock
+    extension: untimed
+    formula: ""
+    atoms: []
+    expected_evidence: "finite trace"
+    sanity_companion: ""
+
+assumptions:
+  scheduler: "не важен: один процесс"
+  delivery: "нет каналов"
+  failures: "нет"
+  environment_inputs: "нет"
+  bounds:
+    - "домен x: в оригинале C `int`; в переписанной модели — Promela `int`"
+
+fairness:
+  required: "none"
+  justification: "свойства безопасности; справедливость на них не влияет"
+  confirmed_by_user: false
+
+backend:
+  engine: mcd
+  search_mode: dfs
+  reductions: none
+
+budget:
+  time: "60000 ms (умолчание CLI)"
+  states: "1000000 (умолчание CLI)"
+  depth: "1000000 (умолчание CLI)"
+  memory: "1024 MiB (умолчание CLI)"
+  repeats: 1
+
+evidence:
+  expected: "unknown для оригинала (ничего не исполнено); exhaustive для переписанной модели"
+  goal: "exhaustive result"
+
+artefacts:
+  may_store_models_and_traces: true   # A6
+  contains_secrets_or_personal_data: "нет — файл из открытого учебного корпуса"
+
+labelled_assumptions:
+  A1: "ДОПУЩЕНИЕ (пользователь недоступен): «проверь эту модель» = проверить свойства, которые модель заявляет сама (два `assert`) плюс отсутствие тупика. Новых требований не придумано."
+  A2: "ДОПУЩЕНИЕ: цель — исчерпывающий результат, а не только поиск ошибки."
+  A3: "ДОПУЩЕНИЕ (о семантике оригинала, движком НЕ проверено): в simple1.pr нет `c_track`, поэтому x живёт в памяти хоста и не входит в вектор состояния Promela. Соседний файл CH17/simple2.pr отличается ровно одной строкой — `c_track \"&x\" \"sizeof(int)\"` — что и есть содержание этого места в корпусе. Проверить это утверждение данный движок не может: он вообще не исполняет host-код."
+  A4: "ДОПУЩЕНИЕ: переполнение C `int` в оригинале не рассматривается (значения 2, 4, 6)."
+  A5: "ДОПУЩЕНИЕ: бюджет — умолчания CLI; модель заведомо крошечная."
+  A6: "ДОПУЩЕНИЕ: артефакты можно складывать в каталог outputs/ этого прогона; исходники корпуса не копируются и не изменяются."

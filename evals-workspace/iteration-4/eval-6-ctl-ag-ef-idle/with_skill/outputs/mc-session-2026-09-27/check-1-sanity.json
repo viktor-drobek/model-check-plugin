@@ -1,0 +1,202 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "promela",
+      "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+      "sha256": "acdfcacad083c29ff47cba18de2fb84ec784e9e064e0b64c435497e07121ec3b"
+    }
+  ],
+  "model": {
+    "name": "version1",
+    "state_bytes": 4,
+    "processes": 2,
+    "variables": 0
+  },
+  "search": {
+    "mode": "dfs",
+    "budget": {
+      "states": 1000000,
+      "depth": 1000000,
+      "time_ms": 60000,
+      "mem_bytes": 1073741824
+    },
+    "stop": "complete",
+    "complete": true
+  },
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 9,
+        "transitions": 12,
+        "depth": 7,
+        "time_ms": 0,
+        "memory_bytes_est": 25152
+      },
+      "complete": true
+    },
+    {
+      "id": "ctl1",
+      "kind": "ctl",
+      "text": "EF (switch@Idle)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 9,
+        "transitions": 12,
+        "depth": 6,
+        "time_ms": 0,
+        "memory_bytes_est": 25540
+      },
+      "complete": true,
+      "witness": {
+        "steps": null,
+        "final_state": null,
+        "final_channels": [
+          {
+            "chan": "tpc",
+            "messages": []
+          }
+        ],
+        "summary": ""
+      },
+      "reason": "the initial state satisfies EF (pc(1) == 0) on the complete reachable graph (9 states)",
+      "temporal": {
+        "logic": "ctl",
+        "source": "formula",
+        "formula": "EF (switch@Idle)",
+        "normalised": "E[true U (pc(1) == 0)]",
+        "atoms": [
+          "pc(1) == 0"
+        ],
+        "fairness": "none",
+        "note": "CTL is evaluated over the whole reachable graph; a state in which no process can move (a deadlock, or a system whose processes have all terminated) carries a self-loop, so that the transition relation is total and EG/AF are defined there — the same stutter extension the LTL product uses"
+      }
+    },
+    {
+      "id": "ctl2",
+      "kind": "ctl",
+      "text": "EF (switch@Busy)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 9,
+        "transitions": 12,
+        "depth": 6,
+        "time_ms": 0,
+        "memory_bytes_est": 25540
+      },
+      "complete": true,
+      "witness": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "subscriber:0",
+            "command": "tpc!offhook",
+            "location": "Busy",
+            "origin": {
+              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+              "line": 9,
+              "name": "tpc!offhook"
+            },
+            "partner": {
+              "process": "switch:1",
+              "command": "tpc?offhook",
+              "origin": {
+                "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+                "line": 21,
+                "name": "tpc?offhook"
+              }
+            }
+          },
+          {
+            "index": 2,
+            "process": "switch:1",
+            "command": "printf(\"MSC: dialtone\\n\")",
+            "location": "Dial",
+            "origin": {
+              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+              "line": 21,
+              "name": "printf(\"MSC: dialtone\\n\")"
+            }
+          },
+          {
+            "index": 3,
+            "process": "subscriber:0",
+            "command": "tpc!digits",
+            "location": "Busy",
+            "origin": {
+              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+              "line": 12,
+              "name": "tpc!digits"
+            },
+            "partner": {
+              "process": "switch:1",
+              "command": "tpc?digits",
+              "origin": {
+                "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+                "line": 25,
+                "name": "tpc?digits"
+              }
+            }
+          },
+          {
+            "index": 4,
+            "process": "switch:1",
+            "command": "printf(\"MSC: notone\\n\")",
+            "location": "Wait",
+            "origin": {
+              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+              "line": 25,
+              "name": "printf(\"MSC: notone\\n\")"
+            }
+          },
+          {
+            "index": 5,
+            "process": "switch:1",
+            "command": "printf(\"MSC: busytone\\n\")",
+            "location": "Busy",
+            "origin": {
+              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+              "line": 31,
+              "name": "printf(\"MSC: busytone\\n\")"
+            }
+          }
+        ],
+        "final_state": null,
+        "final_channels": [
+          {
+            "chan": "tpc",
+            "messages": []
+          }
+        ],
+        "summary": "tpc!offhook, printf(\"MSC: dialtone\\n\"), tpc!digits, printf(\"MSC: notone\\n\"), printf(\"MSC: busytone\\n\")"
+      },
+      "reason": "the initial state satisfies EF (pc(1) == 4) on the complete reachable graph (9 states)",
+      "temporal": {
+        "logic": "ctl",
+        "source": "formula",
+        "formula": "EF (switch@Busy)",
+        "normalised": "E[true U (pc(1) == 4)]",
+        "atoms": [
+          "pc(1) == 4"
+        ],
+        "fairness": "none",
+        "note": "CTL is evaluated over the whole reachable graph; a state in which no process can move (a deadlock, or a system whose processes have all terminated) carries a self-loop, so that the transition relation is total and EG/AF are defined there — the same stutter extension the LTL product uses"
+      }
+    }
+  ],
+  "warnings": [
+    "printf: 8 statement(s) kept as no-op steps so that state counts match SPIN; their output is not produced"
+  ]
+}

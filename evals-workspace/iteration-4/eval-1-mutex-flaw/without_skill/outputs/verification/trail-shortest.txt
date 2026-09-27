@@ -1,0 +1,103 @@
+  1:	proc  1 (user:1) mutex_flaw.pml:5 (state 1)	[x = me]
+		cnt = 0
+		x = 2
+		y = 0
+		z = 0
+		user(1):me = 2
+  2:	proc  1 (user:1) mutex_flaw.pml:8 (state 4)	[(((y==0)||(y==me)))]
+		cnt = 0
+		x = 2
+		y = 0
+		z = 0
+		user(1):me = 2
+  3:	proc  1 (user:1) mutex_flaw.pml:10 (state 7)	[z = me]
+		cnt = 0
+		x = 2
+		y = 0
+		z = 2
+		user(1):me = 2
+  4:	proc  1 (user:1) mutex_flaw.pml:13 (state 10)	[((x==me))]
+		cnt = 0
+		x = 2
+		y = 0
+		z = 2
+		user(1):me = 2
+  5:	proc  0 (user:1) mutex_flaw.pml:5 (state 1)	[x = me]
+		cnt = 0
+		x = 1
+		y = 0
+		z = 2
+		user(0):me = 1
+  6:	proc  0 (user:1) mutex_flaw.pml:8 (state 4)	[(((y==0)||(y==me)))]
+		cnt = 0
+		x = 1
+		y = 0
+		z = 2
+		user(0):me = 1
+  7:	proc  1 (user:1) mutex_flaw.pml:15 (state 13)	[y = me]
+		cnt = 0
+		x = 1
+		y = 2
+		z = 2
+		user(1):me = 2
+  8:	proc  1 (user:1) mutex_flaw.pml:18 (state 16)	[((z==me))]
+		cnt = 0
+		x = 1
+		y = 2
+		z = 2
+		user(1):me = 2
+  9:	proc  1 (user:1) mutex_flaw.pml:22 (state 19)	[cnt = (cnt+1)]
+		cnt = 1
+		x = 1
+		y = 2
+		z = 2
+		user(1):me = 2
+ 10:	proc  0 (user:1) mutex_flaw.pml:10 (state 7)	[z = me]
+		cnt = 1
+		x = 1
+		y = 2
+		z = 1
+		user(0):me = 1
+ 11:	proc  0 (user:1) mutex_flaw.pml:13 (state 10)	[((x==me))]
+		cnt = 1
+		x = 1
+		y = 2
+		z = 1
+		user(0):me = 1
+ 12:	proc  0 (user:1) mutex_flaw.pml:15 (state 13)	[y = me]
+		cnt = 1
+		x = 1
+		y = 1
+		z = 1
+		user(0):me = 1
+ 13:	proc  0 (user:1) mutex_flaw.pml:18 (state 16)	[((z==me))]
+		cnt = 1
+		x = 1
+		y = 1
+		z = 1
+		user(0):me = 1
+ 14:	proc  0 (user:1) mutex_flaw.pml:22 (state 19)	[cnt = (cnt+1)]
+		cnt = 2
+		x = 1
+		y = 1
+		z = 1
+		user(0):me = 1
+spin: mutex_flaw.pml:23, Error: assertion violated
+spin: text of failed assertion: assert((cnt==1))
+ 15:	proc  1 (user:1) mutex_flaw.pml:23 (state 20)	[assert((cnt==1))]
+		cnt = 2
+		x = 1
+		y = 1
+		z = 1
+		user(1):me = 2
+spin: trail ends after 15 steps
+#processes: 2
+		cnt = 2
+		x = 1
+		y = 1
+		z = 1
+ 15:	proc  1 (user:1) mutex_flaw.pml:24 (state 21)
+		user(1):me = 2
+ 15:	proc  0 (user:1) mutex_flaw.pml:23 (state 20)
+		user(0):me = 1
+2 processes created

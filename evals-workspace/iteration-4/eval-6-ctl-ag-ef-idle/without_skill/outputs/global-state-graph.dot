@@ -1,0 +1,25 @@
+digraph global {
+  rankdir=LR;
+  node [shape=box,fontname="monospace"];
+  n0 [label="sub@Idle(S1), switch@Idle(S4)",style=filled,fillcolor="#cfe8cf"];
+  n1 [label="sub@Busy(S6), switch@-(S2)"];
+  n2 [label="sub@Busy(S6), switch@Dial(S12)"];
+  n3 [label="sub@Busy(S6), switch@-(S7)"];
+  n4 [label="sub@Idle(S1), switch@-(S10)"];
+  n5 [label="sub@Busy(S6), switch@Wait(S18)"];
+  n6 [label="sub@Busy(S6), switch@Connect(S24)"];
+  n7 [label="sub@Busy(S6), switch@Busy(S26)"];
+  n8 [label="sub@Idle(S1), switch@-(S27)"];
+  n0 -> n1 [label="tpc!offhook / tpc?offhook"];
+  n1 -> n2 [label="sw printf dialtone"];
+  n2 -> n3 [label="tpc!digits / tpc?digits"];
+  n2 -> n4 [label="tpc!onhook / tpc?onhook"];
+  n3 -> n5 [label="sw printf notone"];
+  n4 -> n0 [label="sw printf notone"];
+  n5 -> n6 [label="sw printf ringtone"];
+  n5 -> n7 [label="sw printf busytone"];
+  n6 -> n7 [label="sw printf busytone"];
+  n6 -> n7 [label="sw printf notone"];
+  n7 -> n8 [label="tpc!onhook / tpc?onhook"];
+  n8 -> n0 [label="sw printf notone"];
+}

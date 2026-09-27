@@ -1,0 +1,184 @@
+### spin -V
+Spin Version 6.5.2 -- 6 December 2019
+
+### model under test: Promela - examples/CH14/version1 (copied to version1.pml)
+
+==========================================================
+RUN 1 - safety: deadlock / invalid end states (no never claim)
+  spin -a version1.pml ; gcc -DSAFETY -o pan ; ./pan -m10000
+==========================================================
+
+(Spin Version 6.5.2 -- 6 December 2019)
+	+ Partial Order Reduction
+
+Full statespace search for:
+	never claim         	- (none specified)
+	assertion violations	+
+	cycle checks       	- (disabled by -DSAFETY)
+	invalid end states	+
+
+State-vector 28 byte, depth reached 11, errors: 0
+        9 states, stored
+        6 states, matched
+       15 transitions (= stored+matched)
+        0 atomic steps
+hash conflicts:         0 (resolved)
+
+Stats on memory usage (in Megabytes):
+    0.000	equivalent memory usage for states (stored*(State-vector + overhead))
+    0.289	actual memory usage for states
+  128.000	memory used for hash table (-w24)
+    0.534	memory used for DFS stack (-m10000)
+  128.730	total actual memory usage
+
+
+unreached in proctype subscriber
+	version1.pml:15, state 8, "-end-"
+	(1 of 8 states)
+unreached in proctype switch
+	version1.pml:40, state 29, "-end-"
+	(1 of 29 states)
+
+pan: elapsed time 0 seconds
+
+==========================================================
+RUN 2 - liveness: [] (switch[1]@Busy -> <> !switch[1]@Busy)
+==========================================================
+
+(Spin Version 6.5.2 -- 6 December 2019)
+	+ Partial Order Reduction
+
+Full statespace search for:
+	never claim         	+ (no_hang_sw)
+	assertion violations	+ (if within scope of claim)
+	acceptance   cycles 	+ (fairness disabled)
+	invalid end states	- (disabled by never claim)
+
+State-vector 44 byte, depth reached 19, errors: 0
+       10 states, stored
+        6 states, matched
+       16 transitions (= stored+matched)
+        0 atomic steps
+hash conflicts:         0 (resolved)
+
+Stats on memory usage (in Megabytes):
+    0.001	equivalent memory usage for states (stored*(State-vector + overhead))
+    0.288	actual memory usage for states
+  128.000	memory used for hash table (-w24)
+    0.534	memory used for DFS stack (-m10000)
+  128.730	total actual memory usage
+
+
+unreached in proctype subscriber
+	sw_busy.pml:15, state 8, "-end-"
+	(1 of 8 states)
+unreached in proctype switch
+	sw_busy.pml:40, state 29, "-end-"
+	(1 of 29 states)
+unreached in claim no_hang_sw
+	_spin_nvr.tmp:10, state 13, "-end-"
+	(1 of 13 states)
+
+pan: elapsed time 0 seconds
+
+==========================================================
+RUN 3 - liveness: [] (subscriber[0]@Busy -> <> !subscriber[0]@Busy)
+==========================================================
+
+(Spin Version 6.5.2 -- 6 December 2019)
+	+ Partial Order Reduction
+
+Full statespace search for:
+	never claim         	+ (no_hang_sub)
+	assertion violations	+ (if within scope of claim)
+	acceptance   cycles 	+ (fairness disabled)
+	invalid end states	- (disabled by never claim)
+
+State-vector 44 byte, depth reached 19, errors: 0
+       16 states, stored (23 visited)
+       22 states, matched
+       45 transitions (= visited+matched)
+        0 atomic steps
+hash conflicts:         0 (resolved)
+
+Stats on memory usage (in Megabytes):
+    0.001	equivalent memory usage for states (stored*(State-vector + overhead))
+    0.288	actual memory usage for states
+  128.000	memory used for hash table (-w24)
+    0.534	memory used for DFS stack (-m10000)
+  128.730	total actual memory usage
+
+
+unreached in proctype subscriber
+	sub_busy.pml:15, state 8, "-end-"
+	(1 of 8 states)
+unreached in proctype switch
+	sub_busy.pml:40, state 29, "-end-"
+	(1 of 29 states)
+unreached in claim no_hang_sub
+	_spin_nvr.tmp:10, state 13, "-end-"
+	(1 of 13 states)
+
+pan: elapsed time 0 seconds
+
+==========================================================
+RUN 4 - vacuity/reachability control: [] !switch[1]@Busy
+  MUST fail: proves Busy is reachable, so runs 2-3 are not vacuous
+==========================================================
+pan:1: assertion violated  !( !( !((switch[1]._p==Busy)))) (at depth 14)
+pan: wrote reach.pml.trail
+
+(Spin Version 6.5.2 -- 6 December 2019)
+Warning: Search not completed
+	+ Partial Order Reduction
+
+Full statespace search for:
+	never claim         	+ (reach_busy)
+	assertion violations	+ (if within scope of claim)
+	acceptance   cycles 	+ (fairness disabled)
+	invalid end states	- (disabled by never claim)
+
+State-vector 44 byte, depth reached 14, errors: 1
+        7 states, stored
+        0 states, matched
+        7 transitions (= stored+matched)
+        0 atomic steps
+hash conflicts:         0 (resolved)
+
+Stats on memory usage (in Megabytes):
+    0.000	equivalent memory usage for states (stored*(State-vector + overhead))
+    0.288	actual memory usage for states
+  128.000	memory used for hash table (-w24)
+    0.534	memory used for DFS stack (-m10000)
+  128.730	total actual memory usage
+
+
+
+pan: elapsed time 0 seconds
+
+--- witness trail into Busy ---
+ltl reach_busy: [] (! ((switch[1]@Busy)))
+starting claim 2
+Never claim moves to line 4	[(1)]
+  2:	proc  0 (subscriber:1) reach.pml:9 (state 1)	[tpc!offhook]
+  3:	proc  1 (switch:1) reach.pml:21 (state 1)	[tpc?offhook]
+              MSC: dialtone
+  5:	proc  1 (switch:1) reach.pml:21 (state 2)	[printf('MSC: dialtone\\n')]
+  7:	proc  0 (subscriber:1) reach.pml:12 (state 2)	[tpc!digits]
+  8:	proc  1 (switch:1) reach.pml:25 (state 6)	[tpc?digits]
+              MSC: notone
+ 10:	proc  1 (switch:1) reach.pml:25 (state 7)	[printf('MSC: notone\\n')]
+              MSC: ringtone
+ 12:	proc  1 (switch:1) reach.pml:30 (state 14)	[printf('MSC: ringtone\\n')]
+              MSC: busytone
+ 14:	proc  1 (switch:1) reach.pml:35 (state 20)	[printf('MSC: busytone\\n')]
+spin: _spin_nvr.tmp:3, Error: assertion violated
+spin: text of failed assertion: assert(!(!(!((switch[1]._p==Busy)))))
+Never claim moves to line 3	[assert(!(!(!((switch[1]._p==Busy)))))]
+spin: trail ends after 15 steps
+#processes: 2
+		Busy = 0
+ 15:	proc  1 (switch:1) reach.pml:39 (state 26)
+ 15:	proc  0 (subscriber:1) reach.pml:11 (state 6)
+ 15:	proc  - (reach_busy:1) _spin_nvr.tmp:2 (state 6)
+2 processes created

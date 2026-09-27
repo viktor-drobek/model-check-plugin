@@ -1,0 +1,54 @@
+{
+  "eval_id": 7,
+  "eval_name": "starvation-loop-fairness",
+  "run": "eval-2b-starvation-loop/without_skill",
+  "passed_count": 8,
+  "total": 9,
+  "expectations": [
+    {
+      "text": "Without fairness the property is reported violated",
+      "passed": true,
+      "evidence": "matched 'violated' at 2596"
+    },
+    {
+      "text": "The counterexample is described as a loop that repeats forever, not as a finite trace",
+      "passed": true,
+      "evidence": "matched 'бесконечный цикл' at 488"
+    },
+    {
+      "text": "Process B is named as the one that is enabled through the loop and never moves",
+      "passed": true,
+      "evidence": "matched 'B` навсегда остаётся на своей начальной метке (строка 17) и `done` навсегда равн' at 1003"
+    },
+    {
+      "text": "The run under weak fairness is reported and comes back verified",
+      "passed": true,
+      "evidence": "in order: [(251, 'слабую справедлив'), (2574, 'verified')]"
+    },
+    {
+      "text": "Both results are given: without fairness first, then with weak fairness",
+      "passed": true,
+      "evidence": "in order: [(2545, '--fairness none'), (2716, '--fairness weak')]"
+    },
+    {
+      "text": "Weak fairness is named as an assumption, not as a fact about the system",
+      "passed": true,
+      "evidence": "matched 'предположение о справедлив' at 4695"
+    },
+    {
+      "text": "Each result carries an evidence level",
+      "passed": false,
+      "evidence": "pattern '\\\\b(exhaustive|bounded|approximate|unknown)\\\\b' not found"
+    },
+    {
+      "text": "The engine was invoked (CLI or MCP), not reasoned around",
+      "passed": true,
+      "evidence": "matched 'mcd check' at 2492"
+    },
+    {
+      "text": "No forbidden phrasing, and the fair result is not called proved",
+      "passed": true,
+      "evidence": "pattern '(?i)\\\\bno errors\\\\b|ошибок нет|\\\\bproved\\\\b|\\\\bproven\\\\b|доказано|система корректна' absent"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "eval_id": 1,
+  "iteration": 4,
+  "date": "2026-09-27",
+  "source": "Agent task-completion notifications of the two subagent runs (subagent_tokens, duration_ms, tool_uses); no other measurement. Eleven of the fourteen runs are re-runs: the first attempt was aborted mid-flight by a session rate limit, so their figures are those of the completed re-run, not of the aborted attempt. The three without_skill runs of evals 3, 5 and 7 completed on the first attempt (2026-09-26).",
+  "engine": "mcd 0.1.0, packaged binary engine/bin/mcd (CLI path; the MCP server cannot be registered into a subagent session)",
+  "with_skill": {
+    "tokens": 148172,
+    "duration_s": 457.672,
+    "tool_uses": 31
+  },
+  "without_skill": {
+    "tokens": 72814,
+    "duration_s": 334.781,
+    "tool_uses": 27
+  }
+}

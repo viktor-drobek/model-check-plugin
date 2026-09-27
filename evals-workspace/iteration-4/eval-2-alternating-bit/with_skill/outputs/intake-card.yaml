@@ -1,0 +1,199 @@
+# Intake card — CH3/alternatingbit.pml, "каждое сообщение доставляется"
+# Filled from the user's request. The user was not available for questions, so
+# every field the request did not fix carries an EXPLICIT ASSUMPTION (A1..A9),
+# marked "assumption:" below and repeated in section 2 of answer.md.
+# Source of the fields: skills/model-check/assets/intake-card.yaml (FR-001, FR-002).
+
+system:
+  name: "alternatingbit (Promela - examples/CH3/alternatingbit.pml)"
+  boundary: >
+    Two processes — Sender and Receiver — and two buffered channels between them,
+    to_rcvr (Sender -> Receiver) and to_sndr (Receiver -> Sender), each of
+    capacity 2 over the alphabet {msg0, msg1, ack0, ack1}. Nothing else.
+  environment: >
+    None is modelled. The channels are perfect: no loss, no duplication, no
+    reordering (FIFO), no corruption, no delay that the model can observe.
+    There is no application above the Sender that produces data and no
+    application below the Receiver that consumes it.
+  excluded:
+    - "message loss — the file contains no loss construct (assumption A1)"
+    - "retransmission — the Sender has no resend branch"
+    - "timeout — the file uses no `timeout` and no timer"
+    - "message payload — messages carry only the alternation bit as an mtype constant"
+  relation_to_implementation: >
+    Corpus model, hand-written by the author of the SPIN book as a teaching file.
+    Not extracted from any implementation; no conformance argument exists.
+
+state:
+  variables: []            # the model declares no variables at all
+  processes:
+    - "Sender:0 — 4 control locations, cyclic: !msg1, ?ack1, !msg0, ?ack0, goto again"
+    - "Receiver:1 — 4 control locations, cyclic: ?msg1, !ack1, ?msg0, !ack0, goto again"
+  channels:
+    - "to_rcvr: capacity 2, FIFO, one mtype field; only writer Sender:0, only reader Receiver:1"
+    - "to_sndr: capacity 2, FIFO, one mtype field; only writer Receiver:1, only reader Sender:0"
+  initial_states: >
+    Single initial state: both processes at label `again`, both channels empty.
+  observables:
+    - "len(to_rcvr) — number of messages handed to the link and not yet taken by the Receiver"
+    - "len(to_sndr) — number of acks handed to the link and not yet taken by the Sender"
+    - "pc(1) == 0 (Receiver@again) — the Receiver has completed a full msg1+msg0 pair"
+    - "pc(0) == 0 (Sender@again) — the Sender has completed a full msg1+msg0 pair"
+
+transitions:
+  semantics: "interleaving of the two processes over buffered (asynchronous) channels"
+  atomic_step: >
+    One Promela statement. The file contains no `atomic` and no `d_step`, so no
+    interleaving is hidden (assumption A2: this matches the intended reading —
+    a send and a receive are separate events).
+  terminal_states: >
+    None intended: both processes loop forever via `goto again`, there is no
+    `end:` label, so any state without an enabled transition is an invalid end
+    state and the engine's `deadlock` property is the right question.
+  nondeterminism: "only the scheduler's choice between the two processes"
+
+properties:
+  - id: P1
+    wording: "каждое сообщение доставляется — всё, что отправитель положил в to_rcvr, получатель забирает"
+    class: liveness
+    logic: LTL
+    extension: untimed
+    formula: "[] (nempty(to_rcvr) -> <> empty(to_rcvr))"
+    atoms: ["len(to_rcvr) > 0", "len(to_rcvr) == 0"]
+    expected_evidence: lasso
+    sanity_companion: "P5 (reach_msg_in_flight)"
+  - id: P2
+    wording: "квитанция тоже доходит — вторая половина рукопожатия"
+    class: liveness
+    logic: LTL
+    extension: untimed
+    formula: "[] (nempty(to_sndr) -> <> empty(to_sndr))"
+    atoms: ["len(to_sndr) > 0", "len(to_sndr) == 0"]
+    expected_evidence: lasso
+    sanity_companion: "P6 (reach_ack_in_flight)"
+  - id: P3
+    wording: "обмен не останавливается: сообщения отправляются бесконечно часто"
+    class: liveness
+    logic: LTL
+    extension: untimed
+    formula: "[]<> nempty(to_rcvr)"
+    atoms: ["len(to_rcvr) > 0"]
+    expected_evidence: lasso
+    sanity_companion: "P5"
+  - id: P4
+    wording: "в каждую сторону летит не больше одного сообщения — ёмкость 2 не переполняется"
+    class: safety
+    logic: LTL
+    extension: untimed
+    formula: "[] (len(to_rcvr) <= 1 && len(to_sndr) <= 1)"
+    atoms: ["len(to_rcvr) <= 1", "len(to_sndr) <= 1"]
+    expected_evidence: "finite trace (none expected)"
+    sanity_companion: "P5, P6"
+  - id: P5
+    wording: "sanity: сообщение вообще бывает в канале (защита P1 от вакуумной истинности)"
+    class: reachability
+    logic: "invariant (engine kind `reach`)"
+    extension: untimed
+    formula: "len(to_rcvr) > 0"
+    atoms: ["len(to_rcvr) > 0"]
+    expected_evidence: "witness (finite run)"
+    sanity_companion: "—"
+  - id: P6
+    wording: "sanity: квитанция вообще бывает в канале (защита P2)"
+    class: reachability
+    logic: "invariant (engine kind `reach`)"
+    extension: untimed
+    formula: "len(to_sndr) > 0"
+    atoms: ["len(to_sndr) > 0"]
+    expected_evidence: "witness (finite run)"
+    sanity_companion: "—"
+  - id: P7
+    wording: "получатель бесконечно часто возвращается в начало цикла — обе фазы msg1/msg0 действительно проходят"
+    class: liveness
+    logic: CTL
+    extension: untimed
+    formula: "AG AF (Receiver@again)"
+    atoms: ["pc(1) == 0"]
+    expected_evidence: "labelling of the whole reachable graph"
+    sanity_companion: "P5"
+  - id: P8
+    wording: "то же для отправителя"
+    class: liveness
+    logic: CTL
+    extension: untimed
+    formula: "AG AF (Sender@again)"
+    atoms: ["pc(0) == 0"]
+    expected_evidence: "labelling of the whole reachable graph"
+    sanity_companion: "P6"
+  - id: P9
+    wording: "нет зависания (задана движком автоматически)"
+    class: safety
+    logic: deadlock
+    extension: untimed
+    formula: "—"
+    atoms: []
+    expected_evidence: "finite trace"
+    sanity_companion: "—"
+  - id: P10
+    wording: "нет цикла без доставки — на ПРОИЗВОДНОЙ модели с метками progress"
+    class: liveness
+    logic: progress
+    extension: untimed
+    formula: "—  (non-progress search, SPIN pan -l)"
+    atoms: ["progress_msg1, progress_msg0 — на двух приёмах получателя"]
+    expected_evidence: lasso
+    sanity_companion: "P9"
+
+assumptions:
+  scheduler: >
+    A3: arbitrary interleaving, no fairness assumed. This is the weakest
+    assumption and it is the one the main runs use.
+  delivery: >
+    A1: the channels never lose, duplicate, reorder or corrupt a message.
+    This is not a choice — it is what the file says; it is recorded as an
+    assumption because the user's words "alternating bit" name a protocol whose
+    whole purpose is to survive loss.
+  failures: "A4: no process crashes, no restart."
+  environment_inputs: >
+    A5: the Sender always has a next message ready; there is no source that can
+    stall. The model has no data, so "message" means "one turn of the
+    alternation", not a distinguishable datum (A6).
+  bounds:
+    - "channel capacity 2 (written in the file, lines 3-4)"
+    - "two processes, fixed, no `run`"
+    - "alphabet of 4 mtype constants"
+    - "resulting reachable state space: 8 states, state vector 9 bytes"
+
+fairness:
+  required: "none"
+  justification: >
+    A7: the liveness properties were run WITHOUT fairness first, as the protocol
+    of references/fairness.md §3 requires, and they came back `verified`. No
+    fairness assumption is therefore needed and none is claimed. The weak-fairness
+    runs were made only to show that the verdict does not move.
+  confirmed_by_user: false
+
+backend:
+  engine: mcd
+  search_mode: dfs        # bfs used only for the sensitivity run (shortest deadlock trace)
+  reductions: none        # the engine has no POR/symmetry; the search is unreduced
+
+budget:
+  time: "60000 ms (default)"
+  states: "1000000 (default)"
+  depth: "1000000 (default)"
+  memory: "1024 MiB (default)"
+  repeats: 1
+  # A8: the defaults were kept because `mcd check --estimate` reported the whole
+  # reachable graph as 8 states — class "small", nothing to stage.
+
+evidence:
+  expected: exhaustive
+  goal: "exhaustive result (the user asked for a proof, not for bug-finding)"
+
+artefacts:
+  may_store_models_and_traces: true
+  # A9: the corpus file is a public teaching model with no business data. All
+  # artefacts were written under outputs/mc-session-2026-09-27/; the corpus file
+  # itself was not copied and not modified.
+  contains_secrets_or_personal_data: "no"

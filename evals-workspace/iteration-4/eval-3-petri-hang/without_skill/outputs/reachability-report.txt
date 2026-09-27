@@ -1,0 +1,32 @@
+reachable markings : 6
+graph edges        : 8
+bound (max tokens in any place over all reachable markings): 1
+
+--- all reachable markings ---
+  {p1=1, p4=1}                 enabled: ['t1', 't4']
+  {p2=1, p4=1}                 enabled: ['t2', 't4']
+  {p1=1, p5=1}                 enabled: ['t1', 't5']
+  {p3=1}                       enabled: ['t3']
+  {p2=1, p5=1}                 enabled: NONE  <-- DEADLOCK
+  {p6=1}                       enabled: ['t6']
+
+--- 1 DEAD marking(s) ---
+  {p2=1, p5=1}
+    shortest firing sequence from M0 (2 steps):
+      M0 = {p1=1, p4=1}
+      --t1--> {p2=1, p4=1}
+      --t4--> {p2=1, p5=1}
+
+--- P-invariant check (verifies safeness / explains the structure) ---
+  p1+p2+p3+p6    constant over all reachable markings: {1}
+  p3+p4+p5+p6    constant over all reachable markings: {1}
+
+--- from which reachable markings is a dead marking still reachable? ---
+  {p1=1, p4=1}                 -> deadlock still reachable: True
+  {p2=1, p4=1}                 -> deadlock still reachable: True
+  {p1=1, p5=1}                 -> deadlock still reachable: True
+  {p3=1}                       -> deadlock still reachable: True
+  {p2=1, p5=1}                 -> deadlock still reachable: True
+  {p6=1}                       -> deadlock still reachable: True
+
+reachability graph written to reachability-graph.dot

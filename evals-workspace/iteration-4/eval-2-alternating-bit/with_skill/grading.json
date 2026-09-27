@@ -1,0 +1,54 @@
+{
+  "eval_id": 2,
+  "eval_name": "alternating-bit-liveness-fairness",
+  "run": "eval-2-alternating-bit/with_skill",
+  "passed_count": 8,
+  "total": 9,
+  "expectations": [
+    {
+      "text": "Fairness is raised as a question or as an explicitly labelled assumption",
+      "passed": true,
+      "evidence": "matched 'справедливость (fairness).** P1–P3 — свойства живости, поэтому вопрос' at 2271"
+    },
+    {
+      "text": "The delivery (liveness) property is reported verified",
+      "passed": true,
+      "evidence": "matched 'verified' at 839"
+    },
+    {
+      "text": "The evidence level exhaustive is stated",
+      "passed": true,
+      "evidence": "matched 'exhaustive' at 852"
+    },
+    {
+      "text": "The formula that was actually checked is shown, in LTL syntax",
+      "passed": true,
+      "evidence": "matched '[]' at 7104"
+    },
+    {
+      "text": "The answer says the verdict does not depend on the fairness setting (the model is lock-step)",
+      "passed": true,
+      "evidence": "matched 'справедливости задан до прогона. Ответ: **результат не зависит' at 2343"
+    },
+    {
+      "text": "The claim is limited to this model: it has no message loss, retransmission or timeout",
+      "passed": true,
+      "evidence": "matched 'нет потер' at 317"
+    },
+    {
+      "text": "The engine was invoked (CLI or MCP), not reasoned around",
+      "passed": false,
+      "evidence": "pattern 'mcd check|mc_check' not found"
+    },
+    {
+      "text": "The word proved/доказано is not used for the model result",
+      "passed": true,
+      "evidence": "pattern '(?i)\\\\bproved\\\\b|\\\\bproven\\\\b|доказано|доказал' absent"
+    },
+    {
+      "text": "No forbidden phrasing",
+      "passed": true,
+      "evidence": "pattern '(?i)\\\\bno errors\\\\b|ошибок нет|protocol is correct|протокол корректен|система корректна' absent"
+    }
+  ]
+}

@@ -1,0 +1,159 @@
+{
+  "note": "Assembled BY HAND. The MCP server was not registered in this session, so mc_manifest could not be called; references/engine-tools.md §4 says to reconstruct versions, hashes and budgets from the reports and to record the command lines and the wall-clock time yourself, and to say that the manifest is hand-made. Seed and per-call start/end times have no CLI counterpart and are absent.",
+  "session_id": "mc-session-2026-09-27 (hand-made directory, not a server session)",
+  "created_utc": "2026-09-27T11:39Z",
+  "finished_utc": "2026-09-27T11:43Z",
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1",
+    "binary": "model-check-plugin/engine/bin/mcd",
+    "binary_sha256": "2016593c7f711e50296510350dcb46c4b946d56219868599050051ddac6dc463",
+    "layer": "CLI (no MCP server registered in this session)"
+  },
+  "inputs": [
+    {
+      "kind": "promela",
+      "role": "the model under check (corpus file, unmodified, not copied)",
+      "path": "Promela - examples/CH3/alternatingbit.pml",
+      "sha256": "09006d65d6619931809544f074da440a9f3758e7715d7cc7493657164267698d"
+    },
+    {
+      "kind": "ir",
+      "role": "IR of the model as the parser emits it",
+      "path": "mc-session-2026-09-27/ir-1.json",
+      "sha256": "see check-2-reach.json inputs[0] for ir-2"
+    },
+    {
+      "kind": "ir",
+      "role": "ir-1 with the two reach properties P5, P6 appended (the CLI route for reach, engine-tools.md §4)",
+      "path": "mc-session-2026-09-27/ir-2.json",
+      "sha256": "88e23bf44cae52abfc5b5eb5461e42d72edfa1b0930be7ddc73e73eb8f356f7d"
+    },
+    {
+      "kind": "promela",
+      "role": "DERIVED model: the corpus model plus two progress labels on the Receiver's two receives. A declared change to the model.",
+      "path": "mc-session-2026-09-27/alternatingbit-progress.pml",
+      "sha256": "559e3d1d33816d850aa1e40d271b79f6e52540451044a4cb7beb64cdb2a55ab7"
+    },
+    {
+      "kind": "promela",
+      "role": "DERIVED model: the corpus model plus a process that may drop a message from to_rcvr. Sensitivity run only.",
+      "path": "mc-session-2026-09-27/alternatingbit-lossy.pml",
+      "sha256": "33db265d6c915d53fc48963e8afbbfe8c9703829c391fb5db40442c3381ec901"
+    },
+    {
+      "kind": "promela",
+      "role": "OUT OF THE REQUESTED SCOPE: the corpus's sequence-numbered variant, checked only to make the Next actions concrete.",
+      "path": "Promela - examples/CH3/alternatingbit2.pml",
+      "sha256": "ccac57b2d7cf0606d9425e6676aa2f0e703dbd6f5e2f0a61032efc8ef060c13d"
+    }
+  ],
+  "budget_applied_everywhere": {
+    "states": 1000000,
+    "depth": 1000000,
+    "time_ms": 60000,
+    "mem_bytes": 1073741824,
+    "source": "CLI defaults; kept because --estimate reported the whole reachable graph as 8 states (class small)"
+  },
+  "calls": [
+    {
+      "n": 1,
+      "tool": "mcd parse",
+      "command": "mcd parse --promela 'Promela - examples/CH3/alternatingbit.pml'",
+      "exit": 0,
+      "artifacts": ["ir-1.json", "parse-1.stderr (empty: no frontend warnings)"]
+    },
+    {
+      "n": 2,
+      "tool": "mcd check --estimate",
+      "command": "mcd check --promela 'Promela - examples/CH3/alternatingbit.pml' --estimate",
+      "exit": 0,
+      "artifacts": ["estimate-1.json"],
+      "result": "8 states, 8 transitions, depth 7, complete, class small; 'not a verification result'"
+    },
+    {
+      "n": 3,
+      "tool": "mcd check",
+      "command": "mcd check --promela 'Promela - examples/CH3/alternatingbit.pml' --ltl '[] (nempty(to_rcvr) -> <> empty(to_rcvr))' --ltl '[] (nempty(to_sndr) -> <> empty(to_sndr))' --ltl '[]<> nempty(to_rcvr)' --ltl '[] (len(to_rcvr) <= 1 && len(to_sndr) <= 1)' --fairness none --sweep",
+      "exit": 0,
+      "params": {"search": "dfs", "fairness": "none"},
+      "artifacts": ["check-1-none.json"]
+    },
+    {
+      "n": 4,
+      "tool": "mcd check",
+      "command": "mcd check --ir ir-2.json --sweep",
+      "exit": 0,
+      "params": {"search": "dfs", "fairness": "none"},
+      "artifacts": ["check-2-reach.json"],
+      "result": "the two reach properties P5, P6 with their witnesses"
+    },
+    {
+      "n": 5,
+      "tool": "mcd check",
+      "command": "mcd check --promela 'Promela - examples/CH3/alternatingbit.pml' --ctl 'AG AF (Receiver@again)' --ctl 'AG AF (Sender@again)' --sweep",
+      "exit": 0,
+      "params": {"search": "graph labelling", "fairness": "none"},
+      "artifacts": ["check-3-ctl.json"]
+    },
+    {
+      "n": 6,
+      "tool": "mcd check",
+      "command": "the command of call 3 with --fairness weak",
+      "exit": 0,
+      "params": {"search": "dfs", "fairness": "weak"},
+      "artifacts": ["check-4-weak.json"]
+    },
+    {
+      "n": 7,
+      "tool": "mcd check",
+      "command": "mcd check --promela 'Promela - examples/CH3/alternatingbit.pml' --progress --sweep",
+      "exit": 0,
+      "params": {"search": "dfs", "fairness": "none"},
+      "artifacts": ["check-5-progress-nolabel.json"],
+      "result": "progress violated — on a model with NO progress label; read as 'no labels were placed', not as a finding about the system"
+    },
+    {
+      "n": 8,
+      "tool": "mcd check",
+      "command": "mcd check --promela alternatingbit-progress.pml --sweep",
+      "exit": 0,
+      "params": {"search": "dfs", "fairness": "none"},
+      "artifacts": ["check-6-progress-labelled.json"],
+      "result": "progress verified on the DERIVED labelled model"
+    },
+    {
+      "n": 9,
+      "tool": "mcd parse",
+      "command": "mcd parse --promela 'Promela - examples/CH3/alternatingbit2.pml'",
+      "exit": 0,
+      "artifacts": ["parse-2.stderr (empty)"],
+      "result": "the sequence-numbered variant is inside the subset"
+    },
+    {
+      "n": 10,
+      "tool": "mcd check",
+      "command": "mcd check --promela 'Promela - examples/CH3/alternatingbit2.pml' --ltl '[] (nempty(to_rcvr) -> <> empty(to_rcvr))' --ltl '[]<> nempty(to_rcvr)' --fairness none|weak --sweep",
+      "exit": 0,
+      "artifacts": ["check-7-abit2-none.json", "check-7-abit2-weak.json"],
+      "result": "OUT OF THE REQUESTED SCOPE — preliminary, supports Next actions only"
+    },
+    {
+      "n": 11,
+      "tool": "mcd check",
+      "command": "mcd check --promela alternatingbit-lossy.pml --ltl '[] (nempty(to_rcvr) -> <> empty(to_rcvr))' --fairness none --bfs",
+      "exit": 0,
+      "params": {"search": "bfs", "fairness": "none"},
+      "artifacts": ["check-8-lossy.json"],
+      "result": "sensitivity run: deadlock violated after 2 steps"
+    }
+  ],
+  "not_available_on_this_layer": [
+    "mc_simulate — no CLI equivalent; the random sanity walk of SKILL.md step 5 was NOT performed",
+    "mc_lint_property — no CLI equivalent; every property was classified by hand against references/properties-ltl-ctl.md",
+    "mc_explain — no CLI equivalent; the counterexample of call 11 was read from counterexample.steps and counterexample.loop in the report",
+    "mc_manifest — this file stands in for it"
+  ]
+}

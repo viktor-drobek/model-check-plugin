@@ -1,0 +1,37 @@
+### ./pan -a -N Q3_one_in_flight -m100000 -w24   (compiled -DNOREDUCE)
+pan: ltl formula Q3_one_in_flight
+
+(Spin Version 6.5.2 -- 6 December 2019)
+
+Full statespace search for:
+	never claim         	+ (Q3_one_in_flight)
+	assertion violations	+ (if within scope of claim)
+	acceptance   cycles 	+ (fairness disabled)
+	invalid end states	- (disabled by never claim)
+
+State-vector 52 byte, depth reached 15, errors: 0
+        8 states, stored
+        1 states, matched
+        9 transitions (= stored+matched)
+        0 atomic steps
+hash conflicts:         0 (resolved)
+
+Stats on memory usage (in Megabytes):
+    0.001	equivalent memory usage for states (stored*(State-vector + overhead))
+    0.288	actual memory usage for states
+  128.000	memory used for hash table (-w24)
+    5.341	memory used for DFS stack (-m100000)
+  133.536	total actual memory usage
+
+
+unreached in proctype Sender
+	ab-original-ltl.pml:23, state 6, "-end-"
+	(1 of 6 states)
+unreached in proctype Receiver
+	ab-original-ltl.pml:32, state 6, "-end-"
+	(1 of 6 states)
+unreached in claim Q3_one_in_flight
+	_spin_nvr.tmp:30, state 10, "-end-"
+	(1 of 10 states)
+
+pan: elapsed time 0 seconds

@@ -1,0 +1,30 @@
+ltl N1_never_delivered: [] (! (marked_delivered))
+starting claim 2
+Never claim moves to line 4	[(1)]
+  2:	proc  0 (Sender:1) ab-marked-nonvacuity.pml:56 (state 1)	[(!(marked_sent))]
+  2:	proc  0 (Sender:1) ab-marked-nonvacuity.pml:56 (state 2)	[mk = 1]
+  2:	proc  0 (Sender:1) ab-marked-nonvacuity.pml:56 (state 3)	[marked_sent = 1]
+		marked_sent = 1
+  3:	proc  0 (Sender:1) ab-marked-nonvacuity.pml:59 (state 7)	[to_rcvr!msg1,mk]
+		queue 1 (to_rcvr): [msg1,1]
+  5:	proc  1 (Receiver:1) ab-marked-nonvacuity.pml:77 (state 1)	[to_rcvr?msg1,got]
+		queue 1 (to_rcvr): 
+		got = 1
+  6:	proc  1 (Receiver:1) ab-marked-nonvacuity.pml:79 (state 2)	[(got)]
+		queue 1 (to_rcvr): 
+  6:	proc  1 (Receiver:1) ab-marked-nonvacuity.pml:79 (state 3)	[marked_delivered = 1]
+		queue 1 (to_rcvr): 
+		marked_delivered = 1
+spin: _spin_nvr.tmp:3, Error: assertion violated
+spin: text of failed assertion: assert(!(!(!(marked_delivered))))
+Never claim moves to line 3	[assert(!(!(!(marked_delivered))))]
+spin: trail ends after 7 steps
+#processes: 2
+		queue 1 (to_rcvr): 
+		marked_sent = 1
+		marked_delivered = 1
+		got = 1
+  7:	proc  1 (Receiver:1) ab-marked-nonvacuity.pml:83 (state 9)
+  7:	proc  0 (Sender:1) ab-marked-nonvacuity.pml:61 (state 9)
+  7:	proc  - (N1_never_delivered:1) _spin_nvr.tmp:2 (state 6)
+2 processes created

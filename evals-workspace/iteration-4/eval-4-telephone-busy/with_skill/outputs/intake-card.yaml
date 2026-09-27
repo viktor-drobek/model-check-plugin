@@ -1,0 +1,165 @@
+# Intake card — CH14/version1, "Телефон не может зависнуть в состоянии Busy?"
+# Filled from the user's request. The user was not available for questions, so every
+# field that would normally have been asked carries an explicit ASSUMPTION marker.
+# Source of the form: skills/model-check/assets/intake-card.yaml (FR-001, FR-002).
+
+system:
+  name: "Телефонный коммутатор, исходящие вызовы (Holzmann, Fig 13.4/13.5)"
+  boundary: >
+    Два процесса модели: subscriber (телефонный аппарат абонента) и switch
+    (коммутатор), связанные одним рандеву-каналом tpc (ёмкость 0).
+    ASSUMPTION A1: границей системы считается ровно то, что есть в файле
+    "Promela - examples/CH14/version1"; ничего не добавлено.
+  environment: >
+    Недетерминированный выбор абонента в состоянии Busy (digits или onhook) и
+    недетерминированный выбор коммутатора в Wait/Connect (ringtone/busytone/notone).
+    ASSUMPTION A2: это и есть вся среда — удалённой стороны, таймеров, отказов
+    линии и второго абонента в модели нет (в файле прямо написано
+    "outgoing calls only" и "no remote hang up").
+  excluded:
+    - "удалённый коммутатор и сигнализация SS7 (появляются в CH14/version2 и далее)"
+    - "разъединение со стороны вызываемого абонента (комментарий /* no remote hang up */)"
+    - "таймеры и любые временные ограничения"
+    - "печать MSC-строк: printf в модели — шаг без эффекта (предупреждение парсера)"
+  relation_to_implementation: >
+    hand-written abstract model (учебная модель из книги). Реальной АТС за ней нет;
+    результат — утверждение о модели, не о коммутаторе. ASSUMPTION A3.
+
+state:
+  variables: []            # переменных в модели нет: model.variables = 0
+  processes:
+    - "subscriber:0 — управляющие состояния Idle, Busy"
+    - "switch:1 — управляющие состояния Idle, Dial, Wait, Connect, Busy + 4 безымянные промежуточные позиции после приёма сообщения (шаги printf)"
+  channels:
+    - "tpc — ёмкость 0 (рандеву), сообщения mtype {offhook, digits, onhook}, буфера нет"
+  initial_states: "subscriber@Idle, switch@Idle, канал пуст (одно начальное состояние)"
+  observables:
+    - "subscriber@Idle / subscriber@Busy → pc(0) == 0 / pc(0) == 1 → трубка положена / трубка снята"
+    - "switch@Idle / switch@Busy → pc(1) == 0 / pc(1) == 4 → коммутатор свободен / выдаёт busytone и ждёт onhook"
+
+transitions:
+  semantics: "interleaving; обмен по tpc — рандеву (один шаг на отправителя и получателя)"
+  atomic_step: >
+    один оператор Promela. ASSUMPTION A4: пользователь не подтверждал атомарный шаг;
+    взята собственная семантика модели (atomic/d_step в файле отсутствуют).
+  terminal_states: >
+    меток end в модели нет; любое состояние без разрешённых переходов, в котором не
+    все процессы завершены, — дедлок. Оба процесса бесконечные, завершаться не должны.
+  nondeterminism: "планировщик (кто из двух процессов делает шаг) и оба if-выбора, описанные в environment"
+
+properties:
+  - id: P1
+    wording: "состояние Busy телефона вообще достижимо (санитарная проверка против вакуумности)"
+    class: reachability
+    logic: CTL
+    extension: untimed
+    formula: "EF (subscriber@Busy)"
+    atoms: ["pc(0) == 1"]
+    expected_evidence: "finite trace (witness)"
+    sanity_companion: "—"
+  - id: P2
+    wording: "состояние Busy коммутатора достижимо"
+    class: reachability
+    logic: CTL
+    extension: untimed
+    formula: "EF (switch@Busy)"
+    atoms: ["pc(1) == 4"]
+    expected_evidence: "finite trace (witness)"
+    sanity_companion: "—"
+  - id: P3
+    wording: "из любого достижимого состояния телефон может вернуться в Idle (нет ловушки Busy)"
+    class: liveness
+    logic: CTL
+    extension: untimed
+    formula: "AG EF (subscriber@Idle)"
+    atoms: ["pc(0) == 0"]
+    expected_evidence: "tree (нарушение) / none (выполнение)"
+    sanity_companion: "P1"
+  - id: P4
+    wording: "попав в Busy, телефон на любом пути неизбежно возвращается в Idle"
+    class: liveness
+    logic: CTL
+    extension: untimed
+    formula: "AG (subscriber@Busy -> AF subscriber@Idle)"
+    atoms: ["pc(0) == 1", "pc(0) == 0"]
+    expected_evidence: "lasso/tree (нарушение)"
+    sanity_companion: "P1"
+  - id: P5
+    wording: "из любого достижимого состояния коммутатор может вернуться в Idle"
+    class: liveness
+    logic: CTL
+    extension: untimed
+    formula: "AG EF (switch@Idle)"
+    atoms: ["pc(1) == 0"]
+    expected_evidence: "tree (нарушение)"
+    sanity_companion: "P2"
+  - id: P6
+    wording: "попав в Busy, коммутатор неизбежно возвращается в Idle"
+    class: liveness
+    logic: CTL
+    extension: untimed
+    formula: "AG (switch@Busy -> AF switch@Idle)"
+    atoms: ["pc(1) == 4", "pc(1) == 0"]
+    expected_evidence: "lasso/tree (нарушение)"
+    sanity_companion: "P2"
+  - id: P7
+    wording: "система не встаёт совсем (добавлено фронтендом автоматически)"
+    class: safety
+    logic: deadlock
+    extension: untimed
+    formula: "—"
+    atoms: []
+    expected_evidence: "finite trace"
+    sanity_companion: "—"
+  - id: P8
+    wording: "нет бесконечного прогона без прогресса, где прогресс = телефон снова в Idle"
+    class: liveness
+    logic: progress
+    extension: untimed
+    formula: "— (метка progress_Idle в производной модели models/version1-progress.pml)"
+    atoms: ["метка progress_Idle процесса subscriber"]
+    expected_evidence: "lasso (нарушение)"
+    sanity_companion: "P1"
+
+assumptions:
+  scheduler: >
+    произвольное чередование, без предположений о справедливости (fairness none).
+    ASSUMPTION A5: справедливость не предполагалась; см. раздел fairness.
+  delivery: "рандеву без потерь, дублирования и переупорядочивания (ёмкость канала 0)"
+  failures: "отсутствуют"
+  environment_inputs: "см. environment выше"
+  bounds:
+    - "ёмкость tpc = 0 (рандеву) — из модели"
+    - "2 процесса, статические (active proctype), run отсутствует"
+    - "переменных нет, поэтому переполнения домена невозможны"
+
+fairness:
+  required: "none"
+  justification: >
+    по протоколу references/fairness.md §3 liveness-свойства сначала прогоняются без
+    справедливости. Все они вернулись verified, поэтому предположение о справедливости
+    не нужно и не добавлялось. Для поиска непрогрессивных циклов дополнительно сделан
+    прогон с fairness weak — результат тот же.
+  confirmed_by_user: false   # пользователь недоступен; ASSUMPTION A5
+
+backend:
+  engine: mcd 0.1.0 (CLI; MCP-сервер в сессии не зарегистрирован)
+  search_mode: dfs
+  reductions: none
+
+budget:
+  time: "60000 ms (умолчание)"
+  states: "1000000 (умолчание)"
+  depth: "1000000 (умолчание)"
+  memory: "1024 MiB (умолчание)"
+  repeats: 1
+
+evidence:
+  expected: exhaustive
+  goal: >
+    exhaustive result. ASSUMPTION A6: вопрос задан как «не может ли», то есть нужна
+    гарантия, а не поиск одного сценария.
+
+artefacts:
+  may_store_models_and_traces: true   # ASSUMPTION A7: сохранение разрешено заданием (каталог outputs/)
+  contains_secrets_or_personal_data: "нет — учебная модель из открытого корпуса"

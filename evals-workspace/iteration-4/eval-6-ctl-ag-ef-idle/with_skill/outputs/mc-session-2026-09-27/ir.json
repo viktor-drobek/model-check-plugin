@@ -1,0 +1,338 @@
+{
+  "schema": "mcd-ir/1",
+  "name": "version1",
+  "channels": [
+    {
+      "name": "tpc",
+      "capacity": 0,
+      "fields": [
+        "byte"
+      ],
+      "origin": {
+        "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+        "line": 5,
+        "name": "tpc"
+      }
+    }
+  ],
+  "processes": [
+    {
+      "name": "subscriber:0",
+      "locations": [
+        {
+          "name": "Idle",
+          "origin": {
+            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "line": 9,
+            "name": "Idle"
+          }
+        },
+        {
+          "name": "Busy",
+          "origin": {
+            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "line": 11,
+            "name": "Busy"
+          }
+        }
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 1,
+          "send": {
+            "chan": "tpc",
+            "args": [
+              {
+                "op": "const",
+                "value": 3
+              }
+            ]
+          },
+          "text": "tpc!offhook",
+          "origin": {
+            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "line": 9,
+            "name": "tpc!offhook"
+          }
+        },
+        {
+          "from": 1,
+          "to": 1,
+          "send": {
+            "chan": "tpc",
+            "args": [
+              {
+                "op": "const",
+                "value": 2
+              }
+            ]
+          },
+          "text": "tpc!digits",
+          "origin": {
+            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "line": 12,
+            "name": "tpc!digits"
+          }
+        },
+        {
+          "from": 1,
+          "to": 0,
+          "send": {
+            "chan": "tpc",
+            "args": [
+              {
+                "op": "const",
+                "value": 1
+              }
+            ]
+          },
+          "text": "tpc!onhook",
+          "origin": {
+            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "line": 13,
+            "name": "tpc!onhook"
+          }
+        }
+      ],
+      "origin": {
+        "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+        "line": 7,
+        "name": "subscriber"
+      }
+    },
+    {
+      "name": "switch:1",
+      "locations": [
+        {
+          "name": "Idle",
+          "origin": {
+            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "line": 20,
+            "name": "Idle"
+          }
+        },
+        {
+          "name": "Dial",
+          "origin": {
+            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "line": 24,
+            "name": "Dial"
+          }
+        },
+        {
+          "name": "Wait",
+          "origin": {
+            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "line": 29,
+            "name": "Wait"
+          }
+        },
+        {
+          "name": "Connect",
+          "origin": {
+            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "line": 34,
+            "name": "Connect"
+          }
+        },
+        {
+          "name": "Busy",
+          "origin": {
+            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "line": 39,
+            "name": "Busy"
+          }
+        },
+        {},
+        {},
+        {},
+        {}
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 6,
+          "recv": {
+            "chan": "tpc",
+            "args": [
+              {
+                "match": {
+                  "op": "const",
+                  "value": 3
+                }
+              }
+            ]
+          },
+          "text": "tpc?offhook",
+          "origin": {
+            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "line": 21,
+            "name": "tpc?offhook"
+          }
+        },
+        {
+          "from": 6,
+          "to": 1,
+          "text": "printf(\"MSC: dialtone\\n\")",
+          "origin": {
+            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "line": 21,
+            "name": "printf(\"MSC: dialtone\\n\")"
+          }
+        },
+        {
+          "from": 1,
+          "to": 7,
+          "recv": {
+            "chan": "tpc",
+            "args": [
+              {
+                "match": {
+                  "op": "const",
+                  "value": 2
+                }
+              }
+            ]
+          },
+          "text": "tpc?digits",
+          "origin": {
+            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "line": 25,
+            "name": "tpc?digits"
+          }
+        },
+        {
+          "from": 7,
+          "to": 2,
+          "text": "printf(\"MSC: notone\\n\")",
+          "origin": {
+            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "line": 25,
+            "name": "printf(\"MSC: notone\\n\")"
+          }
+        },
+        {
+          "from": 1,
+          "to": 8,
+          "recv": {
+            "chan": "tpc",
+            "args": [
+              {
+                "match": {
+                  "op": "const",
+                  "value": 1
+                }
+              }
+            ]
+          },
+          "text": "tpc?onhook",
+          "origin": {
+            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "line": 26,
+            "name": "tpc?onhook"
+          }
+        },
+        {
+          "from": 8,
+          "to": 0,
+          "text": "printf(\"MSC: notone\\n\")",
+          "origin": {
+            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "line": 26,
+            "name": "printf(\"MSC: notone\\n\")"
+          }
+        },
+        {
+          "from": 2,
+          "to": 3,
+          "text": "printf(\"MSC: ringtone\\n\")",
+          "origin": {
+            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "line": 30,
+            "name": "printf(\"MSC: ringtone\\n\")"
+          }
+        },
+        {
+          "from": 2,
+          "to": 4,
+          "text": "printf(\"MSC: busytone\\n\")",
+          "origin": {
+            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "line": 31,
+            "name": "printf(\"MSC: busytone\\n\")"
+          }
+        },
+        {
+          "from": 3,
+          "to": 4,
+          "text": "printf(\"MSC: busytone\\n\")",
+          "origin": {
+            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "line": 35,
+            "name": "printf(\"MSC: busytone\\n\")"
+          }
+        },
+        {
+          "from": 3,
+          "to": 4,
+          "text": "printf(\"MSC: notone\\n\")",
+          "origin": {
+            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "line": 36,
+            "name": "printf(\"MSC: notone\\n\")"
+          }
+        },
+        {
+          "from": 4,
+          "to": 5,
+          "recv": {
+            "chan": "tpc",
+            "args": [
+              {
+                "match": {
+                  "op": "const",
+                  "value": 1
+                }
+              }
+            ]
+          },
+          "text": "tpc?onhook",
+          "origin": {
+            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "line": 39,
+            "name": "tpc?onhook"
+          }
+        },
+        {
+          "from": 5,
+          "to": 0,
+          "text": "printf(\"MSC: notone\\n\")",
+          "origin": {
+            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "line": 39,
+            "name": "printf(\"MSC: notone\\n\")"
+          }
+        }
+      ],
+      "origin": {
+        "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+        "line": 17,
+        "name": "switch"
+      }
+    }
+  ],
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)"
+    }
+  ],
+  "origin": {
+    "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+    "name": "version1"
+  }
+}

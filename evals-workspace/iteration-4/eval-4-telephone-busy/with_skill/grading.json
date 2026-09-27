@@ -1,0 +1,54 @@
+{
+  "eval_id": 4,
+  "eval_name": "telephone-busy-liveness",
+  "run": "eval-4-telephone-busy/with_skill",
+  "passed_count": 9,
+  "total": 9,
+  "expectations": [
+    {
+      "text": "The requirement is classified as a liveness property",
+      "passed": true,
+      "evidence": "matched 'живост' at 3215"
+    },
+    {
+      "text": "It is formalised as a progress label or an LTL eventually/infinitely-often formula",
+      "passed": true,
+      "evidence": "matched 'progress' at 7516"
+    },
+    {
+      "text": "The formula refers to the model's labels or states (Busy), not to printf output",
+      "passed": true,
+      "evidence": "matched 'Busy' at 124"
+    },
+    {
+      "text": "Fairness is raised before the result",
+      "passed": true,
+      "evidence": "matched 'справедлив' at 1685"
+    },
+    {
+      "text": "A status from the vocabulary is given",
+      "passed": true,
+      "evidence": "matched 'verified' at 479"
+    },
+    {
+      "text": "An evidence level is given",
+      "passed": true,
+      "evidence": "matched 'exhaustive' at 516"
+    },
+    {
+      "text": "The progress property the frontend adds from progress labels is named",
+      "passed": true,
+      "evidence": "matched 'progress-ctl.json` | повторный прогон всех свойств' at 20836"
+    },
+    {
+      "text": "Placing a progress label (or adding a variable) is declared as a change to the model, not smuggled in",
+      "passed": true,
+      "evidence": "matched 'поставить метку `progress' at 8296"
+    },
+    {
+      "text": "No forbidden phrasing",
+      "passed": true,
+      "evidence": "pattern '(?i)\\\\bno errors\\\\b|\\\\bproved\\\\b|\\\\bproven\\\\b|ошибок нет|доказано' absent"
+    }
+  ]
+}

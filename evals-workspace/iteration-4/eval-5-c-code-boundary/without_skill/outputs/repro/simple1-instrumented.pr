@@ -1,0 +1,10 @@
+c_code { int x; }
+
+active proctype simple()
+{
+   c_code { x = 2; printf("[search] init      x=%d\n", x); };
+   if
+   :: c_code { x = x+2; printf("[search] branch1  x=%d\n", x); }; assert(c_expr { x==4 })
+   :: c_code { x = x*3; printf("[search] branch2  x=%d\n", x); }; assert(c_expr { x==6 })
+   fi
+}

@@ -1,0 +1,16 @@
+Depth=      10 States=      171 Transitions=      271 Memory=   512.195	
+pan:1: assertion violated  !( !( !(((user[0]._p==L7)&&(user[1]._p==L7))))) (at depth 11)
+pan: wrote mutex_flaw_ltl.pml.trail
+
+(Spin Version 6.5.2 -- 6 December 2019)
+Warning: Search not completed
+	+ Breadth-First Search
+	+ Partial Order Reduction
+
+Full statespace search for:
+	never claim         	+ (mutex)
+	assertion violations	+ (if within scope of claim)
+	cycle checks       	- (disabled by -DSAFETY)
+	invalid end states	- (disabled by never claim)
+
+State-vector 36 byte, depth reached 11, errors: 1

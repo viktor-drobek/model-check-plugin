@@ -1,0 +1,93 @@
+# Intake card — starvation.pml, «Процесс B должен рано или поздно выставить done. Так ли это?»
+# Пользователь недоступен для вопросов; каждое значение, которое в норме требует
+# подтверждения, помечено ASSUMPTION (A1…A8) и повторено в отчёте.
+
+system:
+  name: "starvation (двухпроцессная модель голодания)"
+  boundary: "два процесса Promela: A (бесконечно инвертирует собственный бит t) и B (один оператор done = 1); одна глобальная переменная done"
+  environment: "планировщик — единственный источник недетерминизма; внешних входов, каналов, отказов нет"
+  excluded: []
+  relation_to_implementation: "ASSUMPTION A1: реальной системы за моделью нет — объектом проверки является сам файл starvation.pml как учебная модель. Поле «отношение к реализации» пусто по построению, поэтому ни один вывод не переносится на какую-либо программу."
+
+state:
+  variables:
+    - "done: bit (0/1), глобальная; 0 в начальном состоянии; смысл: «B выполнил свой оператор»"
+    - "A:0.t: bit (0/1), локальная переменная A; свойствами не наблюдается"
+  processes:
+    - "A:0 — active proctype A: do :: t = 1 - t od (одна дуга 0→0, всегда разрешена)"
+    - "B:1 — active proctype B: done = 1, затем завершение (локация 1 помечена end фронтендом)"
+  channels: []
+  initial_states: "done = 0, A:0.t = 0, оба процесса в начальных локациях; ровно одно начальное состояние"
+  observables:
+    - "done → глобальная переменная done → «B выставил done»"
+
+transitions:
+  semantics: "ASSUMPTION A2: чередование (interleaving), по одному оператору за шаг — семантика Promela и IR движка; в модели нет atomic/d_step, поэтому скрытых неделимых участков нет"
+  atomic_step: "один оператор Promela"
+  terminal_states: "ASSUMPTION A3: завершение B законно — фронтенд ставит метку end на конечную локацию proctype; A не завершается никогда, поэтому состояний без разрешённых переходов в модели нет"
+  nondeterminism: "только выбор планировщика между A и B"
+
+properties:
+  - id: P1
+    wording: "Процесс B должен рано или поздно выставить done"
+    class: liveness
+    logic: LTL
+    extension: untimed
+    formula: "<> done"
+    atoms: ["done"]
+    expected_evidence: "лассо (prefix + loop) при нарушении; полный обход произведения при верификации"
+    sanity_companion: "P2"
+    lint: "ASSUMPTION A4: mc_lint_property недоступен (MCP-сервер не зарегистрирован); классификация ручная по references/properties-ltl-ctl.md §1, §3 — liveness, LTL, X-free (stutter_invariant подтверждён движком как true), импликации нет, значит и непокрытого антецедента нет; атом done определён как глобальная переменная IR; непостоянность атома подтверждена P2"
+  - id: P2
+    wording: "санити: состояние с done == 1 вообще достижимо (иначе P1 не о чем)"
+    class: reachability
+    logic: reach
+    extension: untimed
+    formula: "done == 1"
+    atoms: ["done"]
+    expected_evidence: "конечный свидетель (witness)"
+    sanity_companion: ""
+  - id: P3
+    wording: "не запрашивалось пользователем; добавлено фронтендом Promela"
+    class: safety
+    logic: deadlock
+    extension: untimed
+    formula: "нет недопустимых конечных состояний"
+    atoms: []
+    expected_evidence: "конечный путь при нарушении"
+    sanity_companion: ""
+
+assumptions:
+  scheduler: "ASSUMPTION A5: пользователь ничего не сказал о справедливости планировщика, поэтому вопрос не закрывается допущением, а прогоняется во всех трёх режимах движка (none / weak / strong) и результаты докладываются раздельно"
+  delivery: "не применимо — каналов нет"
+  failures: "не моделируются"
+  environment_inputs: "нет"
+  bounds:
+    - "домены bit (0/1) — заданы самой моделью, не сужены нами"
+    - "число процессов 2 — задано моделью (active proctype), не параметр"
+
+fairness:
+  required: "прогнаны все три: none, weak, strong"
+  justification: "ASSUMPTION A5 — обоснование weak fairness из эксплуатационной среды пользователь не дал; поэтому weak-результат доложен как результат при допущении, а не как ответ на исходный вопрос"
+  confirmed_by_user: false
+
+backend:
+  engine: mcd 0.1.0 (CLI, MCP-сервер в сессии не зарегистрирован)
+  search_mode: dfs
+  reductions: none
+
+budget:
+  time: "60000 ms (умолчание)"
+  states: "1000000 (умолчание)"
+  depth: "1000000 (умолчание)"
+  memory: "1024 MiB (умолчание)"
+  repeats: 1
+  basis: "ASSUMPTION A6: бюджеты по умолчанию; mcd check --estimate показал 6 достижимых состояний, вектор 5 байт, класс small — умолчания с огромным запасом"
+
+evidence:
+  expected: exhaustive
+  goal: "исчерпывающий результат (ASSUMPTION A7: вопрос «так ли это?» читается как запрос гарантии, а не как поиск одного сценария)"
+
+artefacts:
+  may_store_models_and_traces: true   # ASSUMPTION A8: модель — учебный файл корпуса движка, коммерческих и персональных данных не содержит; исходник не копировался, на него дана ссылка по пути
+  contains_secrets_or_personal_data: "нет"

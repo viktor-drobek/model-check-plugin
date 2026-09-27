@@ -1,0 +1,92 @@
+{
+  "model": "Promela - examples/CH14/version1",
+  "proposition_idle": "switch (pid 1) at label Idle == local state S4",
+  "state_space": {
+    "reachable_global_states": 9,
+    "global_transitions": 12,
+    "deadlock_states": []
+  },
+  "ctl": {
+    "formula": "AG EF idle",
+    "sat_idle": [
+      "sub@Idle(S1), switch@Idle(S4)"
+    ],
+    "num_states_satisfying_EF_idle": 9,
+    "reachable_states_violating_EF_idle": [],
+    "AG_EF_idle_holds_in_initial_state": true,
+    "AG_EF_idle_holds_in_every_reachable_state": true,
+    "fairness": "none assumed; EF/AG fixpoints range over all paths of the raw state graph",
+    "witness_shape": "tree (one finite witness path per reachable state), not a single path"
+  },
+  "witness_tree": {
+    "sub@Idle(S1), switch@Idle(S4)": {
+      "steps_to_idle": 0,
+      "witness_path": []
+    },
+    "sub@Busy(S6), switch@-(S2)": {
+      "steps_to_idle": 3,
+      "witness_path": [
+        "sw printf dialtone",
+        "tpc!onhook / tpc?onhook",
+        "sw printf notone"
+      ]
+    },
+    "sub@Busy(S6), switch@Dial(S12)": {
+      "steps_to_idle": 2,
+      "witness_path": [
+        "tpc!onhook / tpc?onhook",
+        "sw printf notone"
+      ]
+    },
+    "sub@Busy(S6), switch@-(S7)": {
+      "steps_to_idle": 4,
+      "witness_path": [
+        "sw printf notone",
+        "sw printf busytone",
+        "tpc!onhook / tpc?onhook",
+        "sw printf notone"
+      ]
+    },
+    "sub@Idle(S1), switch@-(S10)": {
+      "steps_to_idle": 1,
+      "witness_path": [
+        "sw printf notone"
+      ]
+    },
+    "sub@Busy(S6), switch@Wait(S18)": {
+      "steps_to_idle": 3,
+      "witness_path": [
+        "sw printf busytone",
+        "tpc!onhook / tpc?onhook",
+        "sw printf notone"
+      ]
+    },
+    "sub@Busy(S6), switch@Connect(S24)": {
+      "steps_to_idle": 3,
+      "witness_path": [
+        "sw printf busytone",
+        "tpc!onhook / tpc?onhook",
+        "sw printf notone"
+      ]
+    },
+    "sub@Busy(S6), switch@Busy(S26)": {
+      "steps_to_idle": 2,
+      "witness_path": [
+        "tpc!onhook / tpc?onhook",
+        "sw printf notone"
+      ]
+    },
+    "sub@Idle(S1), switch@-(S27)": {
+      "steps_to_idle": 1,
+      "witness_path": [
+        "sw printf notone"
+      ]
+    }
+  },
+  "contrast_only_not_the_property_checked": {
+    "reachable_bottom_SCCs": 1,
+    "bottom_SCCs_without_idle": [],
+    "idle_free_cycles_anywhere": [],
+    "note": "an idle-free cycle refutes the LTL formula []<>idle but NOT the CTL formula AG EF idle; an idle-free BOTTOM SCC would refute both"
+  }
+}

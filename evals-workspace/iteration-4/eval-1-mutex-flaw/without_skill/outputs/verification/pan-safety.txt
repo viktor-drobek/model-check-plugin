@@ -1,0 +1,31 @@
+pan:1: assertion violated (cnt==1) (at depth 53)
+pan: wrote mutex_flaw.pml.trail
+
+(Spin Version 6.5.2 -- 6 December 2019)
+Warning: Search not completed
+	+ Partial Order Reduction
+
+Full statespace search for:
+	never claim         	- (none specified)
+	assertion violations	+
+	cycle checks       	- (disabled by -DSAFETY)
+	invalid end states	+
+
+State-vector 28 byte, depth reached 54, errors: 1
+      202 states, stored
+      161 states, matched
+      363 transitions (= stored+matched)
+        0 atomic steps
+hash conflicts:         0 (resolved)
+
+Stats on memory usage (in Megabytes):
+    0.011	equivalent memory usage for states (stored*(State-vector + overhead))
+    0.290	actual memory usage for states
+  512.000	memory used for hash table (-w26)
+    5.341	memory used for DFS stack (-m100000)
+  517.536	total actual memory usage
+
+
+
+pan: elapsed time 0.06 seconds
+pan: rate 3366.6667 states/second

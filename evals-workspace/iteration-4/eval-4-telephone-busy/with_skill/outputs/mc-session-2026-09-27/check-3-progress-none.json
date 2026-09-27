@@ -1,0 +1,74 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "promela",
+      "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-4/eval-4-telephone-busy/with_skill/outputs/models/version1-progress.pml",
+      "sha256": "9ec15da3ba0289fb04e28b8a0d942c130f5b0ce47129b4a3921e942f0c8e2094"
+    }
+  ],
+  "model": {
+    "name": "version1-progress",
+    "state_bytes": 4,
+    "processes": 2,
+    "variables": 0
+  },
+  "search": {
+    "mode": "dfs",
+    "budget": {
+      "states": 1000000,
+      "depth": 1000000,
+      "time_ms": 60000,
+      "mem_bytes": 1073741824
+    },
+    "stop": "complete",
+    "complete": true
+  },
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 9,
+        "transitions": 12,
+        "depth": 7,
+        "time_ms": 0,
+        "memory_bytes_est": 25152
+      },
+      "complete": true
+    },
+    {
+      "id": "progress",
+      "kind": "progress",
+      "text": "no non-progress cycle: every infinite run visits a progress label infinitely often (SPIN: pan -l)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 16,
+        "transitions": 37,
+        "depth": 7,
+        "time_ms": 0,
+        "memory_bytes_est": 25248
+      },
+      "complete": true,
+      "reason": "no non-progress cycle: every cycle of the complete product visits a progress label (SPIN pan -l)",
+      "temporal": {
+        "logic": "ltl",
+        "source": "np",
+        "fairness": "none",
+        "claim": "np_"
+      }
+    }
+  ],
+  "warnings": [
+    "printf: 8 statement(s) kept as no-op steps so that state counts match SPIN; their output is not produced"
+  ]
+}

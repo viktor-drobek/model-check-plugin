@@ -1,0 +1,59 @@
+{
+  "eval_id": 3,
+  "eval_name": "petri-net-hang",
+  "run": "eval-3-petri-hang/without_skill",
+  "passed_count": 5,
+  "total": 10,
+  "expectations": [
+    {
+      "text": "A Petri-net JSON accepted by the engine's frontend was written, with the six places, initial marking p1=p4=1 and the six transitions of the prompt",
+      "passed": false,
+      "evidence": "no valid net under outputs: no *.json files"
+    },
+    {
+      "text": "The engine CLI was run on the net and the command line is shown (mcd check --petri, the binary possibly named through a shell variable)",
+      "passed": false,
+      "evidence": "pattern '(?i)mcd check[^\\\\n]*--petri' not found"
+    },
+    {
+      "text": "The hang (deadlock) property is reported with status violated",
+      "passed": false,
+      "evidence": "pattern '\\\\bviolated\\\\b' not found"
+    },
+    {
+      "text": "The evidence level exhaustive is stated",
+      "passed": false,
+      "evidence": "pattern '\\\\bexhaustive\\\\b' not found"
+    },
+    {
+      "text": "The counterexample is the firing sequence t1 then t4",
+      "passed": true,
+      "evidence": "matched 't1 (p1 → p2), B через t4' at 1426"
+    },
+    {
+      "text": "The final marking has one token in p2 (p2 = 1, or set notation {p2, p5})",
+      "passed": true,
+      "evidence": "matched 'p2 = 1' at 145"
+    },
+    {
+      "text": "The final marking has one token in p5 (p5 = 1, or set notation {p2, p5})",
+      "passed": true,
+      "evidence": "matched 'p5 = 1' at 153"
+    },
+    {
+      "text": "The number of reachable markings (6) is quoted from the engine's counters",
+      "passed": true,
+      "evidence": "matched '6 маркиров' at 1209"
+    },
+    {
+      "text": "The generated safe property is also reported",
+      "passed": false,
+      "evidence": "pattern '\\\\bsafe\\\\b' not found"
+    },
+    {
+      "text": "No forbidden phrasing (no errors / proved / net is correct)",
+      "passed": true,
+      "evidence": "pattern '(?i)\\\\bno errors\\\\b|\\\\bproved\\\\b|\\\\bproven\\\\b|ошибок нет|доказано|net is correct|сеть корректна' absent"
+    }
+  ]
+}

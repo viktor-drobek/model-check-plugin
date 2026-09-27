@@ -1,0 +1,49 @@
+{
+  "eval_id": 1,
+  "eval_name": "mutex-invariant-violated",
+  "run": "eval-1-mutex-flaw/without_skill",
+  "passed_count": 6,
+  "total": 8,
+  "expectations": [
+    {
+      "text": "The mutual-exclusion property is reported with status violated",
+      "passed": true,
+      "evidence": "matched 'violated' at 98"
+    },
+    {
+      "text": "The evidence level exhaustive is stated",
+      "passed": true,
+      "evidence": "matched 'exhaustive' at 332"
+    },
+    {
+      "text": "The counterexample is decoded through the model's labels L1–L4",
+      "passed": true,
+      "evidence": "matched 'L1' at 1449"
+    },
+    {
+      "text": "The counterexample shows both users at label L7 (the critical section)",
+      "passed": true,
+      "evidence": "matched 'L7' at 714"
+    },
+    {
+      "text": "The cause is classified as a system (algorithm) defect",
+      "passed": true,
+      "evidence": "matched 'дефект системы' at 2697"
+    },
+    {
+      "text": "The engine was invoked (CLI or MCP), not reasoned around",
+      "passed": false,
+      "evidence": "pattern 'mcd check|mc_check' not found"
+    },
+    {
+      "text": "The engine version and input hash (manifest) are quoted",
+      "passed": true,
+      "evidence": "matched 'SHA-256 файла | `b9cb0230f9a306494af4a12592df3411988254b35526b5' at 7122"
+    },
+    {
+      "text": "No forbidden phrasing (no errors / proved / system is correct)",
+      "passed": false,
+      "evidence": "forbidden match 'ошибок нет' at 842"
+    }
+  ]
+}

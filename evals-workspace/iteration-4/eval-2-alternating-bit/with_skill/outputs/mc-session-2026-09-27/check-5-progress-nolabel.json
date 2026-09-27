@@ -1,0 +1,342 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "promela",
+      "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH3/alternatingbit.pml",
+      "sha256": "09006d65d6619931809544f074da440a9f3758e7715d7cc7493657164267698d"
+    }
+  ],
+  "model": {
+    "name": "alternatingbit",
+    "state_bytes": 9,
+    "processes": 2,
+    "variables": 0
+  },
+  "search": {
+    "mode": "dfs",
+    "budget": {
+      "states": 1000000,
+      "depth": 1000000,
+      "time_ms": 60000,
+      "mem_bytes": 1073741824
+    },
+    "stop": "complete",
+    "complete": true
+  },
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 8,
+        "transitions": 8,
+        "depth": 7,
+        "time_ms": 0,
+        "memory_bytes_est": 25216
+      },
+      "complete": true
+    },
+    {
+      "id": "progress",
+      "kind": "progress",
+      "text": "no non-progress cycle: every infinite run visits a progress label infinitely often (SPIN: pan -l)",
+      "status": "violated",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 16,
+        "transitions": 32,
+        "depth": 8,
+        "time_ms": 0,
+        "memory_bytes_est": 25952
+      },
+      "complete": true,
+      "counterexample": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "np_",
+            "command": "(np_) -> goto np_1",
+            "location": "np_1",
+            "origin": {
+              "name": "np_: no process at a progress label"
+            }
+          },
+          {
+            "index": 2,
+            "process": "Sender:0",
+            "command": "to_rcvr!msg1",
+            "channels": [
+              {
+                "chan": "to_rcvr",
+                "messages": [
+                  [
+                    3
+                  ]
+                ]
+              }
+            ],
+            "origin": {
+              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH3/alternatingbit.pml",
+              "line": 8,
+              "name": "to_rcvr!msg1"
+            }
+          },
+          {
+            "index": 3,
+            "process": "np_",
+            "command": "(np_) -> goto np_1",
+            "location": "np_1",
+            "origin": {
+              "name": "np_: no process at a progress label"
+            }
+          },
+          {
+            "index": 4,
+            "process": "Receiver:1",
+            "command": "to_rcvr?msg1",
+            "channels": [
+              {
+                "chan": "to_rcvr",
+                "messages": []
+              }
+            ],
+            "origin": {
+              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH3/alternatingbit.pml",
+              "line": 17,
+              "name": "to_rcvr?msg1"
+            }
+          },
+          {
+            "index": 5,
+            "process": "np_",
+            "command": "(np_) -> goto np_1",
+            "location": "np_1",
+            "origin": {
+              "name": "np_: no process at a progress label"
+            }
+          },
+          {
+            "index": 6,
+            "process": "Receiver:1",
+            "command": "to_sndr!ack1",
+            "channels": [
+              {
+                "chan": "to_sndr",
+                "messages": [
+                  [
+                    1
+                  ]
+                ]
+              }
+            ],
+            "origin": {
+              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH3/alternatingbit.pml",
+              "line": 18,
+              "name": "to_sndr!ack1"
+            }
+          },
+          {
+            "index": 7,
+            "process": "np_",
+            "command": "(np_) -> goto np_1",
+            "location": "np_1",
+            "origin": {
+              "name": "np_: no process at a progress label"
+            }
+          },
+          {
+            "index": 8,
+            "process": "Sender:0",
+            "command": "to_sndr?ack1",
+            "channels": [
+              {
+                "chan": "to_sndr",
+                "messages": []
+              }
+            ],
+            "origin": {
+              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH3/alternatingbit.pml",
+              "line": 9,
+              "name": "to_sndr?ack1"
+            }
+          },
+          {
+            "index": 9,
+            "process": "np_",
+            "command": "(np_) -> goto np_1",
+            "location": "np_1",
+            "origin": {
+              "name": "np_: no process at a progress label"
+            }
+          },
+          {
+            "index": 10,
+            "process": "Sender:0",
+            "command": "to_rcvr!msg0",
+            "channels": [
+              {
+                "chan": "to_rcvr",
+                "messages": [
+                  [
+                    4
+                  ]
+                ]
+              }
+            ],
+            "origin": {
+              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH3/alternatingbit.pml",
+              "line": 10,
+              "name": "to_rcvr!msg0"
+            }
+          },
+          {
+            "index": 11,
+            "process": "np_",
+            "command": "(np_) -> goto np_1",
+            "location": "np_1",
+            "origin": {
+              "name": "np_: no process at a progress label"
+            }
+          },
+          {
+            "index": 12,
+            "process": "Receiver:1",
+            "command": "to_rcvr?msg0",
+            "channels": [
+              {
+                "chan": "to_rcvr",
+                "messages": []
+              }
+            ],
+            "origin": {
+              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH3/alternatingbit.pml",
+              "line": 19,
+              "name": "to_rcvr?msg0"
+            }
+          },
+          {
+            "index": 13,
+            "process": "np_",
+            "command": "(np_) -> goto np_1",
+            "location": "np_1",
+            "origin": {
+              "name": "np_: no process at a progress label"
+            }
+          },
+          {
+            "index": 14,
+            "process": "Receiver:1",
+            "command": "to_sndr!ack0",
+            "channels": [
+              {
+                "chan": "to_sndr",
+                "messages": [
+                  [
+                    2
+                  ]
+                ]
+              }
+            ],
+            "location": "again",
+            "origin": {
+              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH3/alternatingbit.pml",
+              "line": 20,
+              "name": "to_sndr!ack0"
+            }
+          },
+          {
+            "index": 15,
+            "process": "np_",
+            "command": "(np_) -> goto np_1",
+            "location": "np_1",
+            "origin": {
+              "name": "np_: no process at a progress label"
+            }
+          },
+          {
+            "index": 16,
+            "process": "Sender:0",
+            "command": "to_sndr?ack0",
+            "channels": [
+              {
+                "chan": "to_sndr",
+                "messages": []
+              }
+            ],
+            "location": "again",
+            "origin": {
+              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH3/alternatingbit.pml",
+              "line": 11,
+              "name": "to_sndr?ack0"
+            }
+          },
+          {
+            "index": 17,
+            "process": "np_",
+            "command": "(np_) -> goto np_1",
+            "location": "np_1",
+            "origin": {
+              "name": "np_: no process at a progress label"
+            }
+          },
+          {
+            "index": 18,
+            "process": "Sender:0",
+            "command": "to_rcvr!msg1",
+            "channels": [
+              {
+                "chan": "to_rcvr",
+                "messages": [
+                  [
+                    3
+                  ]
+                ]
+              }
+            ],
+            "origin": {
+              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH3/alternatingbit.pml",
+              "line": 8,
+              "name": "to_rcvr!msg1"
+            }
+          }
+        ],
+        "final_state": null,
+        "final_channels": [
+          {
+            "chan": "to_sndr",
+            "messages": []
+          },
+          {
+            "chan": "to_rcvr",
+            "messages": [
+              [
+                3
+              ]
+            ]
+          }
+        ],
+        "summary": "(np_) -> goto np_1, to_rcvr!msg1; loop: (np_) -> goto np_1, to_rcvr?msg1, (np_) -> goto np_1, to_sndr!ack1, (np_) -> goto np_1, to_sndr?ack1, (np_) -> goto np_1, to_rcvr!msg0, (np_) -> goto np_1, to_rcvr?msg0, (np_) -> goto np_1, to_sndr!ack0, (np_) -> goto np_1, to_sndr?ack0, (np_) -> goto np_1, to_rcvr!msg1",
+        "loop": {
+          "start": 3,
+          "steps": 16
+        }
+      },
+      "reason": "non-progress cycle: the loop of the counterexample visits no progress label, so the model can run forever without progress (SPIN pan -l: non-progress cycle)",
+      "temporal": {
+        "logic": "ltl",
+        "source": "np",
+        "fairness": "none",
+        "claim": "np_"
+      }
+    }
+  ]
+}

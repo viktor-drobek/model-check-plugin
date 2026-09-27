@@ -1,0 +1,107 @@
+SPIN cross-checks -- Spin Version 6.5.2 -- 6 December 2019
+model: Promela - examples/CH14/version1  (copied verbatim, unmodified)
+pid 0 = subscriber, pid 1 = switch   (confirmed by 'spin -u6 -p')
+
+############ 0. exhaustive safety search (deadlock / invalid end states)
+
+(Spin Version 6.5.2 -- 6 December 2019)
+	+ Partial Order Reduction
+
+Full statespace search for:
+	never claim         	- (none specified)
+	assertion violations	+
+	acceptance   cycles 	- (not selected)
+	invalid end states	+
+
+State-vector 36 byte, depth reached 11, errors: 0
+        9 states, stored
+        6 states, matched
+       15 transitions (= stored+matched)
+
+############ 1. process-local state tables used to build the global product (pan -D)
+digraph p_subscriber {
+size="8,10";
+  GT [shape=box,style=dotted,label="subscriber"];
+  GT -> S1;
+	S1 -> S6  [color=black,style=bold,label="tpc!offhook"];
+	S6 -> S6  [color=black,style=bold,label="tpc!digits"];
+	S6 -> S1  [color=black,style=bold,label="tpc!onhook"];
+}
+digraph p_switch {
+size="8,10";
+  GT [shape=box,style=dotted,label="switch"];
+  GT -> S4;
+	S4 -> S2  [color=black,style=bold,label="tpc?offhook"];
+	S2 -> S12  [color=black,style=solid,label="printf('MSC: dialtone ')"];
+	S12 -> S7  [color=black,style=bold,label="tpc?digits"];
+	S12 -> S10  [color=black,style=bold,label="tpc?onhook"];
+	S7 -> S18  [color=black,style=solid,label="printf('MSC: notone ')"];
+	S18 -> S24  [color=black,style=solid,label="printf('MSC: ringtone ')"];
+	S18 -> S26  [color=black,style=solid,label="printf('MSC: busytone ')"];
+	S24 -> S26  [color=black,style=solid,label="printf('MSC: busytone ')"];
+	S24 -> S26  [color=black,style=solid,label="printf('MSC: notone ')"];
+	S26 -> S27  [color=black,style=bold,label="tpc?onhook"];
+	S27 -> S4  [color=black,style=solid,label="printf('MSC: notone ')"];
+	S10 -> S4  [color=black,style=solid,label="printf('MSC: notone ')"];
+}
+
+############ 2. LTL []<>idle  -- a STRENGTHENING of AG EF idle, not a rewriting
+#  (it is only a sufficient condition: []<>idle => AG EF idle, never the converse)
+
+(Spin Version 6.5.2 -- 6 December 2019)
+	+ Partial Order Reduction
+
+Full statespace search for:
+	never claim         	+ (agf_idle)
+	assertion violations	+ (if within scope of claim)
+	acceptance   cycles 	+ (fairness disabled)
+	invalid end states	- (disabled by never claim)
+
+State-vector 44 byte, depth reached 19, errors: 0
+       17 states, stored (25 visited)
+       26 states, matched
+       51 transitions (= visited+matched)
+
+############ 3. non-vacuity: [] idle must FAIL (idle really does change value)
+pan:1: assertion violated  !( !((switch[1]._p==Idle))) (at depth 3)
+pan: wrote p2_vac.pml.trail
+
+(Spin Version 6.5.2 -- 6 December 2019)
+Warning: Search not completed
+	+ Partial Order Reduction
+
+Full statespace search for:
+	never claim         	+ (always_idle)
+	assertion violations	+ (if within scope of claim)
+	acceptance   cycles 	+ (fairness disabled)
+	invalid end states	- (disabled by never claim)
+
+State-vector 44 byte, depth reached 3, errors: 1
+
+############ 4. structural invariants confirming the hand-built global product
+--- chk_subIdle_implies_swNotAdvanced
+ltl subIdle_implies_swNotAdvanced { [] (subscriber[0]@Idle -> !(switch[1]@Dial || switch[1]@Wait || switch[1]@Connect || switch[1]@Busy)) }
+State-vector 44 byte, depth reached 19, errors: 0
+--- chk_swIdle_implies_subIdle
+ltl swIdle_implies_subIdle { [] (switch[1]@Idle -> subscriber[0]@Idle) }
+State-vector 44 byte, depth reached 19, errors: 0
+--- chk_subBusy_implies_swNotIdle
+ltl subBusy_implies_swNotIdle { [] (subscriber[0]@Busy -> !switch[1]@Idle) }
+State-vector 44 byte, depth reached 19, errors: 0
+
+############ 5. CONTRAST model (version1 + 'hold' self-loop at Wait):
+#  LTL []<>idle is FALSE here, yet CTL AG EF idle is still TRUE.
+pan:1: acceptance cycle (at depth 10)
+pan: wrote contrast_agf.pml.trail
+
+(Spin Version 6.5.2 -- 6 December 2019)
+Warning: Search not completed
+	+ Partial Order Reduction
+
+Full statespace search for:
+	never claim         	+ (agf_idle)
+	assertion violations	+ (if within scope of claim)
+	acceptance   cycles 	+ (fairness disabled)
+	invalid end states	- (disabled by never claim)
+
+State-vector 44 byte, depth reached 19, errors: 1

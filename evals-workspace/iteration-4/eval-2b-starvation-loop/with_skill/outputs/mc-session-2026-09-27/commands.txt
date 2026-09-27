@@ -1,0 +1,17 @@
+# Все команды прогона, в порядке выполнения. Рабочий каталог: корень репозитория
+# /home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check
+# MCD  = model-check-plugin/engine/bin/mcd            (mcd 0.1.0, ir mcd-ir/1, report mcd-report/1)
+# MODEL= model-check-plugin/engine/testdata/promela/starvation.pml
+#        sha256 43092539c371572b0314278ddd7ba4bddd7c8af66a6f5362fb37ca62f4397c0b
+
+$MCD version
+$MCD parse --promela $MODEL                                  > ir-1.json          # exit 0, ноль warnings
+# ir-2-with-reach.json = ir-1.json + запись properties[] {"id":"reach_done","kind":"reach",
+#   "expr":{"op":"eq","args":[{"op":"var","var":"done"},{"op":"const","value":1}]}}
+#   (приём из references/engine-tools.md §4 «Adding your own properties without the server»)
+$MCD check --promela $MODEL --estimate --estimate-ms 1000     > estimate-1.json
+$MCD check --ir ir-2-with-reach.json                          > check-1-safety-reach.json
+$MCD check --promela $MODEL --ltl '<> done' --fairness none    > check-ltl-none.json
+$MCD check --promela $MODEL --ltl '<> done' --fairness weak    > check-ltl-weak.json
+$MCD check --promela $MODEL --ltl '<> done' --fairness strong  > check-ltl-strong.json
+# Все шесть вызовов завершились с кодом 0, stderr пуст.

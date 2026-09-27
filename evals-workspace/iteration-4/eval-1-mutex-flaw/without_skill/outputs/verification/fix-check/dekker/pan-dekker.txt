@@ -1,0 +1,30 @@
+
+(Spin Version 6.5.2 -- 6 December 2019)
+	+ Partial Order Reduction
+
+Full statespace search for:
+	never claim         	- (none specified)
+	assertion violations	+
+	cycle checks       	- (disabled by -DSAFETY)
+	invalid end states	+
+
+State-vector 28 byte, depth reached 49, errors: 0
+      148 states, stored
+      129 states, matched
+      277 transitions (= stored+matched)
+        0 atomic steps
+hash conflicts:         0 (resolved)
+
+Stats on memory usage (in Megabytes):
+    0.008	equivalent memory usage for states (stored*(State-vector + overhead))
+    0.291	actual memory usage for states
+  512.000	memory used for hash table (-w26)
+    5.341	memory used for DFS stack (-m100000)
+  517.536	total actual memory usage
+
+
+unreached in proctype mutex
+	mutex.pml:44, state 23, "-end-"
+	(1 of 23 states)
+
+pan: elapsed time 0 seconds

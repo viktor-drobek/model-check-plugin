@@ -1,0 +1,86 @@
+### model checked (starvation.pml + ltl eventually_done { <> done })
+
+$ spin -a starvation.pml && gcc -O2 -DNOREDUCE -o pan pan.c
+
+########## pan -a  (fairness disabled) ##########
+pan:1: acceptance cycle (at depth 0)
+pan: wrote starvation.pml.trail
+
+(Spin Version 6.5.2 -- 6 December 2019)
+Warning: Search not completed
+
+Full statespace search for:
+	never claim         	+ (eventually_done)
+	assertion violations	+ (if within scope of claim)
+	acceptance   cycles 	+ (fairness disabled)
+	invalid end states	- (disabled by never claim)
+
+State-vector 36 byte, depth reached 4, errors: 1
+        4 states, stored
+        0 states, matched
+        4 transitions (= stored+matched)
+        0 atomic steps
+hash conflicts:         0 (resolved)
+
+Stats on memory usage (in Megabytes):
+    0.000	equivalent memory usage for states (stored*(State-vector + overhead))
+    0.291	actual memory usage for states
+  128.000	memory used for hash table (-w24)
+    0.534	memory used for DFS stack (-m10000)
+  128.730	total actual memory usage
+
+
+
+pan: elapsed time 0.02 seconds
+pan: rate       200 states/second
+
+########## spin -t -p -g  (counterexample) ##########
+ltl eventually_done: <> (done)
+starting claim 2
+  <<<<<START OF CYCLE>>>>>
+Never claim moves to line 4	[(!(done))]
+  2:	proc  0 (A:1) starvation.pml:11 (state 1)	[t = (1-t)]
+  4:	proc  0 (A:1) starvation.pml:11 (state 1)	[t = (1-t)]
+spin: trail ends after 4 steps
+#processes: 2
+		done = 0
+  4:	proc  1 (B:1) starvation.pml:17 (state 1)
+  4:	proc  0 (A:1) starvation.pml:10 (state 2)
+  4:	proc  - (eventually_done:1) _spin_nvr.tmp:3 (state 3)
+2 processes created
+
+########## pan -a -f  (weak fairness) ##########
+
+(Spin Version 6.5.2 -- 6 December 2019)
+
+Full statespace search for:
+	never claim         	+ (eventually_done)
+	assertion violations	+ (if within scope of claim)
+	acceptance   cycles 	+ (fairness enabled)
+	invalid end states	- (disabled by never claim)
+
+State-vector 36 byte, depth reached 4, errors: 0
+        4 states, stored
+        1 states, matched
+        5 transitions (= stored+matched)
+        0 atomic steps
+hash conflicts:         0 (resolved)
+
+Stats on memory usage (in Megabytes):
+    0.000	equivalent memory usage for states (stored*(State-vector + overhead))
+    0.291	actual memory usage for states
+  128.000	memory used for hash table (-w24)
+    0.534	memory used for DFS stack (-m10000)
+  128.730	total actual memory usage
+
+
+unreached in proctype A
+	starvation.pml:13, state 5, "-end-"
+	(1 of 5 states)
+unreached in proctype B
+	(0 of 2 states)
+unreached in claim eventually_done
+	_spin_nvr.tmp:6, state 6, "-end-"
+	(1 of 6 states)
+
+pan: elapsed time 0 seconds

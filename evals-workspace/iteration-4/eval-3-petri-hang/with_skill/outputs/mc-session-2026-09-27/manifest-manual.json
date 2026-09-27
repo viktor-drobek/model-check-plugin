@@ -1,0 +1,34 @@
+{
+  "_note": "Assembled BY HAND. `mc_manifest` was not available: the plugin's MCP server is not registered in this session, so the CLI fallback of references/engine-tools.md §4 was used. Versions, hashes and budgets come from the reports' own `engine`, `inputs` and `search` sections; the command lines and wall-clock times were recorded by hand. There is no seed, because `mc_simulate` has no CLI equivalent and no simulation was run.",
+  "session_dir": "model-check-plugin/evals-workspace/iteration-4/eval-3-petri-hang/with_skill/outputs/mc-session-2026-09-27",
+  "date_utc": "2026-09-27",
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1",
+    "binary": "model-check-plugin/engine/bin/mcd",
+    "layer": "CLI (mcd), MCP server not registered"
+  },
+  "inputs": [
+    {"kind": "petri", "path": "net.json", "sha256": "c499f6f18d226910b5c712aac8f0c0cb84e0e47ce0da10ba61a583bf449e2a0a"},
+    {"kind": "ir", "path": "ir-props.json", "sha256": "de8463c3410ebc23f4a7e9ae9e9f6377d28cc9f84f8017a65b3f0e0268fe422f"}
+  ],
+  "calls": [
+    {"n": 1, "tool": "mcd parse", "cmd": "mcd parse --petri net.json > ir.json", "outcome": "ok", "exit": 0, "artifacts": ["ir.json", "parse.stderr"], "warnings": []},
+    {"n": 2, "tool": "(property list)", "cmd": "python3 make-props.py", "outcome": "ok", "note": "appends 7 reach properties to the IR; no checking logic (engine-tools.md §4)", "artifacts": ["ir-props.json"]},
+    {"n": 3, "tool": "mcd check (estimate, mc_estimate stand-in)", "cmd": "mcd check --ir ir-props.json --estimate --estimate-ms 1000", "outcome": "ok", "exit": 0, "artifacts": ["estimate.json"]},
+    {"n": 4, "tool": "mcd check (pilot budget)", "cmd": "mcd check --ir ir-props.json --budget-states 50 --no-timing", "outcome": "ok", "exit": 0, "params": {"search": "dfs", "fairness": "none", "budget_applied": {"states": 50, "depth": 1000000, "time_ms": 60000, "mem_bytes": 1073741824}}, "artifacts": ["check-pilot.json", "pilot.stderr"]},
+    {"n": 5, "tool": "mcd check (target budget)", "cmd": "mcd check --ir ir-props.json --no-timing", "outcome": "ok", "exit": 0, "params": {"search": "dfs", "fairness": "none", "budget_applied": {"states": 1000000, "depth": 1000000, "time_ms": 60000, "mem_bytes": 1073741824}}, "artifacts": ["check-dfs.json", "dfs.stderr"]},
+    {"n": 6, "tool": "mcd check (bfs)", "cmd": "mcd check --ir ir-props.json --bfs --no-timing", "outcome": "ok", "exit": 0, "params": {"search": "bfs", "fairness": "none"}, "artifacts": ["check-bfs.json", "bfs.stderr"]},
+    {"n": 7, "tool": "mcd check (bfs, whole graph)", "cmd": "mcd check --ir ir-props.json --bfs --sweep --no-timing", "outcome": "ok", "exit": 0, "params": {"search": "bfs", "fairness": "none", "sweep": true}, "artifacts": ["check-bfs-sweep.json", "bfs-sweep.stderr"]},
+    {"n": 8, "tool": "mcd check (frontend properties only)", "cmd": "mcd check --petri net.json --no-timing", "outcome": "ok", "exit": 0, "params": {"search": "dfs", "fairness": "none"}, "artifacts": ["check-petri-baseline.json", "petri.stderr"]},
+    {"n": 9, "tool": "mcd check (CTL)", "cmd": "mcd check --petri net.json --no-timing --ctl 'EF (p1 == 0 && p2 == 1 && p3 == 0 && p4 == 0 && p5 == 1 && p6 == 0)' --ctl 'AF (…same…)' --ctl 'AG EF (…same…)'", "outcome": "ok", "exit": 0, "params": {"search": "dfs", "fairness": "none"}, "artifacts": ["check-ctl.json", "ctl.stderr"]}
+  ],
+  "not_available_in_this_session": [
+    "mc_simulate — no CLI equivalent; the sanity walk of SKILL.md step 5 was skipped and is declared as skipped",
+    "mc_lint_property — no CLI equivalent; the properties were classified by hand against references/properties-ltl-ctl.md",
+    "mc_explain — no CLI equivalent; the counterexample was read from the report's `counterexample.steps`, `counterexample.loop` and `final_state`, and the loop sentence was written by hand",
+    "mc_manifest — this file is the hand-assembled stand-in"
+  ]
+}

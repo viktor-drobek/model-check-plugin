@@ -1,0 +1,158 @@
+# Intake card — CH2/mutex_flaw.pml (FR-001, FR-002).
+# Filled from assets/intake-card.yaml.
+# The user was not available for questions; every value that would normally have
+# been confirmed is marked ASSUMPTION (Ax) and repeated in the report's §2.
+
+system:
+  name: "mutex_flaw — three-flag mutual-exclusion algorithm for two processes"
+  boundary: >
+    Two identical processes (active [2] proctype user) and the four global byte
+    variables cnt, x, y, z. ASSUMPTION A1: nothing else is inside the model — no
+    OS scheduler model, no memory model, no caches, no compiler reordering.
+  environment: >
+    Only the scheduler: at each step exactly one process with an executable
+    statement is chosen, arbitrarily. No inputs, no failures, no messages.
+  excluded:
+    - "memory consistency / store buffering — reads and writes are sequentially consistent in Promela (A1)"
+    - "the number of processes beyond 2 — fixed by `active [2]` (bound B1)"
+  relation_to_implementation: >
+    None. The corpus .pml file IS the object under study (a textbook algorithm,
+    Ben-Ari ch. 2). ASSUMPTION A7: there is no implementation behind it, so a
+    counterexample is classified as a defect of the described object, never as a
+    statement about a real system (references/counterexamples.md §3).
+
+state:
+  variables:
+    - "cnt : byte — number of processes currently inside the critical section (instrumentation counter, incremented at L7, decremented at the end of the section)"
+    - "x : byte — flag, 0 / 1 / 2 (0 = nobody, otherwise the id of the last writer)"
+    - "y : byte — flag, 0 / 1 / 2"
+    - "z : byte — flag, 0 / 1 / 2"
+    - "user:0.me = 1, user:1.me = 2 : byte — local constant, _pid + 1"
+  processes:
+    - "user:0 (_pid 0, me = 1) — locations L1..L7 plus the unlabeled steps of the critical section"
+    - "user:1 (_pid 1, me = 2) — the same code"
+  channels: []
+  initial_states: "cnt = x = y = z = 0; both processes at L1. Exactly one initial state, non-empty."
+  observables:
+    - "cnt  → global `cnt` → how many processes are inside the critical section"
+    - "user:0@L7 / user:1@L7 → pc(0) == 6 / pc(1) == 6 → the process has passed every guard and is about to execute cnt++"
+
+transitions:
+  semantics: "interleaving; shared variables; no channels, no rendezvous"
+  atomic_step: >
+    One Promela statement of one process. ASSUMPTION A3 (the decisive one): the
+    file contains no `atomic` and no `d_step`, so every read and every write of
+    x, y and z interleaves with the other process. If the real algorithm executed
+    L1..L6 indivisibly, the verdict below would be about a different algorithm
+    (references/pitfalls.md §6).
+  terminal_states: >
+    None: each process ends its critical section with `goto L1`, so no process
+    terminates and there is no `end` label. Any state with nothing executable
+    would be a deadlock.
+  nondeterminism: "the scheduler only; the two `if` statements are deterministic (their guards are complementary)"
+
+properties:
+  - id: P1_mutex
+    wording: "Два процесса не должны одновременно попадать в критическую секцию"
+    class: safety
+    logic: invariant
+    extension: untimed
+    formula: "cnt <= 1"
+    atoms: ["cnt"]
+    expected_evidence: "finite trace"
+    sanity_companion: "P2_cs_reachable"
+  - id: P2_cs_reachable
+    wording: "sanity: is the critical section entered at all? (guards against a vacuous P1)"
+    class: reachability
+    logic: reach
+    extension: untimed
+    formula: "cnt >= 1"
+    atoms: ["cnt"]
+    expected_evidence: "witness run"
+    sanity_companion: ""
+  - id: P3_both_in_cs
+    wording: "is the bad state itself reachable: two processes inside at once?"
+    class: reachability
+    logic: reach
+    extension: untimed
+    formula: "cnt >= 2"
+    atoms: ["cnt"]
+    expected_evidence: "witness run"
+    sanity_companion: ""
+  - id: ctl1
+    wording: "the same requirement stated over control locations instead of the counter"
+    class: safety
+    logic: CTL
+    extension: untimed
+    formula: "AG !(user:0@L7 && user:1@L7)"
+    atoms: ["pc(0) == 6", "pc(1) == 6"]
+    expected_evidence: "finite path"
+    sanity_companion: "ctl2"
+  - id: ctl2
+    wording: "sanity/witness: can both processes stand at L7 at the same time?"
+    class: reachability
+    logic: CTL
+    extension: untimed
+    formula: "EF (user:0@L7 && user:1@L7)"
+    atoms: ["pc(0) == 6", "pc(1) == 6"]
+    expected_evidence: "finite path"
+    sanity_companion: ""
+  - id: deadlock
+    wording: "added by the Promela frontend, not requested"
+    class: safety
+    logic: deadlock
+    extension: untimed
+    formula: ""
+    atoms: []
+    expected_evidence: "finite trace"
+    sanity_companion: ""
+  - id: assert
+    wording: "the model's own assert(cnt == 1); added by the frontend, not requested"
+    class: safety
+    logic: assert
+    extension: untimed
+    formula: "cnt == 1 at line 23"
+    atoms: ["cnt"]
+    expected_evidence: "finite trace"
+    sanity_companion: ""
+
+assumptions:
+  scheduler: "arbitrary interleaving, one statement per step (A3)"
+  delivery: "n/a — no channels"
+  failures: "none modelled"
+  environment_inputs: "none"
+  bounds:
+    - "B1: process count = 2 (fixed by `active [2]`)"
+    - "B2: cnt, x, y, z are `byte` (0..255); the engine reports an overflow as invalid-model, none occurred"
+
+fairness:
+  required: none
+  justification: >
+    ASSUMPTION A5: the only requirement asked is safety, and a safety violation is
+    a finite prefix — no fairness assumption can remove it. No liveness property
+    (starvation-freedom) was requested, so the fairness question of FR-008 was not
+    opened. Fairness `none` was used for every run.
+  confirmed_by_user: false
+
+backend:
+  engine: mcd
+  search_mode: "bfs (primary, shortest safety counterexample); dfs run as a cross-check"
+  reductions: none
+
+budget:
+  time: "60000 ms (default)"
+  states: "1000000 (default)"
+  depth: "1000000 (default)"
+  memory: "1024 MiB (default)"
+  repeats: 1
+
+evidence:
+  expected: exhaustive
+  goal: >
+    ASSUMPTION A4: exhaustive result (the user asked to "check the model", not to
+    hunt for one bug). The estimate said 429 reachable states, so exhaustive was
+    affordable.
+
+artefacts:
+  may_store_models_and_traces: true   # the caller directed every artefact into this outputs/ directory
+  contains_secrets_or_personal_data: "no — a public textbook example from the corpus"

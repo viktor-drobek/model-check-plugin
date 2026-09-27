@@ -1,0 +1,56 @@
+{
+  "time_limit_ms": 1000,
+  "elapsed_ms": 0,
+  "states_visited": 9,
+  "transitions": 12,
+  "depth_reached": 6,
+  "state_bytes": 4,
+  "complete": true,
+  "states_per_second": 15204.8,
+  "growth": {
+    "per_level": [
+      {
+        "depth": 0,
+        "states": 1
+      },
+      {
+        "depth": 1,
+        "states": 2
+      },
+      {
+        "depth": 2,
+        "states": 3
+      },
+      {
+        "depth": 3,
+        "states": 5
+      },
+      {
+        "depth": 4,
+        "states": 6
+      },
+      {
+        "depth": 5,
+        "states": 8
+      },
+      {
+        "depth": 6,
+        "states": 9
+      }
+    ],
+    "rate": 1.216,
+    "rate_basis": "geometric mean of 3 ratio(s) states(d+1)/states(d) over levels 3..6"
+  },
+  "projection": {
+    "evidence": "exhaustive",
+    "states_at_target": 9,
+    "states_at_next_level": 9,
+    "note": "the reachable graph was expanded completely: 9 states is exact, there is nothing to extrapolate"
+  },
+  "size": {
+    "class": "small",
+    "basis": "the exact number of reachable states (9) against the A4 bounds of plan 14 §12, which the class reads off two numbers: small up to 100000 states, medium up to 1000000 states, both with a state vector up to 128 bytes; the state vector here is 4 bytes, and the depth reached (6) is reported separately because it is a bound of the run, not of the model",
+    "recommendation": "small (plan 14 §12, A4): an exhaustive check fits well inside the default budgets (1000000 states, 60000 ms, 1024 MiB); run mcd check or mc_check as it is"
+  },
+  "note": "estimate of the state space by partial breadth-first exploration; not a verification result — no property gets a status from it"
+}

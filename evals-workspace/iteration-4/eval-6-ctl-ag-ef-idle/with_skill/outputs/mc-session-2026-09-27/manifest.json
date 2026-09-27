@@ -1,0 +1,90 @@
+{
+  "note": "Assembled by hand: the MCP server was not registered in this session, so mc_manifest was unavailable. Engine, input hash and budgets are copied verbatim from the reports; the command lines and wall-clock times are recorded by the operator (engine-tools.md §4, 'CLI stand-ins').",
+  "session_id": "mc-session-2026-09-27 (CLI, local directory)",
+  "created": "2026-09-27T11:39Z .. 2026-09-27T11:41Z",
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1",
+    "binary": "model-check-plugin/engine/bin/mcd"
+  },
+  "inputs": [
+    {
+      "kind": "promela",
+      "source": "Promela - examples/CH14/version1",
+      "sha256": "acdfcacad083c29ff47cba18de2fb84ec784e9e064e0b64c435497e07121ec3b"
+    }
+  ],
+  "budget_applied": {
+    "states": 1000000,
+    "depth": 1000000,
+    "time_ms": 60000,
+    "mem_bytes": 1073741824,
+    "note": "engine defaults; no --budget-* flag and no --unlimited was used"
+  },
+  "search": { "mode": "dfs", "fairness": "none", "reductions": "none" },
+  "calls": [
+    {
+      "n": 1,
+      "tool": "mcd parse (mc_parse)",
+      "cmd": "mcd parse --promela 'Promela - examples/CH14/version1'",
+      "exit": 0,
+      "artifacts": ["ir.json", "parse.stderr"],
+      "outcome": "ok"
+    },
+    {
+      "n": 2,
+      "tool": "mcd check --estimate (mc_estimate)",
+      "cmd": "mcd check --promela 'Promela - examples/CH14/version1' --estimate --estimate-ms 1000",
+      "exit": 0,
+      "artifacts": ["estimate-1.json"],
+      "outcome": "ok, 9 states, complete, size class small"
+    },
+    {
+      "n": 3,
+      "tool": "mcd check (mc_check) — sanity",
+      "cmd": "mcd check --promela 'Promela - examples/CH14/version1' --ctl 'EF (switch@Idle)' --ctl 'EF (switch@Busy)'",
+      "exit": 0,
+      "artifacts": ["check-1-sanity.json"],
+      "outcome": "report"
+    },
+    {
+      "n": 4,
+      "tool": "mcd check (mc_check) — main property",
+      "cmd": "mcd check --promela 'Promela - examples/CH14/version1' --ctl 'AG EF (switch@Idle)'",
+      "exit": 0,
+      "artifacts": ["check-2-main.json"],
+      "outcome": "report"
+    },
+    {
+      "n": 5,
+      "tool": "mcd check (mc_check) — contrast",
+      "cmd": "mcd check --promela 'Promela - examples/CH14/version1' --ctl 'AG AF (switch@Idle)' --ctl 'AG EF (subscriber@Idle)' --ctl 'EG !(switch@Idle)'",
+      "exit": 0,
+      "artifacts": ["check-3-contrast.json"],
+      "outcome": "report"
+    },
+    {
+      "n": 6,
+      "tool": "mcd check (mc_check) — dual probe",
+      "cmd": "mcd check --promela 'Promela - examples/CH14/version1' --ctl 'EF EG !(switch@Idle)'",
+      "exit": 0,
+      "artifacts": ["check-4-dual.json"],
+      "outcome": "report"
+    },
+    {
+      "n": 7,
+      "tool": "mcd check (mc_check) — LTL attempt, recorded as evidence of the boundary",
+      "cmd": "mcd check --promela 'Promela - examples/CH14/version1' --ltl '[]<> (switch@Idle)'",
+      "exit": 2,
+      "artifacts": ["ltl-attempt.json"],
+      "outcome": "rejected input, kind ltl: \"property ltl1: formula: unexpected character '@' (at offset 12)\""
+    }
+  ],
+  "not_available_from_the_cli": [
+    "mc_simulate — no CLI equivalent, the random sanity walk of SKILL.md step 5 was skipped",
+    "mc_lint_property — refuses kind ctl; the property was classified by hand against references/properties-ltl-ctl.md",
+    "seed / per-call start times — no counterpart in the CLI report"
+  ]
+}

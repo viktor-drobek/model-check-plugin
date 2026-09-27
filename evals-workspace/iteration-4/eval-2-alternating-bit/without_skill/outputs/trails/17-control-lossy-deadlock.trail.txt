@@ -1,0 +1,15 @@
+  1:	proc  0 (Sender:1) ab-lossy-noltl.pml:27 (state 1)	[(!(marked_sent))]
+  1:	proc  0 (Sender:1) ab-lossy-noltl.pml:27 (state 2)	[mk = 1]
+  1:	proc  0 (Sender:1) ab-lossy-noltl.pml:27 (state 3)	[marked_sent = 1]
+  2:	proc  0 (Sender:1) ab-lossy-noltl.pml:30 (state 7)	[to_rcvr!msg1,mk]
+  3:	proc  2 (Channel:1) ab-lossy-noltl.pml:69 (state 1)	[to_rcvr?msg1,junk]
+spin: trail ends after 3 steps
+#processes: 3
+		queue 1 (to_rcvr): 
+		marked_sent = 1
+		marked_delivered = 0
+		got = 0
+  3:	proc  2 (Channel:1) ab-lossy-noltl.pml:68 (state 5)
+  3:	proc  1 (Receiver:1) ab-lossy-noltl.pml:47 (state 8)
+  3:	proc  0 (Sender:1) ab-lossy-noltl.pml:32 (state 9)
+3 processes created

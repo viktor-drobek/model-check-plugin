@@ -1,0 +1,141 @@
+# Intake card (assets/intake-card.yaml), filled for: AG EF idle on CH14/version1.
+# The user was not available for questions; every value that would normally be
+# confirmed is marked ASSUMPTION (teaching-example defaults, SKILL.md step 1).
+
+system:
+  name: "Telephone switch, outgoing calls only (Holzmann, Fig 13.4/13.5)"
+  boundary: "two processes: subscriber (the telephone) and switch (the exchange), plus the rendezvous channel tpc"
+  environment: "none outside the model; the subscriber IS the environment of the switch and is fully nondeterministic where the model gives it a choice"
+  excluded:
+    - "the remote party (the comment in the file says 'no remote hang up'); the switch models the busy/ring tones as an internal nondeterministic choice"
+    - "timers, tone durations, line faults, digit values"
+  relation_to_implementation: "corpus model, taken as given; no conformance argument to any implementation"
+
+state:
+  variables: []            # the model has no variables; state = two program counters + the rendezvous channel
+  processes:
+    - "subscriber:0 — labels Idle, Busy"
+    - "switch:1 — labels Idle, Dial, Wait, Connect, Busy, plus 4 unnamed intermediate locations created by the printf steps"
+  channels:
+    - "tpc, capacity 0 (rendezvous), one field of mtype {offhook, digits, onhook}"
+  initial_states: "subscriber@Idle and switch@Idle, channel empty (single initial state)"
+  observables:
+    - "switch@Idle -> pc(1) == 0 -> the exchange is in its Idle label (line 20), i.e. no call in progress and it is ready to accept a new offhook"
+    - "switch@Busy -> pc(1) == 4 -> the exchange is at its Busy label (line 39)"
+    - "subscriber@Idle -> pc(0) == 0 -> the telephone is on hook (line 9)"
+
+transitions:
+  semantics: "interleaving of the two processes; the channel is capacity 0, so tpc!x / tpc?x is a rendezvous (one joint step)"
+  atomic_step: >
+    one Promela statement. ASSUMPTION: the printf statements are kept as separate no-op
+    steps (engine warning: 8 printf statements), exactly as SPIN counts them, so the
+    switch passes through 4 unnamed intermediate locations. This makes the question
+    'can it always get back to Idle' strictly harder, not easier: those intermediate
+    states are in the graph and must also satisfy EF Idle.
+  terminal_states: "none expected; both processes loop forever. A deadlock would be an error (checked as the engine's deadlock property)"
+  nondeterminism: "the scheduler; the subscriber's choice digits/onhook at Busy; the switch's choice ringtone/busytone at Wait and busytone/notone at Connect"
+
+properties:
+  - id: P1
+    wording: "Проверь свойство AG EF idle (idle — метка Idle процесса switch)"
+    class: liveness           # branching-time "can always recover"; not a safety property, not plain reachability
+    logic: CTL
+    extension: untimed
+    formula: "AG EF (switch@Idle)"
+    atoms: ["switch@Idle -> pc(1) == 0"]
+    expected_evidence: "none for a positive result (a universal formula is justified by the whole graph, not by one run); a tree/state for a violation"
+    sanity_companion: "P2, P3"
+  - id: P2
+    wording: "sanity: is the Idle label of the switch reachable at all?"
+    class: reachability
+    logic: CTL
+    extension: untimed
+    formula: "EF (switch@Idle)"
+    atoms: ["pc(1) == 0"]
+    expected_evidence: "witness run (here: the initial state itself)"
+    sanity_companion: ""
+  - id: P3
+    wording: "sanity against triviality: does the switch ever leave Idle and reach Busy?"
+    class: reachability
+    logic: CTL
+    extension: untimed
+    formula: "EF (switch@Busy)"
+    atoms: ["pc(1) == 4"]
+    expected_evidence: "witness run"
+    sanity_companion: ""
+  - id: P4
+    wording: "contrast (not asked): does the switch return to Idle on every path, not merely possibly?"
+    class: liveness
+    logic: CTL
+    extension: untimed
+    formula: "AG AF (switch@Idle)"
+    atoms: ["pc(1) == 0"]
+    expected_evidence: "none for a positive result"
+    sanity_companion: "P5"
+  - id: P5
+    wording: "dual probe of P4: is there a reachable state with an infinite path that never returns to Idle?"
+    class: liveness
+    logic: CTL
+    extension: untimed
+    formula: "EF EG !(switch@Idle)"
+    atoms: ["pc(1) == 0"]
+    expected_evidence: "a lasso if it holds; nothing if it fails"
+    sanity_companion: ""
+  - id: P6
+    wording: "contrast (not asked): the same question about the telephone"
+    class: liveness
+    logic: CTL
+    extension: untimed
+    formula: "AG EF (subscriber@Idle)"
+    atoms: ["pc(0) == 0"]
+    expected_evidence: "none for a positive result"
+    sanity_companion: ""
+  - id: P0
+    wording: "added by the Promela frontend, not asked for"
+    class: safety
+    logic: deadlock
+    extension: untimed
+    formula: "engine property kind `deadlock`"
+    atoms: []
+    expected_evidence: "finite path to a blocked state"
+    sanity_companion: ""
+
+assumptions:
+  scheduler: "arbitrary interleaving, no fairness (CTL is checked without fairness by this engine; AG EF needs none — see report §2)"
+  delivery: "rendezvous: no loss, no duplication, no reordering, no buffering"
+  failures: "none modelled"
+  environment_inputs: "the subscriber may offer digits or onhook whenever the switch can take them"
+  bounds:
+    - "channel capacity 0 (from the model)"
+    - "2 processes, no dynamic creation"
+    - "no variables, so no data domains to bound"
+
+fairness:
+  required: none
+  justification: >
+    ASSUMPTION: none is needed and none was used. AG EF asks for the existence of a
+    continuation from every reachable state, and an existential path quantifier is
+    not weakened by an unfair scheduler; the engine checks CTL without fairness by
+    design (engine scope). This is stated as a scope fact, not as a modelling choice
+    that props the result up.
+  confirmed_by_user: false
+
+backend:
+  engine: mcd                # 0.1.0, CLI fallback (the MCP server is not registered in this session)
+  search_mode: dfs
+  reductions: none           # the search is unreduced
+
+budget:
+  time: "60000 ms (default)"
+  states: "1000000 (default)"
+  depth: "1000000 (default)"
+  memory: "1024 MiB (default)"
+  repeats: 1                 # deterministic engine; the graph is 9 states
+
+evidence:
+  expected: exhaustive
+  goal: "exhaustive result"
+
+artefacts:
+  may_store_models_and_traces: true   # ASSUMPTION: corpus example, no business data; artefacts kept in outputs/mc-session-2026-09-27/
+  contains_secrets_or_personal_data: "no"

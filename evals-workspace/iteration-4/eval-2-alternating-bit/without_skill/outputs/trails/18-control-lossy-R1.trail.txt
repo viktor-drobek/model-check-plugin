@@ -1,0 +1,27 @@
+ltl R1_every_message_delivered_LOSSY: [] ((! (marked_sent)) || (<> (marked_delivered)))
+ltl R2_nothing_stranded: [] ((! ((len(to_rcvr)>0))) || (<> ((len(to_rcvr)==0))))
+ltl R3_one_in_flight: [] (((len(to_rcvr)<=1)) && ((len(to_sndr)<=1)))
+starting claim 3
+Never claim moves to line 4	[(1)]
+  2:	proc  0 (Sender:1) ab-marked-lossy.pml:27 (state 1)	[(!(marked_sent))]
+  2:	proc  0 (Sender:1) ab-marked-lossy.pml:27 (state 2)	[mk = 1]
+  2:	proc  0 (Sender:1) ab-marked-lossy.pml:27 (state 3)	[marked_sent = 1]
+		marked_sent = 1
+  3:	proc  0 (Sender:1) ab-marked-lossy.pml:30 (state 7)	[to_rcvr!msg1,mk]
+		queue 1 (to_rcvr): [msg1,1]
+Never claim moves to line 3	[((!(!(marked_sent))&&!(marked_delivered)))]
+  5:	proc  2 (Channel:1) ab-marked-lossy.pml:69 (state 1)	[to_rcvr?msg1,junk]
+		queue 1 (to_rcvr): 
+Never claim moves to line 8	[(!(marked_delivered))]
+  <<<<<START OF CYCLE>>>>>
+spin: trail ends after 8 steps
+#processes: 3
+		queue 1 (to_rcvr): 
+		marked_sent = 1
+		marked_delivered = 0
+		got = 0
+  8:	proc  2 (Channel:1) ab-marked-lossy.pml:68 (state 5)
+  8:	proc  1 (Receiver:1) ab-marked-lossy.pml:47 (state 8)
+  8:	proc  0 (Sender:1) ab-marked-lossy.pml:32 (state 9)
+  8:	proc  - (R1_every_message_delivered_LOSSY:1) _spin_nvr.tmp:7 (state 10)
+3 processes created

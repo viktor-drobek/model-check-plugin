@@ -27,12 +27,14 @@
 #   build.sh with --out. The committed engine/bin is left alone by the test run,
 #   so its SHA256SUMS keeps describing the release build rather than a test one.
 #
-#   "exactly one server registration" — counted from what a client actually
-#   reads: the plugin's declared MCP sources (plugin.json `mcpServers` and any
-#   auto-discovered `.mcp.json` at the plugin root) resolved to server names.
-#   Two sources naming the same server still count as two registrations of that
-#   name unless the client is shown to deduplicate them; the confirmation
-#   records which of the two this run established and by what evidence.
+#   "declare exactly one server between them" — what the scenario below checks
+#   is the plugin's declared MCP sources (plugin.json `mcpServers` and the
+#   auto-discovered `.mcp.json` at the plugin root) resolved to server names,
+#   plus the fact that the two sources are the same file and so cannot diverge.
+#   It deliberately does NOT claim a registration count: registering is done by
+#   a client, and no scenario here runs one. The count itself is established in
+#   steps/g6-confirmation.md §3, by the documented replacement rule and by
+#   `claude mcp list`, which prints one entry.
 #
 #   "held-out" — the 40 % test split of evals-workspace/trigger-eval.json. The
 #   accuracy quoted by the exit criterion is the held-out one; the training
@@ -95,7 +97,7 @@ Feature: G6 packaging, install validation and description triggering
     Then the property "deadlock" has status "violated" and evidence "exhaustive"
     And the counterexample summary is "t1, t4"
 
-  Scenario: plugin.json and the plugin-root .mcp.json together yield exactly one server registration
+  Scenario: plugin.json and the plugin-root .mcp.json declare exactly one server between them
     Given the plugin manifest ".claude-plugin/plugin.json"
     Then the manifest is valid JSON with a kebab-case "name" and a "version"
     And the MCP sources the plugin declares resolve to exactly one server named "model-check"

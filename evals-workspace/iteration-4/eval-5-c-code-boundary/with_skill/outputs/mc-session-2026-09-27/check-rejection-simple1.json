@@ -1,0 +1,8 @@
+{
+  "error": {
+    "kind": "outside-subset",
+    "status": "not-executed",
+    "path": "Promela - examples/CH17/simple1.pr:1:1",
+    "message": "construct outside subset: c_code (embedded C is outside the subset) (simple1.pr, line 1)"
+  }
+}

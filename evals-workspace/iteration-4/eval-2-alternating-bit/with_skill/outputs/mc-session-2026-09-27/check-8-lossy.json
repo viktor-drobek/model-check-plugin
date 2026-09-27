@@ -1,0 +1,134 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "promela",
+      "path": "alternatingbit-lossy.pml",
+      "sha256": "33db265d6c915d53fc48963e8afbbfe8c9703829c391fb5db40442c3381ec901"
+    }
+  ],
+  "model": {
+    "name": "alternatingbit-lossy",
+    "state_bytes": 10,
+    "processes": 3,
+    "variables": 0
+  },
+  "search": {
+    "mode": "bfs",
+    "budget": {
+      "states": 1000000,
+      "depth": 1000000,
+      "time_ms": 60000,
+      "mem_bytes": 1073741824
+    },
+    "stop": "all properties decided",
+    "complete": false
+  },
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)",
+      "status": "violated",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 5,
+        "transitions": 4,
+        "depth": 2,
+        "time_ms": 0,
+        "memory_bytes_est": 24960
+      },
+      "complete": false,
+      "counterexample": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "Sender:0",
+            "command": "to_rcvr!msg1",
+            "channels": [
+              {
+                "chan": "to_rcvr",
+                "messages": [
+                  [
+                    3
+                  ]
+                ]
+              }
+            ],
+            "origin": {
+              "file": "alternatingbit-lossy.pml",
+              "line": 16,
+              "name": "to_rcvr!msg1"
+            }
+          },
+          {
+            "index": 2,
+            "process": "Link:2",
+            "command": "to_rcvr?msg1",
+            "channels": [
+              {
+                "chan": "to_rcvr",
+                "messages": []
+              }
+            ],
+            "origin": {
+              "file": "alternatingbit-lossy.pml",
+              "line": 35,
+              "name": "to_rcvr?msg1"
+            }
+          }
+        ],
+        "final_state": null,
+        "final_channels": [
+          {
+            "chan": "to_sndr",
+            "messages": []
+          },
+          {
+            "chan": "to_rcvr",
+            "messages": []
+          }
+        ],
+        "summary": "to_rcvr!msg1, to_rcvr?msg1"
+      },
+      "reason": "deadlock: no transition is enabled and not every process is terminated (at an end label or without outgoing edges)"
+    },
+    {
+      "id": "ltl1",
+      "kind": "ltl",
+      "text": "[] (nempty(to_rcvr) -> <> empty(to_rcvr))",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 14,
+        "transitions": 16,
+        "depth": 7,
+        "time_ms": 0,
+        "memory_bytes_est": 25372
+      },
+      "complete": true,
+      "reason": "no acceptance cycle in the complete product with the automaton for !([] (nempty(to_rcvr) -> <> empty(to_rcvr))): no run satisfies the negated property",
+      "temporal": {
+        "logic": "ltl",
+        "source": "formula",
+        "formula": "[] (nempty(to_rcvr) -> <> empty(to_rcvr))",
+        "negated": "!([] (nempty(to_rcvr) -> <> empty(to_rcvr)))",
+        "atoms": [
+          "len(to_rcvr) > 0",
+          "len(to_rcvr) == 0"
+        ],
+        "stutter_invariant": true,
+        "automaton_states": 2,
+        "automaton_transitions": 3,
+        "automaton_accepting": 1,
+        "fairness": "none",
+        "claim": "never:ltl1"
+      }
+    }
+  ]
+}

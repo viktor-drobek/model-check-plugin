@@ -1,0 +1,337 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "promela",
+      "path": "Promela - examples/CH14/version1",
+      "sha256": "acdfcacad083c29ff47cba18de2fb84ec784e9e064e0b64c435497e07121ec3b"
+    }
+  ],
+  "model": {
+    "name": "version1",
+    "state_bytes": 4,
+    "processes": 2,
+    "variables": 0
+  },
+  "search": {
+    "mode": "dfs",
+    "budget": {
+      "states": 1000000,
+      "depth": 1000000,
+      "time_ms": 60000,
+      "mem_bytes": 1073741824
+    },
+    "stop": "complete",
+    "complete": true
+  },
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 9,
+        "transitions": 12,
+        "depth": 7,
+        "time_ms": 1,
+        "memory_bytes_est": 25152
+      },
+      "complete": true
+    },
+    {
+      "id": "ctl1",
+      "kind": "ctl",
+      "text": "EF (subscriber@Busy)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 9,
+        "transitions": 12,
+        "depth": 6,
+        "time_ms": 0,
+        "memory_bytes_est": 25540
+      },
+      "complete": true,
+      "witness": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "subscriber:0",
+            "command": "tpc!offhook",
+            "location": "Busy",
+            "origin": {
+              "file": "Promela - examples/CH14/version1",
+              "line": 9,
+              "name": "tpc!offhook"
+            },
+            "partner": {
+              "process": "switch:1",
+              "command": "tpc?offhook",
+              "origin": {
+                "file": "Promela - examples/CH14/version1",
+                "line": 21,
+                "name": "tpc?offhook"
+              }
+            }
+          }
+        ],
+        "final_state": null,
+        "final_channels": [
+          {
+            "chan": "tpc",
+            "messages": []
+          }
+        ],
+        "summary": "tpc!offhook"
+      },
+      "reason": "the initial state satisfies EF (pc(0) == 1) on the complete reachable graph (9 states)",
+      "temporal": {
+        "logic": "ctl",
+        "source": "formula",
+        "formula": "EF (subscriber@Busy)",
+        "normalised": "E[true U (pc(0) == 1)]",
+        "atoms": [
+          "pc(0) == 1"
+        ],
+        "fairness": "none",
+        "note": "CTL is evaluated over the whole reachable graph; a state in which no process can move (a deadlock, or a system whose processes have all terminated) carries a self-loop, so that the transition relation is total and EG/AF are defined there — the same stutter extension the LTL product uses"
+      }
+    },
+    {
+      "id": "ctl2",
+      "kind": "ctl",
+      "text": "EF (switch@Busy)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 9,
+        "transitions": 12,
+        "depth": 6,
+        "time_ms": 0,
+        "memory_bytes_est": 25540
+      },
+      "complete": true,
+      "witness": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "subscriber:0",
+            "command": "tpc!offhook",
+            "location": "Busy",
+            "origin": {
+              "file": "Promela - examples/CH14/version1",
+              "line": 9,
+              "name": "tpc!offhook"
+            },
+            "partner": {
+              "process": "switch:1",
+              "command": "tpc?offhook",
+              "origin": {
+                "file": "Promela - examples/CH14/version1",
+                "line": 21,
+                "name": "tpc?offhook"
+              }
+            }
+          },
+          {
+            "index": 2,
+            "process": "switch:1",
+            "command": "printf(\"MSC: dialtone\\n\")",
+            "location": "Dial",
+            "origin": {
+              "file": "Promela - examples/CH14/version1",
+              "line": 21,
+              "name": "printf(\"MSC: dialtone\\n\")"
+            }
+          },
+          {
+            "index": 3,
+            "process": "subscriber:0",
+            "command": "tpc!digits",
+            "location": "Busy",
+            "origin": {
+              "file": "Promela - examples/CH14/version1",
+              "line": 12,
+              "name": "tpc!digits"
+            },
+            "partner": {
+              "process": "switch:1",
+              "command": "tpc?digits",
+              "origin": {
+                "file": "Promela - examples/CH14/version1",
+                "line": 25,
+                "name": "tpc?digits"
+              }
+            }
+          },
+          {
+            "index": 4,
+            "process": "switch:1",
+            "command": "printf(\"MSC: notone\\n\")",
+            "location": "Wait",
+            "origin": {
+              "file": "Promela - examples/CH14/version1",
+              "line": 25,
+              "name": "printf(\"MSC: notone\\n\")"
+            }
+          },
+          {
+            "index": 5,
+            "process": "switch:1",
+            "command": "printf(\"MSC: busytone\\n\")",
+            "location": "Busy",
+            "origin": {
+              "file": "Promela - examples/CH14/version1",
+              "line": 31,
+              "name": "printf(\"MSC: busytone\\n\")"
+            }
+          }
+        ],
+        "final_state": null,
+        "final_channels": [
+          {
+            "chan": "tpc",
+            "messages": []
+          }
+        ],
+        "summary": "tpc!offhook, printf(\"MSC: dialtone\\n\"), tpc!digits, printf(\"MSC: notone\\n\"), printf(\"MSC: busytone\\n\")"
+      },
+      "reason": "the initial state satisfies EF (pc(1) == 4) on the complete reachable graph (9 states)",
+      "temporal": {
+        "logic": "ctl",
+        "source": "formula",
+        "formula": "EF (switch@Busy)",
+        "normalised": "E[true U (pc(1) == 4)]",
+        "atoms": [
+          "pc(1) == 4"
+        ],
+        "fairness": "none",
+        "note": "CTL is evaluated over the whole reachable graph; a state in which no process can move (a deadlock, or a system whose processes have all terminated) carries a self-loop, so that the transition relation is total and EG/AF are defined there — the same stutter extension the LTL product uses"
+      }
+    },
+    {
+      "id": "ctl3",
+      "kind": "ctl",
+      "text": "AG EF (subscriber@Idle)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 9,
+        "transitions": 12,
+        "depth": 6,
+        "time_ms": 0,
+        "memory_bytes_est": 25540
+      },
+      "complete": true,
+      "reason": "the initial state satisfies AG EF (pc(0) == 0) on the complete reachable graph (9 states)",
+      "temporal": {
+        "logic": "ctl",
+        "source": "formula",
+        "formula": "AG EF (subscriber@Idle)",
+        "normalised": "!E[true U !E[true U (pc(0) == 0)]]",
+        "atoms": [
+          "pc(0) == 0"
+        ],
+        "fairness": "none",
+        "note": "CTL is evaluated over the whole reachable graph; a state in which no process can move (a deadlock, or a system whose processes have all terminated) carries a self-loop, so that the transition relation is total and EG/AF are defined there — the same stutter extension the LTL product uses",
+        "witness_note": "not available: a universal property that holds is justified by the complete reachable graph, not by one run — there is no single run to show"
+      }
+    },
+    {
+      "id": "ctl4",
+      "kind": "ctl",
+      "text": "AG (subscriber@Busy -> AF subscriber@Idle)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 9,
+        "transitions": 12,
+        "depth": 6,
+        "time_ms": 0,
+        "memory_bytes_est": 25540
+      },
+      "complete": true,
+      "reason": "the initial state satisfies AG ((pc(0) == 1) -> AF (pc(0) == 0)) on the complete reachable graph (9 states)",
+      "temporal": {
+        "logic": "ctl",
+        "source": "formula",
+        "formula": "AG (subscriber@Busy -> AF subscriber@Idle)",
+        "normalised": "!E[true U !(!(pc(0) == 1) || !EG !(pc(0) == 0))]",
+        "atoms": [
+          "pc(0) == 1",
+          "pc(0) == 0"
+        ],
+        "fairness": "none",
+        "note": "CTL is evaluated over the whole reachable graph; a state in which no process can move (a deadlock, or a system whose processes have all terminated) carries a self-loop, so that the transition relation is total and EG/AF are defined there — the same stutter extension the LTL product uses",
+        "witness_note": "not available: a universal property that holds is justified by the complete reachable graph, not by one run — there is no single run to show"
+      }
+    },
+    {
+      "id": "ctl5",
+      "kind": "ctl",
+      "text": "AG EF (switch@Idle)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 9,
+        "transitions": 12,
+        "depth": 6,
+        "time_ms": 0,
+        "memory_bytes_est": 25540
+      },
+      "complete": true,
+      "reason": "the initial state satisfies AG EF (pc(1) == 0) on the complete reachable graph (9 states)",
+      "temporal": {
+        "logic": "ctl",
+        "source": "formula",
+        "formula": "AG EF (switch@Idle)",
+        "normalised": "!E[true U !E[true U (pc(1) == 0)]]",
+        "atoms": [
+          "pc(1) == 0"
+        ],
+        "fairness": "none",
+        "note": "CTL is evaluated over the whole reachable graph; a state in which no process can move (a deadlock, or a system whose processes have all terminated) carries a self-loop, so that the transition relation is total and EG/AF are defined there — the same stutter extension the LTL product uses",
+        "witness_note": "not available: a universal property that holds is justified by the complete reachable graph, not by one run — there is no single run to show"
+      }
+    },
+    {
+      "id": "ctl6",
+      "kind": "ctl",
+      "text": "AG (switch@Busy -> AF switch@Idle)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 9,
+        "transitions": 12,
+        "depth": 6,
+        "time_ms": 0,
+        "memory_bytes_est": 25540
+      },
+      "complete": true,
+      "reason": "the initial state satisfies AG ((pc(1) == 4) -> AF (pc(1) == 0)) on the complete reachable graph (9 states)",
+      "temporal": {
+        "logic": "ctl",
+        "source": "formula",
+        "formula": "AG (switch@Busy -> AF switch@Idle)",
+        "normalised": "!E[true U !(!(pc(1) == 4) || !EG !(pc(1) == 0))]",
+        "atoms": [
+          "pc(1) == 4",
+          "pc(1) == 0"
+        ],
+        "fairness": "none",
+        "note": "CTL is evaluated over the whole reachable graph; a state in which no process can move (a deadlock, or a system whose processes have all terminated) carries a self-loop, so that the transition relation is total and EG/AF are defined there — the same stutter extension the LTL product uses",
+        "witness_note": "not available: a universal property that holds is justified by the complete reachable graph, not by one run — there is no single run to show"
+      }
+    }
+  ],
+  "warnings": [
+    "printf: 8 statement(s) kept as no-op steps so that state counts match SPIN; their output is not produced"
+  ]
+}

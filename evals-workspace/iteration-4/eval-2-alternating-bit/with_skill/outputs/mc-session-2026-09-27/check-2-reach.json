@@ -1,0 +1,197 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "ir",
+      "path": "ir-2.json",
+      "sha256": "88e23bf44cae52abfc5b5eb5461e42d72edfa1b0930be7ddc73e73eb8f356f7d"
+    }
+  ],
+  "model": {
+    "name": "alternatingbit",
+    "state_bytes": 9,
+    "processes": 2,
+    "variables": 0
+  },
+  "search": {
+    "mode": "dfs",
+    "budget": {
+      "states": 1000000,
+      "depth": 1000000,
+      "time_ms": 60000,
+      "mem_bytes": 1073741824
+    },
+    "stop": "complete",
+    "complete": true
+  },
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 8,
+        "transitions": 8,
+        "depth": 7,
+        "time_ms": 0,
+        "memory_bytes_est": 25216
+      },
+      "complete": true
+    },
+    {
+      "id": "reach_msg_in_flight",
+      "kind": "reach",
+      "text": "sanity: a state is reachable in which a message is pending in to_rcvr (guards ltl1 against vacuity)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 8,
+        "transitions": 8,
+        "depth": 7,
+        "time_ms": 0,
+        "memory_bytes_est": 25216
+      },
+      "complete": true,
+      "witness": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "Sender:0",
+            "command": "to_rcvr!msg1",
+            "channels": [
+              {
+                "chan": "to_rcvr",
+                "messages": [
+                  [
+                    3
+                  ]
+                ]
+              }
+            ],
+            "origin": {
+              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH3/alternatingbit.pml",
+              "line": 8,
+              "name": "to_rcvr!msg1"
+            }
+          }
+        ],
+        "final_state": null,
+        "final_channels": [
+          {
+            "chan": "to_sndr",
+            "messages": []
+          },
+          {
+            "chan": "to_rcvr",
+            "messages": [
+              [
+                3
+              ]
+            ]
+          }
+        ],
+        "summary": "to_rcvr!msg1"
+      },
+      "reason": "a reachable state satisfies len(to_rcvr) > 0; see the witness"
+    },
+    {
+      "id": "reach_ack_in_flight",
+      "kind": "reach",
+      "text": "sanity: a state is reachable in which an ack is pending in to_sndr (guards ltl2 against vacuity)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 8,
+        "transitions": 8,
+        "depth": 7,
+        "time_ms": 0,
+        "memory_bytes_est": 25216
+      },
+      "complete": true,
+      "witness": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "Sender:0",
+            "command": "to_rcvr!msg1",
+            "channels": [
+              {
+                "chan": "to_rcvr",
+                "messages": [
+                  [
+                    3
+                  ]
+                ]
+              }
+            ],
+            "origin": {
+              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH3/alternatingbit.pml",
+              "line": 8,
+              "name": "to_rcvr!msg1"
+            }
+          },
+          {
+            "index": 2,
+            "process": "Receiver:1",
+            "command": "to_rcvr?msg1",
+            "channels": [
+              {
+                "chan": "to_rcvr",
+                "messages": []
+              }
+            ],
+            "origin": {
+              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH3/alternatingbit.pml",
+              "line": 17,
+              "name": "to_rcvr?msg1"
+            }
+          },
+          {
+            "index": 3,
+            "process": "Receiver:1",
+            "command": "to_sndr!ack1",
+            "channels": [
+              {
+                "chan": "to_sndr",
+                "messages": [
+                  [
+                    1
+                  ]
+                ]
+              }
+            ],
+            "origin": {
+              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH3/alternatingbit.pml",
+              "line": 18,
+              "name": "to_sndr!ack1"
+            }
+          }
+        ],
+        "final_state": null,
+        "final_channels": [
+          {
+            "chan": "to_sndr",
+            "messages": [
+              [
+                1
+              ]
+            ]
+          },
+          {
+            "chan": "to_rcvr",
+            "messages": []
+          }
+        ],
+        "summary": "to_rcvr!msg1, to_rcvr?msg1, to_sndr!ack1"
+      },
+      "reason": "a reachable state satisfies len(to_sndr) > 0; see the witness"
+    }
+  ]
+}
