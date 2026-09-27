@@ -394,6 +394,23 @@ func g6Description(skillMD string) (string, error) {
 	return strings.Join(out, " "), nil
 }
 
+// g6MCPConfig returns the path of the MCP config the plugin's manifest names,
+// so that the scenarios follow whatever plugin.json declares instead of a path
+// written twice. A plugin-root .mcp.json would be read too — by a client, and
+// as a *project* config — which is exactly what the packaging avoids, so this
+// helper deliberately resolves only the declared pointer.
+func g6MCPConfig(pluginDir string) (string, error) {
+	var manifest map[string]any
+	if err := g6ReadJSON(filepath.Join(pluginDir, ".claude-plugin", "plugin.json"), &manifest); err != nil {
+		return "", err
+	}
+	decl, _ := manifest["mcpServers"].(string)
+	if decl == "" {
+		return "", fmt.Errorf("plugin.json declares no mcpServers path")
+	}
+	return filepath.Join(pluginDir, filepath.Clean(decl)), nil
+}
+
 // ---------------------------------------------------------------- the steps
 
 func registerG6Steps(sc *godog.ScenarioContext) {
@@ -568,15 +585,19 @@ func registerG6Steps(sc *godog.ScenarioContext) {
 		return nil
 	})
 
-	sc.Step(`^the command in "([^"]+)" resolves, on this host, to an executable file under the plugin directory$`,
-		func(rel string) error {
+	sc.Step(`^the command in the plugin's declared MCP config resolves, on this host, to an executable file under the plugin directory$`,
+		func() error {
+			rel, err := g6MCPConfig(w.plugin)
+			if err != nil {
+				return err
+			}
 			var cfg struct {
 				MCPServers map[string]struct {
 					Command string   `json:"command"`
 					Args    []string `json:"args"`
 				} `json:"mcpServers"`
 			}
-			if err := g6ReadJSON(filepath.Join(w.plugin, rel), &cfg); err != nil {
+			if err := g6ReadJSON(rel, &cfg); err != nil {
 				return err
 			}
 			srv, ok := cfg.MCPServers["model-check"]
@@ -642,13 +663,17 @@ func registerG6Steps(sc *godog.ScenarioContext) {
 	sc.Step(`^the MCP server is started from the packaged binary over stdio inside the sandbox$`,
 		func() error {
 			root := filepath.Join(w.sandboxRoot, "model-check-plugin")
+			cfgPath, err := g6MCPConfig(root)
+			if err != nil {
+				return err
+			}
 			var cfg struct {
 				MCPServers map[string]struct {
 					Command string   `json:"command"`
 					Args    []string `json:"args"`
 				} `json:"mcpServers"`
 			}
-			if err := g6ReadJSON(filepath.Join(root, ".mcp.json"), &cfg); err != nil {
+			if err := g6ReadJSON(cfgPath, &cfg); err != nil {
 				return err
 			}
 			srv := cfg.MCPServers["model-check"]
@@ -825,10 +850,11 @@ func registerG6Steps(sc *godog.ScenarioContext) {
 
 	sc.Step(`^the MCP sources the plugin declares resolve to exactly one server named "([^"]+)"$`,
 		func(name string) error {
-			// The two sources a client reads, in the documented order: the
+			// The sources a client reads, in the documented order: the
 			// plugin-root .mcp.json first, then what `mcpServers` declares.
-			// A name declared later replaces an earlier one, so the count is
-			// over distinct names, and the sources are listed for the report.
+			// The packaging leaves the first of those absent (see the next
+			// step), so in practice there is one source; the loop still looks
+			// for both, so that re-introducing the file fails here.
 			w.servers = map[string]string{}
 			add := func(path, source string) error {
 				var cfg struct {
@@ -853,13 +879,7 @@ func registerG6Steps(sc *godog.ScenarioContext) {
 				if err := add(p, "plugin.json mcpServers -> "+decl); err != nil {
 					return err
 				}
-				// Same file referenced twice is one file, so it cannot diverge.
-				if abs, err := filepath.Abs(p); err == nil {
-					if rootAbs, err := filepath.Abs(rootMCP); err == nil && abs != rootAbs {
-						return fmt.Errorf("plugin.json points at %s while %s also exists: two files, two places to edit",
-							p, rootMCP)
-					}
-				}
+
 			}
 			if len(w.servers) != 1 {
 				return fmt.Errorf("the declared sources resolve to %d servers (%v), want exactly one",
@@ -867,6 +887,19 @@ func registerG6Steps(sc *godog.ScenarioContext) {
 			}
 			if _, ok := w.servers[name]; !ok {
 				return fmt.Errorf("the one server is not named %s: %v", name, w.servers)
+			}
+			return nil
+		})
+
+	sc.Step(`^the plugin root holds no "([^"]+)", which a client also reads as a project config$`,
+		func(name string) error {
+			p := filepath.Join(w.plugin, name)
+			if _, err := os.Stat(p); err == nil {
+				return fmt.Errorf("%s exists: a client reads it a second time as a project "+
+					"config when the plugin directory is the working directory, and lists the "+
+					"server twice (measured in steps/g6-confirmation.md §3)", p)
+			} else if !os.IsNotExist(err) {
+				return err
 			}
 			return nil
 		})

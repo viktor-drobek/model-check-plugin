@@ -4,6 +4,7 @@
 # Produces, under engine/bin/:
 #   mcd-<goos>-<goarch>[.exe]  one static binary per platform of PLATFORMS
 #   mcd                        POSIX wrapper choosing the binary by uname
+#                              (this is the command mcp/servers.json names)
 #   mcd.cmd                    Windows wrapper (shipped, NOT exercised by this repo's tests)
 #   SHA256SUMS                 sha256 of every binary and wrapper, sorted by name
 #   BUILD-INFO.json            version, toolchain, flags and per-platform sizes
@@ -141,10 +142,10 @@ for p in $PLATFORMS; do
 done
 
 # -------------------------------------------------------------- wrappers
-# The plugin's .mcp.json names ONE command. Claude Code's manifest reference
-# documents no per-platform command selection, so the choice is made here, by
-# the wrapper, from uname. Tested on the host platform only (see
-# steps/g6-confirmation.md §1).
+# The plugin's MCP config (mcp/servers.json, named by plugin.json) gives ONE
+# command. Claude Code's manifest reference documents no per-platform command
+# selection, so the choice is made here, by the wrapper, from uname. Tested on
+# the host platform only (see steps/g6-confirmation.md §1).
 cat > "$OUT_DIR/mcd" <<'SH'
 #!/bin/sh
 # Wrapper: exec the mcd binary matching this machine (runtime.GOOS/GOARCH names).

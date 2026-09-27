@@ -6,5 +6,5 @@
     "name": "v-bus"
   },
   "skills": "./skills",
-  "mcpServers": "./.mcp.json"
+  "mcpServers": "./mcp/servers.json"
 }

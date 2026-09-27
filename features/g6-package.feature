@@ -27,14 +27,16 @@
 #   build.sh with --out. The committed engine/bin is left alone by the test run,
 #   so its SHA256SUMS keeps describing the release build rather than a test one.
 #
-#   "declare exactly one server between them" — what the scenario below checks
-#   is the plugin's declared MCP sources (plugin.json `mcpServers` and the
-#   auto-discovered `.mcp.json` at the plugin root) resolved to server names,
-#   plus the fact that the two sources are the same file and so cannot diverge.
-#   It deliberately does NOT claim a registration count: registering is done by
-#   a client, and no scenario here runs one. The count itself is established in
-#   steps/g6-confirmation.md §3, by the documented replacement rule and by
-#   `claude mcp list`, which prints one entry.
+#   "through exactly one source" — the scenario below checks that the plugin
+#   names its MCP config in exactly one place and that no `.mcp.json` sits at
+#   the plugin root. The second half is not tidiness: a `.mcp.json` at the
+#   plugin root is read a second time, as a *project* config, whenever the
+#   plugin directory is itself the working directory, and the client then lists
+#   the server twice — once from the plugin (connected) and once from the
+#   project (pending approval, with ${CLAUDE_PLUGIN_ROOT} unresolved). That was
+#   measured, not feared; steps/g6-confirmation.md §3 has both listings.
+#   The scenario deliberately does NOT claim a registration count of its own:
+#   registering is done by a client, and no scenario here runs one.
 #
 #   "held-out" — the 40 % test split of evals-workspace/trigger-eval.json. The
 #   accuracy quoted by the exit criterion is the held-out one; the training
@@ -68,7 +70,7 @@ Feature: G6 packaging, install validation and description triggering
 
   Scenario: the host binary is selected without asking the caller which platform it is on
     Given the packaged plugin directory
-    Then the command in ".mcp.json" resolves, on this host, to an executable file under the plugin directory
+    Then the command in the plugin's declared MCP config resolves, on this host, to an executable file under the plugin directory
     And running that command with argument "version" prints the version recorded in "engine/bin/BUILD-INFO.json"
 
   # -------------------------------------------------- install validation (A6)
@@ -97,10 +99,11 @@ Feature: G6 packaging, install validation and description triggering
     Then the property "deadlock" has status "violated" and evidence "exhaustive"
     And the counterexample summary is "t1, t4"
 
-  Scenario: plugin.json and the plugin-root .mcp.json declare exactly one server between them
+  Scenario: the plugin declares its MCP server through exactly one source
     Given the plugin manifest ".claude-plugin/plugin.json"
     Then the manifest is valid JSON with a kebab-case "name" and a "version"
     And the MCP sources the plugin declares resolve to exactly one server named "model-check"
+    And the plugin root holds no ".mcp.json", which a client also reads as a project config
     And the repository root holds no ".mcp.json" that declares a server named "model-check"
 
   # --------------------------------------------------- trigger eval set (§8.2)
