@@ -1,5 +1,5 @@
 /* probe: remote label reference P@label inside a never claim
- * claim: the reference's §1 Expressions says this is INSIDE the subset
+ * claim: the reference's §1 Expressions says this is OUTSIDE the subset
  */
 bit x;
 active proctype P() {

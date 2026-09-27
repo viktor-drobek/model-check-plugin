@@ -22,7 +22,12 @@ cd ../evals-workspace/subset-probes && python3 probe.py --mcd /tmp/mcd
 поэтому разошедшаяся справка видна как расхождение, а не как пройденный тест.
 
 Движок: `mcd 0.1.0-g0 (ir mcd-ir/1, report mcd-report/1)`, собранный из дерева на
-G5-дополнении + G6-упаковке. 57 проб, **11 расхождений**.
+G5-дополнении + G6-упаковке. **58 проб.** При первом прогоне — 11 расхождений со
+справкой; они разобраны ниже и справка исправлена, поэтому колонка «Reference says»
+в таблице — это уже **исправленная** классификация, и чистый прогон даёт
+**0 расхождений**. Любое расхождение в будущем означает, что движок и справка снова
+разошлись: тогда надо перевыводить строку справки, а не править `claim` в скрипте,
+чтобы он согласился.
 
 ## Три класса исхода
 
@@ -34,6 +39,10 @@ G5-дополнении + G6-упаковке. 57 проб, **11 расхожд�
 3. **parsed + warning** — принята, но семантика не та, которую даёт SPIN. Ровно один
    такой случай, и он содержательный: `pc_value` принимается и предупреждает, что
    нумерация управляющих точек у движка своя, не pan-овская.
+
+Плюс отдельное значение `claim` = **`defect`**: движок конструкцию разбирает, но это
+не граница подмножества, а известный дефект (§C). Скрипт печатает такие строки
+отдельной строкой итога, чтобы «принято» не читалось как «поддержано».
 
 | Probe | Construct | Reference says | `mcd parse` | Engine message (truncated) |
 |---|---|---|---|---|
@@ -62,14 +71,14 @@ G5-дополнении + G6-упаковке. 57 проб, **11 расхожд�
 | `in-ifdef-family.pml` | #ifdef/#ifndef/#if/#elif/#else/#endif, defined(), #undef | inside | parsed |  |
 | `in-never-claim.pml` | never { … } | inside | parsed |  |
 | `in-expressions.pml` | arithmetic, comparison, &&, ||, !, % | inside | parsed |  |
-| `in-remote-label-in-never.pml` | remote label reference P@label inside a never claim | inside **✗** | rejected `outside-subset` | construct outside subset: remote reference (P@label) (outside the subset) (in-remote-label-in-never.pml, line 8) |
-| `out-inline.pml` | inline name(args) { … } | outside **✗** | parsed |  |
-| `out-typedef.pml` | typedef | outside **✗** | parsed |  |
-| `out-provided.pml` | provided (e) | outside **✗** | parsed |  |
-| `out-chan-in-message.pml` | channels as message fields | outside **✗** | parsed |  |
-| `out-chan-array.pml` | arrays of channels | outside **✗** | parsed |  |
-| `out-chan-uninitialised.pml` | uninitialised channel variables | outside **✗** | parsed |  |
-| `out-nr-pr.pml` | _nr_pr | outside **✗** | parsed |  |
+| `in-remote-label-in-never.pml` | remote label reference P@label inside a never claim | outside | rejected `outside-subset` | construct outside subset: remote reference (P@label) (outside the subset) (in-remote-label-in-never.pml, line 8) |
+| `out-inline.pml` | inline name(args) { … } | inside | parsed |  |
+| `out-typedef.pml` | typedef | inside | parsed |  |
+| `out-provided.pml` | provided (e) | inside | parsed |  |
+| `out-chan-in-message.pml` | channels as message fields | inside | parsed |  |
+| `out-chan-array.pml` | arrays of channels | inside | parsed |  |
+| `out-chan-uninitialised.pml` | uninitialised channel variables | inside | parsed |  |
+| `out-nr-pr.pml` | _nr_pr | inside | parsed |  |
 | `out-unless.pml` | unless | outside | rejected `outside-subset` | construct outside subset: unless (plan 14 §5.2: outside the subset) (out-unless.pml, line 5) |
 | `out-c-code.pml` | c_code | outside | rejected `outside-subset` | construct outside subset: c_code (embedded C is outside the subset) (out-c-code.pml, line 4) |
 | `out-c-expr.pml` | c_expr | outside | rejected `outside-subset` | construct outside subset: c_expr (embedded C is outside the subset) (out-c-expr.pml, line 4) |
@@ -81,7 +90,8 @@ G5-дополнении + G6-упаковке. 57 проб, **11 расхожд�
 | `out-bit-operators.pml` | bit operators | outside | rejected `outside-subset` | construct outside subset: bitwise operator & (outside the subset) (out-bit-operators.pml, line 5) |
 | `out-shift-operators.pml` | shift operators | outside | rejected `outside-subset` | construct outside subset: bitwise operator << (outside the subset) (out-shift-operators.pml, line 5) |
 | `out-conditional-expr.pml` | ?: conditional expression | outside | rejected `outside-subset` | construct outside subset: conditional expression (c -> a : b) (outside the subset) (out-conditional-expr.pml, line 5) |
-| `out-run-in-expression.pml` | run inside an expression | outside **✗** | parsed |  |
+| `out-run-in-expression.pml` | run as the whole right-hand side (pid = run P()) | inside | parsed |  |
+| `out-run-nested-in-expression.pml` | run nested inside a larger expression | outside | rejected `outside-subset` | construct outside subset: run inside an expression (run is accepted as a statement, on its own or as `pid = run P(...)`, not inside a larger expressio |
 | `out-remote-variable.pml` | remote variable reference P[i]:var | outside | rejected `syntax` | expected ";" or "->" after a statement, got : (out-remote-variable.pml, line 5) |
 | `out-poll-receive.pml` | c?[…] poll | outside | rejected `outside-subset` | construct outside subset: channel poll (?[…]) (outside the subset) (out-poll-receive.pml, line 5) |
 | `out-sorted-receive.pml` | c?? random/sorted receive | outside | rejected `outside-subset` | construct outside subset: random receive (??) (outside the subset) (out-sorted-receive.pml, line 5) |
@@ -91,9 +101,9 @@ G5-дополнении + G6-упаковке. 57 проб, **11 расхожд�
 | `out-local-qualifier.pml` | local qualifier | outside | rejected `outside-subset` | construct outside subset: local (variable qualifiers are outside the subset) (out-local-qualifier.pml, line 4) |
 | `out-show-qualifier.pml` | show qualifier | outside | rejected `outside-subset` | construct outside subset: show (variable qualifiers are outside the subset) (out-show-qualifier.pml, line 4) |
 | `out-ltl-block.pml` | ltl name { … } block | outside | rejected `outside-subset` | construct outside subset: ltl (inline LTL blocks are outside the subset; use never { }) (out-ltl-block.pml, line 6) |
-| `out-pc-value.pml` | pc_value(pid) | outside **✗** | parsed + warning | warning: pc_value (line 6): the value is this engine's control-location numbering, which is built differently from pan's internal state numbers; a mod |
+| `out-pc-value.pml` | pc_value(pid) | inside | parsed + warning | warning: pc_value (line 6): the value is this engine's control-location numbering, which is built differently from pan's internal state numbers; a mod |
 | `out-include.pml` | #include | outside | rejected `outside-subset` | construct outside subset: #include (the model must be a single file) (out-include.pml, line 4) |
-| `out-block-redeclaration.pml` | block-scoped redeclaration of a local | outside **✗** | parsed |  |
+| `out-block-redeclaration.pml` | block-scoped redeclaration of a local | defect | parsed |  |
 
 ## Разбор одиннадцати расхождений
 
@@ -119,11 +129,13 @@ G5 внёс в подмножество то, что план 14 §5.2 отно�
 Две строки требуют не «переноса», а **уточнения**, иначе справка соврёт в другую сторону:
 
 - **`run` внутри выражения.** Принимается `pid = run P(...)` (движок кладёт в
-  переменную новый pid). Отвергается `run` внутри **большего** выражения — сообщение
-  движка прямо это и разделяет: «run is accepted as a statement, on its own or as
-  `pid = run P(...)`, not inside a larger expression». Корпусный `CH3/notpossible.pml`
-  (`!run A()`, `_pid > 0 && - run A()`) по-прежнему отвергается, и SPIN его тоже не
-  принимает. То есть прежняя строка была не устаревшей, а слишком широкой.
+  переменную новый pid) — проба `out-run-in-expression.pml`. Отвергается `run` внутри
+  **большего** выражения — проба `out-run-nested-in-expression.pml` (`n = 1 + run Q()`);
+  сообщение движка прямо это и разделяет: «run is accepted as a statement, on its own
+  or as `pid = run P(...)`, not inside a larger expression». Корпусный
+  `CH3/notpossible.pml` (`!run A()`, `_pid > 0 && - run A()`) по-прежнему отвергается,
+  и SPIN его тоже не принимает. То есть прежняя строка была не устаревшей, а слишком
+  широкой, и обе половины теперь закреплены отдельными пробами.
 - **`pc_value`.** Принимается, но с предупреждением: нумерация управляющих точек у
   движка своя. `CH4/pcval.pml` (G4 числил его вне подмножества) разбирается, выход 0,
   три предупреждения. Для отчёта это значит: модель, поведение которой зависит от
@@ -171,7 +183,7 @@ SPIN 6 файл **отвергает**. Движок его принимает �
 
 ## Что осталось верным без правок
 
-45 из 57 проб подтвердили справку как есть: все процессы, типы, массивы, обе формы
+46 из 58 проб подтвердили справку как есть: все процессы, типы, массивы, обе формы
 `mtype`, каналы и их предикаты, `xr`/`xs` как хинты, управляющие конструкции и
 префиксы меток (`accept` и `progress` дают свойства `accept`/`progress` в IR),
 `atomic`/`d_step`, операторы, `timeout`, весь препроцессор с `-D`, арифметика и

@@ -10,10 +10,13 @@ table.
     python3 probe.py --mcd /tmp/mcd            # write the .pml files, run, report
     python3 probe.py --mcd /tmp/mcd --json results.json
 
-Each probe declares `claim`: "inside" (§1 promises the engine accepts it) or
-"outside" (§3 promises a rejection). The script does not assume the claim is true —
-it prints AGREES / DISAGREES per row, so a doc that has drifted shows up as a
-disagreement rather than as a passing test.
+Each probe declares `claim`: "inside" (the reference says the engine accepts it),
+"outside" (the reference says it is refused) or "defect" (the engine accepts it, the
+reference says so, and says it is a defect rather than a boundary — SPIN refuses the
+file). The claims were brought into line with the engine by the row-by-row pass of
+`steps/g3-evals3-subset-probe.md`, so **a clean run reports zero disagreements**:
+any disagreement now means the engine and the reference have drifted apart again,
+which is the whole point of keeping this script.
 
 `mcd parse` exit codes (engine-tools.md §2): 0 = an IR document, 2 = the frontend
 rejected the input, 1 = a tool error. A construct that parses at exit 0 is inside the
@@ -91,25 +94,25 @@ PROBES = [
     ("in-expressions", "inside", "arithmetic, comparison, &&, ||, !, %", "§1 Expressions",
      "byte n;\nactive proctype P() { n = (1 + 2) * 3 - 4;\n"
      "  if :: n > 1 && n < 100 || !(n == 0) -> n = n % 5 :: else -> skip fi }\n"),
-    ("in-remote-label-in-never", "inside", "remote label reference P@label inside a never claim", "§1 Expressions",
+    ("in-remote-label-in-never", "outside", "remote label reference P@label inside a never claim", "§1 Expressions",
      "bit x;\nactive proctype P() {\nL0: x = 1;\nL1: x = 0 }\n"
      "never { do :: P@L0 -> skip od }\n"),
 
     # -------------------------------------------------------------- §3: outside
-    ("out-inline", "outside", "inline name(args) { … }", "§3",
+    ("out-inline", "inside", "inline name(args) { … }", "§3",
      "inline bump(v) { v = v + 1 }\nbyte n;\nactive proctype P() { bump(n) }\n"),
-    ("out-typedef", "outside", "typedef", "§3",
+    ("out-typedef", "inside", "typedef", "§3",
      "typedef Pair { byte a; byte b };\nPair p;\nactive proctype P() { p.a = 1 }\n"),
-    ("out-provided", "outside", "provided (e)", "§3",
+    ("out-provided", "inside", "provided (e)", "§3",
      "byte turn;\nactive proctype P() provided (turn == 0) { turn = 1 }\n"),
-    ("out-chan-in-message", "outside", "channels as message fields", "§3",
+    ("out-chan-in-message", "inside", "channels as message fields", "§3",
      "chan reply = [1] of { byte };\nchan req = [1] of { chan };\n"
      "active proctype S() { req!reply }\n"),
-    ("out-chan-array", "outside", "arrays of channels", "§3",
+    ("out-chan-array", "inside", "arrays of channels", "§3",
      "chan c[2] = [1] of { byte };\nactive proctype P() { c[0]!1 }\n"),
-    ("out-chan-uninitialised", "outside", "uninitialised channel variables", "§3",
+    ("out-chan-uninitialised", "inside", "uninitialised channel variables", "§3",
      "chan c;\nactive proctype P() { skip }\n"),
-    ("out-nr-pr", "outside", "_nr_pr", "§3",
+    ("out-nr-pr", "inside", "_nr_pr", "§3",
      "byte n;\nactive proctype P() { n = _nr_pr }\n"),
     ("out-unless", "outside", "unless", "§3",
      "byte n;\nactive proctype P() { { n = 1; n = 2 } unless { n > 0 -> n = 3 } }\n"),
@@ -133,8 +136,10 @@ PROBES = [
      "byte n;\nactive proctype P() { n = (1 << 2) >> 1 }\n"),
     ("out-conditional-expr", "outside", "?: conditional expression", "§3",
      "byte n;\nactive proctype P() { n = (1 > 0 -> 2 : 3) }\n"),
-    ("out-run-in-expression", "outside", "run inside an expression", "§3",
+    ("out-run-in-expression", "inside", "run as the whole right-hand side (pid = run P())", "§3",
      "proctype Q() { skip }\nbyte n;\ninit { n = run Q() }\n"),
+    ("out-run-nested-in-expression", "outside", "run nested inside a larger expression", "§3",
+     "proctype Q() { skip }\nbyte n;\ninit { n = 1 + run Q() }\n"),
     ("out-remote-variable", "outside", "remote variable reference P[i]:var", "§3",
      "active proctype P() { byte v; v = 1 }\nactive proctype Q() { byte w; w = P[0]:v }\n"),
     ("out-poll-receive", "outside", "c?[…] poll", "§3",
@@ -153,11 +158,11 @@ PROBES = [
      "show byte n;\nactive proctype P() { n = 1 }\n"),
     ("out-ltl-block", "outside", "ltl name { … } block", "§3",
      "bit x;\nactive proctype P() { do :: x = 1 - x od }\nltl p { []<> x }\n"),
-    ("out-pc-value", "outside", "pc_value(pid)", "§3 (plan §5.2 lists it as v1)",
+    ("out-pc-value", "inside", "pc_value(pid)", "§3 (plan §5.2 lists it as v1)",
      "byte n;\nactive proctype P() { skip }\nactive proctype Q() { n = pc_value(0) }\n"),
     ("out-include", "outside", "#include", "§3",
      "#include \"other.pml\"\nactive proctype P() { skip }\n"),
-    ("out-block-redeclaration", "outside", "block-scoped redeclaration of a local", "§3",
+    ("out-block-redeclaration", "defect", "block-scoped redeclaration of a local", "§3 known defect",
      "active proctype P() { byte n; n = 1; { byte n; n = 2 } }\n"),
 ]
 
@@ -209,7 +214,9 @@ def main(argv=None):
             continue
         r = run(args.mcd, path)
         actual_inside = r["outcome"].startswith("parsed")
-        agrees = actual_inside == (claim == "inside")
+        # "defect" behaves like "inside" for the comparison: the engine does parse
+        # it. The reference records it as a defect, and §3 says so in words.
+        agrees = actual_inside == (claim in ("inside", "defect"))
         row = {"id": pid, "claim": claim, "construct": construct, "source": source,
                "agrees": agrees, **r}
         rows.append(row)
@@ -232,7 +239,14 @@ def main(argv=None):
         if r["outcome"] == "rejected":
             detail += " (%s) %s" % (r.get("kind"), (r.get("message") or "")[:70])
         print("%s %-26s %-8s %s" % (mark, r["id"], r["claim"], detail))
+    defects = [r for r in rows if r["claim"] == "defect"]
     print("\n%d probes, %d disagree with the reference" % (len(rows), len(disagreements)))
+    if defects:
+        print("%d probe(s) record a known engine defect rather than a boundary: %s"
+              % (len(defects), ", ".join(r["id"] for r in defects)))
+    if disagreements:
+        print("A disagreement means references/promela-subset.md and the engine have "
+              "drifted; re-derive the row rather than editing this script to agree.")
     return 0
 
 

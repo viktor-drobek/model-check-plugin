@@ -410,10 +410,10 @@
   },
   {
    "id": "in-remote-label-in-never",
-   "claim": "inside",
+   "claim": "outside",
    "construct": "remote label reference P@label inside a never claim",
    "source": "§1 Expressions",
-   "agrees": false,
+   "agrees": true,
    "exit": 2,
    "outcome": "rejected",
    "kind": "outside-subset",
@@ -422,10 +422,10 @@
   },
   {
    "id": "out-inline",
-   "claim": "outside",
+   "claim": "inside",
    "construct": "inline name(args) { … }",
    "source": "§3",
-   "agrees": false,
+   "agrees": true,
    "exit": 0,
    "outcome": "parsed",
    "processes": [
@@ -437,10 +437,10 @@
   },
   {
    "id": "out-typedef",
-   "claim": "outside",
+   "claim": "inside",
    "construct": "typedef",
    "source": "§3",
-   "agrees": false,
+   "agrees": true,
    "exit": 0,
    "outcome": "parsed",
    "processes": [
@@ -452,10 +452,10 @@
   },
   {
    "id": "out-provided",
-   "claim": "outside",
+   "claim": "inside",
    "construct": "provided (e)",
    "source": "§3",
-   "agrees": false,
+   "agrees": true,
    "exit": 0,
    "outcome": "parsed",
    "processes": [
@@ -467,10 +467,10 @@
   },
   {
    "id": "out-chan-in-message",
-   "claim": "outside",
+   "claim": "inside",
    "construct": "channels as message fields",
    "source": "§3",
-   "agrees": false,
+   "agrees": true,
    "exit": 0,
    "outcome": "parsed",
    "processes": [
@@ -482,10 +482,10 @@
   },
   {
    "id": "out-chan-array",
-   "claim": "outside",
+   "claim": "inside",
    "construct": "arrays of channels",
    "source": "§3",
-   "agrees": false,
+   "agrees": true,
    "exit": 0,
    "outcome": "parsed",
    "processes": [
@@ -497,10 +497,10 @@
   },
   {
    "id": "out-chan-uninitialised",
-   "claim": "outside",
+   "claim": "inside",
    "construct": "uninitialised channel variables",
    "source": "§3",
-   "agrees": false,
+   "agrees": true,
    "exit": 0,
    "outcome": "parsed",
    "processes": [
@@ -512,10 +512,10 @@
   },
   {
    "id": "out-nr-pr",
-   "claim": "outside",
+   "claim": "inside",
    "construct": "_nr_pr",
    "source": "§3",
-   "agrees": false,
+   "agrees": true,
    "exit": 0,
    "outcome": "parsed",
    "processes": [
@@ -659,10 +659,10 @@
   },
   {
    "id": "out-run-in-expression",
-   "claim": "outside",
-   "construct": "run inside an expression",
+   "claim": "inside",
+   "construct": "run as the whole right-hand side (pid = run P())",
    "source": "§3",
-   "agrees": false,
+   "agrees": true,
    "exit": 0,
    "outcome": "parsed",
    "processes": [
@@ -672,6 +672,18 @@
    "properties": [
     "deadlock"
    ]
+  },
+  {
+   "id": "out-run-nested-in-expression",
+   "claim": "outside",
+   "construct": "run nested inside a larger expression",
+   "source": "§3",
+   "agrees": true,
+   "exit": 2,
+   "outcome": "rejected",
+   "kind": "outside-subset",
+   "message": "construct outside subset: run inside an expression (run is accepted as a statement, on its own or as `pid = run P(...)`, not inside a larger expression) (out-run-nested-in-expression.pml, line 6)",
+   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-run-nested-in-expression.pml:6:16"
   },
   {
    "id": "out-remote-variable",
@@ -783,10 +795,10 @@
   },
   {
    "id": "out-pc-value",
-   "claim": "outside",
+   "claim": "inside",
    "construct": "pc_value(pid)",
    "source": "§3 (plan §5.2 lists it as v1)",
-   "agrees": false,
+   "agrees": true,
    "exit": 0,
    "outcome": "parsed",
    "processes": [
@@ -814,10 +826,10 @@
   },
   {
    "id": "out-block-redeclaration",
-   "claim": "outside",
+   "claim": "defect",
    "construct": "block-scoped redeclaration of a local",
-   "source": "§3",
-   "agrees": false,
+   "source": "§3 known defect",
+   "agrees": true,
    "exit": 0,
    "outcome": "parsed",
    "processes": [
