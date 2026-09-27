@@ -211,6 +211,11 @@ type g6Client struct {
 	out    *bufio.Reader
 	stderr *bytes.Buffer
 	id     int
+
+	// serverInfo from the one initialize handshake: the server answers
+	// `initialize` once per connection, so a second call would fail and the
+	// implementation name has to be kept from the first.
+	serverInfo map[string]any
 }
 
 func g6Start(command string, args, env []string, dir string) (*g6Client, error) {
@@ -231,13 +236,15 @@ func g6Start(command string, args, env []string, dir string) (*g6Client, error) 
 		return nil, err
 	}
 	c := &g6Client{cmd: cmd, in: in, out: bufio.NewReader(out), stderr: &errBuf}
-	if _, err := c.call("initialize", map[string]any{
+	res, err := c.call("initialize", map[string]any{
 		"protocolVersion": "2025-06-18",
 		"capabilities":    map[string]any{},
 		"clientInfo":      map[string]any{"name": "g6-install-check", "version": "0"},
-	}); err != nil {
+	})
+	if err != nil {
 		return nil, err
 	}
+	c.serverInfo, _ = res["serverInfo"].(map[string]any)
 	if err := c.notify("notifications/initialized", map[string]any{}); err != nil {
 		return nil, err
 	}
@@ -667,7 +674,9 @@ func registerG6Steps(sc *godog.ScenarioContext) {
 	})
 
 	sc.Step(`^the client sends "initialize" and then "tools/list"$`, func() error {
-		// initialize already happened when the process started; ask for the tools.
+		// `initialize` happened when the process started (a server answers it
+		// once per connection); this asks for the tools and keeps what that
+		// handshake reported.
 		res, err := w.client.call("tools/list", map[string]any{})
 		if err != nil {
 			return err
@@ -681,14 +690,7 @@ func registerG6Steps(sc *godog.ScenarioContext) {
 			}
 		}
 		sort.Strings(w.tools)
-		info, err := w.client.call("initialize", map[string]any{
-			"protocolVersion": "2025-06-18",
-			"capabilities":    map[string]any{},
-			"clientInfo":      map[string]any{"name": "g6", "version": "0"},
-		})
-		if err == nil {
-			w.serverInfo, _ = info["serverInfo"].(map[string]any)
-		}
+		w.serverInfo = w.client.serverInfo
 		return nil
 	})
 
