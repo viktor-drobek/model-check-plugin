@@ -1,0 +1,831 @@
+{
+ "mcd": "mcd 0.1.0-g0 (ir mcd-ir/1, report mcd-report/1)",
+ "probes": [
+  {
+   "id": "in-proctype-active-init",
+   "claim": "inside",
+   "construct": "proctype, active proctype, active [N] proctype, init",
+   "source": "§1 Processes",
+   "agrees": true,
+   "exit": 0,
+   "outcome": "parsed",
+   "processes": [
+    "A:0",
+    "B:1",
+    "B:2",
+    "init:3",
+    "P:4"
+   ],
+   "properties": [
+    "deadlock"
+   ]
+  },
+  {
+   "id": "in-params-pid",
+   "claim": "inside",
+   "construct": "proctype parameters, _pid",
+   "source": "§1 Processes",
+   "agrees": true,
+   "exit": 0,
+   "outcome": "parsed",
+   "processes": [
+    "init:0",
+    "P:1"
+   ],
+   "properties": [
+    "deadlock"
+   ]
+  },
+  {
+   "id": "in-run-in-loop",
+   "claim": "inside",
+   "construct": "run inside a loop (G5)",
+   "source": "§1 Processes",
+   "agrees": true,
+   "exit": 0,
+   "outcome": "parsed",
+   "processes": [
+    "init:0",
+    "W:1",
+    "W:2",
+    "W:3",
+    "W:4",
+    "W:5",
+    "W:6",
+    "W:7",
+    "W:8"
+   ],
+   "properties": [
+    "deadlock"
+   ]
+  },
+  {
+   "id": "in-run-recursive",
+   "claim": "inside",
+   "construct": "recursive run (G5)",
+   "source": "§1 Processes",
+   "agrees": true,
+   "exit": 0,
+   "outcome": "parsed",
+   "processes": [
+    "init:0",
+    "R:1",
+    "R:2",
+    "R:3",
+    "R:4",
+    "R:5",
+    "R:6",
+    "R:7",
+    "R:8"
+   ],
+   "properties": [
+    "deadlock"
+   ]
+  },
+  {
+   "id": "in-types-scalar",
+   "claim": "inside",
+   "construct": "bit, bool, byte, short, int, pid",
+   "source": "§1 Types",
+   "agrees": true,
+   "exit": 0,
+   "outcome": "parsed",
+   "processes": [
+    "P:0"
+   ],
+   "properties": [
+    "deadlock"
+   ]
+  },
+  {
+   "id": "in-types-array",
+   "claim": "inside",
+   "construct": "one-dimensional array of fixed length",
+   "source": "§1 Types",
+   "agrees": true,
+   "exit": 0,
+   "outcome": "parsed",
+   "processes": [
+    "P:0"
+   ],
+   "properties": [
+    "deadlock"
+   ]
+  },
+  {
+   "id": "in-mtype-eq-form",
+   "claim": "inside",
+   "construct": "mtype = { a, b }",
+   "source": "§1 mtype",
+   "agrees": true,
+   "exit": 0,
+   "outcome": "parsed",
+   "processes": [
+    "P:0"
+   ],
+   "properties": [
+    "deadlock"
+   ]
+  },
+  {
+   "id": "in-mtype-brace-form",
+   "claim": "inside",
+   "construct": "mtype { a, b }",
+   "source": "§1 mtype",
+   "agrees": true,
+   "exit": 0,
+   "outcome": "parsed",
+   "processes": [
+    "P:0"
+   ],
+   "properties": [
+    "deadlock"
+   ]
+  },
+  {
+   "id": "in-chan-buffered",
+   "claim": "inside",
+   "construct": "chan c = [N] of { t }; send and receive",
+   "source": "§1 Channels",
+   "agrees": true,
+   "exit": 0,
+   "outcome": "parsed",
+   "processes": [
+    "S:0",
+    "R:1"
+   ],
+   "properties": [
+    "deadlock"
+   ]
+  },
+  {
+   "id": "in-chan-rendezvous",
+   "claim": "inside",
+   "construct": "chan c = [0] of { t } (rendezvous)",
+   "source": "§1 Channels",
+   "agrees": true,
+   "exit": 0,
+   "outcome": "parsed",
+   "processes": [
+    "S:0",
+    "R:1"
+   ],
+   "properties": [
+    "deadlock"
+   ]
+  },
+  {
+   "id": "in-chan-multifield",
+   "claim": "inside",
+   "construct": "c!e1,e2 and c!e1(e2) forms",
+   "source": "§1 Channels",
+   "agrees": true,
+   "exit": 0,
+   "outcome": "parsed",
+   "processes": [
+    "S:0"
+   ],
+   "properties": [
+    "deadlock"
+   ]
+  },
+  {
+   "id": "in-chan-recv-constant",
+   "claim": "inside",
+   "construct": "c?x with a constant (pattern match)",
+   "source": "§1 Channels",
+   "agrees": true,
+   "exit": 0,
+   "outcome": "parsed",
+   "processes": [
+    "R:0"
+   ],
+   "properties": [
+    "deadlock"
+   ]
+  },
+  {
+   "id": "in-chan-predicates",
+   "claim": "inside",
+   "construct": "len, empty, full, nempty, nfull",
+   "source": "§1 Channels",
+   "agrees": true,
+   "exit": 0,
+   "outcome": "parsed",
+   "processes": [
+    "P:0"
+   ],
+   "properties": [
+    "deadlock"
+   ]
+  },
+  {
+   "id": "in-chan-xr-xs",
+   "claim": "inside",
+   "construct": "xr c / xs c as hints",
+   "source": "§1 Channels",
+   "agrees": true,
+   "exit": 0,
+   "outcome": "parsed",
+   "processes": [
+    "P:0"
+   ],
+   "properties": [
+    "deadlock"
+   ]
+  },
+  {
+   "id": "in-control",
+   "claim": "inside",
+   "construct": "if/fi, do/od, ::, ->, else, break, goto, labels",
+   "source": "§1 Control",
+   "agrees": true,
+   "exit": 0,
+   "outcome": "parsed",
+   "processes": [
+    "P:0"
+   ],
+   "properties": [
+    "deadlock"
+   ]
+  },
+  {
+   "id": "in-label-prefixes",
+   "claim": "inside",
+   "construct": "end, progress, accept label prefixes",
+   "source": "§1 Control",
+   "agrees": true,
+   "exit": 0,
+   "outcome": "parsed",
+   "processes": [
+    "P:0",
+    "Q:1"
+   ],
+   "properties": [
+    "deadlock",
+    "accept",
+    "progress"
+   ]
+  },
+  {
+   "id": "in-atomic-dstep",
+   "claim": "inside",
+   "construct": "atomic { … }, d_step { … }",
+   "source": "§1 Atomicity",
+   "agrees": true,
+   "exit": 0,
+   "outcome": "parsed",
+   "processes": [
+    "P:0"
+   ],
+   "properties": [
+    "deadlock"
+   ]
+  },
+  {
+   "id": "in-statements",
+   "claim": "inside",
+   "construct": "assignment, guard, assert, skip, true, false, printf",
+   "source": "§1 Statements",
+   "agrees": true,
+   "exit": 0,
+   "outcome": "parsed",
+   "processes": [
+    "P:0"
+   ],
+   "properties": [
+    "deadlock",
+    "assert"
+   ],
+   "warnings": [
+    "warning: printf: 1 statement(s) kept as no-op steps so that state counts match SPIN; their output is not produced"
+   ]
+  },
+  {
+   "id": "in-timeout",
+   "claim": "inside",
+   "construct": "timeout",
+   "source": "§1 Statements",
+   "agrees": true,
+   "exit": 0,
+   "outcome": "parsed",
+   "processes": [
+    "P:0"
+   ],
+   "properties": [
+    "deadlock"
+   ]
+  },
+  {
+   "id": "in-define-object",
+   "claim": "inside",
+   "construct": "#define NAME body",
+   "source": "§1 Preprocessor",
+   "agrees": true,
+   "exit": 0,
+   "outcome": "parsed",
+   "processes": [
+    "P:0"
+   ],
+   "properties": [
+    "deadlock"
+   ]
+  },
+  {
+   "id": "in-define-function",
+   "claim": "inside",
+   "construct": "#define NAME(args) body",
+   "source": "§1 Preprocessor",
+   "agrees": true,
+   "exit": 0,
+   "outcome": "parsed",
+   "processes": [
+    "P:0"
+   ],
+   "properties": [
+    "deadlock"
+   ]
+  },
+  {
+   "id": "in-define-continuation",
+   "claim": "inside",
+   "construct": "#define with a \\ continuation",
+   "source": "§1 Preprocessor",
+   "agrees": true,
+   "exit": 0,
+   "outcome": "parsed",
+   "processes": [
+    "P:0"
+   ],
+   "properties": [
+    "deadlock"
+   ]
+  },
+  {
+   "id": "in-ifdef-family",
+   "claim": "inside",
+   "construct": "#ifdef/#ifndef/#if/#elif/#else/#endif, defined(), #undef",
+   "source": "§1 Preprocessor",
+   "agrees": true,
+   "exit": 0,
+   "outcome": "parsed",
+   "processes": [
+    "P:0"
+   ],
+   "properties": [
+    "deadlock"
+   ]
+  },
+  {
+   "id": "in-never-claim",
+   "claim": "inside",
+   "construct": "never { … }",
+   "source": "§1 Properties",
+   "agrees": true,
+   "exit": 0,
+   "outcome": "parsed",
+   "processes": [
+    "P:0",
+    "never"
+   ],
+   "properties": [
+    "deadlock",
+    "never"
+   ]
+  },
+  {
+   "id": "in-expressions",
+   "claim": "inside",
+   "construct": "arithmetic, comparison, &&, ||, !, %",
+   "source": "§1 Expressions",
+   "agrees": true,
+   "exit": 0,
+   "outcome": "parsed",
+   "processes": [
+    "P:0"
+   ],
+   "properties": [
+    "deadlock"
+   ]
+  },
+  {
+   "id": "in-remote-label-in-never",
+   "claim": "inside",
+   "construct": "remote label reference P@label inside a never claim",
+   "source": "§1 Expressions",
+   "agrees": false,
+   "exit": 2,
+   "outcome": "rejected",
+   "kind": "outside-subset",
+   "message": "construct outside subset: remote reference (P@label) (outside the subset) (in-remote-label-in-never.pml, line 8)",
+   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/in-remote-label-in-never.pml:8:15"
+  },
+  {
+   "id": "out-inline",
+   "claim": "outside",
+   "construct": "inline name(args) { … }",
+   "source": "§3",
+   "agrees": false,
+   "exit": 0,
+   "outcome": "parsed",
+   "processes": [
+    "P:0"
+   ],
+   "properties": [
+    "deadlock"
+   ]
+  },
+  {
+   "id": "out-typedef",
+   "claim": "outside",
+   "construct": "typedef",
+   "source": "§3",
+   "agrees": false,
+   "exit": 0,
+   "outcome": "parsed",
+   "processes": [
+    "P:0"
+   ],
+   "properties": [
+    "deadlock"
+   ]
+  },
+  {
+   "id": "out-provided",
+   "claim": "outside",
+   "construct": "provided (e)",
+   "source": "§3",
+   "agrees": false,
+   "exit": 0,
+   "outcome": "parsed",
+   "processes": [
+    "P:0"
+   ],
+   "properties": [
+    "deadlock"
+   ]
+  },
+  {
+   "id": "out-chan-in-message",
+   "claim": "outside",
+   "construct": "channels as message fields",
+   "source": "§3",
+   "agrees": false,
+   "exit": 0,
+   "outcome": "parsed",
+   "processes": [
+    "S:0"
+   ],
+   "properties": [
+    "deadlock"
+   ]
+  },
+  {
+   "id": "out-chan-array",
+   "claim": "outside",
+   "construct": "arrays of channels",
+   "source": "§3",
+   "agrees": false,
+   "exit": 0,
+   "outcome": "parsed",
+   "processes": [
+    "P:0"
+   ],
+   "properties": [
+    "deadlock"
+   ]
+  },
+  {
+   "id": "out-chan-uninitialised",
+   "claim": "outside",
+   "construct": "uninitialised channel variables",
+   "source": "§3",
+   "agrees": false,
+   "exit": 0,
+   "outcome": "parsed",
+   "processes": [
+    "P:0"
+   ],
+   "properties": [
+    "deadlock"
+   ]
+  },
+  {
+   "id": "out-nr-pr",
+   "claim": "outside",
+   "construct": "_nr_pr",
+   "source": "§3",
+   "agrees": false,
+   "exit": 0,
+   "outcome": "parsed",
+   "processes": [
+    "P:0"
+   ],
+   "properties": [
+    "deadlock"
+   ]
+  },
+  {
+   "id": "out-unless",
+   "claim": "outside",
+   "construct": "unless",
+   "source": "§3",
+   "agrees": true,
+   "exit": 2,
+   "outcome": "rejected",
+   "kind": "outside-subset",
+   "message": "construct outside subset: unless (plan 14 §5.2: outside the subset) (out-unless.pml, line 5)",
+   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-unless.pml:5:40"
+  },
+  {
+   "id": "out-c-code",
+   "claim": "outside",
+   "construct": "c_code",
+   "source": "§3",
+   "agrees": true,
+   "exit": 2,
+   "outcome": "rejected",
+   "kind": "outside-subset",
+   "message": "construct outside subset: c_code (embedded C is outside the subset) (out-c-code.pml, line 4)",
+   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-c-code.pml:4:1"
+  },
+  {
+   "id": "out-c-expr",
+   "claim": "outside",
+   "construct": "c_expr",
+   "source": "§3",
+   "agrees": true,
+   "exit": 2,
+   "outcome": "rejected",
+   "kind": "outside-subset",
+   "message": "construct outside subset: c_expr (embedded C is outside the subset) (out-c-expr.pml, line 4)",
+   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-c-expr.pml:4:29"
+  },
+  {
+   "id": "out-c-decl",
+   "claim": "outside",
+   "construct": "c_decl",
+   "source": "§3",
+   "agrees": true,
+   "exit": 2,
+   "outcome": "rejected",
+   "kind": "outside-subset",
+   "message": "construct outside subset: c_decl (embedded C is outside the subset) (out-c-decl.pml, line 4)",
+   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-c-decl.pml:4:1"
+  },
+  {
+   "id": "out-c-state",
+   "claim": "outside",
+   "construct": "c_state",
+   "source": "§3",
+   "agrees": true,
+   "exit": 2,
+   "outcome": "rejected",
+   "kind": "outside-subset",
+   "message": "construct outside subset: c_state (embedded C is outside the subset) (out-c-state.pml, line 4)",
+   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-c-state.pml:4:1"
+  },
+  {
+   "id": "out-c-track",
+   "claim": "outside",
+   "construct": "c_track",
+   "source": "§3",
+   "agrees": true,
+   "exit": 2,
+   "outcome": "rejected",
+   "kind": "outside-subset",
+   "message": "construct outside subset: c_code (embedded C is outside the subset) (out-c-track.pml, line 4)",
+   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-c-track.pml:4:1"
+  },
+  {
+   "id": "out-eval-in-receive",
+   "claim": "outside",
+   "construct": "eval(e) in a receive",
+   "source": "§3",
+   "agrees": true,
+   "exit": 2,
+   "outcome": "rejected",
+   "kind": "outside-subset",
+   "message": "construct outside subset: eval (plan 14 §5.2: not in the corpus, outside the subset) (out-eval-in-receive.pml, line 5)",
+   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-eval-in-receive.pml:5:33"
+  },
+  {
+   "id": "out-priority",
+   "claim": "outside",
+   "construct": "priority",
+   "source": "§3",
+   "agrees": true,
+   "exit": 2,
+   "outcome": "rejected",
+   "kind": "outside-subset",
+   "message": "construct outside subset: priority (process priorities are outside the subset) (out-priority.pml, line 4)",
+   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-priority.pml:4:21"
+  },
+  {
+   "id": "out-bit-operators",
+   "claim": "outside",
+   "construct": "bit operators",
+   "source": "§3",
+   "agrees": true,
+   "exit": 2,
+   "outcome": "rejected",
+   "kind": "outside-subset",
+   "message": "construct outside subset: bitwise operator & (outside the subset) (out-bit-operators.pml, line 5)",
+   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-bit-operators.pml:5:30"
+  },
+  {
+   "id": "out-shift-operators",
+   "claim": "outside",
+   "construct": "shift operators",
+   "source": "§3",
+   "agrees": true,
+   "exit": 2,
+   "outcome": "rejected",
+   "kind": "outside-subset",
+   "message": "construct outside subset: bitwise operator << (outside the subset) (out-shift-operators.pml, line 5)",
+   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-shift-operators.pml:5:30"
+  },
+  {
+   "id": "out-conditional-expr",
+   "claim": "outside",
+   "construct": "?: conditional expression",
+   "source": "§3",
+   "agrees": true,
+   "exit": 2,
+   "outcome": "rejected",
+   "kind": "outside-subset",
+   "message": "construct outside subset: conditional expression (c -> a : b) (outside the subset) (out-conditional-expr.pml, line 5)",
+   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-conditional-expr.pml:5:27"
+  },
+  {
+   "id": "out-run-in-expression",
+   "claim": "outside",
+   "construct": "run inside an expression",
+   "source": "§3",
+   "agrees": false,
+   "exit": 0,
+   "outcome": "parsed",
+   "processes": [
+    "init:0",
+    "Q:1"
+   ],
+   "properties": [
+    "deadlock"
+   ]
+  },
+  {
+   "id": "out-remote-variable",
+   "claim": "outside",
+   "construct": "remote variable reference P[i]:var",
+   "source": "§3",
+   "agrees": true,
+   "exit": 2,
+   "outcome": "rejected",
+   "kind": "syntax",
+   "message": "expected \";\" or \"->\" after a statement, got : (out-remote-variable.pml, line 5)",
+   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-remote-variable.pml:5:39"
+  },
+  {
+   "id": "out-poll-receive",
+   "claim": "outside",
+   "construct": "c?[…] poll",
+   "source": "§3",
+   "agrees": true,
+   "exit": 2,
+   "outcome": "rejected",
+   "kind": "outside-subset",
+   "message": "construct outside subset: channel poll (?[…]) (outside the subset) (out-poll-receive.pml, line 5)",
+   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-poll-receive.pml:5:37"
+  },
+  {
+   "id": "out-sorted-receive",
+   "claim": "outside",
+   "construct": "c?? random/sorted receive",
+   "source": "§3",
+   "agrees": true,
+   "exit": 2,
+   "outcome": "rejected",
+   "kind": "outside-subset",
+   "message": "construct outside subset: random receive (??) (outside the subset) (out-sorted-receive.pml, line 5)",
+   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-sorted-receive.pml:5:31"
+  },
+  {
+   "id": "out-copy-receive",
+   "claim": "outside",
+   "construct": "c?<…> copy receive",
+   "source": "§3",
+   "agrees": true,
+   "exit": 2,
+   "outcome": "rejected",
+   "kind": "outside-subset",
+   "message": "construct outside subset: copy receive (?<…>) (outside the subset) (out-copy-receive.pml, line 5)",
+   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-copy-receive.pml:5:31"
+  },
+  {
+   "id": "out-unsigned",
+   "claim": "outside",
+   "construct": "unsigned",
+   "source": "§3",
+   "agrees": true,
+   "exit": 2,
+   "outcome": "rejected",
+   "kind": "outside-subset",
+   "message": "construct outside subset: unsigned (outside the subset) (out-unsigned.pml, line 4)",
+   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-unsigned.pml:4:1"
+  },
+  {
+   "id": "out-hidden-qualifier",
+   "claim": "outside",
+   "construct": "hidden qualifier",
+   "source": "§3",
+   "agrees": true,
+   "exit": 2,
+   "outcome": "rejected",
+   "kind": "outside-subset",
+   "message": "construct outside subset: hidden (variable qualifiers are outside the subset) (out-hidden-qualifier.pml, line 4)",
+   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-hidden-qualifier.pml:4:1"
+  },
+  {
+   "id": "out-local-qualifier",
+   "claim": "outside",
+   "construct": "local qualifier",
+   "source": "§3",
+   "agrees": true,
+   "exit": 2,
+   "outcome": "rejected",
+   "kind": "outside-subset",
+   "message": "construct outside subset: local (variable qualifiers are outside the subset) (out-local-qualifier.pml, line 4)",
+   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-local-qualifier.pml:4:1"
+  },
+  {
+   "id": "out-show-qualifier",
+   "claim": "outside",
+   "construct": "show qualifier",
+   "source": "§3",
+   "agrees": true,
+   "exit": 2,
+   "outcome": "rejected",
+   "kind": "outside-subset",
+   "message": "construct outside subset: show (variable qualifiers are outside the subset) (out-show-qualifier.pml, line 4)",
+   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-show-qualifier.pml:4:1"
+  },
+  {
+   "id": "out-ltl-block",
+   "claim": "outside",
+   "construct": "ltl name { … } block",
+   "source": "§3",
+   "agrees": true,
+   "exit": 2,
+   "outcome": "rejected",
+   "kind": "outside-subset",
+   "message": "construct outside subset: ltl (inline LTL blocks are outside the subset; use never { }) (out-ltl-block.pml, line 6)",
+   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-ltl-block.pml:6:1"
+  },
+  {
+   "id": "out-pc-value",
+   "claim": "outside",
+   "construct": "pc_value(pid)",
+   "source": "§3 (plan §5.2 lists it as v1)",
+   "agrees": false,
+   "exit": 0,
+   "outcome": "parsed",
+   "processes": [
+    "P:0",
+    "Q:1"
+   ],
+   "properties": [
+    "deadlock"
+   ],
+   "warnings": [
+    "warning: pc_value (line 6): the value is this engine's control-location numbering, which is built differently from pan's internal state numbers; a model whose behaviour depends on the number behaves differently here than under SPIN"
+   ]
+  },
+  {
+   "id": "out-include",
+   "claim": "outside",
+   "construct": "#include",
+   "source": "§3",
+   "agrees": true,
+   "exit": 2,
+   "outcome": "rejected",
+   "kind": "outside-subset",
+   "message": "construct outside subset: #include (the model must be a single file) (out-include.pml, line 4)",
+   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-include.pml:4:1"
+  },
+  {
+   "id": "out-block-redeclaration",
+   "claim": "outside",
+   "construct": "block-scoped redeclaration of a local",
+   "source": "§3",
+   "agrees": false,
+   "exit": 0,
+   "outcome": "parsed",
+   "processes": [
+    "P:0"
+   ],
+   "properties": [
+    "deadlock"
+   ]
+  }
+ ]
+}

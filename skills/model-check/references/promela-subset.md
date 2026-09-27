@@ -25,8 +25,10 @@ or explain the boundary. A construct outside the subset gives `not-executed` for
 Most rows are exercised by the corpus files of chapters 2–3 that agree with SPIN state
 for state (`steps/g1-confirmation.md` §3.1: 21 files agree, 3 differ only by the
 overflow policy of §2); `#elif`, `#undef`, `nempty`/`nfull`, `xr`/`xs` (in the corpus
-only under `#if 0`) and remote references are covered by the engine's own test models
-(`engine/testdata/promela/`) and unit tests, not by the corpus.
+only under `#if 0`) are covered by the engine's own test models
+(`engine/testdata/promela/`) and unit tests, not by the corpus. Remote references are
+**not** accepted (§3); the plan never included them, and this table promised them in
+error until the row-by-row probe of `steps/g3-evals3-subset-probe.md` caught it.
 
 | Area | Accepted |
 |---|---|
@@ -38,15 +40,21 @@ only under `#if 0`) and remote references are covered by the engine's own test m
 | Atomicity | `atomic { … }`, `d_step { … }` (semantics in §2) |
 | Statements | assignment, expression statements (guards), `assert(e)`, `skip`, `true`, `false`, `timeout`, `printf` (a step with no effect; warning) |
 | Preprocessor | `#define` (object-like `#define NAME body` and function-like `#define NAME(args) body`, with `\` continuation), `#undef`, `#ifdef`/`#ifndef`/`#if`/`#elif`/`#else`/`#endif` with constant expressions and `defined()`; symbols from the command line with `-D` (`-D NAME` / `-D NAME=value`, repeatable; MCP: `defines`); expanded tokens keep the line of the macro call for traces |
-| Properties | `never` claim (`never { … }`; parsed and stored as a claim process, **not executed** until G4 — the engine emits a warning and **no property record** for the claim; `#ifdef` pairs select claims, as `CH4/prop.pml` with `-D PHI`), `assert`, `end`/`progress`/`accept` labels |
-| Expressions | integer arithmetic and comparison, `&&`, `||`, `!`, `%`; remote label references `P@label` inside never claims |
+| Properties | `never` claim (`never { … }`; since G4 it is **executed** and the frontend adds a property `never` of kind `ltl` — probe `in-never-claim.pml` gives properties `deadlock, never`; `#ifdef` pairs select claims, as `CH4/prop.pml` with `-D PHI`), `assert`, `end`/`progress`/`accept` labels (an `accept` label adds a property `accept`, a `progress` label a property `progress` — probe `in-label-prefixes.pml` gives `deadlock, accept, progress`) |
+| Expressions | integer arithmetic and comparison, `&&`, `\|\|`, `!`, `%` |
 
 ## 2. Semantic decisions users will notice against SPIN
 
-All of these were settled by probes against `pan` (SPIN 6.5.2, `-DNOREDUCE`); for the
-24 files of chapters 2–3 that the parser accepts, the state counts match `pan -c0`
-exactly except where this table says otherwise (the other 12 files are rejected before
-any search, §3).
+All of these were settled by probes against `pan` (SPIN 6.5.2, `-DNOREDUCE`). The
+subset widened in G5, so the counts of the G1 era no longer hold: of the 34 `.pml` /
+`.pr` files in chapters 2–3, **31 now parse and 3 are refused** —
+`CH3/notpossible.pml` (`run` inside a larger expression), `CH3/pots.pml` (`unless`),
+and `CH3/scope.pml`, which is a `semantic` refusal that **SPIN makes too**, at the
+same line and for the same reason ("undeclared variable: y"), because the file is a
+teaching example of a scope error. Where the differential corpus test covers a model
+the counts agree with `pan -c0` (`TestDifferentialCorpus`, 51 models, all agreeing —
+`steps/g5-addendum-confirmation.md` §5); that test, not this paragraph, is the
+authority for any particular file.
 
 | Topic | Engine | SPIN (`pan`) | What to tell the user |
 |---|---|---|---|
@@ -59,7 +67,8 @@ any search, §3).
 | **`else`** | dynamic: executable iff no other option of the same `if`/`do` is | same | — |
 | **`timeout`** | two-phase: true iff nothing at all is executable with `timeout` false (02 гл. 13) | same | an abstraction of "stuck", not a clock |
 | **Process termination** | the `-end-` transition of a process is executable only when no younger process is alive (SPIN removes only the last process of the vector); locals are zeroed | same | end states are valid only when every process is terminated or at an `end` label |
-| **Never claim** | parsed as a process with `claim: true`, **not executed**; the report carries the warning "never claim (line N) parsed and stored as a claim process; not executed in this engine version — safety properties only; the claim's product with the system is G4" and **no record** for the claim; the search is the safety search of G0/G1 | executed in lockstep | until G4 you assign `not-executed` yourself to the property the claim expresses, quoting the warning as the reason; the `deadlock`/`assert` properties of the same model are still checked and reported |
+| **Never claim** | parsed as a process with `claim: true` and **executed** since G4: the frontend adds a property `never` (kind `ltl`), the claim moves first at every step, and its verdict comes back like any other (`properties-ltl-ctl.md` §6) | the same | the G1-era warning "not executed in this engine version" is gone; if you meet it in an old report, that report predates G4 |
+| **`pc_value(n)`** | accepted, and **warned about**: "the value is this engine's control-location numbering, which is built differently from pan's internal state numbers; a model whose behaviour depends on the number behaves differently here than under SPIN" | pan has its own internal numbering, and warns that `pc_value` outside a never claim is unusual | this is the one construct the engine accepts while telling you the semantics differ. A verdict on a model that branches on a particular `pc_value` is about **this** engine's numbering and must not be carried to SPIN. `CH4/pcval.pml` parses (exit 0, three warnings) |
 | **`printf`** | a step without effect; warning "printf ignored" | prints | properties cannot observe it |
 | **Undeclared variable** (`CH3/scope.pml`) | `kind: semantic` rejection | SPIN also refuses | fix the model |
 
@@ -74,35 +83,56 @@ meaningful with G4.
 
 ## 3. Outside the subset — the `not-executed` rule
 
-The parser refuses these with `kind: outside-subset` and names the construct and the
-line; the honest report is `not-executed` for every property, with the construct, the
-line, and (where one exists) the rewrite. `kind: syntax` and `kind: semantic` refusals
-are model errors to fix, not boundaries to explain.
+Every row of this table was derived by running `mcd parse` on a minimal model that
+exercises that one construct: the probes are `evals-workspace/subset-probes/*.pml`,
+the driver is `probe.py` beside them, and the run is recorded in
+`steps/g3-evals3-subset-probe.md`. Re-run it rather than trusting the table —
+`python3 probe.py --mcd /tmp/mcd` prints a disagreement for any row that has drifted.
 
-> **This table predates the G5 subset extension and is wider than the engine's
-> refusals now are.** Rows marked "v1 (G5)" were written when G5 was unbuilt; probes
-> of the current binary accept `provided` (`CH3/toggle.pml`), `inline`
-> (`CH3/inline.pml`), `typedef` (`CH3/typedef.pml`) and channels carried in messages
-> (`CH3/rendezvous2.pml`, `CH15/client_server.pml`), all of which this table still
-> calls deferred. `unless` and `c_code` are still refused, as the plan intends.
-> Until the row-by-row pass against `steps/g5-confirmation.md` is done, **do not
-> report a construct as outside the subset on the strength of this table alone** —
-> run `mcd parse` and quote what the engine actually says. A construct wrongly
-> called `not-executed` is the same kind of error as a verdict wrongly claimed.
+Three outcomes, not two:
 
-| Construct | Tier | Corpus file | Rewrite to offer |
+- **rejected** — exit code 2, the honest report is `not-executed` for every property,
+  with the construct, the line, and (where one exists) the rewrite;
+- **parsed** — inside the subset, whatever anything else says;
+- **parsed with a warning** — accepted, but the semantics are not SPIN's. One
+  construct is in this class, `pc_value` (§2); do not report it as a boundary and do
+  not carry its verdict to SPIN.
+
+Most rejections carry `kind: outside-subset`, and the row below says where they do
+not. `kind: syntax` and `kind: semantic` normally mean a model error to fix rather
+than a boundary to explain — with the one exception noted for `P[i]:var`.
+
+| Construct | Rejection `kind` | Corpus file | Rewrite to offer |
 |---|---|---|---|
-| `inline name(args) { … }` | v1 (G5) | `CH3/inline.pml`, `CH2/prodcons2.pml` | paste the body by hand (say so in the report) |
-| `typedef` | v1 (G5) | `CH3/typedef.pml` | flatten into scalars/arrays |
-| `provided (e)` | v1 (G5) | `CH3/toggle.pml`, `CH5/pathfinder.pml` | an explicit turn variable, if the priority matters to the property |
-| channels as message fields, arrays of channels, channel variables, uninitialised channels | v1 (G5) | `CH3/rendezvous2.pml`, `CH3/pots.pml`, `CH3/wc.pml`, `CH15/client_server.pml` | static channels per pair |
-| `_nr_pr` | v1 (G5) | `CH15/client_server.pml` | a counter the model maintains itself |
-| `unless` | excluded | `CH7/example1.pml`–`example3.pml`, `CH3/pots.pml` | explicit `do` with a guard on the escape condition |
-| `c_code`, `c_expr`, `c_decl`, `c_state`, `c_track` | excluded (NFR-004: no host code) | `CH17/simple1.pr` (line 1), `CH17/simple2.pr`, `CH10/fahr.pml` | model the C effect as Promela assignments and guards |
-| `eval(e)` in receive, `priority`, bit operators, `?:`, `run` inside an expression, remote variable references, `c?[…]`/`c??`/`c?<…>` (poll, sorted, random, copy), `unsigned`, `hidden`/`show`/`local` qualifiers | excluded / not in the plan | `CH3/notpossible.pml` (`run` in an expression — SPIN refuses too) | — |
-| `ltl name { … }` blocks | excluded (plan gives `never { }` priority) | — | a never claim (G4) |
-| `#include` | outside | `CH15/*` | paste the included text |
-| block-scoped redeclaration of a local (SPIN 6 allows) | outside, with a message | none in the corpus | rename |
+| `unless` | `outside-subset` ("plan 14 §5.2: outside the subset") | `CH7/example1.pml`–`example3.pml`, `CH3/pots.pml` | explicit `do` with a guard on the escape condition |
+| `c_code`, `c_expr`, `c_decl`, `c_state`, `c_track` | `outside-subset` ("embedded C is outside the subset"; a `c_track` file is refused at its `c_code`) | `CH17/simple1.pr` (line 1), `CH17/simple2.pr`, `CH10/fahr.pml` | model the C effect as Promela assignments and guards |
+| `eval(e)` in a receive | `outside-subset` ("plan 14 §5.2: not in the corpus, outside the subset") | — | receive into a variable and guard on it |
+| `priority n` | `outside-subset` ("process priorities are outside the subset") | `CH5/pathfinder.pml` | an explicit turn variable, if the priority matters to the property |
+| bitwise `&`, `\|`, `^`, `~` and the shifts `<<`, `>>` | `outside-subset` ("bitwise operator …") | — | arithmetic, or a small array of bits |
+| `?:` — the conditional expression `(c -> a : b)` | `outside-subset` ("conditional expression (c -> a : b)") | — | an `if … fi` with two options |
+| `run` **inside a larger expression** | `outside-subset` — the message says it exactly: "run is accepted as a statement, on its own or as `pid = run P(...)`, not inside a larger expression" | `CH3/notpossible.pml` (`!run A()`; SPIN refuses it too) | assign first (`pid = run P()`), then test the pid |
+| remote **variable** reference `P[i]:var` | **`syntax`**, not `outside-subset` ("expected \";\" or \"->\" after a statement, got :") — the one place where a `syntax` refusal is a boundary rather than a typo | `CH15/*` | a global the process writes |
+| `c?[…]` (poll), `c??` (random/sorted receive), `c?<…>` (copy receive) | `outside-subset` ("channel poll (?[…])", "random receive (??)", "copy receive (?<…>)") | — | `nempty(c)` as a guard, then an ordinary receive |
+| `unsigned` | `outside-subset` | — | `byte` / `short` / `int` with an explicit range check |
+| `hidden`, `show`, `local` qualifiers | `outside-subset` ("variable qualifiers are outside the subset") | — | drop the qualifier; it does not change behaviour |
+| `ltl name { … }` blocks | `outside-subset` ("inline LTL blocks are outside the subset") | — | a never claim, or `--ltl` on the command line |
+| `#include` | `outside-subset` ("the model must be a single file") | `CH15/*` | paste the included text |
+| remote **label** reference `P@label` | `outside-subset` ("remote reference (P@label)") — in a never claim and in an `--ltl` formula. **CTL accepts it** and normalises it to `pc(…)` (`properties-ltl-ctl.md` §2) | — | ask it in CTL, or add a `progress` label or a variable |
+
+**Lifted by G5** — these were listed here while G5 was unbuilt and are now **inside**
+the subset; probes accept all of them: `inline`, `typedef`, `provided (e)`, channels
+carried in messages, arrays of channels, uninitialised channel variables, `_nr_pr`,
+`pc_value` (with the warning of §2), and `run` as the whole right-hand side of an
+assignment. Do not report any of them as a boundary.
+
+**Known defect, not a boundary.** A block-scoped redeclaration of a local
+(`{ byte n; … }` inside a proctype that already has `n`) is **accepted silently**,
+and the two variables become one — SPIN 6 refuses the file outright
+(`Error: redeclaration of 'n'`). The engine gives no warning and no non-zero exit, so
+a model that redeclares a local is not the model that gets checked. Until the engine
+owner fixes it, treat a redeclaration you spot in a user's model as a model error and
+say so yourself; do not rely on the parser to catch it
+(`steps/g3-evals3-subset-probe.md` §C).
 
 ## 4. Reading a rejection
 
@@ -135,6 +165,11 @@ message construct outside subset: c_code (embedded C is outside the subset) (sim
   narrowing; it no longer describes the engine.
 - **Overflow policy.** Plan §4.1 (`invalid-model`) is implemented; SPIN wraps. A
   "wrap like SPIN" mode would be one flag at the store; it does not exist today.
+- **Constructs the plan defers to v1 and G5 built anyway.** `inline`, `typedef`,
+  `provided`, channels in messages, arrays of channels, `_nr_pr`, `pc_value` and
+  `run` in a loop are accepted now, ahead of the plan's own wording, which still
+  files them under v1. The engine's behaviour is the fact; §3 lists what is actually
+  refused.
 - **`_pid`, the `mtype { }` form, `nempty`/`nfull`, `#ifdef` family, `xr`/`xs`** are
   accepted although §5.2 does not list them literally, because the MVP corpus files
   need them (`CH2/mutex_flaw.pml`, `CH2/mutex.pml`, `CH4/dijkstra_progress.pml`,

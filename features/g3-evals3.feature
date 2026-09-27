@@ -235,6 +235,48 @@ Feature: G3 evals — stage 3 after G4: E2, E2b and E4 with and without the skil
     And that property's counters show 12 states
     And "references/promela-subset.md" says that every run draws from its proctype's pool and a pid is reused
 
+  # ------------------------------------ the subset table, re-derived from the binary
+  # references/promela-subset.md §3 is a set of claims about what the parser
+  # refuses. The probes under evals-workspace/subset-probes exercise one construct
+  # each; these scenarios re-run a sample of them through the in-process CLI and
+  # compare the outcome with what the table says, so the table cannot drift from
+  # the engine without a red scenario. Evidence and the full 57-probe run:
+  # steps/g3-evals3-subset-probe.md.
+
+  Scenario Outline: The engine refuses what the subset table says it refuses
+    Then running "mcd parse --promela" on the probe "<probe>" is rejected with kind "<kind>"
+    And "references/promela-subset.md" lists "<construct>" as outside the subset
+
+    Examples:
+      | probe                    | kind           | construct |
+      | out-unless               | outside-subset | `unless`  |
+      | out-c-code               | outside-subset | `c_code`  |
+      | out-eval-in-receive      | outside-subset | `eval(e)` |
+      | out-priority             | outside-subset | `priority n` |
+      | out-bit-operators        | outside-subset | bitwise   |
+      | out-poll-receive         | outside-subset | poll      |
+      | out-ltl-block            | outside-subset | `ltl name { … }` blocks |
+      | out-include              | outside-subset | `#include` |
+      | out-remote-variable      | syntax         | `P[i]:var` |
+
+  Scenario Outline: The engine accepts what the subset table no longer calls a boundary
+    Then running "mcd parse --promela" on the probe "<probe>" is accepted
+    And "references/promela-subset.md" does not list "<construct>" as outside the subset
+
+    Examples:
+      | probe                  | construct   |
+      | out-inline             | `inline`    |
+      | out-typedef            | `typedef`   |
+      | out-provided           | `provided`  |
+      | out-chan-in-message    | channels carried in messages |
+      | out-nr-pr              | `_nr_pr`    |
+      | out-pc-value           | `pc_value`  |
+      | in-never-claim         | `never`     |
+
+  Scenario: The subset table no longer carries the warning that replaced the missing pass
+    Then "references/promela-subset.md" does not warn that its table predates the G5 extension
+    And "references/promela-subset.md" says that the rows were derived by probing the engine
+
   # ---------------------------------------------------------- graded runs
   Scenario: Every eval runnable from G4 or earlier has a graded run in iteration-3 in both configurations
     Then every eval in "evals/evals.json" with "runnable_from" at or before "G4" has a graded run under the workspace "evals-workspace/iteration-3" with "with_skill" and "without_skill"

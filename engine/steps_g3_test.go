@@ -2081,6 +2081,109 @@ func registerG3Steps(sc *godog.ScenarioContext) {
 		}
 		return nil
 	})
+
+	// ------------------------------- the subset table, re-derived from the binary
+	// The probes live in evals-workspace/subset-probes and are run through the
+	// in-process CLI, so a scenario fails if the engine's classification of a
+	// construct and references/promela-subset.md §3 ever disagree again.
+	probePath := func(name string) string {
+		return filepath.Join(w.pluginDir, "evals-workspace", "subset-probes", name+".pml")
+	}
+	runProbe := func(name string) (int, map[string]any, string) {
+		var stdout, stderr bytes.Buffer
+		code := cli.Run([]string{"parse", "--promela", probePath(name)}, &stdout, &stderr)
+		var doc map[string]any
+		_ = json.Unmarshal(stdout.Bytes(), &doc)
+		return code, doc, stderr.String()
+	}
+	sc.Step(`^running "mcd parse --promela" on the probe "([^"]+)" is rejected with kind "([^"]+)"$`, func(name, kind string) error {
+		if _, err := os.Stat(probePath(name)); err != nil {
+			return fmt.Errorf("probe %s is missing; run evals-workspace/subset-probes/probe.py: %v", name, err)
+		}
+		code, doc, stderr := runProbe(name)
+		if code != 2 {
+			return fmt.Errorf("probe %s exited %d, want 2 (a frontend rejection); stderr: %s", name, code, stderr)
+		}
+		e, _ := doc["error"].(map[string]any)
+		if e == nil {
+			return fmt.Errorf("probe %s: exit 2 without an error document", name)
+		}
+		if got := fmt.Sprint(e["kind"]); got != kind {
+			return fmt.Errorf("probe %s rejected with kind %q, the table says %q (message: %v)", name, got, kind, e["message"])
+		}
+		return nil
+	})
+	sc.Step(`^running "mcd parse --promela" on the probe "([^"]+)" is accepted$`, func(name string) error {
+		if _, err := os.Stat(probePath(name)); err != nil {
+			return fmt.Errorf("probe %s is missing; run evals-workspace/subset-probes/probe.py: %v", name, err)
+		}
+		code, doc, stderr := runProbe(name)
+		if code != 0 {
+			return fmt.Errorf("probe %s exited %d, want 0 (inside the subset); stdout error: %v; stderr: %s", name, code, doc["error"], stderr)
+		}
+		if _, ok := doc["processes"]; !ok {
+			return fmt.Errorf("probe %s: exit 0 without an IR document", name)
+		}
+		return nil
+	})
+	// "outside the subset" means: named in the §3 table, which is the part of the
+	// file between its heading and the next one.
+	outsideSection := func() (string, error) {
+		body, err := read("references/promela-subset.md")
+		if err != nil {
+			return "", err
+		}
+		i := strings.Index(body, "## 3. Outside the subset")
+		if i < 0 {
+			return "", fmt.Errorf("references/promela-subset.md has no section 3")
+		}
+		rest := body[i:]
+		if j := strings.Index(rest, "\n## 4."); j >= 0 {
+			rest = rest[:j]
+		}
+		return rest, nil
+	}
+	sc.Step(`^"([^"]+)" lists "([^"]+)" as outside the subset$`, func(_, construct string) error {
+		sec, err := outsideSection()
+		if err != nil {
+			return err
+		}
+		if !strings.Contains(sec, construct) {
+			return fmt.Errorf("section 3 does not name %q, but the engine refuses it", construct)
+		}
+		return nil
+	})
+	sc.Step(`^"([^"]+)" does not list "([^"]+)" as outside the subset$`, func(_, construct string) error {
+		sec, err := outsideSection()
+		if err != nil {
+			return err
+		}
+		// The section names lifted constructs in its "Lifted by G5" paragraph; a
+		// row is what makes a construct a boundary, so look only at table rows.
+		for _, line := range strings.Split(sec, "\n") {
+			if !strings.HasPrefix(line, "| ") || strings.HasPrefix(line, "| Construct") || strings.HasPrefix(line, "|---") {
+				continue
+			}
+			cells := strings.SplitN(strings.TrimPrefix(line, "| "), " | ", 2)
+			if strings.Contains(cells[0], construct) {
+				return fmt.Errorf("section 3 still has a table row for %q, but the engine accepts it: %s", construct, line)
+			}
+		}
+		return nil
+	})
+	sc.Step(`^"([^"]+)" does not warn that its table predates the G5 extension$`, func(rel string) error {
+		body, err := read(rel)
+		if err != nil {
+			return err
+		}
+		if phrase(`(?is)predates the G5 subset extension|(?is)wider than the engine's\s+refusals`).MatchString(body) {
+			return fmt.Errorf("%s still carries the placeholder warning instead of a true table", rel)
+		}
+		return nil
+	})
+	sc.Step(`^"([^"]+)" says that the rows were derived by probing the engine$`, func(rel string) error {
+		return statesRule(rel, phrase(`(?is)Every row of this table was derived by running .mcd parse.`), "the rows were derived by probing the engine")
+	})
 }
 
 // objectKeysInOrder returns the keys of the top-level object member `key` in
