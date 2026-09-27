@@ -2171,6 +2171,16 @@ func registerG3Steps(sc *godog.ScenarioContext) {
 		}
 		return nil
 	})
+	sc.Step(`^"([^"]+)" section 3 names "([^"]+)"$`, func(_, phrase string) error {
+		sec, err := outsideSection()
+		if err != nil {
+			return err
+		}
+		if !strings.Contains(sec, phrase) {
+			return fmt.Errorf("section 3 of references/promela-subset.md does not name %q", phrase)
+		}
+		return nil
+	})
 	sc.Step(`^"([^"]+)" does not warn that its table predates the G5 extension$`, func(rel string) error {
 		body, err := read(rel)
 		if err != nil {

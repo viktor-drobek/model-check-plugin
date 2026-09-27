@@ -176,7 +176,9 @@ Feature: G3 evals — stage 2 after G1: E1 and E5 with and without the skill
       | --promela        |
       | -D               |
       | --sweep          |
-      | .mcp.json        |
+      # Renamed in G6: a `.mcp.json` at the plugin root was read a second time as a
+      # project config and registered the server twice (steps/g6-confirmation.md §3).
+      | mcp/servers.json |
     And "references/engine-tools.md" has at most 300 lines or a table of contents
 
   Scenario: The engine-tools reference documents the seven MCP tools as built in G2 with their field names

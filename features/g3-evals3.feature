@@ -273,6 +273,30 @@ Feature: G3 evals — stage 3 after G4: E2, E2b and E4 with and without the skil
       | out-pc-value           | `pc_value`  |
       | in-never-claim         | `never`     |
 
+  # Name collisions are `semantic` refusals that SPIN makes too — model errors, not
+  # boundaries of the subset — and the two divergences are refusals the engine makes
+  # deliberately where SPIN accepts. Both families were fixed/decided in the second G5
+  # addendum; these rows keep §3 honest about them.
+  Scenario Outline: Name collisions and the deliberate divergences are refused and documented
+    Then running "mcd parse --promela" on the probe "<probe>" is rejected with kind "semantic"
+    And "references/promela-subset.md" section 3 names "<phrase>"
+
+    Examples:
+      | probe                       | phrase |
+      | out-redeclare-enclosing     | enclosing scope is still open |
+      | out-redeclare-if-options    | options open no scope |
+      | out-duplicate-label         | the same label |
+      | out-label-and-variable      | both a label and a variable |
+      | out-proctype-and-mtype      | proctype whose name is already an `mtype` constant |
+      | out-two-globals             | two globals of one name |
+      | out-run-arity-few           | arity does not match |
+      | out-sibling-different-types | different types |
+
+  Scenario: The one legal redeclaration is accepted, and the reference says it is one variable
+    Then running "mcd parse --promela" on the probe "in-redeclare-siblings" is accepted
+    And "references/promela-subset.md" section 3 names "the sole earlier declaration was in a scope that has"
+    And "references/promela-subset.md" section 3 names "keeps **one** variable"
+
   Scenario: The subset table no longer carries the warning that replaced the missing pass
     Then "references/promela-subset.md" does not warn that its table predates the G5 extension
     And "references/promela-subset.md" says that the rows were derived by probing the engine

@@ -22,7 +22,7 @@ cd ../evals-workspace/subset-probes && python3 probe.py --mcd /tmp/mcd
 поэтому разошедшаяся справка видна как расхождение, а не как пройденный тест.
 
 Движок: `mcd 0.1.0-g0 (ir mcd-ir/1, report mcd-report/1)`, собранный из дерева на
-G5-дополнении + G6-упаковке. **58 проб.** При первом прогоне — 11 расхождений со
+G5-дополнении + G6-упаковке. **73 пробы.** При первом прогоне — 11 расхождений со
 справкой; они разобраны ниже и справка исправлена, поэтому колонка «Reference says»
 в таблице — это уже **исправленная** классификация, и чистый прогон даёт
 **0 расхождений**. Любое расхождение в будущем означает, что движок и справка снова
@@ -103,7 +103,22 @@ G5-дополнении + G6-упаковке. **58 проб.** При перв�
 | `out-ltl-block.pml` | ltl name { … } block | outside | rejected `outside-subset` | construct outside subset: ltl (inline LTL blocks are outside the subset; use never { }) (out-ltl-block.pml, line 6) |
 | `out-pc-value.pml` | pc_value(pid) | inside | parsed + warning | warning: pc_value (line 6): the value is this engine's control-location numbering, which is built differently from pan's internal state numbers; a mod |
 | `out-include.pml` | #include | outside | rejected `outside-subset` | construct outside subset: #include (the model must be a single file) (out-include.pml, line 4) |
-| `out-block-redeclaration.pml` | block-scoped redeclaration of a local | defect | parsed |  |
+| `out-redeclare-enclosing.pml` | redeclaration while the enclosing scope is open | outside | rejected `semantic` | redeclaration of n: the name is already declared in this scope or in one still open around it (SPIN: "redeclaration of 'n'"); only a block that has cl |
+| `out-redeclare-same-scope.pml` | redeclaration in the same scope | outside | rejected `semantic` | redeclaration of n: the name is already declared in this scope or in one still open around it (SPIN: "redeclaration of 'n'"); only a block that has cl |
+| `out-redeclare-parameter.pml` | local shadowing a proctype parameter | outside | rejected `semantic` | redeclaration of n: the name is already declared in this scope or in one still open around it (SPIN: "redeclaration of 'n'"); only a block that has cl |
+| `out-redeclare-global.pml` | local shadowing a global | outside | rejected `semantic` | redeclaration of n: it is already a global variable, and a local of that name would shadow it (SPIN refuses the same) (out-redeclare-global.pml, line  |
+| `out-redeclare-if-options.pml` | two if options declaring one name | outside | rejected `semantic` | redeclaration of n: the name is already declared in this scope or in one still open around it (SPIN: "redeclaration of 'n'"); only a block that has cl |
+| `out-duplicate-label.pml` | duplicate label in one proctype | outside | rejected `semantic` | label L redeclared: P already has a statement labelled L (SPIN reports the same) (out-duplicate-label.pml, line 6) |
+| `out-label-and-variable.pml` | one identifier as both label and variable | outside | rejected `semantic` | L is already a label of P: one identifier cannot be both a variable and a control location (SPIN refuses the same) (out-label-and-variable.pml, line 4 |
+| `out-label-and-global.pml` | label colliding with a global | outside | rejected `semantic` | label g: the name is already a global variable, and SPIN keeps one namespace for both (it reports "bad label-name g") (out-label-and-global.pml, line  |
+| `out-label-and-mtype.pml` | label colliding with an mtype constant | outside | rejected `semantic` | label m: the name is already an mtype constant, and SPIN keeps one namespace for both (it reports "bad label-name m") (out-label-and-mtype.pml, line 6 |
+| `out-proctype-and-global.pml` | proctype name colliding with a global | outside | rejected `semantic` | proctype P: the name is already a global variable, and SPIN keeps one namespace for both (out-proctype-and-global.pml, line 5) |
+| `out-proctype-and-mtype.pml` | proctype name colliding with an mtype constant | outside | rejected `semantic` | proctype P: the name is already an mtype constant, and SPIN keeps one namespace for both (out-proctype-and-mtype.pml, line 5) |
+| `out-two-globals.pml` | two globals of one name | outside | rejected `semantic` | redeclaration of n: the name is already a global variable, channel or mtype constant (SPIN: "redeclaration of 'n'") (out-two-globals.pml, line 5) |
+| `in-redeclare-siblings.pml` | sibling blocks declaring one name (the scope has closed) | inside | parsed |  |
+| `out-run-arity-few.pml` | run with fewer arguments than parameters | outside | rejected `semantic` | run P: 0 argument(s) for 1 parameter(s) (out-run-arity-few.pml, line 5) |
+| `out-run-arity-many.pml` | run with more arguments than parameters | outside | rejected `semantic` | run P: 2 argument(s) for 1 parameter(s) (out-run-arity-many.pml, line 5) |
+| `out-sibling-different-types.pml` | sibling blocks declaring one name with different types | outside | rejected `semantic` | y is declared twice in P with different types (int and byte); the engine keeps one flat set of locals per process (out-sibling-different-types.pml, li |
 
 ## Разбор одиннадцати расхождений
 
@@ -142,34 +157,44 @@ G5 внёс в подмножество то, что план 14 §5.2 отно�
   конкретного числа `pc_value`, ведёт себя здесь иначе, чем под SPIN, — принята, но
   переносить вердикт на SPIN нельзя. Строка идёт в §2 («расхождения с SPIN»), а не в §3.
 
-### C. Дефект движка (1) — **не заделывается документацией, отчёт координатору**
+### C. Дефект движка (1) — **исправлен G5, третий проход**
 
-**Переобъявление локальной переменной в блоке принимается молча, и две переменные
-сливаются в одну.**
+При первом прогоне: `active proctype P() { byte n; n = 1; { byte n; n = 2 } }` —
+`mcd parse` давал код 0 и один локальный `n` (внутренняя переменная сливалась с
+внешней), тогда как SPIN 6 файл отвергает (`Error: redeclaration of 'n'`). Ни кода
+возврата, ни `warnings`: проверялась не та модель, которую написал пользователь.
+Записано тогда как дефект для маршрутизации владельцем, **не** заделано документацией.
+
+**Исправлено** во втором дополнении G5 (`steps/g5-addendum2-confirmation.md`), и
+находка оказалась первой из **шести** одного семейства: G5 перебрал 52 формы
+столкновения имён против SPIN, нашёл 19 расхождений — все в одну сторону, движок
+принимал то, что SPIN отвергает, — и свёл их к шести дефектам. Теперь:
 
 ```
-$ cat out-block-redeclaration.pml
-active proctype P() { byte n; n = 1; { byte n; n = 2 } }
-
-$ /tmp/mcd parse --promela out-block-redeclaration.pml        # exit 0
-   процесс P:0, locals: ['n']          ← одна переменная вместо двух
-
-$ spin -a out-block-redeclaration.pml
-spin: out-block-redeclaration.pml:4, Error: redeclaration of 'n'
+$ /tmp/mcd parse --promela out-redeclare-enclosing.pml        # exit 2
+semantic: redeclaration of n: the name is already declared in this scope or in one
+          still open around it …
 ```
 
-SPIN 6 файл **отвергает**. Движок его принимает и строит модель, в которой внутренняя
-`n` — это внешняя `n`: присваивание в блоке затирает внешнюю переменную. Справка
-обещала «outside, with a message»; сообщения нет, отказа нет, есть молчаливая подмена
-модели.
+Правило, которое G5 установил перебором (а не обобщением с двух примеров, как в
+первой редакции): объявление — ошибка, когда имя **видно** там, где оно стоит; законно
+только если единственное прежнее объявление было в области, которая уже закрылась;
+область открывают **только** `{ }`, альтернативы `if`/`do` — нет. Тринадцать проб
+этого прохода (`out-redeclare-*`, `out-duplicate-label`, `out-label-and-*`,
+`out-proctype-and-*`, `out-two-globals`, `in-redeclare-siblings`) закрепляют и
+запреты, и единственный законный случай.
 
-Дефект именно в **переобъявлении**, а не в блочной области видимости вообще: на
-`CH3/scope.pml` (переменная объявлена во вложенном блоке и используется после него)
-движок даёт `semantic` «undeclared variable y (line 11)», и **SPIN даёт ту же ошибку
-на той же строке** — тут движок прав. Расходятся они ровно там, где имя переобъявлено. Это тот же класс, что найденный ранее `goto` на несуществующую метку: модель,
-которую проверяют, — не та, которую написал пользователь, и ни кода возврата, ни
-`warnings` об этом не говорят. Ожидаемое поведение — отказ `kind: semantic` с именем
-переменной и строкой. Владелец `engine/frontend/promela` — агент G5.
+Второй дефект того же класса — `goto` на несуществующую метку — тоже вошёл в это
+семейство (повторная метка в одном proctype молча сливала две локации).
+
+### C2. Два сознательных расхождения (движок строже SPIN)
+
+Не дефекты и не границы подмножества, а выбор, записанный в справке §3 «Stricter than
+SPIN», чтобы дифференциальные прогоны не ловили их снова:
+`out-run-arity-few` / `out-run-arity-many` (SPIN подставляет ноль вместо недостающего
+аргумента; движок отвергает, потому что тихий ноль даёт вердикт о модели, которой
+автор не писал) и `out-sibling-different-types` (SPIN заводит две переменные; движок
+держит один плоский набор локальных, где имя — это слот).
 
 ### D. Уточнение, не расхождение: род отказа
 
@@ -183,7 +208,7 @@ SPIN 6 файл **отвергает**. Движок его принимает �
 
 ## Что осталось верным без правок
 
-46 из 58 проб подтвердили справку как есть: все процессы, типы, массивы, обе формы
+61 из 73 проб подтвердили справку как есть: все процессы, типы, массивы, обе формы
 `mtype`, каналы и их предикаты, `xr`/`xs` как хинты, управляющие конструкции и
 префиксы меток (`accept` и `progress` дают свойства `accept`/`progress` в IR),
 `atomic`/`d_step`, операторы, `timeout`, весь препроцессор с `-D`, арифметика и

@@ -124,9 +124,19 @@ mcd serve [--session-dir DIR] [--allow-read DIR]… [--max-states N] [--max-dept
 | `--concurrency K` | simultaneous `mc_check`/`mc_estimate` runs | 2 |
 | `--cleanup` | remove session directories at shutdown (opt-in) | keep |
 
-The plugin's `.mcp.json` starts it as `${CLAUDE_PLUGIN_ROOT}/engine/bin/mcd serve
---max-states 5000000 --max-depth 5000000 --max-ms 300000 --max-memory-mb 2048
---concurrency 2` (installation and the binary build belong to G6).
+The plugin declares the server in **`mcp/servers.json`** (`plugin.json` points at it
+with `"mcpServers": "./mcp/servers.json"`), which starts it as
+`${CLAUDE_PLUGIN_ROOT}/engine/bin/mcd serve --max-states 5000000 --max-depth 5000000
+--max-ms 300000 --max-memory-mb 2048 --concurrency 2`.
+
+**Not `.mcp.json`, and not at the plugin root.** G6 found that a `.mcp.json` in the
+plugin root is read twice when the plugin directory is itself the working directory:
+once as the plugin's own declaration and once as a *project* config, which registered
+the server a second time — `plugin:model-check:model-check ✔ Connected` beside a
+second `model-check … ⏸ Pending approval` whose `${CLAUDE_PLUGIN_ROOT}` was unset.
+Moving the file out of the root removes the second path; its contents did not change
+(`steps/g6-confirmation.md` §3.2–3.3). If you are debugging an installation and see
+the server listed twice, this is the shape to look for.
 
 **Budget rule (the same in both layers since G4).** `budget` has four optional
 fields `states`, `depth`, `ms`, `memory_mb`; an absent or zero field means the
@@ -298,7 +308,7 @@ Anything else that differs between two runs is an engine defect to report.
 | `ltl` (never claims and `--ltl` formulas), `progress` (`--progress` and `progress` labels), weak fairness, lasso counterexamples (`loop`), `--unlimited`, the same budget rule in both layers, `mc_parse{promela}` over MCP | **G4 (built)**. Plan §11 kept LTL evidence at `unknown` only "while experimental"; the differential oracle of `steps/g4-confirmation.md` §3.1 (43 triples agreeing with `pan`) is what ends that, so LTL results now carry the ordinary evidence levels of §6 |
 | `ctl` (`--ctl`, graph labelling), vacuity for temporal formulas, the growth model of `mc_estimate` (`--estimate`, `--target-depth`, and a `size` class), Promela v1 (`inline`, `typedef`, `provided`, channels in messages, arrays of channels, `_nr_pr`, `pc_value`, `run` in a loop with `--max-procs`) | **G5 (built)**. The fields are in §5.2 (`temporal`, per-property `warnings`) and §4 (`mc_check`, `mc_lint_property`, `mc_estimate`, `mc_parse`); the subset is in `promela-subset.md` §3, re-derived from the engine by the probes of `steps/g3-evals3-subset-probe.md`. The vocabulary of `features/g5-ctl-v1.feature` is the authority for witness and counterexample shapes |
 | the G5 addendum: no stutter extension inside the `np_` product, and one instance pool per proctype (`counterexamples.md` §2a, `promela-subset.md` §2) | **G5 addendum (built)** |
-| plugin installation (`.mcp.json`, binary build) validated with a real client | G6 |
+| plugin installation (`mcp/servers.json`, the cross-platform binary build and `BUILD-INFO.json`) validated with a real client | **G6 (built)** |
 | bitstate (`approximate`), POR, parallel BFS | G7 (vNext, if chosen) |
 
 ## 9. Session directory and artefacts (11 §13)

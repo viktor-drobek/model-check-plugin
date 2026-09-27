@@ -825,10 +825,154 @@
    "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-include.pml:4:1"
   },
   {
-   "id": "out-block-redeclaration",
-   "claim": "defect",
-   "construct": "block-scoped redeclaration of a local",
-   "source": "§3 known defect",
+   "id": "out-redeclare-enclosing",
+   "claim": "outside",
+   "construct": "redeclaration while the enclosing scope is open",
+   "source": "§3 names",
+   "agrees": true,
+   "exit": 2,
+   "outcome": "rejected",
+   "kind": "semantic",
+   "message": "redeclaration of n: the name is already declared in this scope or in one still open around it (SPIN: \"redeclaration of 'n'\"); only a block that has closed frees the name (out-redeclare-enclosing.pml, line 4)",
+   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-redeclare-enclosing.pml:4:45"
+  },
+  {
+   "id": "out-redeclare-same-scope",
+   "claim": "outside",
+   "construct": "redeclaration in the same scope",
+   "source": "§3 names",
+   "agrees": true,
+   "exit": 2,
+   "outcome": "rejected",
+   "kind": "semantic",
+   "message": "redeclaration of n: the name is already declared in this scope or in one still open around it (SPIN: \"redeclaration of 'n'\"); only a block that has closed frees the name (out-redeclare-same-scope.pml, line 4)",
+   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-redeclare-same-scope.pml:4:36"
+  },
+  {
+   "id": "out-redeclare-parameter",
+   "claim": "outside",
+   "construct": "local shadowing a proctype parameter",
+   "source": "§3 names",
+   "agrees": true,
+   "exit": 2,
+   "outcome": "rejected",
+   "kind": "semantic",
+   "message": "redeclaration of n: the name is already declared in this scope or in one still open around it (SPIN: \"redeclaration of 'n'\"); only a block that has closed frees the name (out-redeclare-parameter.pml, line 4)",
+   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-redeclare-parameter.pml:4:27"
+  },
+  {
+   "id": "out-redeclare-global",
+   "claim": "outside",
+   "construct": "local shadowing a global",
+   "source": "§3 names",
+   "agrees": true,
+   "exit": 2,
+   "outcome": "rejected",
+   "kind": "semantic",
+   "message": "redeclaration of n: it is already a global variable, and a local of that name would shadow it (SPIN refuses the same) (out-redeclare-global.pml, line 5)",
+   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-redeclare-global.pml:5:28"
+  },
+  {
+   "id": "out-redeclare-if-options",
+   "claim": "outside",
+   "construct": "two if options declaring one name",
+   "source": "§3 names",
+   "agrees": true,
+   "exit": 2,
+   "outcome": "rejected",
+   "kind": "semantic",
+   "message": "redeclaration of n: the name is already declared in this scope or in one still open around it (SPIN: \"redeclaration of 'n'\"); only a block that has closed frees the name (out-redeclare-if-options.pml, line 4)",
+   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-redeclare-if-options.pml:4:51"
+  },
+  {
+   "id": "out-duplicate-label",
+   "claim": "outside",
+   "construct": "duplicate label in one proctype",
+   "source": "§3 names",
+   "agrees": true,
+   "exit": 2,
+   "outcome": "rejected",
+   "kind": "semantic",
+   "message": "label L redeclared: P already has a statement labelled L (SPIN reports the same) (out-duplicate-label.pml, line 6)",
+   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-duplicate-label.pml:6:1"
+  },
+  {
+   "id": "out-label-and-variable",
+   "claim": "outside",
+   "construct": "one identifier as both label and variable",
+   "source": "§3 names",
+   "agrees": true,
+   "exit": 2,
+   "outcome": "rejected",
+   "kind": "semantic",
+   "message": "L is already a label of P: one identifier cannot be both a variable and a control location (SPIN refuses the same) (out-label-and-variable.pml, line 4)",
+   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-label-and-variable.pml:4:28"
+  },
+  {
+   "id": "out-label-and-global",
+   "claim": "outside",
+   "construct": "label colliding with a global",
+   "source": "§3 names",
+   "agrees": true,
+   "exit": 2,
+   "outcome": "rejected",
+   "kind": "semantic",
+   "message": "label g: the name is already a global variable, and SPIN keeps one namespace for both (it reports \"bad label-name g\") (out-label-and-global.pml, line 6)",
+   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-label-and-global.pml:6:1"
+  },
+  {
+   "id": "out-label-and-mtype",
+   "claim": "outside",
+   "construct": "label colliding with an mtype constant",
+   "source": "§3 names",
+   "agrees": true,
+   "exit": 2,
+   "outcome": "rejected",
+   "kind": "semantic",
+   "message": "label m: the name is already an mtype constant, and SPIN keeps one namespace for both (it reports \"bad label-name m\") (out-label-and-mtype.pml, line 6)",
+   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-label-and-mtype.pml:6:1"
+  },
+  {
+   "id": "out-proctype-and-global",
+   "claim": "outside",
+   "construct": "proctype name colliding with a global",
+   "source": "§3 names",
+   "agrees": true,
+   "exit": 2,
+   "outcome": "rejected",
+   "kind": "semantic",
+   "message": "proctype P: the name is already a global variable, and SPIN keeps one namespace for both (out-proctype-and-global.pml, line 5)",
+   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-proctype-and-global.pml:5:1"
+  },
+  {
+   "id": "out-proctype-and-mtype",
+   "claim": "outside",
+   "construct": "proctype name colliding with an mtype constant",
+   "source": "§3 names",
+   "agrees": true,
+   "exit": 2,
+   "outcome": "rejected",
+   "kind": "semantic",
+   "message": "proctype P: the name is already an mtype constant, and SPIN keeps one namespace for both (out-proctype-and-mtype.pml, line 5)",
+   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-proctype-and-mtype.pml:5:1"
+  },
+  {
+   "id": "out-two-globals",
+   "claim": "outside",
+   "construct": "two globals of one name",
+   "source": "§3 names",
+   "agrees": true,
+   "exit": 2,
+   "outcome": "rejected",
+   "kind": "semantic",
+   "message": "redeclaration of n: the name is already a global variable, channel or mtype constant (SPIN: \"redeclaration of 'n'\") (out-two-globals.pml, line 5)",
+   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-two-globals.pml:5:6"
+  },
+  {
+   "id": "in-redeclare-siblings",
+   "claim": "inside",
+   "construct": "sibling blocks declaring one name (the scope has closed)",
+   "source": "§3 names",
    "agrees": true,
    "exit": 0,
    "outcome": "parsed",
@@ -838,6 +982,42 @@
    "properties": [
     "deadlock"
    ]
+  },
+  {
+   "id": "out-run-arity-few",
+   "claim": "outside",
+   "construct": "run with fewer arguments than parameters",
+   "source": "§3 divergences",
+   "agrees": true,
+   "exit": 2,
+   "outcome": "rejected",
+   "kind": "semantic",
+   "message": "run P: 0 argument(s) for 1 parameter(s) (out-run-arity-few.pml, line 5)",
+   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-run-arity-few.pml:5:8"
+  },
+  {
+   "id": "out-run-arity-many",
+   "claim": "outside",
+   "construct": "run with more arguments than parameters",
+   "source": "§3 divergences",
+   "agrees": true,
+   "exit": 2,
+   "outcome": "rejected",
+   "kind": "semantic",
+   "message": "run P: 2 argument(s) for 1 parameter(s) (out-run-arity-many.pml, line 5)",
+   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-run-arity-many.pml:5:8"
+  },
+  {
+   "id": "out-sibling-different-types",
+   "claim": "outside",
+   "construct": "sibling blocks declaring one name with different types",
+   "source": "§3 divergences",
+   "agrees": true,
+   "exit": 2,
+   "outcome": "rejected",
+   "kind": "semantic",
+   "message": "y is declared twice in P with different types (int and byte); the engine keeps one flat set of locals per process (out-sibling-different-types.pml, line 4)",
+   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-sibling-different-types.pml:4:48"
   }
  ]
 }

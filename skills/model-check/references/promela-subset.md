@@ -71,6 +71,7 @@ authority for any particular file.
 | **`pc_value(n)`** | accepted, and **warned about**: "the value is this engine's control-location numbering, which is built differently from pan's internal state numbers; a model whose behaviour depends on the number behaves differently here than under SPIN" | pan has its own internal numbering, and warns that `pc_value` outside a never claim is unusual | this is the one construct the engine accepts while telling you the semantics differ. A verdict on a model that branches on a particular `pc_value` is about **this** engine's numbering and must not be carried to SPIN. `CH4/pcval.pml` parses (exit 0, three warnings) |
 | **`printf`** | a step without effect; warning "printf ignored" | prints | properties cannot observe it |
 | **Undeclared variable** (`CH3/scope.pml`) | `kind: semantic` rejection | SPIN also refuses | fix the model |
+| **Redeclaration of a name** | `kind: semantic` rejection quoting SPIN's own wording ("label L redeclared", "redeclaration of n") | SPIN also refuses, on all the shapes that matter — the rule was re-established by running 52 collision shapes against SPIN 6.5.2, not inferred from two (`steps/g5-addendum2-confirmation.md` §2) | fix the model. The rule, and the one legal case, are in §3 "Name collisions". Two shapes are refused here where SPIN accepts, deliberately — §3 "Stricter than SPIN" |
 
 Unchanged from the notes: state = globals + per process (location, locals) + channel
 contents; step = one executable statement of one process; executability is the only
@@ -125,14 +126,48 @@ carried in messages, arrays of channels, uninitialised channel variables, `_nr_p
 `pc_value` (with the warning of §2), and `run` as the whole right-hand side of an
 assignment. Do not report any of them as a boundary.
 
-**Known defect, not a boundary.** A block-scoped redeclaration of a local
-(`{ byte n; … }` inside a proctype that already has `n`) is **accepted silently**,
-and the two variables become one — SPIN 6 refuses the file outright
-(`Error: redeclaration of 'n'`). The engine gives no warning and no non-zero exit, so
-a model that redeclares a local is not the model that gets checked. Until the engine
-owner fixes it, treat a redeclaration you spot in a user's model as a model error and
-say so yourself; do not rely on the parser to catch it
-(`steps/g3-evals3-subset-probe.md` §C).
+### Name collisions — `semantic` refusals, and SPIN refuses them too
+
+These are **not** boundaries of the subset: nothing here is a construct the engine
+declines to support, so the status is not `not-executed`. They are model errors, the
+engine names the identifier, the file and the line, and SPIN 6.5.2 rejects the same
+models. Report them as "fix the model", quoting the message.
+
+**The rule** (established by running 52 collision shapes against SPIN, not inferred
+from a couple of examples — `steps/g5-addendum2-confirmation.md` §2): a declaration is
+an error when the name is **visible where it stands** — in the same scope, or in a
+scope still open around it (an enclosing block, the proctype body, a parameter, a
+global). It is legal only when the sole earlier declaration was in a scope that has
+since **closed**. Only `{ }` opens a scope; the options of an `if`/`do` do not, so two
+options declaring one name are a redeclaration.
+
+| Collision | Probe |
+|---|---|
+| a local redeclared while an enclosing scope is still open, or twice in one scope, or over a parameter, or over a global | `out-redeclare-enclosing`, `out-redeclare-same-scope`, `out-redeclare-parameter`, `out-redeclare-global` |
+| two options of one `if`/`do` declaring the same name (options open no scope) | `out-redeclare-if-options` |
+| two statements of one proctype carrying the same label | `out-duplicate-label` |
+| one identifier used as both a label and a variable, in either order | `out-label-and-variable` |
+| a label whose name is already a global, a channel, an `mtype` constant or a proctype | `out-label-and-global`, `out-label-and-mtype` |
+| a proctype whose name is already an `mtype` constant, a channel or a global | `out-proctype-and-global`, `out-proctype-and-mtype` |
+| two globals of one name | `out-two-globals` |
+
+**The legal case**, and what it means: sibling blocks, where the first scope closed
+before the second opened (`{ byte n; … }; { byte n; … }`, and the two expansions of an
+`inline` that declares a variable). SPIN keeps **one** variable and re-initialises it
+at each declaration — `pan -d` on `engine/testdata/promela/redeclared-siblings.pml`
+gives `n = 0`, `n = 1`, `n = 0`, `n = 2` and 6 states, and the engine gives the same 6.
+Do not tell a user those are two variables (probe `in-redeclare-siblings`).
+
+### Stricter than SPIN — two deliberate refusals
+
+Both are choices, recorded so that a differential run does not rediscover them as
+defects, and so that a user porting a model from SPIN is told why it stopped.
+
+| Refused here, accepted by SPIN | Why the engine refuses |
+|---|---|
+| **`run` whose arity does not match** — `run P()` for `proctype P(byte x)` (probe `out-run-arity-few`; SPIN fills the missing argument with zero and accepts, while rejecting a *surplus* argument) | SPIN's own behaviour is asymmetric and so is no model: a surplus argument is an error, a missing one is a silent zero. A missing argument is nearly always a typo or the trace of an edit that removed a parameter, and a silent zero produces a model the author did not write — then a `verified` about someone else's model, the exact failure the differential apparatus exists to prevent. The cost of refusing is bounded and visible: exit 2, `not-executed` (nothing ran, so no verdict is claimed), a message naming both counts. `run P(1, 2)` is refused too, naming both counts (`out-run-arity-many`) |
+| **sibling blocks declaring one name with different types** — `{ int y; … }; { byte y; … }`, or a scalar and an array (probe `out-sibling-different-types`; SPIN makes two separate variables) | the engine keeps one flat set of locals per process, where the name *is* the slot. Accepting would mean renaming, which changes the state-vector layout and every counterexample in which the name appears — a bad trade for a shape no corpus model uses |
+
 
 ## 4. Reading a rejection
 
