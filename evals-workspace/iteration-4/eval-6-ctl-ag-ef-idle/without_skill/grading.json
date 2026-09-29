@@ -2,8 +2,8 @@
   "eval_id": 6,
   "eval_name": "ctl-ag-ef-idle",
   "run": "eval-6-ctl-ag-ef-idle/without_skill",
-  "passed_count": 5,
-  "total": 7,
+  "passed_count": 4,
+  "total": 8,
   "expectations": [
     {
       "text": "The property is handled as CTL",
@@ -16,9 +16,9 @@
       "evidence": "matched 'AG EF idle' at 2"
     },
     {
-      "text": "No LTL formula on idle is substituted for it",
+      "text": "No LTL formula on idle is substituted for it (naming it in order to reject it is allowed)",
       "passed": false,
-      "evidence": "forbidden match '[]<>idle' at 1180"
+      "evidence": "forbidden match 'формула **не переписывалась** в `[]<>idle' at 1147"
     },
     {
       "text": "The branching-time meaning (from every reachable state some path reaches idle) is explained",
@@ -31,14 +31,19 @@
       "evidence": "matched 'fairness-free' at 329"
     },
     {
-      "text": "The answer says whether the witness or counterexample is a path or a tree",
-      "passed": true,
-      "evidence": "matched 'путь' at 167"
+      "text": "The answer says the verdict carries no run at all and gives the engine's reason for that (a universal property that holds is justified by the whole graph, not by one run)",
+      "passed": false,
+      "evidence": "pattern '(?i)(no|without|not)\\\\s+(single\\\\s+)?(run|trace|witness|path)|нет\\\\s+(отдельного\\\\s+)?(прогон|трасс|пут|свидетел)|witness_note|без\\\\s+трасс' not found"
     },
     {
-      "text": "A status from the vocabulary is given",
+      "text": "The status is the one this model gives: verified with evidence exhaustive",
       "passed": false,
-      "evidence": "pattern '\\\\b(verified|violated|inconclusive|unknown|not-executed|invalid-model)\\\\b' not found"
+      "evidence": "pattern '(?i)\\\\bverified\\\\b[\\\\s\\\\S]{0,200}\\\\bexhaustive\\\\b|\\\\bexhaustive\\\\b[\\\\s\\\\S]{0,200}\\\\bverified\\\\b' not found"
+    },
+    {
+      "text": "The engine was invoked and its report is among the run's outputs: a CTL property verified with evidence exhaustive",
+      "passed": false,
+      "evidence": "no engine report under outputs matching {'status': 'verified', 'evidence': 'exhaustive'}: ctl-check-contrast.json: no engine section; ctl-check-version1.json: no engine section"
     }
   ]
 }

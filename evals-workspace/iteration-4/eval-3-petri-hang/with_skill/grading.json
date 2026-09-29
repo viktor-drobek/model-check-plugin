@@ -2,8 +2,8 @@
   "eval_id": 3,
   "eval_name": "petri-net-hang",
   "run": "eval-3-petri-hang/with_skill",
-  "passed_count": 9,
-  "total": 10,
+  "passed_count": 11,
+  "total": 11,
   "expectations": [
     {
       "text": "A Petri-net JSON accepted by the engine's frontend was written, with the six places, initial marking p1=p4=1 and the six transitions of the prompt",
@@ -11,9 +11,9 @@
       "evidence": "mc-session-2026-09-27/net.json is a valid net equivalent to evals/fixtures/petrinet1.json"
     },
     {
-      "text": "The engine CLI was run on the net and the command line is shown (mcd check --petri, the binary possibly named through a shell variable)",
-      "passed": false,
-      "evidence": "pattern '(?i)mcd check[^\\\\n]*--petri' not found"
+      "text": "The engine was run on the net and the command line is shown — either `mcd check --petri` or the parse-then-check route (`mcd parse --petri` followed by `mcd check --ir`)",
+      "passed": true,
+      "evidence": "matched 'mcd parse --petri` |\\n| `mc-session-2026-09-27/make-props.py` | сборка списка сво' at 21764"
     },
     {
       "text": "The hang (deadlock) property is reported with status violated",
@@ -51,9 +51,14 @@
       "evidence": "matched 'safe' at 887"
     },
     {
-      "text": "No forbidden phrasing (no errors / proved / net is correct)",
+      "text": "No forbidden phrasing (no errors / proved / net is correct) (naming the word in order to deny it does not count)",
       "passed": true,
-      "evidence": "pattern '(?i)\\\\bno errors\\\\b|\\\\bproved\\\\b|\\\\bproven\\\\b|ошибок нет|доказано|net is correct|сеть корректна' absent"
+      "evidence": "pattern '(?i)\\\\bno errors\\\\b|\\\\bproved\\\\b|\\\\bproven\\\\b|ошибок нет|(?<!не )доказано|net is correct|сеть корректна' absent"
+    },
+    {
+      "text": "The engine's report is among the run's outputs: the hang (deadlock) property violated with evidence exhaustive",
+      "passed": true,
+      "evidence": "mc-session-2026-09-27/check-bfs-sweep.json: property 'deadlock' is violated / exhaustive"
     }
   ]
 }

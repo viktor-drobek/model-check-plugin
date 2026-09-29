@@ -3,7 +3,7 @@
   "eval_name": "petri-net-hang",
   "run": "eval-3-petri-hang/without_skill",
   "passed_count": 5,
-  "total": 10,
+  "total": 11,
   "expectations": [
     {
       "text": "A Petri-net JSON accepted by the engine's frontend was written, with the six places, initial marking p1=p4=1 and the six transitions of the prompt",
@@ -11,9 +11,9 @@
       "evidence": "no valid net under outputs: no *.json files"
     },
     {
-      "text": "The engine CLI was run on the net and the command line is shown (mcd check --petri, the binary possibly named through a shell variable)",
+      "text": "The engine was run on the net and the command line is shown — either `mcd check --petri` or the parse-then-check route (`mcd parse --petri` followed by `mcd check --ir`)",
       "passed": false,
-      "evidence": "pattern '(?i)mcd check[^\\\\n]*--petri' not found"
+      "evidence": "pattern '(?i)mcd\\\\s+(check[^\\\\n]*--petri|parse[^\\\\n]*--petri[\\\\s\\\\S]{0,400}?mcd\\\\s+check[^\\\\n]*--ir)' not found"
     },
     {
       "text": "The hang (deadlock) property is reported with status violated",
@@ -51,9 +51,14 @@
       "evidence": "pattern '\\\\bsafe\\\\b' not found"
     },
     {
-      "text": "No forbidden phrasing (no errors / proved / net is correct)",
+      "text": "No forbidden phrasing (no errors / proved / net is correct) (naming the word in order to deny it does not count)",
       "passed": true,
-      "evidence": "pattern '(?i)\\\\bno errors\\\\b|\\\\bproved\\\\b|\\\\bproven\\\\b|ошибок нет|доказано|net is correct|сеть корректна' absent"
+      "evidence": "pattern '(?i)\\\\bno errors\\\\b|\\\\bproved\\\\b|\\\\bproven\\\\b|ошибок нет|(?<!не )доказано|net is correct|сеть корректна' absent"
+    },
+    {
+      "text": "The engine's report is among the run's outputs: the hang (deadlock) property violated with evidence exhaustive",
+      "passed": false,
+      "evidence": "no engine report under outputs matching {'property': 'deadlock', 'status': 'violated', 'evidence': 'exhaustive'}: no *.json files"
     }
   ]
 }

@@ -1,9 +1,9 @@
 {
   "eval_id": 4,
   "eval_name": "telephone-busy-liveness",
-  "run": "with_skill",
-  "passed_count": 9,
-  "total": 9,
+  "run": "eval-4-telephone-busy/with_skill",
+  "passed_count": 10,
+  "total": 10,
   "expectations": [
     {
       "text": "The requirement is classified as a liveness property",
@@ -36,9 +36,9 @@
       "evidence": "matched 'exhaustive' at 899"
     },
     {
-      "text": "The progress property the frontend adds from progress labels is named",
+      "text": "The route is named correctly: either the `progress` property the frontend adds from progress labels, or the CTL formula with a control-label atom",
       "passed": true,
-      "evidence": "matched '`progress` | вид свойства' at 11991"
+      "evidence": "matched '`progress`, метк' at 1598"
     },
     {
       "text": "Placing a progress label (or adding a variable) is declared as a change to the model, not smuggled in",
@@ -46,9 +46,14 @@
       "evidence": "matched 'Метка `progress` поставлена' at 5270"
     },
     {
-      "text": "No forbidden phrasing",
+      "text": "No forbidden phrasing (naming the word in order to deny it does not count)",
       "passed": true,
-      "evidence": "pattern '(?i)\\\\bno errors\\\\b|\\\\bproved\\\\b|\\\\bproven\\\\b|ошибок нет|доказано' absent"
+      "evidence": "pattern '(?i)\\\\bno errors\\\\b|\\\\bproved\\\\b|\\\\bproven\\\\b|ошибок нет|(?<!не )доказано' absent"
+    },
+    {
+      "text": "The engine was invoked and its report is among the run's outputs",
+      "passed": true,
+      "evidence": "mc-session-2026-09-25/check-1-original-baseline.json is an engine report"
     }
   ]
 }

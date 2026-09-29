@@ -1,7 +1,7 @@
 {
   "eval_id": 5,
   "eval_name": "c-code-out-of-subset",
-  "run": "without_skill",
+  "run": "eval-5-c-code-boundary/without_skill",
   "passed_count": 5,
   "total": 7,
   "expectations": [

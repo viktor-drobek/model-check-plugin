@@ -2,8 +2,8 @@
   "eval_id": 7,
   "eval_name": "starvation-loop-fairness",
   "run": "eval-2b-starvation-loop/without_skill",
-  "passed_count": 8,
-  "total": 9,
+  "passed_count": 9,
+  "total": 10,
   "expectations": [
     {
       "text": "Without fairness the property is reported violated",
@@ -41,14 +41,19 @@
       "evidence": "pattern '\\\\b(exhaustive|bounded|approximate|unknown)\\\\b' not found"
     },
     {
-      "text": "The engine was invoked (CLI or MCP), not reasoned around",
+      "text": "The engine was invoked and the unfair run's report is among the run's outputs: a property violated",
       "passed": true,
-      "evidence": "matched 'mcd check' at 2492"
+      "evidence": "mcd-fairness-none.json: property 'ltl1' is violated / exhaustive"
     },
     {
-      "text": "No forbidden phrasing, and the fair result is not called proved",
+      "text": "No forbidden phrasing, and the fair result is not called proved (naming the word in order to deny it does not count)",
       "passed": true,
-      "evidence": "pattern '(?i)\\\\bno errors\\\\b|ошибок нет|\\\\bproved\\\\b|\\\\bproven\\\\b|доказано|система корректна' absent"
+      "evidence": "pattern '(?i)\\\\bno errors\\\\b|ошибок нет|\\\\bproved\\\\b|\\\\bproven\\\\b|(?<!не )доказано|система корректна' absent"
+    },
+    {
+      "text": "The weak-fairness run's report is also among the outputs: a property verified with evidence exhaustive",
+      "passed": true,
+      "evidence": "mcd-fairness-none.json: property 'deadlock' is verified / exhaustive"
     }
   ]
 }

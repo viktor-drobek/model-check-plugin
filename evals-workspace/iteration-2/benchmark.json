@@ -55,9 +55,9 @@
           "evidence": "matched 'дефект системы' at 12103"
         },
         {
-          "text": "The engine was invoked (CLI or MCP), not reasoned around",
+          "text": "The engine was invoked (CLI or MCP) and its report is among the run's outputs: property `assert` violated with evidence exhaustive",
           "passed": true,
-          "evidence": "matched 'mcd check' at 7177"
+          "evidence": "check-ir-bfs.json: property 'assert' is violated / exhaustive"
         },
         {
           "text": "The engine version and input hash (manifest) are quoted",
@@ -65,9 +65,9 @@
           "evidence": "matched 'mcd 0.1' at 5697"
         },
         {
-          "text": "No forbidden phrasing (no errors / proved / system is correct)",
+          "text": "No forbidden phrasing (no errors / proved / system is correct) (naming the word in order to deny it does not count)",
           "passed": true,
-          "evidence": "pattern '(?i)\\\\bno errors\\\\b|\\\\bproved\\\\b|\\\\bproven\\\\b|ошибок нет|доказано|system is correct|система корректна' absent"
+          "evidence": "pattern '(?i)\\\\bno errors\\\\b|\\\\bproved\\\\b|\\\\bproven\\\\b|ошибок нет|(?<!не )доказано|system is correct|система корректна' absent"
         }
       ],
       "notes": []
@@ -79,9 +79,9 @@
       "run_number": 1,
       "result": {
         "pass_rate": 1.0,
-        "passed": 10,
+        "passed": 11,
         "failed": 0,
-        "total": 10,
+        "total": 11,
         "time_seconds": 315.574,
         "tokens": 118231,
         "tool_calls": 21,
@@ -94,7 +94,7 @@
           "evidence": "mc-session-2026-09-25/net.json is a valid net equivalent to evals/fixtures/petrinet1.json"
         },
         {
-          "text": "The engine CLI was run on the net and the command line is shown (mcd check --petri, the binary possibly named through a shell variable)",
+          "text": "The engine was run on the net and the command line is shown — either `mcd check --petri` or the parse-then-check route (`mcd parse --petri` followed by `mcd check --ir`)",
           "passed": true,
           "evidence": "matched 'mcd check --petri' at 8500"
         },
@@ -134,9 +134,14 @@
           "evidence": "matched 'safe' at 894"
         },
         {
-          "text": "No forbidden phrasing (no errors / proved / net is correct)",
+          "text": "No forbidden phrasing (no errors / proved / net is correct) (naming the word in order to deny it does not count)",
           "passed": true,
-          "evidence": "pattern '(?i)\\\\bno errors\\\\b|\\\\bproved\\\\b|\\\\bproven\\\\b|ошибок нет|доказано|net is correct|сеть корректна' absent"
+          "evidence": "pattern '(?i)\\\\bno errors\\\\b|\\\\bproved\\\\b|\\\\bproven\\\\b|ошибок нет|(?<!не )доказано|net is correct|сеть корректна' absent"
+        },
+        {
+          "text": "The engine's report is among the run's outputs: the hang (deadlock) property violated with evidence exhaustive",
+          "passed": true,
+          "evidence": "mc-session-2026-09-25/check-bfs.json: property 'deadlock' is violated / exhaustive"
         }
       ],
       "notes": []
@@ -237,9 +242,9 @@
           "evidence": "pattern '(?i)system defect|algorithm (is|itself is) wrong|дефект (системы|алгоритма)|ошибка (в )?алгоритм' not found"
         },
         {
-          "text": "The engine was invoked (CLI or MCP), not reasoned around",
+          "text": "The engine was invoked (CLI or MCP) and its report is among the run's outputs: property `assert` violated with evidence exhaustive",
           "passed": false,
-          "evidence": "pattern 'mcd check|mc_check' not found"
+          "evidence": "no engine report under outputs matching {'property': 'assert', 'status': 'violated', 'evidence': 'exhaustive'}: no *.json files"
         },
         {
           "text": "The engine version and input hash (manifest) are quoted",
@@ -247,9 +252,9 @@
           "evidence": "pattern '(?i)(sha256|sha-256)[^\\\\n]{0,40}[0-9a-f]{16}|0\\\\.1\\\\.0-g\\\\d|mcd \\\\d+\\\\.\\\\d+' not found"
         },
         {
-          "text": "No forbidden phrasing (no errors / proved / system is correct)",
+          "text": "No forbidden phrasing (no errors / proved / system is correct) (naming the word in order to deny it does not count)",
           "passed": true,
-          "evidence": "pattern '(?i)\\\\bno errors\\\\b|\\\\bproved\\\\b|\\\\bproven\\\\b|ошибок нет|доказано|system is correct|система корректна' absent"
+          "evidence": "pattern '(?i)\\\\bno errors\\\\b|\\\\bproved\\\\b|\\\\bproven\\\\b|ошибок нет|(?<!не )доказано|system is correct|система корректна' absent"
         }
       ],
       "notes": []
@@ -260,10 +265,10 @@
       "configuration": "without_skill",
       "run_number": 1,
       "result": {
-        "pass_rate": 0.5,
+        "pass_rate": 0.4545,
         "passed": 5,
-        "failed": 5,
-        "total": 10,
+        "failed": 6,
+        "total": 11,
         "time_seconds": 46.706,
         "tokens": 41754,
         "tool_calls": 2,
@@ -276,9 +281,9 @@
           "evidence": "no valid net under outputs: no *.json files"
         },
         {
-          "text": "The engine CLI was run on the net and the command line is shown (mcd check --petri, the binary possibly named through a shell variable)",
+          "text": "The engine was run on the net and the command line is shown — either `mcd check --petri` or the parse-then-check route (`mcd parse --petri` followed by `mcd check --ir`)",
           "passed": false,
-          "evidence": "pattern '(?i)mcd check[^\\\\n]*--petri' not found"
+          "evidence": "pattern '(?i)mcd\\\\s+(check[^\\\\n]*--petri|parse[^\\\\n]*--petri[\\\\s\\\\S]{0,400}?mcd\\\\s+check[^\\\\n]*--ir)' not found"
         },
         {
           "text": "The hang (deadlock) property is reported with status violated",
@@ -316,9 +321,14 @@
           "evidence": "pattern '\\\\bsafe\\\\b' not found"
         },
         {
-          "text": "No forbidden phrasing (no errors / proved / net is correct)",
+          "text": "No forbidden phrasing (no errors / proved / net is correct) (naming the word in order to deny it does not count)",
           "passed": true,
-          "evidence": "pattern '(?i)\\\\bno errors\\\\b|\\\\bproved\\\\b|\\\\bproven\\\\b|ошибок нет|доказано|net is correct|сеть корректна' absent"
+          "evidence": "pattern '(?i)\\\\bno errors\\\\b|\\\\bproved\\\\b|\\\\bproven\\\\b|ошибок нет|(?<!не )доказано|net is correct|сеть корректна' absent"
+        },
+        {
+          "text": "The engine's report is among the run's outputs: the hang (deadlock) property violated with evidence exhaustive",
+          "passed": false,
+          "evidence": "no engine report under outputs matching {'property': 'deadlock', 'status': 'violated', 'evidence': 'exhaustive'}: no *.json files"
         }
       ],
       "notes": []
@@ -401,9 +411,9 @@
     },
     "without_skill": {
       "pass_rate": {
-        "mean": 0.5714,
-        "stddev": 0.1237,
-        "min": 0.5,
+        "mean": 0.5563,
+        "stddev": 0.1387,
+        "min": 0.4545,
         "max": 0.7143
       },
       "time_seconds": {
@@ -420,16 +430,16 @@
       }
     },
     "delta": {
-      "pass_rate": "+0.43",
+      "pass_rate": "+0.44",
       "time_seconds": "+182.8",
       "tokens": "+61844"
     }
   },
   "notes": [
     "Eval 1 (mutex-invariant-violated): with_skill 8/8, without_skill 4/8",
-    "Eval 1: 4 of 8 assertions pass in both configurations and do not differentiate the skill: 'The mutual-exclusion property is reported with status violated'; 'The counterexample is decoded through the model's labels L1–L4'; 'The counterexample shows both users at label L7 (the critical section)'; 'No forbidden phrasing (no errors / proved / system is correct)'",
-    "Eval 3 (petri-net-hang): with_skill 10/10, without_skill 5/10",
-    "Eval 3: 5 of 10 assertions pass in both configurations and do not differentiate the skill: 'The counterexample is the firing sequence t1 then t4'; 'The final marking has one token in p2 (p2 = 1, or set notation {p2, p5})'; 'The final marking has one token in p5 (p5 = 1, or set notation {p2, p5})'; 'The number of reachable markings (6) is quoted from the engine's counters'; 'No forbidden phrasing (no errors / proved / net is correct)'",
+    "Eval 1: 4 of 8 assertions pass in both configurations and do not differentiate the skill: 'The mutual-exclusion property is reported with status violated'; 'The counterexample is decoded through the model's labels L1–L4'; 'The counterexample shows both users at label L7 (the critical section)'; 'No forbidden phrasing (no errors / proved / system is correct) (naming the word in order to deny it does not count)'",
+    "Eval 3 (petri-net-hang): with_skill 11/11, without_skill 5/11",
+    "Eval 3: 5 of 11 assertions pass in both configurations and do not differentiate the skill: 'The counterexample is the firing sequence t1 then t4'; 'The final marking has one token in p2 (p2 = 1, or set notation {p2, p5})'; 'The final marking has one token in p5 (p5 = 1, or set notation {p2, p5})'; 'The number of reachable markings (6) is quoted from the engine's counters'; 'No forbidden phrasing (no errors / proved / net is correct) (naming the word in order to deny it does not count)'",
     "Eval 5 (c-code-out-of-subset): with_skill 7/7, without_skill 5/7",
     "Eval 5: 5 of 7 assertions pass in both configurations and do not differentiate the skill: 'Status not-executed is reported'; 'The rejected construct c_code is named'; 'A source line of the construct is given'; 'No property result is imitated for the original model: no line of the answer attributes verified/violated/inconclusive to simple1.pr, c_code/c_expr or the original model/file (a verdict about a clearly separate rewrite is allowed — including a line that calls that rewrite \"the original\" one as against a mutant; refined in iteration-2 and again in iteration-3, see steps/g3-evals3-confirmation.md)'; 'No host code is executed and the answer says so'"
   ]

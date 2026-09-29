@@ -50,12 +50,11 @@ Feature: G3 evals — stage 2 after G1: E1 and E5 with and without the skill
     Then every eval in "evals/evals.json" with "runnable_from" at or before "G1" has a graded run under the workspace "evals-workspace/iteration-2" with "with_skill" and "without_skill"
 
   # ----------------------------------------------------------- graded runs
-  # @pending — правки по ревью 2026-09-29 (steps/review-fixes-confirmation.md) изменили набор
-  # assertions: факт вызова движка теперь проверяется `engine_report` по отчёту движка,
-  # а не regex по тексту ответа, и добавлен eval 8 (допущение A7). Записанные прогоны
-  # iteration-2/3 градированы прежними assertions, и сравнивать их с нынешним evals.json
-  # нельзя. Сценарий снова становится исполнимым после перезамера набора живыми прогонами.
-  @pending
+  # Правки по ревью 2026-09-29 изменили набор assertions (факт вызова движка —
+  # `engine_report` по отчёту, а не regex по тексту). Записанные прогоны не перезапускались:
+  # градация — детерминированная функция от (ответ, выводы, assertions), и grading.json пересчитан
+  # на тех же артефактах. Отчёты движка в них есть (mc-session-*/check-*.json), поэтому прогоны
+  # со скилом проходят и строгие проверки, а baseline — нет.
   Scenario Outline: The staged criterion — the run with the skill passes every assertion, the baseline does not
     Given the evals workspace "evals-workspace/iteration-2/<dir>"
     Then "eval_metadata.json" names eval id <id> and the prompt of that eval in "evals/evals.json"

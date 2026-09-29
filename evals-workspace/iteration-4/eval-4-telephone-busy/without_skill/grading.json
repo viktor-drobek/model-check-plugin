@@ -2,8 +2,8 @@
   "eval_id": 4,
   "eval_name": "telephone-busy-liveness",
   "run": "eval-4-telephone-busy/without_skill",
-  "passed_count": 3,
-  "total": 9,
+  "passed_count": 4,
+  "total": 10,
   "expectations": [
     {
       "text": "The requirement is classified as a liveness property",
@@ -36,9 +36,9 @@
       "evidence": "pattern '\\\\b(exhaustive|bounded|approximate|unknown)\\\\b' not found"
     },
     {
-      "text": "The progress property the frontend adds from progress labels is named",
-      "passed": false,
-      "evidence": "pattern '(?i)(свойств\\\\w*|property|properties)[^\\\\n]{0,60}`?progress`?|`?progress`?[^\\\\n]{0,60}(свойств\\\\w*|property|properties)' not found"
+      "text": "The route is named correctly: either the `progress` property the frontend adds from progress labels, or the CTL formula with a control-label atom",
+      "passed": true,
+      "evidence": "matched '@Busy' at 739"
     },
     {
       "text": "Placing a progress label (or adding a variable) is declared as a change to the model, not smuggled in",
@@ -46,9 +46,14 @@
       "evidence": "pattern '(?i)(добав\\\\w+|постав\\\\w+|размест\\\\w+|внёс|внес\\\\w+|перепис\\\\w+|измен\\\\w+|add\\\\w*|plac\\\\w+|insert\\\\w+|rewr\\\\w+|modif\\\\w+)[^\\\\n]{0,120}(progress|мет\\\\w+|label)|(progress|label|мет\\\\w+)[^\\\\n]{0,120}(добав\\\\w+|постав\\\\w+|перепис\\\\w+|измен\\\\w+ модел|add\\\\w*|plac\\\\w+|change to the model|изменени\\\\w* модел)' not found"
     },
     {
-      "text": "No forbidden phrasing",
+      "text": "No forbidden phrasing (naming the word in order to deny it does not count)",
       "passed": false,
       "evidence": "forbidden match 'ошибок нет' at 378"
+    },
+    {
+      "text": "The engine was invoked and its report is among the run's outputs",
+      "passed": false,
+      "evidence": "no engine report under outputs matching {any}: no *.json files"
     }
   ]
 }
