@@ -1,0 +1,108 @@
+[
+  {
+    "id": "deadlock",
+    "kind": "deadlock",
+    "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)"
+  },
+  {
+    "id": "P1",
+    "kind": "invariant",
+    "text": "!(working0 && working1): клиенты не работают одновременно",
+    "expr": {
+      "op": "not",
+      "args": [
+        {
+          "op": "and",
+          "args": [
+            {
+              "op": "var",
+              "var": "working0"
+            },
+            {
+              "op": "var",
+              "var": "working1"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "S0",
+    "kind": "reach",
+    "text": "waiting0: клиент 0 пытается получить разрешение",
+    "expr": {
+      "op": "var",
+      "var": "waiting0"
+    }
+  },
+  {
+    "id": "S1",
+    "kind": "reach",
+    "text": "waiting1: клиент 1 пытается получить разрешение",
+    "expr": {
+      "op": "var",
+      "var": "waiting1"
+    }
+  },
+  {
+    "id": "S2",
+    "kind": "reach",
+    "text": "working0: клиент 0 работает",
+    "expr": {
+      "op": "var",
+      "var": "working0"
+    }
+  },
+  {
+    "id": "S3",
+    "kind": "reach",
+    "text": "working1: клиент 1 работает",
+    "expr": {
+      "op": "var",
+      "var": "working1"
+    }
+  },
+  {
+    "id": "S4",
+    "kind": "reach",
+    "text": "accepted0: запрос клиента 0 уже принят",
+    "expr": {
+      "op": "var",
+      "var": "accepted0"
+    }
+  },
+  {
+    "id": "S5",
+    "kind": "reach",
+    "text": "accepted1: запрос клиента 1 уже принят",
+    "expr": {
+      "op": "var",
+      "var": "accepted1"
+    }
+  },
+  {
+    "id": "ltl1",
+    "kind": "ltl",
+    "formula": "[] (waiting0 -> <> working0)",
+    "text": "каждая попытка клиента 0 получить сервер когда-нибудь приводит к работе"
+  },
+  {
+    "id": "ltl2",
+    "kind": "ltl",
+    "formula": "[] (waiting1 -> <> working1)",
+    "text": "каждая попытка клиента 1 получить сервер когда-нибудь приводит к работе"
+  },
+  {
+    "id": "ltl3",
+    "kind": "ltl",
+    "formula": "[] (accepted0 -> <> working0)",
+    "text": "после принятия запроса клиента 0 тот когда-нибудь работает"
+  },
+  {
+    "id": "ltl4",
+    "kind": "ltl",
+    "formula": "[] (accepted1 -> <> working1)",
+    "text": "после принятия запроса клиента 1 тот когда-нибудь работает"
+  }
+]

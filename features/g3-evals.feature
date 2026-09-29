@@ -40,14 +40,11 @@ Feature: G3 evals — stage 2 after G1: E1 and E5 with and without the skill
       | G5 |
     And the evals in "evals/evals.json" with "runnable_from" at or before "G1" are exactly ids "1, 3, 5, 8"
 
-  # @pending — правки по ревью 2026-09-29 (steps/review-fixes-confirmation.md) изменили набор
-  # assertions: факт вызова движка теперь проверяется `engine_report` по отчёту движка,
-  # а не regex по тексту ответа, и добавлен eval 8 (допущение A7). Записанные прогоны
-  # iteration-2/3 градированы прежними assertions, и сравнивать их с нынешним evals.json
-  # нельзя. Сценарий снова становится исполнимым после перезамера набора живыми прогонами.
-  @pending
+  # Набор evals растёт, а итерация — снимок: она градирует то, что набор содержал на тот
+  # момент (поле `first_measured_in` в evals.json). Требование, чтобы новый eval вообще
+  # был измерен, живёт в сценарии последней итерации (features/g6-package.feature).
   Scenario: Every eval runnable from G1 or earlier has a graded run in iteration-2 in both configurations
-    Then every eval in "evals/evals.json" with "runnable_from" at or before "G1" has a graded run under the workspace "evals-workspace/iteration-2" with "with_skill" and "without_skill"
+    Then every eval in "evals/evals.json" with "runnable_from" at or before "G1" that the set already held then has a graded run under the workspace "evals-workspace/iteration-2" with "with_skill" and "without_skill"
 
   # ----------------------------------------------------------- graded runs
   # Правки по ревью 2026-09-29 изменили набор assertions (факт вызова движка —

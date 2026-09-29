@@ -41,9 +41,9 @@
       "evidence": "pattern '(?i)\\\\bverified\\\\b[\\\\s\\\\S]{0,200}\\\\bexhaustive\\\\b|\\\\bexhaustive\\\\b[\\\\s\\\\S]{0,200}\\\\bverified\\\\b' not found"
     },
     {
-      "text": "The engine was invoked and its report is among the run's outputs: a CTL property verified with evidence exhaustive",
+      "text": "The engine was invoked and its report is among the run's outputs: a property of kind ctl verified with evidence exhaustive",
       "passed": false,
-      "evidence": "no engine report under outputs matching {'status': 'verified', 'evidence': 'exhaustive'}: ctl-check-contrast.json: no engine section; ctl-check-version1.json: no engine section"
+      "evidence": "no engine report under outputs matching {'kind': 'ctl', 'status': 'verified', 'evidence': 'exhaustive'}: ctl-check-contrast.json: no engine section; ctl-check-version1.json: no engine section"
     }
   ]
 }

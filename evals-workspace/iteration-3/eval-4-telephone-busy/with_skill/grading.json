@@ -11,7 +11,7 @@
       "evidence": "matched 'живост' at 1828"
     },
     {
-      "text": "It is formalised as a progress label or an LTL eventually/infinitely-often formula",
+      "text": "The requirement is formalised either as a progress label / LTL eventually, or as a CTL formula over the control label",
       "passed": true,
       "evidence": "matched '<>' at 1121"
     },
@@ -41,9 +41,9 @@
       "evidence": "matched '`progress`, метк' at 1598"
     },
     {
-      "text": "Placing a progress label (or adding a variable) is declared as a change to the model, not smuggled in",
+      "text": "If the route needs a change to the model (a progress label or a new variable), that change is declared; a CTL answer over the existing label needs no such change and says so",
       "passed": true,
-      "evidence": "matched 'Метка `progress` поставлена' at 5270"
+      "evidence": "matched 'изменение модели**, а не факт о системе: вердикт `progress' at 5400"
     },
     {
       "text": "No forbidden phrasing (naming the word in order to deny it does not count)",
@@ -51,9 +51,9 @@
       "evidence": "pattern '(?i)\\\\bno errors\\\\b|\\\\bproved\\\\b|\\\\bproven\\\\b|ошибок нет|(?<!не )доказано' absent"
     },
     {
-      "text": "The engine was invoked and its report is among the run's outputs",
+      "text": "The engine was invoked and its report is among the run's outputs, carrying the property of the route taken (progress, or ctl for the control-label route)",
       "passed": true,
-      "evidence": "mc-session-2026-09-25/check-1-original-baseline.json is an engine report"
+      "evidence": "mc-session-2026-09-25/check-2-progress-switch-none.json: property 'progress' (progress) is verified / exhaustive"
     }
   ]
 }

@@ -61,7 +61,8 @@ Feature: Инструкции скила согласованы с движко�
     And "skills/model-check/references/properties-ltl-ctl.md" contains:
       | a `ctl` property asked with `fairness: weak` or `strong` comes back `not-executed` |
     And "skills/model-check/SKILL.md" contains:
-      | `AG EF switch@Idle` comes back `verified` / `exhaustive` |
+      | two readings, and they are different properties            |
+      | It does **not** answer the second reading                   |
       | `provided` entered the subset in v1 (G5)                 |
 
   Scenario: Примеры синтаксиса CTL — те, что парсер принимает

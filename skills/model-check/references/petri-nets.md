@@ -129,7 +129,7 @@ run, explain the +2 in the state count before anything else.
 | live (Holzmann) = hang unreachable | `deadlock` read positively: `verified` on `deadlock` means live | — | none needed | G0 |
 | safe | `invariant` `safe`: every place `≤ 1` | invariant | none needed | G0 (generated) |
 | bounded by `k` | `invariant`: every place `≤ k` (authored in IR today); capacity overflow is `invalid-model` | invariant | none needed | G0 (IR), frontend option later |
-| transition `t` dead (never fires) | `reach` on "inputs of `t` hold their weights" — unreachable ⇒ dead (§3: no `fire(t)` atom yet) | reachability | none needed | G0 (IR), atom in G4 |
+| transition `t` dead (never fires) | `reach` on "inputs of `t` hold their weights" — unreachable ⇒ dead (§3: there is no `fire(t)` atom, and §4 says what to write instead) | reachability | none needed | G0 (IR), atom in G4 |
 | transition `t` can always fire again | `ctl`: `AG EF fire(t)`, written as `AG EF (‹inputs of t hold their weights›)` — e.g. `AG EF (p1 >= 1)` for a `t` whose only input is `p1`, `AG EF (p2 >= 1 && p4 >= 1)` for two inputs | CTL | **none** — by construction | G5 (built) |
 | transition `t` fires infinitely often on every run | `ltl`: `[]<> fire(t)`, written as `[]<> (‹inputs of t hold their weights›)` — a **proxy**, see below | LTL | **required** — ask before running | G4 (built, as the proxy) |
 
@@ -161,9 +161,12 @@ continuation in which `t` fires. For the LTL row it is **not** exact, and the pl
 so (14 §5.3, "заявленный прокси"): `[]<> enabled(t)` says `t` is *offered* infinitely
 often, while `[]<> fire(t)` says it is *taken* infinitely often — a transition in conflict
 with another can stay enabled forever and never be chosen, and the proxy calls that run
-good. Say which of the two you checked, and when the user means firing, either add a
-counter place that the firing of `t` increments and ask about that counter, or route the
-question to a tool with transition events.
+good. Say which of the two you checked, and when the user means firing, either route the question to a
+tool with transition events, or add a counter place that the firing of `t` increments —
+and then say what that costs: a place has a capacity (255 by default), so a run that fires
+`t` often enough overflows it and the engine answers `invalid-model`, which is a fact
+about the encoding and not about the net. A bounded counter of that kind can only support
+a question of the form "does `t` fire at least k times", never "infinitely often".
 
 Note 04 гл. 3 mentions Murata's liveness ladder L0–L4. The engine maps only the two
 ends that the plan defines: L0 (dead) ⇔ `fire(t)` unreachable, and "can fire again
@@ -172,8 +175,9 @@ intermediate Murata level; the engine does not compute it.
 
 ## 5. Standard property set the frontend generates (plan §5.3; G0)
 
-On `mcd parse --petri` / `mcd check --petri` the frontend generates two properties
-and puts them in every report, in this order: `deadlock` (kind `deadlock`, text
+On `mcd parse --petri` / `mcd check --petri` the frontend generates two properties and
+puts them in every report of a run that used the model's own property list — a list you
+pass replaces them (`SKILL.md` step 6) — in this order: `deadlock` (kind `deadlock`, text
 "hang (Holzmann §8.10): a reachable marking in which no transition is enabled") and
 `safe` (kind `invariant`, "every place holds at most one token in every reachable
 marking"). The capacity check is not a property: exceeding a capacity ends the run

@@ -1,0 +1,661 @@
+{
+  "schema": "mcd-ir/1",
+  "name": "two_clients",
+  "globals": [
+    {
+      "name": "waiting0",
+      "type": "bool",
+      "init": [
+        0
+      ],
+      "origin": {
+        "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+        "line": 7,
+        "name": "waiting0"
+      }
+    },
+    {
+      "name": "waiting1",
+      "type": "bool",
+      "init": [
+        0
+      ],
+      "origin": {
+        "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+        "line": 8,
+        "name": "waiting1"
+      }
+    },
+    {
+      "name": "accepted0",
+      "type": "bool",
+      "init": [
+        0
+      ],
+      "origin": {
+        "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+        "line": 9,
+        "name": "accepted0"
+      }
+    },
+    {
+      "name": "accepted1",
+      "type": "bool",
+      "init": [
+        0
+      ],
+      "origin": {
+        "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+        "line": 10,
+        "name": "accepted1"
+      }
+    },
+    {
+      "name": "working0",
+      "type": "bool",
+      "init": [
+        0
+      ],
+      "origin": {
+        "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+        "line": 11,
+        "name": "working0"
+      }
+    },
+    {
+      "name": "working1",
+      "type": "bool",
+      "init": [
+        0
+      ],
+      "origin": {
+        "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+        "line": 12,
+        "name": "working1"
+      }
+    }
+  ],
+  "channels": [
+    {
+      "name": "request",
+      "capacity": 0,
+      "fields": [
+        "byte"
+      ],
+      "origin": {
+        "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+        "line": 2,
+        "name": "request"
+      }
+    },
+    {
+      "name": "grant0",
+      "capacity": 0,
+      "fields": [
+        "bit"
+      ],
+      "origin": {
+        "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+        "line": 3,
+        "name": "grant0"
+      }
+    },
+    {
+      "name": "grant1",
+      "capacity": 0,
+      "fields": [
+        "bit"
+      ],
+      "origin": {
+        "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+        "line": 4,
+        "name": "grant1"
+      }
+    },
+    {
+      "name": "release",
+      "capacity": 0,
+      "fields": [
+        "byte"
+      ],
+      "origin": {
+        "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+        "line": 5,
+        "name": "release"
+      }
+    }
+  ],
+  "processes": [
+    {
+      "name": "Client0:0",
+      "locations": [
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {}
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 1,
+          "effect": [
+            {
+              "var": "waiting0",
+              "value": {
+                "op": "const",
+                "value": 1
+              }
+            }
+          ],
+          "text": "waiting0 = true",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+            "line": 16,
+            "name": "waiting0 = true"
+          }
+        },
+        {
+          "from": 1,
+          "to": 2,
+          "send": {
+            "chan": "request",
+            "args": [
+              {
+                "op": "const"
+              }
+            ]
+          },
+          "text": "request!0",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+            "line": 17,
+            "name": "request!0"
+          }
+        },
+        {
+          "from": 2,
+          "to": 3,
+          "effect": [
+            {
+              "var": "accepted0",
+              "value": {
+                "op": "const",
+                "value": 1
+              }
+            }
+          ],
+          "text": "accepted0 = true",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+            "line": 18,
+            "name": "accepted0 = true"
+          }
+        },
+        {
+          "from": 3,
+          "to": 4,
+          "recv": {
+            "chan": "grant0",
+            "args": [
+              {
+                "match": {
+                  "op": "const",
+                  "value": 1
+                }
+              }
+            ]
+          },
+          "text": "grant0?1",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+            "line": 19,
+            "name": "grant0?1"
+          }
+        },
+        {
+          "from": 4,
+          "to": 5,
+          "effect": [
+            {
+              "var": "accepted0",
+              "value": {
+                "op": "const"
+              }
+            }
+          ],
+          "text": "accepted0 = false",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+            "line": 20,
+            "name": "accepted0 = false"
+          }
+        },
+        {
+          "from": 5,
+          "to": 6,
+          "effect": [
+            {
+              "var": "waiting0",
+              "value": {
+                "op": "const"
+              }
+            }
+          ],
+          "text": "waiting0 = false",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+            "line": 21,
+            "name": "waiting0 = false"
+          }
+        },
+        {
+          "from": 6,
+          "to": 7,
+          "effect": [
+            {
+              "var": "working0",
+              "value": {
+                "op": "const",
+                "value": 1
+              }
+            }
+          ],
+          "text": "working0 = true",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+            "line": 22,
+            "name": "working0 = true"
+          }
+        },
+        {
+          "from": 7,
+          "to": 8,
+          "effect": [
+            {
+              "var": "working0",
+              "value": {
+                "op": "const"
+              }
+            }
+          ],
+          "text": "working0 = false",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+            "line": 23,
+            "name": "working0 = false"
+          }
+        },
+        {
+          "from": 8,
+          "to": 0,
+          "send": {
+            "chan": "release",
+            "args": [
+              {
+                "op": "const"
+              }
+            ]
+          },
+          "text": "release!0",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+            "line": 24,
+            "name": "release!0"
+          }
+        }
+      ],
+      "origin": {
+        "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+        "line": 14,
+        "name": "Client0"
+      }
+    },
+    {
+      "name": "Client1:1",
+      "locations": [
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {}
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 1,
+          "effect": [
+            {
+              "var": "waiting1",
+              "value": {
+                "op": "const",
+                "value": 1
+              }
+            }
+          ],
+          "text": "waiting1 = true",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+            "line": 30,
+            "name": "waiting1 = true"
+          }
+        },
+        {
+          "from": 1,
+          "to": 2,
+          "send": {
+            "chan": "request",
+            "args": [
+              {
+                "op": "const",
+                "value": 1
+              }
+            ]
+          },
+          "text": "request!1",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+            "line": 31,
+            "name": "request!1"
+          }
+        },
+        {
+          "from": 2,
+          "to": 3,
+          "effect": [
+            {
+              "var": "accepted1",
+              "value": {
+                "op": "const",
+                "value": 1
+              }
+            }
+          ],
+          "text": "accepted1 = true",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+            "line": 32,
+            "name": "accepted1 = true"
+          }
+        },
+        {
+          "from": 3,
+          "to": 4,
+          "recv": {
+            "chan": "grant1",
+            "args": [
+              {
+                "match": {
+                  "op": "const",
+                  "value": 1
+                }
+              }
+            ]
+          },
+          "text": "grant1?1",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+            "line": 33,
+            "name": "grant1?1"
+          }
+        },
+        {
+          "from": 4,
+          "to": 5,
+          "effect": [
+            {
+              "var": "accepted1",
+              "value": {
+                "op": "const"
+              }
+            }
+          ],
+          "text": "accepted1 = false",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+            "line": 34,
+            "name": "accepted1 = false"
+          }
+        },
+        {
+          "from": 5,
+          "to": 6,
+          "effect": [
+            {
+              "var": "waiting1",
+              "value": {
+                "op": "const"
+              }
+            }
+          ],
+          "text": "waiting1 = false",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+            "line": 35,
+            "name": "waiting1 = false"
+          }
+        },
+        {
+          "from": 6,
+          "to": 7,
+          "effect": [
+            {
+              "var": "working1",
+              "value": {
+                "op": "const",
+                "value": 1
+              }
+            }
+          ],
+          "text": "working1 = true",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+            "line": 36,
+            "name": "working1 = true"
+          }
+        },
+        {
+          "from": 7,
+          "to": 8,
+          "effect": [
+            {
+              "var": "working1",
+              "value": {
+                "op": "const"
+              }
+            }
+          ],
+          "text": "working1 = false",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+            "line": 37,
+            "name": "working1 = false"
+          }
+        },
+        {
+          "from": 8,
+          "to": 0,
+          "send": {
+            "chan": "release",
+            "args": [
+              {
+                "op": "const",
+                "value": 1
+              }
+            ]
+          },
+          "text": "release!1",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+            "line": 38,
+            "name": "release!1"
+          }
+        }
+      ],
+      "origin": {
+        "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+        "line": 28,
+        "name": "Client1"
+      }
+    },
+    {
+      "name": "Server:2",
+      "locations": [
+        {},
+        {},
+        {},
+        {},
+        {}
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 1,
+          "recv": {
+            "chan": "request",
+            "args": [
+              {
+                "match": {
+                  "op": "const"
+                }
+              }
+            ]
+          },
+          "text": "request?0",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+            "line": 44,
+            "name": "request?0"
+          }
+        },
+        {
+          "from": 1,
+          "to": 2,
+          "send": {
+            "chan": "grant0",
+            "args": [
+              {
+                "op": "const",
+                "value": 1
+              }
+            ]
+          },
+          "text": "grant0!1",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+            "line": 45,
+            "name": "grant0!1"
+          }
+        },
+        {
+          "from": 2,
+          "to": 0,
+          "recv": {
+            "chan": "release",
+            "args": [
+              {
+                "match": {
+                  "op": "const"
+                }
+              }
+            ]
+          },
+          "text": "release?0",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+            "line": 46,
+            "name": "release?0"
+          }
+        },
+        {
+          "from": 0,
+          "to": 3,
+          "recv": {
+            "chan": "request",
+            "args": [
+              {
+                "match": {
+                  "op": "const",
+                  "value": 1
+                }
+              }
+            ]
+          },
+          "text": "request?1",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+            "line": 47,
+            "name": "request?1"
+          }
+        },
+        {
+          "from": 3,
+          "to": 4,
+          "send": {
+            "chan": "grant1",
+            "args": [
+              {
+                "op": "const",
+                "value": 1
+              }
+            ]
+          },
+          "text": "grant1!1",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+            "line": 48,
+            "name": "grant1!1"
+          }
+        },
+        {
+          "from": 4,
+          "to": 0,
+          "recv": {
+            "chan": "release",
+            "args": [
+              {
+                "match": {
+                  "op": "const",
+                  "value": 1
+                }
+              }
+            ]
+          },
+          "text": "release?1",
+          "origin": {
+            "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+            "line": 49,
+            "name": "release?1"
+          }
+        }
+      ],
+      "origin": {
+        "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+        "line": 42,
+        "name": "Server"
+      }
+    }
+  ],
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)"
+    }
+  ],
+  "origin": {
+    "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+    "name": "two_clients"
+  }
+}

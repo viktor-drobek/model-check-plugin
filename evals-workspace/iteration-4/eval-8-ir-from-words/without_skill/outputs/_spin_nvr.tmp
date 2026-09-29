@@ -1,0 +1,9 @@
+never mutual_exclusion {    /* !([] (! ((working[0]) && (working[1])))) */
+T0_init:
+	do
+	:: atomic { (! ((! ((working[0]) && (working[1]))))) -> assert(!(! ((! ((working[0]) && (working[1])))))) }
+	:: (1) -> goto T0_init
+	od;
+accept_all:
+	skip
+}

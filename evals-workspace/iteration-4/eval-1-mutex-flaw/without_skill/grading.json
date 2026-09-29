@@ -41,9 +41,9 @@
       "evidence": "matched 'SHA-256 файла | `b9cb0230f9a306494af4a12592df3411988254b35526b5' at 7122"
     },
     {
-      "text": "No forbidden phrasing (no errors / proved / system is correct) (naming the word in order to deny it does not count)",
+      "text": "No forbidden phrasing (no errors / proved / system is correct) (a line that rejects the word does not count)",
       "passed": false,
-      "evidence": "forbidden match 'ошибок нет' at 842"
+      "evidence": "forbidden match '| Тупики / некорректные конечные состояния | ошибок нет' at 797"
     }
   ]
 }

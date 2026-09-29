@@ -2,7 +2,7 @@
   "eval_id": 7,
   "eval_name": "starvation-loop-fairness",
   "run": "eval-2b-starvation-loop/without_skill",
-  "passed_count": 3,
+  "passed_count": 4,
   "total": 10,
   "expectations": [
     {
@@ -41,19 +41,19 @@
       "evidence": "pattern '\\\\b(exhaustive|bounded|approximate|unknown)\\\\b' not found"
     },
     {
-      "text": "The engine was invoked and the unfair run's report is among the run's outputs: a property violated",
+      "text": "The engine was invoked and the unfair run's report is among the outputs: the temporal property violated under fairness none",
       "passed": false,
-      "evidence": "no engine report under outputs matching {'status': 'violated'}: no *.json files"
+      "evidence": "no engine report under outputs matching {'kind': ['ltl', 'progress'], 'status': 'violated', 'fairness': 'none'}: no *.json files"
     },
     {
-      "text": "No forbidden phrasing, and the fair result is not called proved (naming the word in order to deny it does not count)",
-      "passed": false,
-      "evidence": "forbidden match 'Ошибок нет' at 3203"
+      "text": "No forbidden phrasing, and the fair result is not called proved (a line that rejects the word does not count)",
+      "passed": true,
+      "evidence": "pattern \"(?im)^(?![^\\\\n]*(не\\\\s|нельзя|не говор|not |never |avoid|do not|don't|forbidden|запрещ))[^\\\\n]*(\\\\bno errors\\\\b|ошибок нет|\\\\bproved\\\\b|\\\\bproven\\\\b|доказано|доказал|protocol is correct|протокол корректен|система корректна)\" absent"
     },
     {
-      "text": "The weak-fairness run's report is also among the outputs: a property verified with evidence exhaustive",
+      "text": "The weak-fairness run's report is also among the outputs: the same kind of property verified with evidence exhaustive under fairness weak",
       "passed": false,
-      "evidence": "no engine report under outputs matching {'status': 'verified', 'evidence': 'exhaustive'}: no *.json files"
+      "evidence": "no engine report under outputs matching {'kind': ['ltl', 'progress'], 'status': 'verified', 'evidence': 'exhaustive', 'fairness': 'weak'}: no *.json files"
     }
   ]
 }

@@ -1,0 +1,51 @@
+{
+  "order": [
+    "t01",
+    "n03",
+    "n09",
+    "t07",
+    "n07",
+    "t03",
+    "n06",
+    "n10",
+    "t02",
+    "n04",
+    "t05",
+    "t06",
+    "n05",
+    "n01",
+    "t04",
+    "t08",
+    "t10",
+    "t09",
+    "n08",
+    "n02"
+  ],
+  "train": [
+    "n04",
+    "n05",
+    "n07",
+    "n08",
+    "n09",
+    "n10",
+    "t02",
+    "t03",
+    "t04",
+    "t07",
+    "t08",
+    "t10"
+  ],
+  "test": [
+    "n01",
+    "n02",
+    "n03",
+    "n06",
+    "t01",
+    "t05",
+    "t06",
+    "t09"
+  ],
+  "seed": 20260926,
+  "runs": 3,
+  "description": "Model checking of protocols, concurrent algorithms, state machines and Petri nets with a built-in explicit-state engine (Go, exposed as MCP tools mc_parse, mc_check, mc_explain and others, or as the `mcd` CLI) — no external SPIN, NuSMV or other model checker is needed or should be looked for. Use this skill whenever the user wants to verify, prove or refute a behavioural property of a system with several interacting parts: deadlock, mutual exclusion, invariants, reachability, liveness, response, starvation, fairness, LTL, CTL, Promela models, never claims, Petri nets, token nets, alternating-bit or handshake protocols, telephone switches, producer/consumer, leader election, \"can this hang\", \"is a counterexample possible\", \"verify this protocol\", \"check this model\", \"model checking\", \"deadlock\", \"counterexample\". Russian triggers, use the skill for any of them: «проверь модель», «может ли зависнуть», «докажи, что никогда», «сеть Петри», «тупик», «инвариант», «взаимное исключение», «живость», «liveness», «справедливость», «Promela», «never claim», «LTL», «CTL», «model checking», «верификация протокола», «контрпример», «гонка», «переведи сеть Петри во что-нибудь проверяемое». Also use it when the user only describes the system in words and asks whether something bad can ever happen or something good must eventually happen — that is a model-checking question even if they do not say so. Do not use it for unit tests of sequential code, data-race linters, single-function theorem proving, or for drawing diagrams without analysis."
+}

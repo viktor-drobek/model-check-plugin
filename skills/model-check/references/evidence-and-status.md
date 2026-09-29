@@ -88,6 +88,14 @@ name the bound at which it stopped and the result is phrased relative to it;
 `unknown` is used when it cannot — a tool error, an interruption without a bound, a
 result that cannot be classified.
 
+Read "can name the bound" as the **kind of stop**, not as "a number can be quoted": a
+time limit is a number too, and it still gives `unknown`. Operatively, and this is what
+the engine does, `bounded` is an incomplete search stopped by a **declared search bound**
+— the states budget, the depth budget, or the process-instance pool — and everything else
+that stopped early is `unknown`. What makes the first three different is that they are
+properties of the search the caller asked for; the clock and the memory are properties of
+the machine it ran on.
+
 **Which budget stop gets which (as built in G4).** A **states** or **depth** stop is
 `bounded`: the engine names the bound it stopped at, and the same run repeated stops
 at the same place. A
@@ -134,7 +142,7 @@ the fairness setting it was checked under (`engine-tools.md` §7).
 | `verified` | `exhaustive` | "Property P holds on model M under assumptions A; the search was exhaustive (N states)." (AC-01) | "the system is correct"; anything about the implementation |
 | `verified` | `exhaustive`, for an `ltl` or `progress` property | "Formula φ holds on model M under fairness F; the product with the automaton for !φ was searched exhaustively (N states)." Name the formula and the fairness; a temporal verdict without them is unreadable | "holds" without the formula or the fairness; anything about the implementation |
 | `verified` | `bounded`, `approximate` | not produced: an incomplete search without a violation is `inconclusive` (§2, row 5) | — |
-| `violated` | `exhaustive` (the only combination the engine emits) | "P is violated on M; counterexample replayed: … (final state …)." | "the system has a bug" before the cause classification (`counterexamples.md` §3) |
+| `violated` | `exhaustive` (the only combination the engine emits) | "P is violated on M; counterexample decoded: … (final state …)" — *replayed* only after a guided `mc_simulate` run over its steps (`counterexamples.md` §5). | "the system has a bug" before the cause classification (`counterexamples.md` §3) |
 | `inconclusive` | `bounded` | "No counterexample was found before the run stopped at N states / depth D; what lies beyond — and, for a depth stop, what lies below it through an unexpanded state — is not known." (AC-02) | "holds up to k" as if it said something about beyond k; "everything up to the bound was checked"; "no errors" |
 | `inconclusive` | `approximate` | "No counterexample found in an approximate search with estimated coverage c." (AC-12) | "exhaustive", "proved" |
 | `inconclusive` | `unknown` | produced since G4 by a **time** or **memory** budget stop (§3): "The run stopped after T ms with N states stored; how much of the state space that is, is not known." | "up to N states" as if N were a bound; any coverage claim |
@@ -193,9 +201,9 @@ a user's phrasing when you quote it back.
 
 - "Property P1 holds on the finite model M under the stated assumptions; the search
   was exhaustive (N states, depth d)."
-- "No counterexample was found in a bounded search up to N states; the result is
-  inconclusive beyond that bound."
-- "P2 is violated; the counterexample (n steps, final state …) was replayed; cause
+- "No counterexample was found before the bounded search stopped at N states; nothing is
+  claimed beyond that bound, and §3 says what such a run may also have missed below it."
+- "P2 is violated; the counterexample (n steps, final state …) was decoded; cause
   class: model defect (channel capacity 2 admits a reordering the real link cannot
   produce)."
 - "P3 was not executed: the model uses `unless` (line 12), which is outside the

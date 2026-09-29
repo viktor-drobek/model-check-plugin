@@ -1,0 +1,19 @@
+{
+  "eval_id": 8,
+  "iteration": 4,
+  "date": "2026-09-29",
+  "source": "Codex CLI turn.completed usage events and the wall clock of the two exec invocations; tool_uses counted from completed command_execution items in the session log",
+  "engine": "mcd 0.1.0, packaged binary engine/bin/mcd (CLI path)",
+  "with_skill": {
+    "tokens": 3197468,
+    "duration_s": 532.0,
+    "tool_uses": 54,
+    "tokens_note": "input 3177060 (of which 3081600 served from cache) + output 20408; the Codex CLI counts the whole cached prefix on every request, so this figure is not comparable with the subagent token counts of the other iteration-4 runs"
+  },
+  "without_skill": {
+    "tokens": 413270,
+    "duration_s": 293.0,
+    "tool_uses": 8,
+    "tokens_note": "input 403470 (of which 352512 cached) + output 9800; same caveat"
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "eval_id": 8,
+  "eval_name": "ir-from-words",
+  "run": "eval-8-ir-from-words/without_skill",
+  "passed_count": 6,
+  "total": 8,
+  "expectations": [
+    {
+      "text": "The model the agent built from the words is among the run's outputs (a Promela-subset file, or an IR document when the experimental direct-IR route was taken)",
+      "passed": true,
+      "evidence": "two_clients.pml matches '*.pml'"
+    },
+    {
+      "text": "The route the skill prescribes was taken: the model is written in the Promela subset, not authored directly as IR",
+      "passed": true,
+      "evidence": "two_clients.pml matches '*.pml'"
+    },
+    {
+      "text": "The mutual-exclusion question is asked of the engine as a property, not answered by reading the model",
+      "passed": true,
+      "evidence": "matched '[]' at 1592"
+    },
+    {
+      "text": "The mutual-exclusion question was answered by the engine: a state property (invariant or assert) verified with evidence exhaustive in a report among the outputs",
+      "passed": false,
+      "evidence": "no engine report under outputs matching {'kind': ['invariant', 'assert'], 'status': 'verified', 'evidence': 'exhaustive'}: no *.json files"
+    },
+    {
+      "text": "The deadlock question is answered from the engine's own deadlock property",
+      "passed": false,
+      "evidence": "no engine report under outputs matching {'property': 'deadlock', 'status': 'verified', 'evidence': 'exhaustive'}: no *.json files"
+    },
+    {
+      "text": "The answer names the extra assumption of a self-built model: the verdict holds for the model, and that the model matches the words is a separate claim",
+      "passed": true,
+      "evidence": "matched 'допущения и модел' at 680"
+    },
+    {
+      "text": "The modelling decisions the words did not fix are named (channel kind or capacity, ordering, what the working section is)",
+      "passed": true,
+      "evidence": "matched 'ёмкост' at 900"
+    },
+    {
+      "text": "No forbidden phrasing, and the self-built model is not presented as a result about the described system itself (a line that rejects the word does not count)",
+      "passed": true,
+      "evidence": "pattern \"(?im)^(?![^\\\\n]*(не\\\\s|нельзя|не говор|not |never |avoid|do not|don't|forbidden|запрещ))[^\\\\n]*(\\\\bno errors\\\\b|ошибок нет|\\\\bproved\\\\b|\\\\bproven\\\\b|доказано|система корректна|system is correct)\" absent"
+    }
+  ]
+}

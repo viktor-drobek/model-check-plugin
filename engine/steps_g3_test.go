@@ -1302,10 +1302,29 @@ func registerG3Steps(sc *godog.ScenarioContext) {
 		}
 		return "", fmt.Errorf("no directory %s* under %s", prefix, workspace)
 	}
-	sc.Step(`^every eval in "([^"]+)" with "runnable_from" at or before "([^"]+)" has a graded run under the workspace "([^"]+)" with "([^"]+)" and "([^"]+)"$`, func(_, step, workspace, a, b string) error {
-		list, err := evalsUpTo(step)
+	// An iteration is a snapshot: it grades the evals the set held when it ran.
+	// `first_measured_in` says at which iteration an eval entered the set, so a
+	// later addition does not retroactively fail an earlier workspace. The
+	// guarantee that a new eval is measured at all lives where it belongs — in
+	// the scenario that requires the *latest* iteration to grade every eval the
+	// engine can run (features/g6-package.feature).
+	alreadyInSetAt := func(e map[string]any, workspace string) bool {
+		first, _ := e["first_measured_in"].(string)
+		if first == "" {
+			return true
+		}
+		return filepath.Base(first) <= filepath.Base(workspace)
+	}
+	sc.Step(`^every eval in "([^"]+)" with "runnable_from" at or before "([^"]+)" that the set already held then has a graded run under the workspace "([^"]+)" with "([^"]+)" and "([^"]+)"$`, func(_, step, workspace, a, b string) error {
+		all, err := evalsUpTo(step)
 		if err != nil {
 			return err
+		}
+		var list []map[string]any
+		for _, e := range all {
+			if alreadyInSetAt(e, workspace) {
+				list = append(list, e)
+			}
 		}
 		if len(list) == 0 {
 			return fmt.Errorf("no eval is runnable from %s or earlier", step)

@@ -121,13 +121,39 @@ class GraderTest(unittest.TestCase):
         check["path"] = "properties.5.status"
         self.assertFalse(grader.check_json_field(check, "", self.outputs, None)[0])
 
+    def test_outputs_file(self):
+        """An artefact is found by name, and the answer text is irrelevant."""
+        check = {"globs": ["*.pml", "*.ir.json"]}
+        self.assertFalse(grader.check_outputs_file(check, "here is a proctype", self.outputs, None)[0])
+        with open(os.path.join(self.outputs, "model.pml"), "w", encoding="utf-8") as fh:
+            fh.write("active proctype p() { skip }\n")
+        ok, ev = grader.check_outputs_file(check, "", self.outputs, None)
+        self.assertTrue(ok)
+        self.assertIn("model.pml", ev)
+        self.assertFalse(grader.check_outputs_file({"globs": ["*.json"]}, "", self.outputs, None)[0])
+        # nested files count too: a run may put its model in a session directory
+        os.makedirs(os.path.join(self.outputs, "session"))
+        with open(os.path.join(self.outputs, "session", "m.ir.json"), "w", encoding="utf-8") as fh:
+            fh.write("{}")
+        self.assertTrue(grader.check_outputs_file({"globs": ["*.ir.json"]}, "", self.outputs, None)[0])
+
     def test_engine_report(self):
-        """The check reads the engine's artefact, never the answer text."""
+        """The check reads the engine's artefact, and the artefact has to be real.
+
+        Recognising the shape is not enough: a hand-written JSON has the same
+        shape. The report is tied to its input by hash, so an assertion about the
+        engine having run cannot be satisfied by typing one."""
+        model = os.path.join(self.outputs, "m.ir.json")
+        with open(model, "w", encoding="utf-8") as fh:
+            fh.write('{"schema": "mcd-ir/1"}')
+        digest = grader.sha256_of(model)
         report = {
             "engine": {"name": "mcd", "version": "0.1.0", "report_schema": "mcd-report/1"},
+            "inputs": [{"kind": "ir", "path": "m.ir.json", "sha256": digest}],
             "properties": [
-                {"id": "deadlock", "status": "verified", "evidence": "exhaustive"},
-                {"id": "ctl1", "status": "violated", "evidence": "exhaustive"},
+                {"id": "deadlock", "kind": "deadlock", "status": "verified", "evidence": "exhaustive"},
+                {"id": "ctl1", "kind": "ctl", "status": "violated", "evidence": "exhaustive",
+                 "temporal": {"logic": "ctl", "fairness": "none"}},
             ],
         }
         answer = "I ran mcd check and everything is verified / exhaustive"
@@ -139,15 +165,47 @@ class GraderTest(unittest.TestCase):
             {"property": "ctl1", "status": "violated", "evidence": "exhaustive"}, "", self.outputs, None)
         self.assertTrue(ok)
         self.assertIn("ctl1", ev)
+        # Matching by kind, by a list of kinds, and by the fairness it ran under.
+        self.assertTrue(grader.check_engine_report({"kind": "ctl"}, "", self.outputs, None)[0])
+        self.assertTrue(grader.check_engine_report({"kind": ["ltl", "ctl"]}, "", self.outputs, None)[0])
+        self.assertTrue(grader.check_engine_report({"kind": "ctl", "fairness": "none"}, "", self.outputs, None)[0])
+        self.assertFalse(grader.check_engine_report({"kind": "ctl", "fairness": "weak"}, "", self.outputs, None)[0])
+        # A bare status must not be answered by a different property: this is the
+        # hole the implementation review found (a CTL assertion passing on deadlock).
+        self.assertFalse(grader.check_engine_report({"kind": "ltl", "status": "verified"}, "", self.outputs, None)[0])
         # Right property, wrong verdict; and a property that is not there.
         self.assertFalse(grader.check_engine_report({"property": "ctl1", "status": "verified"}, "", self.outputs, None)[0])
         self.assertFalse(grader.check_engine_report({"property": "ltl9"}, "", self.outputs, None)[0])
-        # A JSON file that is not this engine's report does not count.
-        self.write(os.path.join(self.outputs, "other.json"), {"engine": {"name": "spin"}, "properties": []})
-        ok, _ = grader.check_engine_report({"property": "deadlock", "status": "verified"}, "", self.outputs, None)
-        self.assertTrue(ok)
-        os.remove(os.path.join(self.outputs, "check-1.json"))
-        self.assertFalse(grader.check_engine_report({"type": "engine_report"}, "", self.outputs, None)[0])
+
+    def test_engine_report_rejects_a_fabricated_one(self):
+        """Every way of writing the JSON by hand that the review demonstrated."""
+        base = {
+            "engine": {"name": "mcd", "version": "0.1.0", "report_schema": "mcd-report/1"},
+            "inputs": [{"kind": "ir", "path": "m.ir.json", "sha256": "0" * 64}],
+            "properties": [{"id": "deadlock", "kind": "deadlock", "status": "verified", "evidence": "exhaustive"}],
+        }
+        want = {"property": "deadlock", "status": "verified"}
+
+        def only(doc):
+            for f in os.listdir(self.outputs):
+                os.remove(os.path.join(self.outputs, f))
+            self.write(os.path.join(self.outputs, "x.json"), doc)
+            return grader.check_engine_report(want, "", self.outputs, None)
+
+        # A hash that belongs to no file: nothing was checked.
+        self.assertFalse(only(base)[0])
+        # A schema that only looks like the engine's.
+        bad = json.loads(json.dumps(base))
+        bad["engine"]["report_schema"] = "mcd-report/not-a-version"
+        self.assertFalse(only(bad)[0])
+        # No inputs at all: the report names no model.
+        bad = json.loads(json.dumps(base))
+        del bad["inputs"]
+        self.assertFalse(only(bad)[0])
+        # Another engine's report.
+        bad = json.loads(json.dumps(base))
+        bad["engine"]["name"] = "spin"
+        self.assertFalse(only(bad)[0])
 
     # --- grade -----------------------------------------------------------
     def test_grade_shapes_grading_json(self):

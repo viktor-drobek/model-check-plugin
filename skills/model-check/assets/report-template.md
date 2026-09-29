@@ -63,7 +63,9 @@ For `invalid-model`: the overflowed domain and step.*
 
 ## 8. Counterexample
 
-*Per `violated` property:* one-sentence summary; chronology in source names
+*Per `violated` property **that carries a run** (an unreachable `reach` and some CTL
+verdicts do not — quote their `reason` or `temporal.witness_note` instead):*
+one-sentence summary; chronology in source names
 (step, process, statement, changed variables, sends/receives); the first causal
 fork; for lassos the loop as a separate block with the unmet obligation; cause
 class (system / model / property / fairness-environment artefact) with the

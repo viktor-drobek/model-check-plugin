@@ -51,7 +51,7 @@ need the user's explicit confirmation, defaults are not enough.
 ### Node 1 — goal
 
 - A guarantee is wanted (alone or together with bug-finding) → continue; nodes 3 and 6 must both pass for `exhaustive` to be possible.
-- Bounded assurance is enough → continue with a declared states or depth budget. Do not promise the outcome in advance: a run under a budget still returns `violated` / `exhaustive` when it finds a counterexample, and `verified` / `exhaustive` for a `reach` whose witness it found, because one run decides both. `inconclusive` / `bounded` is what you get only if nothing was decided before the budget stopped it.
+- Bounded assurance is enough → continue with a declared states or depth budget, and say what such a run can and cannot establish (`evidence-and-status.md` §3: it names the bound that stopped it, and under a depth bound it may also have missed paths shorter than the bound). Do not promise the outcome in advance: a run under a budget still returns `violated` / `exhaustive` when it finds a counterexample, and `verified` / `exhaustive` for a `reach` whose witness it found, because one run decides both. `inconclusive` / `bounded` is what you get only if nothing was decided before the budget stopped it.
 - Only a concrete failing scenario is wanted → continue with early stop enabled (`mc_check` stops at the first violation per property).
 
 ### Node 2 — is there a model?

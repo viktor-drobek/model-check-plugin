@@ -1,0 +1,100 @@
+system:
+  name: "Два клиента и один сервер"
+  boundary: "Клиенты Client0, Client1 и Server; обмен запросом, разрешением и освобождением"
+  environment: "Внешних событий нет; порядок шагов недетерминирован"
+  excluded:
+    - "Сеть, потери и задержки сообщений: явно помеченное учебное допущение, не указанное пользователем"
+    - "Сбои процессов и сервера: явно помеченное учебное допущение"
+  relation_to_implementation: "built from prose; реализации и готовой модели нет"
+
+state:
+  variables:
+    - "waiting0, waiting1: bool; клиент пытается получить разрешение, начиная до передачи запроса"
+    - "accepted0, accepted1: bool; сервер уже принял запрос, клиент ещё не получил разрешение"
+    - "working0, working1: bool; клиент находится в фазе работы"
+    - "У каждого процесса конечная управляющая позиция"
+  processes: ["Client0", "Client1", "Server"]
+  channels:
+    - "request: вместимость 0, byte (0 или 1), rendezvous"
+    - "grant0, grant1: вместимость 0, bit, rendezvous"
+    - "release: вместимость 0, byte (0 или 1), rendezvous"
+  initial_states: "Все шесть bool равны false; процессы стоят в начале своих циклов"
+  observables:
+    - "working0 && working1: одновременная работа"
+    - "waiting0, waiting1: попытка получить сервер"
+    - "accepted0, accepted1: запрос уже принят сервером"
+    - "working0, working1: клиент начал работу"
+
+transitions:
+  semantics: "Асинхронное чередование шагов; все каналы синхронные rendezvous, без буферов и потерь"
+  atomic_step: "Одно присваивание либо парная передача и приём по каналу"
+  terminal_states: "Нет нормального завершения: все три процесса повторяют цикл; отсутствие доступного шага считается глобальным тупиком"
+  nondeterminism: "Планировщик выбирает доступный шаг; Server при двух одновременных попытках может принять любой запрос"
+
+properties:
+  - id: P1
+    wording: "Могут ли два клиента работать одновременно?"
+    class: safety
+    logic: invariant
+    extension: untimed
+    formula: "!(working0 && working1)"
+    atoms: [working0, working1]
+    expected_evidence: "Полный обход или конечный контрпример"
+    sanity_companion: "S2, S3: работа каждого клиента достижима"
+  - id: deadlock
+    wording: "Может ли вся система заблокироваться без доступного действия?"
+    class: safety
+    logic: deadlock
+    extension: untimed
+    formula: "Во всех достижимых состояниях есть доступный шаг"
+    atoms: []
+    expected_evidence: "Полный обход или конечный контрпример"
+    sanity_companion: "S2, S3: оба клиента способны начать работу"
+  - id: ltl1-ltl2
+    wording: "Может ли клиент бесконечно ждать после попытки послать запрос?"
+    class: liveness
+    logic: LTL
+    extension: untimed
+    formula: "[] (waiting_i -> <> working_i), i=0,1"
+    atoms: [waiting0, waiting1, working0, working1]
+    expected_evidence: "Полный обход произведения или лассо"
+    sanity_companion: "S0, S1: ожидание обоих клиентов достижимо"
+  - id: ltl3-ltl4
+    wording: "Может ли клиент ждать бесконечно после принятия запроса сервером?"
+    class: liveness
+    logic: LTL
+    extension: untimed
+    formula: "[] (accepted_i -> <> working_i), i=0,1"
+    atoms: [accepted0, accepted1, working0, working1]
+    expected_evidence: "Полный обход произведения или лассо"
+    sanity_companion: "S4, S5: принятые запросы обоих клиентов достижимы"
+
+assumptions:
+  scheduler: "По умолчанию fairness none: произвольный выбор доступного действия; отдельно исследовано weak"
+  delivery: "ЯВНОЕ ДОПУЩЕНИЕ: синхронная, без потерь, дублирования и переупорядочения"
+  failures: "ЯВНОЕ ДОПУЩЕНИЕ: отказов нет; клиент после работы всегда может начать освобождение"
+  environment_inputs: "ЯВНОЕ ДОПУЩЕНИЕ: оба клиента бесконечно повторяют запросы; внешних запросов нет"
+  bounds:
+    - "Ровно два клиента и один сервер"
+    - "Все флаги bool"
+    - "Вместимость всех каналов 0"
+fairness:
+  required: "none для основного ответа; weak только анализ чувствительности"
+  justification: "Для weak нет пользовательского подтверждения; контрпримеры сохраняются и при weak"
+  confirmed_by_user: false
+backend:
+  engine: "mcd 0.1.0, CLI"
+  search_mode: "BFS для безопасности и sanity; DFS для LTL"
+  reductions: none
+budget:
+  time: "10000 ms"
+  states: 10000
+  depth: 10000
+  memory: "128 MiB"
+  repeats: 1
+evidence:
+  expected: exhaustive
+  goal: "Полный ответ для конечной учебной абстракции"
+artefacts:
+  may_store_models_and_traces: true
+  contains_secrets_or_personal_data: "Словесная учебная схема; секретов и персональных данных нет"

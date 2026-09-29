@@ -1,0 +1,43 @@
+{
+  "eval_id": 8,
+  "eval_name": "ir-from-words",
+  "iteration": 4,
+  "date": "2026-09-29",
+  "prompt": "Готовой модели нет, система описана только словами: два клиента делят один сервер. Клиент посылает запрос, ждёт разрешения, работает, затем сообщает об освобождении. Сервер выдаёт разрешение одному клиенту за раз и принимает следующий запрос только после освобождения. Вопросы: могут ли два клиента работать одновременно и может ли система зависнуть?",
+  "expected_output": "The model is built by the agent from the words alone (no model is given). The route is the one the skill prescribes: write it in the Promela subset first — direct IR authoring is experimental (plan 14 §12, A7) — then mc_parse, then mc_check with the two questions: the mutual-exclusion assert and deadlock. Both come back `verified` / `exhaustive` on a correct model (the hand-written reference `evals/fixtures/handshake.pml` gives deadlock verified and assert verified, exhaustive, 12 states). The answer must say that a verdict on a self-built model carries one more assumption than a verdict on a model the user gave — that the model says what the words said — and name the modelling decisions that the words did not fix (rendezvous or buffered channels, whether the server may reorder, what \"works\" means). The engine's report JSON saved into the run's outputs directory.",
+  "fixture": "evals/fixtures/handshake.pml (the hand-written reference; never shown to the run)",
+  "runnable_from": "G1",
+  "first_measured_in": "iteration-4",
+  "engine": "mcd 0.1.0 — the packaged binary engine/bin/mcd (wrapper -> mcd-linux-arm64), the same binary the other iteration-4 runs used",
+  "protocol": {
+    "executor": "one Codex CLI session per configuration (codex exec -m gpt-6-sol -s workspace-write), launched separately so that neither configuration saw the other's context; this differs from the other iteration-4 runs, whose executor was a subagent of the coordinating Claude session — the eval was added after them",
+    "with_skill": "prompt + repository root + output directory + path of skills/model-check/SKILL.md ('follow it literally, including the references') + path of the packaged binary engine/bin/mcd; told the MCP server is not registered (CLI fallback of SKILL.md step 3) and not to run SPIN",
+    "without_skill": "prompt + repository root + output directory only, and an explicit ban on reading model-check-plugin/skills/ (the measured skill); every other tool free, SPIN not forbidden — and the run did reach for SPIN",
+    "mcp": "not exercised: the MCP server was not registered into either session, as in the other iteration-4 runs",
+    "questions": "the user is not available; both configurations were told to record an explicitly labelled assumption instead of asking",
+    "grading": "evals-workspace/grader.py over outputs/answer.md and the outputs directory; assertions from skills/model-check/evals/evals.json",
+    "timing": "tokens from the Codex turn.completed usage event (input + output, cached input included in input); duration from the wall clock of the exec invocation; tool_uses = completed command_execution items"
+  },
+  "assertions_changed_after_the_runs": {
+    "which": "assertions 1 and 2 of eval 8",
+    "what": "they looked for `proctype`/`chan` in the answer text and for a sentence about preferring the Promela route; both are now `outputs_file` checks over the run's artefacts",
+    "why": "both runs wrote the model to a file and named it in the answer instead of inlining it, so the prose test measured formatting, not the work — the same defect the review found in the rest of the set (steps/review-astra-skill.md §D). The rewrite raises the baseline's score as well as the skill's (4/8 → 6/8 against 6/8 → 8/8), which is what tells it apart from tuning the set to the skill",
+    "when": "after both runs were graded, before this metadata was written"
+  },
+  "removed_after_grading": {
+    "without_skill": {
+      "files": [
+        "pan.b",
+        "pan.c",
+        "pan.h",
+        "pan.m",
+        "pan.p",
+        "pan.t",
+        "pan_deadlock",
+        "pan_failure",
+        "pan_ltl"
+      ],
+      "reason": "the compiled SPIN verifier and its generated C, left by the baseline run, are build output and are not kept in git (the same rule the repository applies to the engine's own binaries). Removed AFTER grading, and the grade is unchanged at 6/8: no assertion of eval 8 matches those names — the model `two_clients.pml`, the run logs and the trail, which are what the answer cites, are kept. Re-grading after the removal reproduces 6/8."
+    }
+  }
+}

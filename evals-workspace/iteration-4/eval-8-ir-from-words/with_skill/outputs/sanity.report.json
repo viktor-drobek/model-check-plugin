@@ -1,0 +1,810 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "ir",
+      "path": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/sanity.ir.json",
+      "sha256": "d93c60a675cbf2cae2e06b9ee847a6d00ce1a321ce081871cd862b0dacd8095f"
+    }
+  ],
+  "model": {
+    "name": "two_clients",
+    "state_bytes": 14,
+    "processes": 3,
+    "variables": 6
+  },
+  "search": {
+    "mode": "bfs",
+    "budget": {
+      "states": 10000,
+      "depth": 10000,
+      "time_ms": 10000,
+      "mem_bytes": 134217728
+    },
+    "stop": "all properties decided",
+    "complete": false
+  },
+  "properties": [
+    {
+      "id": "S0",
+      "kind": "reach",
+      "text": "waiting0: клиент 0 пытается получить разрешение",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 26,
+        "transitions": 36,
+        "depth": 6,
+        "time_ms": 0,
+        "memory_bytes_est": 26368
+      },
+      "complete": false,
+      "witness": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "Client0:0",
+            "command": "waiting0 = true",
+            "changes": [
+              {
+                "var": "waiting0",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 16,
+              "name": "waiting0 = true"
+            }
+          }
+        ],
+        "final_state": [
+          {
+            "var": "waiting0",
+            "value": 1
+          },
+          {
+            "var": "waiting1",
+            "value": 0
+          },
+          {
+            "var": "accepted0",
+            "value": 0
+          },
+          {
+            "var": "accepted1",
+            "value": 0
+          },
+          {
+            "var": "working0",
+            "value": 0
+          },
+          {
+            "var": "working1",
+            "value": 0
+          }
+        ],
+        "final_channels": [
+          {
+            "chan": "request",
+            "messages": []
+          },
+          {
+            "chan": "grant0",
+            "messages": []
+          },
+          {
+            "chan": "grant1",
+            "messages": []
+          },
+          {
+            "chan": "release",
+            "messages": []
+          }
+        ],
+        "summary": "waiting0 = true"
+      },
+      "reason": "a reachable state satisfies waiting0; see the witness"
+    },
+    {
+      "id": "S1",
+      "kind": "reach",
+      "text": "waiting1: клиент 1 пытается получить разрешение",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 26,
+        "transitions": 36,
+        "depth": 6,
+        "time_ms": 0,
+        "memory_bytes_est": 26368
+      },
+      "complete": false,
+      "witness": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "Client1:1",
+            "command": "waiting1 = true",
+            "changes": [
+              {
+                "var": "waiting1",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 30,
+              "name": "waiting1 = true"
+            }
+          }
+        ],
+        "final_state": [
+          {
+            "var": "waiting0",
+            "value": 0
+          },
+          {
+            "var": "waiting1",
+            "value": 1
+          },
+          {
+            "var": "accepted0",
+            "value": 0
+          },
+          {
+            "var": "accepted1",
+            "value": 0
+          },
+          {
+            "var": "working0",
+            "value": 0
+          },
+          {
+            "var": "working1",
+            "value": 0
+          }
+        ],
+        "final_channels": [
+          {
+            "chan": "request",
+            "messages": []
+          },
+          {
+            "chan": "grant0",
+            "messages": []
+          },
+          {
+            "chan": "grant1",
+            "messages": []
+          },
+          {
+            "chan": "release",
+            "messages": []
+          }
+        ],
+        "summary": "waiting1 = true"
+      },
+      "reason": "a reachable state satisfies waiting1; see the witness"
+    },
+    {
+      "id": "S2",
+      "kind": "reach",
+      "text": "working0: клиент 0 работает",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 26,
+        "transitions": 36,
+        "depth": 6,
+        "time_ms": 0,
+        "memory_bytes_est": 26368
+      },
+      "complete": false,
+      "witness": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "Client0:0",
+            "command": "waiting0 = true",
+            "changes": [
+              {
+                "var": "waiting0",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 16,
+              "name": "waiting0 = true"
+            }
+          },
+          {
+            "index": 2,
+            "process": "Client0:0",
+            "command": "request!0",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 17,
+              "name": "request!0"
+            },
+            "partner": {
+              "process": "Server:2",
+              "command": "request?0",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+                "line": 44,
+                "name": "request?0"
+              }
+            }
+          },
+          {
+            "index": 3,
+            "process": "Client0:0",
+            "command": "accepted0 = true",
+            "changes": [
+              {
+                "var": "accepted0",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 18,
+              "name": "accepted0 = true"
+            }
+          },
+          {
+            "index": 4,
+            "process": "Server:2",
+            "command": "grant0!1",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 45,
+              "name": "grant0!1"
+            },
+            "partner": {
+              "process": "Client0:0",
+              "command": "grant0?1",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+                "line": 19,
+                "name": "grant0?1"
+              }
+            }
+          },
+          {
+            "index": 5,
+            "process": "Client0:0",
+            "command": "accepted0 = false",
+            "changes": [
+              {
+                "var": "accepted0",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 20,
+              "name": "accepted0 = false"
+            }
+          },
+          {
+            "index": 6,
+            "process": "Client0:0",
+            "command": "waiting0 = false",
+            "changes": [
+              {
+                "var": "waiting0",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 21,
+              "name": "waiting0 = false"
+            }
+          },
+          {
+            "index": 7,
+            "process": "Client0:0",
+            "command": "working0 = true",
+            "changes": [
+              {
+                "var": "working0",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 22,
+              "name": "working0 = true"
+            }
+          }
+        ],
+        "final_state": [
+          {
+            "var": "waiting0",
+            "value": 0
+          },
+          {
+            "var": "waiting1",
+            "value": 0
+          },
+          {
+            "var": "accepted0",
+            "value": 0
+          },
+          {
+            "var": "accepted1",
+            "value": 0
+          },
+          {
+            "var": "working0",
+            "value": 1
+          },
+          {
+            "var": "working1",
+            "value": 0
+          }
+        ],
+        "final_channels": [
+          {
+            "chan": "request",
+            "messages": []
+          },
+          {
+            "chan": "grant0",
+            "messages": []
+          },
+          {
+            "chan": "grant1",
+            "messages": []
+          },
+          {
+            "chan": "release",
+            "messages": []
+          }
+        ],
+        "summary": "waiting0 = true, request!0, accepted0 = true, grant0!1, accepted0 = false, waiting0 = false, working0 = true"
+      },
+      "reason": "a reachable state satisfies working0; see the witness"
+    },
+    {
+      "id": "S3",
+      "kind": "reach",
+      "text": "working1: клиент 1 работает",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 26,
+        "transitions": 36,
+        "depth": 6,
+        "time_ms": 0,
+        "memory_bytes_est": 26368
+      },
+      "complete": false,
+      "witness": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "Client1:1",
+            "command": "waiting1 = true",
+            "changes": [
+              {
+                "var": "waiting1",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 30,
+              "name": "waiting1 = true"
+            }
+          },
+          {
+            "index": 2,
+            "process": "Client1:1",
+            "command": "request!1",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 31,
+              "name": "request!1"
+            },
+            "partner": {
+              "process": "Server:2",
+              "command": "request?1",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+                "line": 47,
+                "name": "request?1"
+              }
+            }
+          },
+          {
+            "index": 3,
+            "process": "Client1:1",
+            "command": "accepted1 = true",
+            "changes": [
+              {
+                "var": "accepted1",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 32,
+              "name": "accepted1 = true"
+            }
+          },
+          {
+            "index": 4,
+            "process": "Server:2",
+            "command": "grant1!1",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 48,
+              "name": "grant1!1"
+            },
+            "partner": {
+              "process": "Client1:1",
+              "command": "grant1?1",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+                "line": 33,
+                "name": "grant1?1"
+              }
+            }
+          },
+          {
+            "index": 5,
+            "process": "Client1:1",
+            "command": "accepted1 = false",
+            "changes": [
+              {
+                "var": "accepted1",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 34,
+              "name": "accepted1 = false"
+            }
+          },
+          {
+            "index": 6,
+            "process": "Client1:1",
+            "command": "waiting1 = false",
+            "changes": [
+              {
+                "var": "waiting1",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 35,
+              "name": "waiting1 = false"
+            }
+          },
+          {
+            "index": 7,
+            "process": "Client1:1",
+            "command": "working1 = true",
+            "changes": [
+              {
+                "var": "working1",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 36,
+              "name": "working1 = true"
+            }
+          }
+        ],
+        "final_state": [
+          {
+            "var": "waiting0",
+            "value": 0
+          },
+          {
+            "var": "waiting1",
+            "value": 0
+          },
+          {
+            "var": "accepted0",
+            "value": 0
+          },
+          {
+            "var": "accepted1",
+            "value": 0
+          },
+          {
+            "var": "working0",
+            "value": 0
+          },
+          {
+            "var": "working1",
+            "value": 1
+          }
+        ],
+        "final_channels": [
+          {
+            "chan": "request",
+            "messages": []
+          },
+          {
+            "chan": "grant0",
+            "messages": []
+          },
+          {
+            "chan": "grant1",
+            "messages": []
+          },
+          {
+            "chan": "release",
+            "messages": []
+          }
+        ],
+        "summary": "waiting1 = true, request!1, accepted1 = true, grant1!1, accepted1 = false, waiting1 = false, working1 = true"
+      },
+      "reason": "a reachable state satisfies working1; see the witness"
+    },
+    {
+      "id": "S4",
+      "kind": "reach",
+      "text": "accepted0: запрос клиента 0 уже принят",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 26,
+        "transitions": 36,
+        "depth": 6,
+        "time_ms": 0,
+        "memory_bytes_est": 26368
+      },
+      "complete": false,
+      "witness": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "Client0:0",
+            "command": "waiting0 = true",
+            "changes": [
+              {
+                "var": "waiting0",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 16,
+              "name": "waiting0 = true"
+            }
+          },
+          {
+            "index": 2,
+            "process": "Client0:0",
+            "command": "request!0",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 17,
+              "name": "request!0"
+            },
+            "partner": {
+              "process": "Server:2",
+              "command": "request?0",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+                "line": 44,
+                "name": "request?0"
+              }
+            }
+          },
+          {
+            "index": 3,
+            "process": "Client0:0",
+            "command": "accepted0 = true",
+            "changes": [
+              {
+                "var": "accepted0",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 18,
+              "name": "accepted0 = true"
+            }
+          }
+        ],
+        "final_state": [
+          {
+            "var": "waiting0",
+            "value": 1
+          },
+          {
+            "var": "waiting1",
+            "value": 0
+          },
+          {
+            "var": "accepted0",
+            "value": 1
+          },
+          {
+            "var": "accepted1",
+            "value": 0
+          },
+          {
+            "var": "working0",
+            "value": 0
+          },
+          {
+            "var": "working1",
+            "value": 0
+          }
+        ],
+        "final_channels": [
+          {
+            "chan": "request",
+            "messages": []
+          },
+          {
+            "chan": "grant0",
+            "messages": []
+          },
+          {
+            "chan": "grant1",
+            "messages": []
+          },
+          {
+            "chan": "release",
+            "messages": []
+          }
+        ],
+        "summary": "waiting0 = true, request!0, accepted0 = true"
+      },
+      "reason": "a reachable state satisfies accepted0; see the witness"
+    },
+    {
+      "id": "S5",
+      "kind": "reach",
+      "text": "accepted1: запрос клиента 1 уже принят",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 26,
+        "transitions": 36,
+        "depth": 6,
+        "time_ms": 0,
+        "memory_bytes_est": 26368
+      },
+      "complete": false,
+      "witness": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "Client1:1",
+            "command": "waiting1 = true",
+            "changes": [
+              {
+                "var": "waiting1",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 30,
+              "name": "waiting1 = true"
+            }
+          },
+          {
+            "index": 2,
+            "process": "Client1:1",
+            "command": "request!1",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 31,
+              "name": "request!1"
+            },
+            "partner": {
+              "process": "Server:2",
+              "command": "request?1",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+                "line": 47,
+                "name": "request?1"
+              }
+            }
+          },
+          {
+            "index": 3,
+            "process": "Client1:1",
+            "command": "accepted1 = true",
+            "changes": [
+              {
+                "var": "accepted1",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 32,
+              "name": "accepted1 = true"
+            }
+          }
+        ],
+        "final_state": [
+          {
+            "var": "waiting0",
+            "value": 0
+          },
+          {
+            "var": "waiting1",
+            "value": 1
+          },
+          {
+            "var": "accepted0",
+            "value": 0
+          },
+          {
+            "var": "accepted1",
+            "value": 1
+          },
+          {
+            "var": "working0",
+            "value": 0
+          },
+          {
+            "var": "working1",
+            "value": 0
+          }
+        ],
+        "final_channels": [
+          {
+            "chan": "request",
+            "messages": []
+          },
+          {
+            "chan": "grant0",
+            "messages": []
+          },
+          {
+            "chan": "grant1",
+            "messages": []
+          },
+          {
+            "chan": "release",
+            "messages": []
+          }
+        ],
+        "summary": "waiting1 = true, request!1, accepted1 = true"
+      },
+      "reason": "a reachable state satisfies accepted1; see the witness"
+    }
+  ]
+}

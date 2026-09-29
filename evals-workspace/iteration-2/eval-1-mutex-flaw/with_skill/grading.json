@@ -33,7 +33,7 @@
     {
       "text": "The engine was invoked (CLI or MCP) and its report is among the run's outputs: property `assert` violated with evidence exhaustive",
       "passed": true,
-      "evidence": "check-ir-bfs.json: property 'assert' is violated / exhaustive"
+      "evidence": "check-ir-bfs.json: property 'assert' (assert) is violated / exhaustive"
     },
     {
       "text": "The engine version and input hash (manifest) are quoted",
@@ -41,9 +41,9 @@
       "evidence": "matched 'mcd 0.1' at 5697"
     },
     {
-      "text": "No forbidden phrasing (no errors / proved / system is correct) (naming the word in order to deny it does not count)",
+      "text": "No forbidden phrasing (no errors / proved / system is correct) (a line that rejects the word does not count)",
       "passed": true,
-      "evidence": "pattern '(?i)\\\\bno errors\\\\b|\\\\bproved\\\\b|\\\\bproven\\\\b|ошибок нет|(?<!не )доказано|system is correct|система корректна' absent"
+      "evidence": "pattern \"(?im)^(?![^\\\\n]*(не\\\\s|нельзя|не говор|not |never |avoid|do not|don't|forbidden|запрещ))[^\\\\n]*(\\\\bno errors\\\\b|ошибок нет|\\\\bproved\\\\b|\\\\bproven\\\\b|доказано|system is correct|система корректна)\" absent"
     }
   ]
 }

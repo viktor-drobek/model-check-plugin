@@ -1,0 +1,107 @@
+ltl mutual_exclusion: [] (! ((working[0]) && (working[1])))
+Starting Client with pid 1
+  1:	proc  0 (:init::1) two_clients.pml:47 (state 1)	[(run Client(0))]
+Starting Client with pid 2
+  2:	proc  0 (:init::1) two_clients.pml:48 (state 2)	[(run Client(1))]
+Starting Server with pid 3
+  3:	proc  0 (:init::1) two_clients.pml:49 (state 3)	[(run Server())]
+  4:	proc  2 (Client:1) two_clients.pml:16 (state 1)	[request!id]
+		queue 1 (request): [1]
+  5:	proc  3 (Server:1) two_clients.pml:36 (state 1)	[request?id]
+		queue 1 (request): 
+  6:	proc  3 (Server:1) two_clients.pml:37 (state 2)	[assert((owner==2))]
+		queue 1 (request): 
+  7:	proc  3 (Server:1) two_clients.pml:38 (state 3)	[owner = id]
+		queue 1 (request): 
+		owner = 1
+  8:	proc  3 (Server:1) two_clients.pml:39 (state 4)	[permission[id]!go]
+		queue 1 (request): 
+  9:	proc  2 (Client:1) two_clients.pml:17 (state 2)	[permission[id]?go]
+		queue 1 (request): 
+ 10:	proc  2 (Client:1) two_clients.pml:18 (state 3)	[working[id] = 1]
+		queue 1 (request): 
+		working[0] = 0
+		working[1] = 1
+ 11:	proc  2 (Client:1) two_clients.pml:23 (state 6)	[else]
+		queue 1 (request): 
+ 12:	proc  2 (Client:1) two_clients.pml:23 (state 7)	[(1)]
+		queue 1 (request): 
+ 13:	proc  2 (Client:1) two_clients.pml:26 (state 10)	[(1)]
+		queue 1 (request): 
+ 14:	proc  2 (Client:1) two_clients.pml:27 (state 11)	[working[id] = 0]
+		queue 1 (request): 
+		working[0] = 0
+		working[1] = 0
+ 15:	proc  2 (Client:1) two_clients.pml:28 (state 12)	[release!id]
+		queue 1 (request): 
+ 16:	proc  3 (Server:1) two_clients.pml:40 (state 5)	[release?eval(id)]
+		queue 1 (request): 
+ 17:	proc  2 (Client:1) two_clients.pml:16 (state 1)	[request!id]
+		queue 1 (request): [1]
+ 18:	proc  1 (Client:1) two_clients.pml:16 (state 1)	[request!id]
+		queue 1 (request): [1][0]
+ 19:	proc  3 (Server:1) two_clients.pml:41 (state 6)	[owner = 2]
+		queue 1 (request): [1][0]
+		owner = 2
+ 20:	proc  3 (Server:1) two_clients.pml:36 (state 1)	[request?id]
+		queue 1 (request): [0]
+ 21:	proc  3 (Server:1) two_clients.pml:37 (state 2)	[assert((owner==2))]
+		queue 1 (request): [0]
+ 22:	proc  3 (Server:1) two_clients.pml:38 (state 3)	[owner = id]
+		queue 1 (request): [0]
+		owner = 1
+ 23:	proc  3 (Server:1) two_clients.pml:39 (state 4)	[permission[id]!go]
+		queue 1 (request): [0]
+ 24:	proc  2 (Client:1) two_clients.pml:17 (state 2)	[permission[id]?go]
+		queue 1 (request): [0]
+ 25:	proc  2 (Client:1) two_clients.pml:18 (state 3)	[working[id] = 1]
+		queue 1 (request): [0]
+		working[0] = 0
+		working[1] = 1
+ 26:	proc  2 (Client:1) two_clients.pml:23 (state 6)	[else]
+		queue 1 (request): [0]
+ 27:	proc  2 (Client:1) two_clients.pml:23 (state 7)	[(1)]
+		queue 1 (request): [0]
+ 28:	proc  2 (Client:1) two_clients.pml:26 (state 10)	[(1)]
+		queue 1 (request): [0]
+ 29:	proc  2 (Client:1) two_clients.pml:27 (state 11)	[working[id] = 0]
+		queue 1 (request): [0]
+		working[0] = 0
+		working[1] = 0
+ 30:	proc  2 (Client:1) two_clients.pml:28 (state 12)	[release!id]
+		queue 1 (request): [0]
+ 31:	proc  3 (Server:1) two_clients.pml:40 (state 5)	[release?eval(id)]
+		queue 1 (request): [0]
+ 32:	proc  3 (Server:1) two_clients.pml:41 (state 6)	[owner = 2]
+		queue 1 (request): [0]
+		owner = 2
+ 33:	proc  3 (Server:1) two_clients.pml:36 (state 1)	[request?id]
+		queue 1 (request): 
+ 34:	proc  3 (Server:1) two_clients.pml:37 (state 2)	[assert((owner==2))]
+		queue 1 (request): 
+ 35:	proc  3 (Server:1) two_clients.pml:38 (state 3)	[owner = id]
+		queue 1 (request): 
+		owner = 0
+ 36:	proc  3 (Server:1) two_clients.pml:39 (state 4)	[permission[id]!go]
+		queue 1 (request): 
+ 37:	proc  1 (Client:1) two_clients.pml:17 (state 2)	[permission[id]?go]
+		queue 1 (request): 
+ 38:	proc  2 (Client:1) two_clients.pml:16 (state 1)	[request!id]
+		queue 1 (request): [1]
+ 39:	proc  1 (Client:1) two_clients.pml:18 (state 3)	[working[id] = 1]
+		queue 1 (request): [1]
+		working[0] = 1
+		working[1] = 0
+ 40:	proc  1 (Client:1) two_clients.pml:22 (state 4)	[((id==0))]
+		queue 1 (request): [1]
+spin: trail ends after 40 steps
+#processes: 4
+		queue 1 (request): [1]
+		working[0] = 1
+		working[1] = 0
+		owner = 0
+ 40:	proc  3 (Server:1) two_clients.pml:40 (state 5)
+ 40:	proc  2 (Client:1) two_clients.pml:17 (state 2)
+ 40:	proc  1 (Client:1) two_clients.pml:30 (state 16) <valid end state>
+ 40:	proc  0 (:init::1) two_clients.pml:51 (state 5) <valid end state>
+4 processes created

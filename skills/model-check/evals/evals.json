@@ -1,6 +1,6 @@
 {
   "skill_name": "model-check",
-  "note": "Prompts from model-check-skill-notes/14-skill-building-plan.md §8.2 (E1–E6). Each eval has 'assertions' (plan §8.2 as amended; 'expectations' is the key of grading.json only). Every assertion has a 'text' for the human reader and a 'check' a grader applies without judgement: regex / not_regex / regex_order run over the answer text (Python re, flags given in the pattern); petri_json_valid looks for a JSON file in the run's outputs directory that the engine's Petri frontend accepts and, when 'equivalent_to' is set, that has the same places, initial marking, transitions and arcs as that fixture; json_field reads a value from a JSON file in the outputs directory. 'runnable_from' names the build step from which the engine can execute the eval (G0: Petri JSON via the mcd CLI; G1: Promela; G4: ltl/progress/weak fairness; G5: ctl). An eval may carry 'variant_of' (it varies another eval's question on a different model) and 'dir' (the workspace directory name, when it is not 'eval-<id>-<name>'). Corpus fixtures are referenced by path and SHA-256 in evals/fixtures/README.md; evals/fixtures/petrinet1.json is the skill's own encoding, not a corpus copy. Grader: model-check-plugin/evals-workspace/grader.py. Since the review of 2026-09-29 (steps/review-astra-skill.md §D, steps/review-sol-reconciliation.md §5), an assertion that the engine was invoked is a `engine_report` check and not a regex over the prose: it looks for a file under the run's outputs directory that the engine itself wrote (engine.name = mcd, engine.report_schema = mcd-report/*) and, when given, for the property id, status and evidence in it. A run therefore has to save each mc_check report into its outputs directory; an answer that only talks about having run the engine now fails those assertions, which is the point.",
+  "note": "Prompts from model-check-skill-notes/14-skill-building-plan.md §8.2 (E1–E6). Each eval has 'assertions' (plan §8.2 as amended; 'expectations' is the key of grading.json only). Every assertion has a 'text' for the human reader and a 'check' a grader applies without judgement: regex / not_regex / regex_order run over the answer text (Python re, flags given in the pattern); petri_json_valid looks for a JSON file in the run's outputs directory that the engine's Petri frontend accepts and, when 'equivalent_to' is set, that has the same places, initial marking, transitions and arcs as that fixture; json_field reads a value from a JSON file in the outputs directory. 'runnable_from' names the build step from which the engine can execute the eval (G0: Petri JSON via the mcd CLI; G1: Promela; G4: ltl/progress/weak fairness; G5: ctl). An eval may carry 'variant_of' (it varies another eval's question on a different model) and 'dir' (the workspace directory name, when it is not 'eval-<id>-<name>'). Corpus fixtures are referenced by path and SHA-256 in evals/fixtures/README.md; evals/fixtures/petrinet1.json is the skill's own encoding, not a corpus copy. Grader: model-check-plugin/evals-workspace/grader.py. Since the review of 2026-09-29 (steps/review-astra-skill.md §D, steps/review-sol-reconciliation.md §5), an assertion that the engine was invoked is a `engine_report` check and not a regex over the prose: it looks for a file under the run's outputs directory that the engine itself wrote (engine.name = mcd, engine.report_schema = mcd-report/*) and, when given, for the property id, status and evidence in it. A run therefore has to save each mc_check report into its outputs directory; an answer that only talks about having run the engine now fails those assertions, which is the point. An eval may carry 'first_measured_in': the workspace iteration at which it entered the set. Earlier iterations are historical snapshots and are not expected to contain it; the latest iteration is expected to contain every eval the engine can run, which is what keeps a new eval from staying unmeasured.",
   "evals": [
     {
       "id": 1,
@@ -63,10 +63,10 @@
           }
         },
         {
-          "text": "No forbidden phrasing (no errors / proved / system is correct) (naming the word in order to deny it does not count)",
+          "text": "No forbidden phrasing (no errors / proved / system is correct) (a line that rejects the word does not count)",
           "check": {
             "type": "not_regex",
-            "pattern": "(?i)\\bno errors\\b|\\bproved\\b|\\bproven\\b|ошибок нет|(?<!не )доказано|system is correct|система корректна"
+            "pattern": "(?im)^(?![^\\n]*(не\\s|нельзя|не говор|not |never |avoid|do not|don't|forbidden|запрещ))[^\\n]*(\\bno errors\\b|ошибок нет|\\bproved\\b|\\bproven\\b|доказано|system is correct|система корректна)"
           }
         }
       ]
@@ -123,25 +123,26 @@
           }
         },
         {
-          "text": "The engine was invoked and its report is among the run's outputs: a property verified with evidence exhaustive",
+          "text": "The engine was invoked and its report is among the run's outputs: the LTL property verified with evidence exhaustive",
           "check": {
             "type": "engine_report",
+            "kind": "ltl",
             "status": "verified",
             "evidence": "exhaustive"
           }
         },
         {
-          "text": "The word proved/доказано is not used for the model result (naming the word in order to deny it does not count)",
+          "text": "The word proved/доказано is not used for the model result (a line that rejects the word does not count)",
           "check": {
             "type": "not_regex",
-            "pattern": "(?i)\\bproved\\b|\\bproven\\b|(?<!не )доказано|(?<!не )доказал"
+            "pattern": "(?im)^(?![^\\n]*(не\\s|нельзя|не говор|not |never |avoid|do not|don't|forbidden|запрещ))[^\\n]*(\\bno errors\\b|ошибок нет|\\bproved\\b|\\bproven\\b|доказано|доказал|protocol is correct|протокол корректен|система корректна)"
           }
         },
         {
-          "text": "No forbidden phrasing",
+          "text": "No forbidden phrasing (a line that rejects the word does not count)",
           "check": {
             "type": "not_regex",
-            "pattern": "(?i)\\bno errors\\b|ошибок нет|protocol is correct|протокол корректен|система корректна"
+            "pattern": "(?im)^(?![^\\n]*(не\\s|нельзя|не говор|not |never |avoid|do not|don't|forbidden|запрещ))[^\\n]*(\\bno errors\\b|ошибок нет|\\bproved\\b|\\bproven\\b|доказано|доказал|protocol is correct|протокол корректен|система корректна)"
           }
         }
       ]
@@ -163,10 +164,10 @@
           }
         },
         {
-          "text": "The engine was run on the net and the command line is shown — either `mcd check --petri` or the parse-then-check route (`mcd parse --petri` followed by `mcd check --ir`)",
+          "text": "The engine was run on the net and the call is shown — the MCP tools (mc_parse / mc_check) or either CLI route (`mcd check --petri`, or `mcd parse --petri` then `mcd check --ir`)",
           "check": {
             "type": "regex",
-            "pattern": "(?i)mcd\\s+(check[^\\n]*--petri|parse[^\\n]*--petri[\\s\\S]{0,400}?mcd\\s+check[^\\n]*--ir)"
+            "pattern": "(?i)mc_check|mc_parse|mcd\\s+(check[^\\n]*--petri|parse[^\\n]*--petri[\\s\\S]{0,400}?mcd\\s+check[^\\n]*--ir)"
           }
         },
         {
@@ -219,10 +220,10 @@
           }
         },
         {
-          "text": "No forbidden phrasing (no errors / proved / net is correct) (naming the word in order to deny it does not count)",
+          "text": "No forbidden phrasing (no errors / proved / net is correct) (a line that rejects the word does not count)",
           "check": {
             "type": "not_regex",
-            "pattern": "(?i)\\bno errors\\b|\\bproved\\b|\\bproven\\b|ошибок нет|(?<!не )доказано|net is correct|сеть корректна"
+            "pattern": "(?im)^(?![^\\n]*(не\\s|нельзя|не говор|not |never |avoid|do not|don't|forbidden|запрещ))[^\\n]*(\\bno errors\\b|ошибок нет|\\bproved\\b|\\bproven\\b|доказано|net is correct|сеть корректна)"
           }
         },
         {
@@ -253,10 +254,10 @@
           }
         },
         {
-          "text": "It is formalised as a progress label or an LTL eventually/infinitely-often formula",
+          "text": "The requirement is formalised either as a progress label / LTL eventually, or as a CTL formula over the control label",
           "check": {
             "type": "regex",
-            "pattern": "(?i)\\bprogress\\b|<>|\\[\\]\\s*<>|eventually|непременно|когда-нибудь"
+            "pattern": "(?i)\\bprogress\\b|<>|\\[\\]\\s*<>|eventually|непременно|когда-нибудь|\\bAG\\b|\\bEF\\b|\\bAF\\b"
           }
         },
         {
@@ -295,10 +296,10 @@
           }
         },
         {
-          "text": "Placing a progress label (or adding a variable) is declared as a change to the model, not smuggled in",
+          "text": "If the route needs a change to the model (a progress label or a new variable), that change is declared; a CTL answer over the existing label needs no such change and says so",
           "check": {
             "type": "regex",
-            "pattern": "(?i)(добав\\w+|постав\\w+|размест\\w+|внёс|внес\\w+|перепис\\w+|измен\\w+|add\\w*|plac\\w+|insert\\w+|rewr\\w+|modif\\w+)[^\\n]{0,120}(progress|мет\\w+|label)|(progress|label|мет\\w+)[^\\n]{0,120}(добав\\w+|постав\\w+|перепис\\w+|измен\\w+ модел|add\\w*|plac\\w+|change to the model|изменени\\w* модел)"
+            "pattern": "(?i)((добав\\w+|постав\\w+|размест\\w+|внёс|внес\\w+|перепис\\w+|измен\\w+|add\\w*|plac\\w*|insert\\w*|chang\\w*)[^\\n]{0,80}(progress|метк|label|переменн)|(без изменен|не меня\\w+ модел|without (a )?chang|no change to the model|модель не меня))"
           }
         },
         {
@@ -309,9 +310,13 @@
           }
         },
         {
-          "text": "The engine was invoked and its report is among the run's outputs",
+          "text": "The engine was invoked and its report is among the run's outputs, carrying the property of the route taken (progress, or ctl for the control-label route)",
           "check": {
-            "type": "engine_report"
+            "type": "engine_report",
+            "kind": [
+              "progress",
+              "ctl"
+            ]
           }
         }
       ]
@@ -435,9 +440,10 @@
           }
         },
         {
-          "text": "The engine was invoked and its report is among the run's outputs: a CTL property verified with evidence exhaustive",
+          "text": "The engine was invoked and its report is among the run's outputs: a property of kind ctl verified with evidence exhaustive",
           "check": {
             "type": "engine_report",
+            "kind": "ctl",
             "status": "verified",
             "evidence": "exhaustive"
           }
@@ -511,25 +517,35 @@
           }
         },
         {
-          "text": "The engine was invoked and the unfair run's report is among the run's outputs: a property violated",
+          "text": "The engine was invoked and the unfair run's report is among the outputs: the temporal property violated under fairness none",
           "check": {
             "type": "engine_report",
-            "status": "violated"
+            "kind": [
+              "ltl",
+              "progress"
+            ],
+            "status": "violated",
+            "fairness": "none"
           }
         },
         {
-          "text": "No forbidden phrasing, and the fair result is not called proved (naming the word in order to deny it does not count)",
+          "text": "No forbidden phrasing, and the fair result is not called proved (a line that rejects the word does not count)",
           "check": {
             "type": "not_regex",
-            "pattern": "(?i)\\bno errors\\b|ошибок нет|\\bproved\\b|\\bproven\\b|(?<!не )доказано|система корректна"
+            "pattern": "(?im)^(?![^\\n]*(не\\s|нельзя|не говор|not |never |avoid|do not|don't|forbidden|запрещ))[^\\n]*(\\bno errors\\b|ошибок нет|\\bproved\\b|\\bproven\\b|доказано|доказал|protocol is correct|протокол корректен|система корректна)"
           }
         },
         {
-          "text": "The weak-fairness run's report is also among the outputs: a property verified with evidence exhaustive",
+          "text": "The weak-fairness run's report is also among the outputs: the same kind of property verified with evidence exhaustive under fairness weak",
           "check": {
             "type": "engine_report",
+            "kind": [
+              "ltl",
+              "progress"
+            ],
             "status": "verified",
-            "evidence": "exhaustive"
+            "evidence": "exhaustive",
+            "fairness": "weak"
           }
         }
       ]
@@ -537,25 +553,32 @@
     {
       "id": 8,
       "name": "ir-from-words",
-      "prompt": "Опиши словами, без готовой модели: два клиента делят один сервер. Клиент посылает запрос, ждёт разрешения, работает, затем сообщает об освобождении. Сервер выдаёт разрешение одному клиенту за раз и принимает следующий запрос только после освобождения. Вопросы: могут ли два клиента работать одновременно и может ли система зависнуть?",
+      "prompt": "Готовой модели нет, система описана только словами: два клиента делят один сервер. Клиент посылает запрос, ждёт разрешения, работает, затем сообщает об освобождении. Сервер выдаёт разрешение одному клиенту за раз и принимает следующий запрос только после освобождения. Вопросы: могут ли два клиента работать одновременно и может ли система зависнуть?",
       "expected_output": "The model is built by the agent from the words alone (no model is given). The route is the one the skill prescribes: write it in the Promela subset first — direct IR authoring is experimental (plan 14 §12, A7) — then mc_parse, then mc_check with the two questions: the mutual-exclusion assert and deadlock. Both come back `verified` / `exhaustive` on a correct model (the hand-written reference `evals/fixtures/handshake.pml` gives deadlock verified and assert verified, exhaustive, 12 states). The answer must say that a verdict on a self-built model carries one more assumption than a verdict on a model the user gave — that the model says what the words said — and name the modelling decisions that the words did not fix (rendezvous or buffered channels, whether the server may reorder, what \"works\" means). The engine's report JSON saved into the run's outputs directory.",
       "files": [],
       "fixture": "evals/fixtures/handshake.pml",
       "runnable_from": "G1",
-      "note": "This is the eval plan 14 §12 promises for assumption A7 («агент способен сам порождать модель для системы, заданной словами») and which G5 did not run; added by the review-fix pass of 2026-09-29 (steps/review-sol-reconciliation.md §1, row A2). The fixture is the comparison model, not an input: the agent never sees it.",
+      "first_measured_in": "iteration-4",
+      "note": "This is the eval plan 14 §12 promises for assumption A7 («агент способен сам порождать модель для системы, заданной словами») and which G5 did not run; added by the review-fix pass of 2026-09-29 (steps/review-sol-reconciliation.md §1, row A2). The fixture is the comparison model, not an input: the agent never sees it. The comparison with the hand-written reference is by **verdict**, not by structure: the reference `evals/fixtures/handshake.pml` gives deadlock verified/exhaustive and its mutual-exclusion assert verified/exhaustive, and the assertions require the agent's own model to be checked for the same two questions with the same two verdicts. Two models can agree on both verdicts and still differ (the reference itself fixes rendezvous channels and one working step, which the words do not), so this measures that the agent formalised and checked, not that it formalised the same way. The stricter form of assumption A7 in plan 14 §12 — the agent authoring IR directly — stays unmeasured: the skill calls that route experimental and this eval follows the skill.",
       "assertions": [
         {
-          "text": "A model is built from the words and shown (a Promela-subset model, or an IR with the route declared experimental)",
+          "text": "The model the agent built from the words is among the run's outputs (a Promela-subset file, or an IR document when the experimental direct-IR route was taken)",
           "check": {
-            "type": "regex",
-            "pattern": "(?i)proctype|active\\s*\\[|chan\\s+\\w+\\s*=|\"schema\"\\s*:\\s*\"mcd-ir/"
+            "type": "outputs_file",
+            "globs": [
+              "*.pml",
+              "*.ir.json",
+              "*ir*.json"
+            ]
           }
         },
         {
-          "text": "The Promela-subset route is preferred over writing IR by hand, or writing IR by hand is declared experimental",
+          "text": "The route the skill prescribes was taken: the model is written in the Promela subset, not authored directly as IR",
           "check": {
-            "type": "regex",
-            "pattern": "(?i)promela[^\\n]{0,80}(сначал|first|предпоч|prefer)|(experimental|экспериментальн)[^\\n]{0,60}(IR|ир)|IR[^\\n]{0,60}(experimental|экспериментальн)"
+            "type": "outputs_file",
+            "globs": [
+              "*.pml"
+            ]
           }
         },
         {
@@ -566,9 +589,13 @@
           }
         },
         {
-          "text": "The engine was invoked and its report is among the run's outputs: a property verified with evidence exhaustive",
+          "text": "The mutual-exclusion question was answered by the engine: a state property (invariant or assert) verified with evidence exhaustive in a report among the outputs",
           "check": {
             "type": "engine_report",
+            "kind": [
+              "invariant",
+              "assert"
+            ],
             "status": "verified",
             "evidence": "exhaustive"
           }
@@ -597,10 +624,10 @@
           }
         },
         {
-          "text": "No forbidden phrasing, and the self-built model is not presented as a result about the described system itself (naming the word in order to deny it does not count)",
+          "text": "No forbidden phrasing, and the self-built model is not presented as a result about the described system itself (a line that rejects the word does not count)",
           "check": {
             "type": "not_regex",
-            "pattern": "(?i)\\bno errors\\b|ошибок нет|\\bproved\\b|\\bproven\\b|(?<!не )доказано|система корректна|system is correct"
+            "pattern": "(?im)^(?![^\\n]*(не\\s|нельзя|не говор|not |never |avoid|do not|don't|forbidden|запрещ))[^\\n]*(\\bno errors\\b|ошибок нет|\\bproved\\b|\\bproven\\b|доказано|система корректна|system is correct)"
           }
         }
       ]

@@ -47,8 +47,11 @@ follows that priority.
 
 **Control-label atoms (`proc@label`, `proc:pid@label`): rejected in LTL, accepted in
 CTL.** The bracket form `proc[i]@label` is *not* parsed — the instance is selected with a
-colon and the engine's own 1-based pid (`switch:1@Idle`), and a bare `switch@Idle` means
-the first instance of that proctype. In an `--ltl` formula `mcd` rejects the whole run with `kind: "ltl"`
+colon and the instance's **own name as the engine built it** — take it from the report or
+from `mc_parse`'s `origins`, do not compute it: the number is the process's pid in the IR,
+which counts `init` and every earlier `run`, so `switch:1@Idle` is right on
+`CH14/version1` and `switch:0@Idle` is rejected there with "no process called switch:0".
+A bare `switch@Idle` means the first instance of that proctype. In an `--ltl` formula `mcd` rejects the whole run with `kind: "ltl"`
 ("unexpected character '@'") and produces no report. In a `--ctl` formula the same
 atom is accepted and normalised to a program-counter test: `AG EF (subscriber@Idle)`
 on `CH14/version1` is evaluated as `!E[true U !E[true U (pc(0) == 0)]]` and comes
@@ -110,7 +113,7 @@ deadlocks separately, so the models it evaluates formulas on are total). Where t
 | "p eventually" (inevitability) | `<> p` | `AF p` | yes | remember: terminal states with no successor change the reading; the engine reports deadlock separately |
 | "from every reachable state recovery is possible" | not expressible | `AG EF reset` | **no** | CTL only; a linear trace cannot refute it — the witness is a tree (05 гл. 6, 07 лекция 9) |
 | "it is possible that p" (sanity, planning) | not expressible as a universal LTL check; `!<> p` violated ⇔ p reachable | `EF p` | **no** | use the engine's `reach` kind or `EF p`; a trail to `p` is the witness |
-| "p until q" | `p U q` | `A(p U q)` | yes | strong until: `q` must occur |
+| "p until q" | `p U q` | `A[p U q]` | yes | strong until: `q` must occur; the brackets are part of the syntax |
 | "in the next step p" | `X p` | `AX p` | yes | both depend on the atomic step; flag as not stutter-invariant |
 | "on some path p holds forever" | not expressible | `EG p` | **no** | CTL only; the witness is a lasso inside `p`-states |
 | "a transition t can always fire again" (Petri liveness) | `[]<> fire(t)` — needs fairness | `AG EF fire(t)` — no fairness | **no** | see `petri-nets.md` §4; the two are different questions |
@@ -142,7 +145,8 @@ logics are incomparable (05 гл. 6; 03 гл. 2; 09 гл. 2).
   `not-executed` with that reason, never as a quietly unfair answer. So a CTL result is
   always a fairness-free result — say so, and put a liveness question that needs a
   fairness assumption in LTL.
-- **Witness shape.** LTL violation: one lasso (prefix + loop). CTL: a path for
+- **Witness shape** (what the engine builds, not what the logic allows). LTL violation:
+  usually a lasso, sometimes a bad prefix with no loop — read `counterexample.loop`. CTL: a path for
   `EF`/`EG` witnesses and for `AG p` violations; a tree for violations of nested
   universal-existential formulas such as `AG EF p` (11 §8, 05 гл. 6). Say in the
   report whether one trace was enough.

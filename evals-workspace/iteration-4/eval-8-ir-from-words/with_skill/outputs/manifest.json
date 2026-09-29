@@ -1,0 +1,129 @@
+{
+  "kind": "manual-cli-manifest",
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1",
+    "binary": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/engine/bin/mcd"
+  },
+  "inputs_and_outputs": [
+    {
+      "path": "two_clients.pml",
+      "sha256": "7784f95c5b2d1cc8a68936138f568d79d679ea14ca14c7c0b36ed2c53efdfbcc"
+    },
+    {
+      "path": "model.ir.json",
+      "sha256": "1223acd8a33850b5ef55879893899d8156496a124790d86d543037f2f67ddbfb"
+    },
+    {
+      "path": "sanity.ir.json",
+      "sha256": "d93c60a675cbf2cae2e06b9ee847a6d00ce1a321ce081871cd862b0dacd8095f"
+    },
+    {
+      "path": "safety.ir.json",
+      "sha256": "9f07f971b8dc00bd626bd5ff84bb03bae7daed9ae850173fb912c30d4e0b8975"
+    },
+    {
+      "path": "all.ir.json",
+      "sha256": "c95ceac3a8a651bbfaf43142f49c1f228eb43eeb82b7cbdb9e582306de989dec"
+    },
+    {
+      "path": "properties.json",
+      "sha256": "a1ff7eae437efcf7146a34430e47906819cdc7469d404a237e45cdcfa5591c08"
+    },
+    {
+      "path": "estimate.json",
+      "sha256": "3fb10581eaac5bf77e6e42d8ae8e7361bf5ecabb1ed70d77701ce80dd53165da"
+    },
+    {
+      "path": "sanity.report.json",
+      "sha256": "7e7d71ed98003e4312ab3809c547102af0bf068071e22ba9b93810e082cddb7e"
+    },
+    {
+      "path": "safety.report.json",
+      "sha256": "1afb0b54919a6b9331a2bb559017d178c348d5ee56d5c7aa7722a7811abe7792"
+    },
+    {
+      "path": "liveness-none.report.json",
+      "sha256": "e8b37e53c27e401a9655c14be3685f80016e9232d302c4f10ae41bb09beccc62"
+    },
+    {
+      "path": "liveness-weak.report.json",
+      "sha256": "1cf18b3566d6544c724687c5d0845477861b03b6e0ccbbfaf46d31223628284f"
+    },
+    {
+      "path": "intake-card.yaml",
+      "sha256": "dc4e685e880f8def3b2c530a6a2ca3984a773f9f929e2bf2a772bd3611f92b07"
+    },
+    {
+      "path": "mapping.md",
+      "sha256": "f0d8aeaa75306eda3f8767671058d62a3275f1d337402e0ac07d5b6e4a7977f8"
+    },
+    {
+      "path": "counterexamples.md",
+      "sha256": "97cde7c1fee4597f9a316a5b0827c5f148cbdfb517e79916e96b81e2181861d4"
+    },
+    {
+      "path": "answer.md",
+      "sha256": "55b4c435b4d7c2943dbe8f48f91d49368a07c0698eb0e8cdb2f0d0c1acb5ee44"
+    }
+  ],
+  "commands": [
+    {
+      "stage": "parse",
+      "command": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/engine/bin/mcd parse --promela model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml > model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/model.ir.json",
+      "output": "model.ir.json"
+    },
+    {
+      "stage": "estimate",
+      "command": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/engine/bin/mcd check --promela model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml --estimate --estimate-ms 1000 --target-depth 100 > model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/estimate.json",
+      "output": "estimate.json"
+    },
+    {
+      "stage": "sanity",
+      "command": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/engine/bin/mcd check --ir model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/sanity.ir.json --bfs --budget-states 10000 --budget-depth 10000 --budget-ms 10000 --budget-mem-mb 128 > model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/sanity.report.json",
+      "output": "sanity.report.json"
+    },
+    {
+      "stage": "safety",
+      "command": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/engine/bin/mcd check --ir model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/safety.ir.json --bfs --budget-states 10000 --budget-depth 10000 --budget-ms 10000 --budget-mem-mb 128 > model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/safety.report.json",
+      "output": "safety.report.json"
+    },
+    {
+      "stage": "liveness-none",
+      "command": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/engine/bin/mcd check --ir model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/all.ir.json --ltl '[] (waiting0 -> <> working0)' --ltl '[] (waiting1 -> <> working1)' --ltl '[] (accepted0 -> <> working0)' --ltl '[] (accepted1 -> <> working1)' --fairness none --budget-states 10000 --budget-depth 10000 --budget-ms 10000 --budget-mem-mb 128 > model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/liveness-none.report.json",
+      "output": "liveness-none.report.json"
+    },
+    {
+      "stage": "liveness-weak",
+      "command": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/engine/bin/mcd check --ir model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/all.ir.json --ltl '[] (waiting0 -> <> working0)' --ltl '[] (waiting1 -> <> working1)' --ltl '[] (accepted0 -> <> working0)' --ltl '[] (accepted1 -> <> working1)' --fairness weak --budget-states 10000 --budget-depth 10000 --budget-ms 10000 --budget-mem-mb 128 > model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/liveness-weak.report.json",
+      "output": "liveness-weak.report.json"
+    }
+  ],
+  "parameters": {
+    "budget": {
+      "states": 10000,
+      "depth": 10000,
+      "time_ms": 10000,
+      "memory_mib": 128
+    },
+    "estimate_ms": 1000,
+    "search": {
+      "sanity": "bfs",
+      "safety": "bfs",
+      "liveness": "dfs"
+    },
+    "fairness": [
+      "none",
+      "weak"
+    ],
+    "reductions": "none"
+  },
+  "cli_gaps": [
+    "mc_simulate has no CLI equivalent: pilot simulation skipped",
+    "mc_lint_property has no CLI equivalent: property classification performed manually",
+    "mc_explain has no CLI equivalent: traces decoded from report JSON",
+    "mc_manifest has no CLI equivalent: this file assembled manually; no seed or start/end timestamps"
+  ]
+}

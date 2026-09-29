@@ -41,9 +41,9 @@
       "evidence": "matched 'verified`** | **`exhaustive`** (9 состояний, 12 переходов, граф раскрыт полность' at 338"
     },
     {
-      "text": "The engine was invoked and its report is among the run's outputs: a CTL property verified with evidence exhaustive",
+      "text": "The engine was invoked and its report is among the run's outputs: a property of kind ctl verified with evidence exhaustive",
       "passed": true,
-      "evidence": "mc-session-2026-09-27/check-1-sanity.json: property 'deadlock' is verified / exhaustive"
+      "evidence": "mc-session-2026-09-27/check-1-sanity.json: property 'ctl1' (ctl) is verified / exhaustive"
     }
   ]
 }

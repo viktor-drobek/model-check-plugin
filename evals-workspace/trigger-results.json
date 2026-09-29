@@ -1,5 +1,5 @@
 {
-  "method": "subagent judges (the headless `claude -p` CLI had no credentials in this environment)",
+  "method": "three independent judge sessions per variant, each a fresh Codex CLI session on gpt-6-sol (codex exec -s read-only) answering the prepared roster prompt and nothing else; all four variants judged by the same population on the same seeded split. The G6 measurement (Claude subagent judges) is not mixed in: its raw runs stay in evals-workspace/trigger-runs/, this one is in trigger-runs-2/",
   "judge_runs_per_variant": 3,
   "seed": 20260926,
   "split": {
@@ -34,8 +34,59 @@
   "threshold_test_accuracy": 0.85,
   "variants": [
     {
+      "variant": "v1",
+      "role": "the description now in SKILL.md, rewritten by the review fixes of 2026-09-29 so that activation is decided by the question and not by a keyword",
+      "description": "Model checking of protocols, concurrent algorithms, state machines and Petri nets with a built-in explicit-state engine (Go, exposed as MCP tools mc_parse, mc_check, mc_explain and others, or as the `mcd` CLI) — no external SPIN, NuSMV or other model checker is needed or should be looked for. Use this skill whenever the user wants to verify, prove or refute a behavioural property of a system with several interacting parts: deadlock, mutual exclusion, invariants, reachability, liveness, response, starvation, fairness, LTL, CTL, Promela models, never claims, Petri nets, token nets, alternating-bit or handshake protocols, telephone switches, producer/consumer, leader election, \"can this hang\", \"is a counterexample possible\", \"verify this protocol\", \"check this model\", \"model checking\", \"deadlock\", \"counterexample\". Russian signals: «проверь модель», «может ли зависнуть», «докажи, что никогда», «сеть Петри», «тупик», «инвариант», «взаимное исключение», «живость», «liveness», «справедливость», «Promela», «never claim», «LTL», «CTL», «model checking», «верификация протокола», «контрпример», «гонка», «переведи сеть Петри во что-нибудь проверяемое». Also use it when the user only describes the system in words and asks whether something bad can ever happen or something good must eventually happen — that is a model-checking question even if they do not say so. What decides is the question, not the word: use the skill when the question is whether some behaviour of a system with several interacting parts is possible or unavoidable, and do not use it for unit tests of sequential code, for finding races in real source with a linter or sanitiser, for single-function theorem proving, or for drawing diagrams without analysis — even when one of the words above appears there.",
+      "runs": 3,
+      "train_accuracy": 1.0,
+      "train": {
+        "n": 12,
+        "correct": 12,
+        "accuracy": 1.0,
+        "true_positive": 6,
+        "false_negative": 0,
+        "false_positive": 0,
+        "true_negative": 6,
+        "missing": []
+      },
+      "test_accuracy": 1.0,
+      "test": {
+        "n": 8,
+        "correct": 8,
+        "accuracy": 1.0,
+        "true_positive": 4,
+        "false_negative": 0,
+        "false_positive": 0,
+        "true_negative": 4,
+        "missing": []
+      },
+      "all_accuracy": 1.0,
+      "decisions": {
+        "n01": false,
+        "n02": false,
+        "n03": false,
+        "n04": false,
+        "n05": false,
+        "n06": false,
+        "n07": false,
+        "n08": false,
+        "n09": false,
+        "n10": false,
+        "t01": true,
+        "t02": true,
+        "t03": true,
+        "t04": true,
+        "t05": true,
+        "t06": true,
+        "t07": true,
+        "t08": true,
+        "t09": true,
+        "t10": true
+      }
+    },
+    {
       "variant": "v0",
-      "role": "the description SKILL.md carries today (incumbent)",
+      "role": "the description G6 chose",
       "description": "Model checking of protocols, concurrent algorithms, state machines and Petri nets with a built-in explicit-state engine (Go, exposed as MCP tools mc_parse, mc_check, mc_explain and others, or as the `mcd` CLI) — no external SPIN, NuSMV or other model checker is needed or should be looked for. Use this skill whenever the user wants to verify, prove or refute a behavioural property of a system with several interacting parts: deadlock, mutual exclusion, invariants, reachability, liveness, response, starvation, fairness, LTL, CTL, Promela models, never claims, Petri nets, token nets, alternating-bit or handshake protocols, telephone switches, producer/consumer, leader election, \"can this hang\", \"is a counterexample possible\", \"verify this protocol\", \"check this model\", \"model checking\", \"deadlock\", \"counterexample\". Russian triggers, use the skill for any of them: «проверь модель», «может ли зависнуть», «докажи, что никогда», «сеть Петри», «тупик», «инвариант», «взаимное исключение», «живость», «liveness», «справедливость», «Promela», «never claim», «LTL», «CTL», «model checking», «верификация протокола», «контрпример», «гонка», «переведи сеть Петри во что-нибудь проверяемое». Also use it when the user only describes the system in words and asks whether something bad can ever happen or something good must eventually happen — that is a model-checking question even if they do not say so. Do not use it for unit tests of sequential code, data-race linters, single-function theorem proving, or for drawing diagrams without analysis.",
       "runs": 3,
       "train_accuracy": 1.0,
@@ -86,16 +137,16 @@
     },
     {
       "variant": "vmin",
-      "role": "control: the terse one-line description from plugin.json",
+      "role": "one-line minimal description",
       "description": "Model checking skill with a built-in explicit-state engine (mcd) exposed over MCP: parse, simulate, check, explain, lint, estimate, manifest.",
       "runs": 3,
-      "train_accuracy": 1.0,
+      "train_accuracy": 0.9167,
       "train": {
         "n": 12,
-        "correct": 12,
-        "accuracy": 1.0,
-        "true_positive": 6,
-        "false_negative": 0,
+        "correct": 11,
+        "accuracy": 0.9167,
+        "true_positive": 5,
+        "false_negative": 1,
         "false_positive": 0,
         "true_negative": 6,
         "missing": []
@@ -111,7 +162,7 @@
         "true_negative": 4,
         "missing": []
       },
-      "all_accuracy": 1.0,
+      "all_accuracy": 0.95,
       "decisions": {
         "n01": false,
         "n02": false,
@@ -130,14 +181,14 @@
         "t05": true,
         "t06": true,
         "t07": true,
-        "t08": true,
+        "t08": false,
         "t09": true,
         "t10": true
       }
     },
     {
       "variant": "vanti",
-      "role": "control: a description saying the skill only pretty-prints Promela",
+      "role": "deliberately wrong description (control)",
       "description": "Formats Promela source files: normalises whitespace, aligns option arrows and sorts declarations. A pretty-printer only — it does not analyse, execute or verify anything.",
       "runs": 3,
       "train_accuracy": 0.5,
@@ -187,7 +238,8 @@
       }
     }
   ],
-  "chosen": "v0",
-  "chosen_description": "Model checking of protocols, concurrent algorithms, state machines and Petri nets with a built-in explicit-state engine (Go, exposed as MCP tools mc_parse, mc_check, mc_explain and others, or as the `mcd` CLI) — no external SPIN, NuSMV or other model checker is needed or should be looked for. Use this skill whenever the user wants to verify, prove or refute a behavioural property of a system with several interacting parts: deadlock, mutual exclusion, invariants, reachability, liveness, response, starvation, fairness, LTL, CTL, Promela models, never claims, Petri nets, token nets, alternating-bit or handshake protocols, telephone switches, producer/consumer, leader election, \"can this hang\", \"is a counterexample possible\", \"verify this protocol\", \"check this model\", \"model checking\", \"deadlock\", \"counterexample\". Russian triggers, use the skill for any of them: «проверь модель», «может ли зависнуть», «докажи, что никогда», «сеть Петри», «тупик», «инвариант», «взаимное исключение», «живость», «liveness», «справедливость», «Promela», «never claim», «LTL», «CTL», «model checking», «верификация протокола», «контрпример», «гонка», «переведи сеть Петри во что-нибудь проверяемое». Also use it when the user only describes the system in words and asks whether something bad can ever happen or something good must eventually happen — that is a model-checking question even if they do not say so. Do not use it for unit tests of sequential code, data-race linters, single-function theorem proving, or for drawing diagrams without analysis.",
-  "meets_threshold": true
+  "chosen": "v1",
+  "chosen_description": "Model checking of protocols, concurrent algorithms, state machines and Petri nets with a built-in explicit-state engine (Go, exposed as MCP tools mc_parse, mc_check, mc_explain and others, or as the `mcd` CLI) — no external SPIN, NuSMV or other model checker is needed or should be looked for. Use this skill whenever the user wants to verify, prove or refute a behavioural property of a system with several interacting parts: deadlock, mutual exclusion, invariants, reachability, liveness, response, starvation, fairness, LTL, CTL, Promela models, never claims, Petri nets, token nets, alternating-bit or handshake protocols, telephone switches, producer/consumer, leader election, \"can this hang\", \"is a counterexample possible\", \"verify this protocol\", \"check this model\", \"model checking\", \"deadlock\", \"counterexample\". Russian signals: «проверь модель», «может ли зависнуть», «докажи, что никогда», «сеть Петри», «тупик», «инвариант», «взаимное исключение», «живость», «liveness», «справедливость», «Promela», «never claim», «LTL», «CTL», «model checking», «верификация протокола», «контрпример», «гонка», «переведи сеть Петри во что-нибудь проверяемое». Also use it when the user only describes the system in words and asks whether something bad can ever happen or something good must eventually happen — that is a model-checking question even if they do not say so. What decides is the question, not the word: use the skill when the question is whether some behaviour of a system with several interacting parts is possible or unavoidable, and do not use it for unit tests of sequential code, for finding races in real source with a linter or sanitiser, for single-function theorem proving, or for drawing diagrams without analysis — even when one of the words above appears there.",
+  "meets_threshold": true,
+  "notes": "v1 and v0 tie at 1.00 on the held-out split: this set cannot separate them, and the tie goes to the incumbent, which is the text now in SKILL.md. Read the result as «the rewritten description is not worse», not as «it is better» — eight test queries, all answered correctly by both. The control vanti stays at 0.50 (it misses every query that must trigger), so the judge population does discriminate; what it cannot do is rank two already-good descriptions. A set that separated them would need queries near the boundary the rewrite moved: a keyword present with the wrong intent («гонка» in a linter question) and the intent present without any keyword."
 }

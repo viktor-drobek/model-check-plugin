@@ -32,8 +32,7 @@ Hashes computed with `sha256sum` on 2026-09-24.
 
 Which evals can run today: E3 (Petri JSON through `mcd check --petri`, build step
 G0); E1 and E5 (Promela through `--promela`, G1); E2, E2b and E4 (`--ltl`,
-`--progress`, `--fairness weak`, G4). E6 needs `ctl` and is still `not-executed`
-(G5). The `runnable_from` field of each eval records this.
+`--progress`, `--fairness weak`, G4). E6 needs `ctl`, which runs since G5. The `runnable_from` field of each eval records this.
 
 E2b (id 7) is a variant of E2, not a replacement: E2 asks the delivery question on
 the corpus model, E2b asks a liveness question on a model where the answer does

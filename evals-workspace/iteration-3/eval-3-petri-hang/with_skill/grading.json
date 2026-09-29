@@ -11,7 +11,7 @@
       "evidence": "mc-session-2026-09-25/petrinet.json is a valid net equivalent to evals/fixtures/petrinet1.json"
     },
     {
-      "text": "The engine was run on the net and the command line is shown — either `mcd check --petri` or the parse-then-check route (`mcd parse --petri` followed by `mcd check --ir`)",
+      "text": "The engine was run on the net and the call is shown — the MCP tools (mc_parse / mc_check) or either CLI route (`mcd check --petri`, or `mcd parse --petri` then `mcd check --ir`)",
       "passed": true,
       "evidence": "matched 'mcd parse --petri petrinet.json > ir.json\\n/tmp/mcd check --no-timing --petri pet' at 18416"
     },
@@ -51,14 +51,14 @@
       "evidence": "matched 'safe' at 776"
     },
     {
-      "text": "No forbidden phrasing (no errors / proved / net is correct) (naming the word in order to deny it does not count)",
+      "text": "No forbidden phrasing (no errors / proved / net is correct) (a line that rejects the word does not count)",
       "passed": true,
-      "evidence": "pattern '(?i)\\\\bno errors\\\\b|\\\\bproved\\\\b|\\\\bproven\\\\b|ошибок нет|(?<!не )доказано|net is correct|сеть корректна' absent"
+      "evidence": "pattern \"(?im)^(?![^\\\\n]*(не\\\\s|нельзя|не говор|not |never |avoid|do not|don't|forbidden|запрещ))[^\\\\n]*(\\\\bno errors\\\\b|ошибок нет|\\\\bproved\\\\b|\\\\bproven\\\\b|доказано|net is correct|сеть корректна)\" absent"
     },
     {
       "text": "The engine's report is among the run's outputs: the hang (deadlock) property violated with evidence exhaustive",
       "passed": true,
-      "evidence": "mc-session-2026-09-25/check-1-pilot.json: property 'deadlock' is violated / exhaustive"
+      "evidence": "mc-session-2026-09-25/check-1-pilot.json: property 'deadlock' (deadlock) is violated / exhaustive"
     }
   ]
 }

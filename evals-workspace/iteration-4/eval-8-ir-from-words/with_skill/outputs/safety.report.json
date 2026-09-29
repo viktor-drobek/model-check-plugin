@@ -1,0 +1,64 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "ir",
+      "path": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/safety.ir.json",
+      "sha256": "9f07f971b8dc00bd626bd5ff84bb03bae7daed9ae850173fb912c30d4e0b8975"
+    }
+  ],
+  "model": {
+    "name": "two_clients",
+    "state_bytes": 14,
+    "processes": 3,
+    "variables": 6
+  },
+  "search": {
+    "mode": "bfs",
+    "budget": {
+      "states": 10000,
+      "depth": 10000,
+      "time_ms": 10000,
+      "mem_bytes": 134217728
+    },
+    "stop": "complete",
+    "complete": true
+  },
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 32,
+        "transitions": 50,
+        "depth": 9,
+        "time_ms": 0,
+        "memory_bytes_est": 26368
+      },
+      "complete": true
+    },
+    {
+      "id": "P1",
+      "kind": "invariant",
+      "text": "!(working0 && working1): клиенты не работают одновременно",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 32,
+        "transitions": 50,
+        "depth": 9,
+        "time_ms": 0,
+        "memory_bytes_est": 26368
+      },
+      "complete": true
+    }
+  ]
+}

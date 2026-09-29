@@ -1,0 +1,2828 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "ir",
+      "path": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/all.ir.json",
+      "sha256": "c95ceac3a8a651bbfaf43142f49c1f228eb43eeb82b7cbdb9e582306de989dec"
+    }
+  ],
+  "model": {
+    "name": "two_clients",
+    "state_bytes": 14,
+    "processes": 3,
+    "variables": 6
+  },
+  "search": {
+    "mode": "dfs",
+    "budget": {
+      "states": 10000,
+      "depth": 10000,
+      "time_ms": 10000,
+      "mem_bytes": 134217728
+    },
+    "stop": "complete",
+    "complete": true
+  },
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 32,
+        "transitions": 50,
+        "depth": 18,
+        "time_ms": 2,
+        "memory_bytes_est": 27456
+      },
+      "complete": true
+    },
+    {
+      "id": "P1",
+      "kind": "invariant",
+      "text": "!(working0 && working1): клиенты не работают одновременно",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 32,
+        "transitions": 50,
+        "depth": 18,
+        "time_ms": 2,
+        "memory_bytes_est": 27456
+      },
+      "complete": true
+    },
+    {
+      "id": "S0",
+      "kind": "reach",
+      "text": "waiting0: клиент 0 пытается получить разрешение",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 32,
+        "transitions": 50,
+        "depth": 18,
+        "time_ms": 2,
+        "memory_bytes_est": 27456
+      },
+      "complete": true,
+      "witness": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "Client0:0",
+            "command": "waiting0 = true",
+            "changes": [
+              {
+                "var": "waiting0",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 16,
+              "name": "waiting0 = true"
+            }
+          }
+        ],
+        "final_state": [
+          {
+            "var": "waiting0",
+            "value": 1
+          },
+          {
+            "var": "waiting1",
+            "value": 0
+          },
+          {
+            "var": "accepted0",
+            "value": 0
+          },
+          {
+            "var": "accepted1",
+            "value": 0
+          },
+          {
+            "var": "working0",
+            "value": 0
+          },
+          {
+            "var": "working1",
+            "value": 0
+          }
+        ],
+        "final_channels": [
+          {
+            "chan": "request",
+            "messages": []
+          },
+          {
+            "chan": "grant0",
+            "messages": []
+          },
+          {
+            "chan": "grant1",
+            "messages": []
+          },
+          {
+            "chan": "release",
+            "messages": []
+          }
+        ],
+        "summary": "waiting0 = true"
+      },
+      "reason": "a reachable state satisfies waiting0; see the witness"
+    },
+    {
+      "id": "S1",
+      "kind": "reach",
+      "text": "waiting1: клиент 1 пытается получить разрешение",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 32,
+        "transitions": 50,
+        "depth": 18,
+        "time_ms": 2,
+        "memory_bytes_est": 27456
+      },
+      "complete": true,
+      "witness": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "Client0:0",
+            "command": "waiting0 = true",
+            "changes": [
+              {
+                "var": "waiting0",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 16,
+              "name": "waiting0 = true"
+            }
+          },
+          {
+            "index": 2,
+            "process": "Client0:0",
+            "command": "request!0",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 17,
+              "name": "request!0"
+            },
+            "partner": {
+              "process": "Server:2",
+              "command": "request?0",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+                "line": 44,
+                "name": "request?0"
+              }
+            }
+          },
+          {
+            "index": 3,
+            "process": "Client0:0",
+            "command": "accepted0 = true",
+            "changes": [
+              {
+                "var": "accepted0",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 18,
+              "name": "accepted0 = true"
+            }
+          },
+          {
+            "index": 4,
+            "process": "Client1:1",
+            "command": "waiting1 = true",
+            "changes": [
+              {
+                "var": "waiting1",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 30,
+              "name": "waiting1 = true"
+            }
+          }
+        ],
+        "final_state": [
+          {
+            "var": "waiting0",
+            "value": 1
+          },
+          {
+            "var": "waiting1",
+            "value": 1
+          },
+          {
+            "var": "accepted0",
+            "value": 1
+          },
+          {
+            "var": "accepted1",
+            "value": 0
+          },
+          {
+            "var": "working0",
+            "value": 0
+          },
+          {
+            "var": "working1",
+            "value": 0
+          }
+        ],
+        "final_channels": [
+          {
+            "chan": "request",
+            "messages": []
+          },
+          {
+            "chan": "grant0",
+            "messages": []
+          },
+          {
+            "chan": "grant1",
+            "messages": []
+          },
+          {
+            "chan": "release",
+            "messages": []
+          }
+        ],
+        "summary": "waiting0 = true, request!0, accepted0 = true, waiting1 = true"
+      },
+      "reason": "a reachable state satisfies waiting1; see the witness"
+    },
+    {
+      "id": "S2",
+      "kind": "reach",
+      "text": "working0: клиент 0 работает",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 32,
+        "transitions": 50,
+        "depth": 18,
+        "time_ms": 2,
+        "memory_bytes_est": 27456
+      },
+      "complete": true,
+      "witness": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "Client0:0",
+            "command": "waiting0 = true",
+            "changes": [
+              {
+                "var": "waiting0",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 16,
+              "name": "waiting0 = true"
+            }
+          },
+          {
+            "index": 2,
+            "process": "Client0:0",
+            "command": "request!0",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 17,
+              "name": "request!0"
+            },
+            "partner": {
+              "process": "Server:2",
+              "command": "request?0",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+                "line": 44,
+                "name": "request?0"
+              }
+            }
+          },
+          {
+            "index": 3,
+            "process": "Client0:0",
+            "command": "accepted0 = true",
+            "changes": [
+              {
+                "var": "accepted0",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 18,
+              "name": "accepted0 = true"
+            }
+          },
+          {
+            "index": 4,
+            "process": "Client1:1",
+            "command": "waiting1 = true",
+            "changes": [
+              {
+                "var": "waiting1",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 30,
+              "name": "waiting1 = true"
+            }
+          },
+          {
+            "index": 5,
+            "process": "Server:2",
+            "command": "grant0!1",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 45,
+              "name": "grant0!1"
+            },
+            "partner": {
+              "process": "Client0:0",
+              "command": "grant0?1",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+                "line": 19,
+                "name": "grant0?1"
+              }
+            }
+          },
+          {
+            "index": 6,
+            "process": "Client0:0",
+            "command": "accepted0 = false",
+            "changes": [
+              {
+                "var": "accepted0",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 20,
+              "name": "accepted0 = false"
+            }
+          },
+          {
+            "index": 7,
+            "process": "Client0:0",
+            "command": "waiting0 = false",
+            "changes": [
+              {
+                "var": "waiting0",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 21,
+              "name": "waiting0 = false"
+            }
+          },
+          {
+            "index": 8,
+            "process": "Client0:0",
+            "command": "working0 = true",
+            "changes": [
+              {
+                "var": "working0",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 22,
+              "name": "working0 = true"
+            }
+          }
+        ],
+        "final_state": [
+          {
+            "var": "waiting0",
+            "value": 0
+          },
+          {
+            "var": "waiting1",
+            "value": 1
+          },
+          {
+            "var": "accepted0",
+            "value": 0
+          },
+          {
+            "var": "accepted1",
+            "value": 0
+          },
+          {
+            "var": "working0",
+            "value": 1
+          },
+          {
+            "var": "working1",
+            "value": 0
+          }
+        ],
+        "final_channels": [
+          {
+            "chan": "request",
+            "messages": []
+          },
+          {
+            "chan": "grant0",
+            "messages": []
+          },
+          {
+            "chan": "grant1",
+            "messages": []
+          },
+          {
+            "chan": "release",
+            "messages": []
+          }
+        ],
+        "summary": "waiting0 = true, request!0, accepted0 = true, waiting1 = true, grant0!1, accepted0 = false, waiting0 = false, working0 = true"
+      },
+      "reason": "a reachable state satisfies working0; see the witness"
+    },
+    {
+      "id": "S3",
+      "kind": "reach",
+      "text": "working1: клиент 1 работает",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 32,
+        "transitions": 50,
+        "depth": 18,
+        "time_ms": 2,
+        "memory_bytes_est": 27456
+      },
+      "complete": true,
+      "witness": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "Client0:0",
+            "command": "waiting0 = true",
+            "changes": [
+              {
+                "var": "waiting0",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 16,
+              "name": "waiting0 = true"
+            }
+          },
+          {
+            "index": 2,
+            "process": "Client0:0",
+            "command": "request!0",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 17,
+              "name": "request!0"
+            },
+            "partner": {
+              "process": "Server:2",
+              "command": "request?0",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+                "line": 44,
+                "name": "request?0"
+              }
+            }
+          },
+          {
+            "index": 3,
+            "process": "Client0:0",
+            "command": "accepted0 = true",
+            "changes": [
+              {
+                "var": "accepted0",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 18,
+              "name": "accepted0 = true"
+            }
+          },
+          {
+            "index": 4,
+            "process": "Client1:1",
+            "command": "waiting1 = true",
+            "changes": [
+              {
+                "var": "waiting1",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 30,
+              "name": "waiting1 = true"
+            }
+          },
+          {
+            "index": 5,
+            "process": "Server:2",
+            "command": "grant0!1",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 45,
+              "name": "grant0!1"
+            },
+            "partner": {
+              "process": "Client0:0",
+              "command": "grant0?1",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+                "line": 19,
+                "name": "grant0?1"
+              }
+            }
+          },
+          {
+            "index": 6,
+            "process": "Client0:0",
+            "command": "accepted0 = false",
+            "changes": [
+              {
+                "var": "accepted0",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 20,
+              "name": "accepted0 = false"
+            }
+          },
+          {
+            "index": 7,
+            "process": "Client0:0",
+            "command": "waiting0 = false",
+            "changes": [
+              {
+                "var": "waiting0",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 21,
+              "name": "waiting0 = false"
+            }
+          },
+          {
+            "index": 8,
+            "process": "Client0:0",
+            "command": "working0 = true",
+            "changes": [
+              {
+                "var": "working0",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 22,
+              "name": "working0 = true"
+            }
+          },
+          {
+            "index": 9,
+            "process": "Client0:0",
+            "command": "working0 = false",
+            "changes": [
+              {
+                "var": "working0",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 23,
+              "name": "working0 = false"
+            }
+          },
+          {
+            "index": 10,
+            "process": "Client0:0",
+            "command": "release!0",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 24,
+              "name": "release!0"
+            },
+            "partner": {
+              "process": "Server:2",
+              "command": "release?0",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+                "line": 46,
+                "name": "release?0"
+              }
+            }
+          },
+          {
+            "index": 11,
+            "process": "Client0:0",
+            "command": "waiting0 = true",
+            "changes": [
+              {
+                "var": "waiting0",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 16,
+              "name": "waiting0 = true"
+            }
+          },
+          {
+            "index": 12,
+            "process": "Client1:1",
+            "command": "request!1",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 31,
+              "name": "request!1"
+            },
+            "partner": {
+              "process": "Server:2",
+              "command": "request?1",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+                "line": 47,
+                "name": "request?1"
+              }
+            }
+          },
+          {
+            "index": 13,
+            "process": "Client1:1",
+            "command": "accepted1 = true",
+            "changes": [
+              {
+                "var": "accepted1",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 32,
+              "name": "accepted1 = true"
+            }
+          },
+          {
+            "index": 14,
+            "process": "Server:2",
+            "command": "grant1!1",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 48,
+              "name": "grant1!1"
+            },
+            "partner": {
+              "process": "Client1:1",
+              "command": "grant1?1",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+                "line": 33,
+                "name": "grant1?1"
+              }
+            }
+          },
+          {
+            "index": 15,
+            "process": "Client1:1",
+            "command": "accepted1 = false",
+            "changes": [
+              {
+                "var": "accepted1",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 34,
+              "name": "accepted1 = false"
+            }
+          },
+          {
+            "index": 16,
+            "process": "Client1:1",
+            "command": "waiting1 = false",
+            "changes": [
+              {
+                "var": "waiting1",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 35,
+              "name": "waiting1 = false"
+            }
+          },
+          {
+            "index": 17,
+            "process": "Client1:1",
+            "command": "working1 = true",
+            "changes": [
+              {
+                "var": "working1",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 36,
+              "name": "working1 = true"
+            }
+          }
+        ],
+        "final_state": [
+          {
+            "var": "waiting0",
+            "value": 1
+          },
+          {
+            "var": "waiting1",
+            "value": 0
+          },
+          {
+            "var": "accepted0",
+            "value": 0
+          },
+          {
+            "var": "accepted1",
+            "value": 0
+          },
+          {
+            "var": "working0",
+            "value": 0
+          },
+          {
+            "var": "working1",
+            "value": 1
+          }
+        ],
+        "final_channels": [
+          {
+            "chan": "request",
+            "messages": []
+          },
+          {
+            "chan": "grant0",
+            "messages": []
+          },
+          {
+            "chan": "grant1",
+            "messages": []
+          },
+          {
+            "chan": "release",
+            "messages": []
+          }
+        ],
+        "summary": "waiting0 = true, request!0, accepted0 = true, waiting1 = true, grant0!1, accepted0 = false, waiting0 = false, working0 = true, working0 = false, release!0, waiting0 = true, request!1, accepted1 = true, grant1!1, accepted1 = false, waiting1 = false, working1 = true"
+      },
+      "reason": "a reachable state satisfies working1; see the witness"
+    },
+    {
+      "id": "S4",
+      "kind": "reach",
+      "text": "accepted0: запрос клиента 0 уже принят",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 32,
+        "transitions": 50,
+        "depth": 18,
+        "time_ms": 2,
+        "memory_bytes_est": 27456
+      },
+      "complete": true,
+      "witness": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "Client0:0",
+            "command": "waiting0 = true",
+            "changes": [
+              {
+                "var": "waiting0",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 16,
+              "name": "waiting0 = true"
+            }
+          },
+          {
+            "index": 2,
+            "process": "Client0:0",
+            "command": "request!0",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 17,
+              "name": "request!0"
+            },
+            "partner": {
+              "process": "Server:2",
+              "command": "request?0",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+                "line": 44,
+                "name": "request?0"
+              }
+            }
+          },
+          {
+            "index": 3,
+            "process": "Client0:0",
+            "command": "accepted0 = true",
+            "changes": [
+              {
+                "var": "accepted0",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 18,
+              "name": "accepted0 = true"
+            }
+          }
+        ],
+        "final_state": [
+          {
+            "var": "waiting0",
+            "value": 1
+          },
+          {
+            "var": "waiting1",
+            "value": 0
+          },
+          {
+            "var": "accepted0",
+            "value": 1
+          },
+          {
+            "var": "accepted1",
+            "value": 0
+          },
+          {
+            "var": "working0",
+            "value": 0
+          },
+          {
+            "var": "working1",
+            "value": 0
+          }
+        ],
+        "final_channels": [
+          {
+            "chan": "request",
+            "messages": []
+          },
+          {
+            "chan": "grant0",
+            "messages": []
+          },
+          {
+            "chan": "grant1",
+            "messages": []
+          },
+          {
+            "chan": "release",
+            "messages": []
+          }
+        ],
+        "summary": "waiting0 = true, request!0, accepted0 = true"
+      },
+      "reason": "a reachable state satisfies accepted0; see the witness"
+    },
+    {
+      "id": "S5",
+      "kind": "reach",
+      "text": "accepted1: запрос клиента 1 уже принят",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 32,
+        "transitions": 50,
+        "depth": 18,
+        "time_ms": 2,
+        "memory_bytes_est": 27456
+      },
+      "complete": true,
+      "witness": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "Client0:0",
+            "command": "waiting0 = true",
+            "changes": [
+              {
+                "var": "waiting0",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 16,
+              "name": "waiting0 = true"
+            }
+          },
+          {
+            "index": 2,
+            "process": "Client0:0",
+            "command": "request!0",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 17,
+              "name": "request!0"
+            },
+            "partner": {
+              "process": "Server:2",
+              "command": "request?0",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+                "line": 44,
+                "name": "request?0"
+              }
+            }
+          },
+          {
+            "index": 3,
+            "process": "Client0:0",
+            "command": "accepted0 = true",
+            "changes": [
+              {
+                "var": "accepted0",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 18,
+              "name": "accepted0 = true"
+            }
+          },
+          {
+            "index": 4,
+            "process": "Client1:1",
+            "command": "waiting1 = true",
+            "changes": [
+              {
+                "var": "waiting1",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 30,
+              "name": "waiting1 = true"
+            }
+          },
+          {
+            "index": 5,
+            "process": "Server:2",
+            "command": "grant0!1",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 45,
+              "name": "grant0!1"
+            },
+            "partner": {
+              "process": "Client0:0",
+              "command": "grant0?1",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+                "line": 19,
+                "name": "grant0?1"
+              }
+            }
+          },
+          {
+            "index": 6,
+            "process": "Client0:0",
+            "command": "accepted0 = false",
+            "changes": [
+              {
+                "var": "accepted0",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 20,
+              "name": "accepted0 = false"
+            }
+          },
+          {
+            "index": 7,
+            "process": "Client0:0",
+            "command": "waiting0 = false",
+            "changes": [
+              {
+                "var": "waiting0",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 21,
+              "name": "waiting0 = false"
+            }
+          },
+          {
+            "index": 8,
+            "process": "Client0:0",
+            "command": "working0 = true",
+            "changes": [
+              {
+                "var": "working0",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 22,
+              "name": "working0 = true"
+            }
+          },
+          {
+            "index": 9,
+            "process": "Client0:0",
+            "command": "working0 = false",
+            "changes": [
+              {
+                "var": "working0",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 23,
+              "name": "working0 = false"
+            }
+          },
+          {
+            "index": 10,
+            "process": "Client0:0",
+            "command": "release!0",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 24,
+              "name": "release!0"
+            },
+            "partner": {
+              "process": "Server:2",
+              "command": "release?0",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+                "line": 46,
+                "name": "release?0"
+              }
+            }
+          },
+          {
+            "index": 11,
+            "process": "Client0:0",
+            "command": "waiting0 = true",
+            "changes": [
+              {
+                "var": "waiting0",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 16,
+              "name": "waiting0 = true"
+            }
+          },
+          {
+            "index": 12,
+            "process": "Client1:1",
+            "command": "request!1",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 31,
+              "name": "request!1"
+            },
+            "partner": {
+              "process": "Server:2",
+              "command": "request?1",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+                "line": 47,
+                "name": "request?1"
+              }
+            }
+          },
+          {
+            "index": 13,
+            "process": "Client1:1",
+            "command": "accepted1 = true",
+            "changes": [
+              {
+                "var": "accepted1",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 32,
+              "name": "accepted1 = true"
+            }
+          }
+        ],
+        "final_state": [
+          {
+            "var": "waiting0",
+            "value": 1
+          },
+          {
+            "var": "waiting1",
+            "value": 1
+          },
+          {
+            "var": "accepted0",
+            "value": 0
+          },
+          {
+            "var": "accepted1",
+            "value": 1
+          },
+          {
+            "var": "working0",
+            "value": 0
+          },
+          {
+            "var": "working1",
+            "value": 0
+          }
+        ],
+        "final_channels": [
+          {
+            "chan": "request",
+            "messages": []
+          },
+          {
+            "chan": "grant0",
+            "messages": []
+          },
+          {
+            "chan": "grant1",
+            "messages": []
+          },
+          {
+            "chan": "release",
+            "messages": []
+          }
+        ],
+        "summary": "waiting0 = true, request!0, accepted0 = true, waiting1 = true, grant0!1, accepted0 = false, waiting0 = false, working0 = true, working0 = false, release!0, waiting0 = true, request!1, accepted1 = true"
+      },
+      "reason": "a reachable state satisfies accepted1; see the witness"
+    },
+    {
+      "id": "ltl1",
+      "kind": "ltl",
+      "text": "[] (waiting0 -> <> working0)",
+      "status": "violated",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 41,
+        "transitions": 65,
+        "depth": 27,
+        "time_ms": 0,
+        "memory_bytes_est": 27922
+      },
+      "complete": false,
+      "counterexample": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 2,
+            "process": "Client0:0",
+            "command": "waiting0 = true",
+            "changes": [
+              {
+                "var": "waiting0",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 16,
+              "name": "waiting0 = true"
+            }
+          },
+          {
+            "index": 3,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 4,
+            "process": "Client0:0",
+            "command": "request!0",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 17,
+              "name": "request!0"
+            },
+            "partner": {
+              "process": "Server:2",
+              "command": "request?0",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+                "line": 44,
+                "name": "request?0"
+              }
+            }
+          },
+          {
+            "index": 5,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 6,
+            "process": "Client0:0",
+            "command": "accepted0 = true",
+            "changes": [
+              {
+                "var": "accepted0",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 18,
+              "name": "accepted0 = true"
+            }
+          },
+          {
+            "index": 7,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 8,
+            "process": "Client1:1",
+            "command": "waiting1 = true",
+            "changes": [
+              {
+                "var": "waiting1",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 30,
+              "name": "waiting1 = true"
+            }
+          },
+          {
+            "index": 9,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 10,
+            "process": "Server:2",
+            "command": "grant0!1",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 45,
+              "name": "grant0!1"
+            },
+            "partner": {
+              "process": "Client0:0",
+              "command": "grant0?1",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+                "line": 19,
+                "name": "grant0?1"
+              }
+            }
+          },
+          {
+            "index": 11,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 12,
+            "process": "Client0:0",
+            "command": "accepted0 = false",
+            "changes": [
+              {
+                "var": "accepted0",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 20,
+              "name": "accepted0 = false"
+            }
+          },
+          {
+            "index": 13,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 14,
+            "process": "Client0:0",
+            "command": "waiting0 = false",
+            "changes": [
+              {
+                "var": "waiting0",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 21,
+              "name": "waiting0 = false"
+            }
+          },
+          {
+            "index": 15,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 16,
+            "process": "Client0:0",
+            "command": "working0 = true",
+            "changes": [
+              {
+                "var": "working0",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 22,
+              "name": "working0 = true"
+            }
+          },
+          {
+            "index": 17,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 18,
+            "process": "Client0:0",
+            "command": "working0 = false",
+            "changes": [
+              {
+                "var": "working0",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 23,
+              "name": "working0 = false"
+            }
+          },
+          {
+            "index": 19,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 20,
+            "process": "Client0:0",
+            "command": "release!0",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 24,
+              "name": "release!0"
+            },
+            "partner": {
+              "process": "Server:2",
+              "command": "release?0",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+                "line": 46,
+                "name": "release?0"
+              }
+            }
+          },
+          {
+            "index": 21,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 22,
+            "process": "Client0:0",
+            "command": "waiting0 = true",
+            "changes": [
+              {
+                "var": "waiting0",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 16,
+              "name": "waiting0 = true"
+            }
+          },
+          {
+            "index": 23,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 24,
+            "process": "Client1:1",
+            "command": "request!1",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 31,
+              "name": "request!1"
+            },
+            "partner": {
+              "process": "Server:2",
+              "command": "request?1",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+                "line": 47,
+                "name": "request?1"
+              }
+            }
+          },
+          {
+            "index": 25,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 26,
+            "process": "Client1:1",
+            "command": "accepted1 = true",
+            "changes": [
+              {
+                "var": "accepted1",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 32,
+              "name": "accepted1 = true"
+            }
+          },
+          {
+            "index": 27,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 28,
+            "process": "Server:2",
+            "command": "grant1!1",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 48,
+              "name": "grant1!1"
+            },
+            "partner": {
+              "process": "Client1:1",
+              "command": "grant1?1",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+                "line": 33,
+                "name": "grant1?1"
+              }
+            }
+          },
+          {
+            "index": 29,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 30,
+            "process": "Client1:1",
+            "command": "accepted1 = false",
+            "changes": [
+              {
+                "var": "accepted1",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 34,
+              "name": "accepted1 = false"
+            }
+          },
+          {
+            "index": 31,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 32,
+            "process": "Client1:1",
+            "command": "waiting1 = false",
+            "changes": [
+              {
+                "var": "waiting1",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 35,
+              "name": "waiting1 = false"
+            }
+          },
+          {
+            "index": 33,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 34,
+            "process": "Client1:1",
+            "command": "working1 = true",
+            "changes": [
+              {
+                "var": "working1",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 36,
+              "name": "working1 = true"
+            }
+          },
+          {
+            "index": 35,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 36,
+            "process": "Client1:1",
+            "command": "working1 = false",
+            "changes": [
+              {
+                "var": "working1",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 37,
+              "name": "working1 = false"
+            }
+          },
+          {
+            "index": 37,
+            "process": "never:ltl1",
+            "command": "((waiting0) && !(working0)) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "((waiting0) && !(working0))"
+            }
+          },
+          {
+            "index": 38,
+            "process": "Client1:1",
+            "command": "release!1",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 38,
+              "name": "release!1"
+            },
+            "partner": {
+              "process": "Server:2",
+              "command": "release?1",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+                "line": 49,
+                "name": "release?1"
+              }
+            }
+          },
+          {
+            "index": 39,
+            "process": "never:ltl1",
+            "command": "(!(working0)) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(!(working0))"
+            }
+          },
+          {
+            "index": 40,
+            "process": "Client1:1",
+            "command": "waiting1 = true",
+            "changes": [
+              {
+                "var": "waiting1",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 30,
+              "name": "waiting1 = true"
+            }
+          },
+          {
+            "index": 41,
+            "process": "never:ltl1",
+            "command": "(!(working0)) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(!(working0))"
+            }
+          },
+          {
+            "index": 42,
+            "process": "Client1:1",
+            "command": "request!1",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 31,
+              "name": "request!1"
+            },
+            "partner": {
+              "process": "Server:2",
+              "command": "request?1",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+                "line": 47,
+                "name": "request?1"
+              }
+            }
+          },
+          {
+            "index": 43,
+            "process": "never:ltl1",
+            "command": "(!(working0)) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(!(working0))"
+            }
+          },
+          {
+            "index": 44,
+            "process": "Client1:1",
+            "command": "accepted1 = true",
+            "changes": [
+              {
+                "var": "accepted1",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 32,
+              "name": "accepted1 = true"
+            }
+          },
+          {
+            "index": 45,
+            "process": "never:ltl1",
+            "command": "(!(working0)) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(!(working0))"
+            }
+          },
+          {
+            "index": 46,
+            "process": "Server:2",
+            "command": "grant1!1",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 48,
+              "name": "grant1!1"
+            },
+            "partner": {
+              "process": "Client1:1",
+              "command": "grant1?1",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+                "line": 33,
+                "name": "grant1?1"
+              }
+            }
+          },
+          {
+            "index": 47,
+            "process": "never:ltl1",
+            "command": "(!(working0)) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(!(working0))"
+            }
+          },
+          {
+            "index": 48,
+            "process": "Client1:1",
+            "command": "accepted1 = false",
+            "changes": [
+              {
+                "var": "accepted1",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 34,
+              "name": "accepted1 = false"
+            }
+          },
+          {
+            "index": 49,
+            "process": "never:ltl1",
+            "command": "(!(working0)) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(!(working0))"
+            }
+          },
+          {
+            "index": 50,
+            "process": "Client1:1",
+            "command": "waiting1 = false",
+            "changes": [
+              {
+                "var": "waiting1",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 35,
+              "name": "waiting1 = false"
+            }
+          },
+          {
+            "index": 51,
+            "process": "never:ltl1",
+            "command": "(!(working0)) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(!(working0))"
+            }
+          },
+          {
+            "index": 52,
+            "process": "Client1:1",
+            "command": "working1 = true",
+            "changes": [
+              {
+                "var": "working1",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 36,
+              "name": "working1 = true"
+            }
+          },
+          {
+            "index": 53,
+            "process": "never:ltl1",
+            "command": "(!(working0)) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(!(working0))"
+            }
+          },
+          {
+            "index": 54,
+            "process": "Client1:1",
+            "command": "working1 = false",
+            "changes": [
+              {
+                "var": "working1",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 37,
+              "name": "working1 = false"
+            }
+          },
+          {
+            "index": 55,
+            "process": "never:ltl1",
+            "command": "(!(working0)) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(!(working0))"
+            }
+          },
+          {
+            "index": 56,
+            "process": "Client1:1",
+            "command": "release!1",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 38,
+              "name": "release!1"
+            },
+            "partner": {
+              "process": "Server:2",
+              "command": "release?1",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+                "line": 49,
+                "name": "release?1"
+              }
+            }
+          }
+        ],
+        "final_state": [
+          {
+            "var": "waiting0",
+            "value": 1
+          },
+          {
+            "var": "waiting1",
+            "value": 0
+          },
+          {
+            "var": "accepted0",
+            "value": 0
+          },
+          {
+            "var": "accepted1",
+            "value": 0
+          },
+          {
+            "var": "working0",
+            "value": 0
+          },
+          {
+            "var": "working1",
+            "value": 0
+          }
+        ],
+        "final_channels": [
+          {
+            "chan": "request",
+            "messages": []
+          },
+          {
+            "chan": "grant0",
+            "messages": []
+          },
+          {
+            "chan": "grant1",
+            "messages": []
+          },
+          {
+            "chan": "release",
+            "messages": []
+          }
+        ],
+        "summary": "(1) -> goto T0_init, waiting0 = true, (1) -> goto T0_init, request!0, (1) -> goto T0_init, accepted0 = true, (1) -> goto T0_init, waiting1 = true, (1) -> goto T0_init, grant0!1, (1) -> goto T0_init, accepted0 = false, (1) -> goto T0_init, waiting0 = false, (1) -> goto T0_init, working0 = true, (1) -> goto T0_init, working0 = false, (1) -> goto T0_init, release!0, (1) -> goto T0_init, waiting0 = true, (1) -> goto T0_init, request!1, (1) -> goto T0_init, accepted1 = true, (1) -> goto T0_init, grant1!1, (1) -> goto T0_init, accepted1 = false, (1) -> goto T0_init, waiting1 = false, (1) -> goto T0_init, working1 = true, (1) -> goto T0_init, working1 = false, ((waiting0) && !(working0)) -> goto accept_S1, release!1; loop: (!(working0)) -> goto accept_S1, waiting1 = true, (!(working0)) -> goto accept_S1, request!1, (!(working0)) -> goto accept_S1, accepted1 = true, (!(working0)) -> goto accept_S1, grant1!1, (!(working0)) -> goto accept_S1, accepted1 = false, (!(working0)) -> goto accept_S1, waiting1 = false, (!(working0)) -> goto accept_S1, working1 = true, (!(working0)) -> goto accept_S1, working1 = false, (!(working0)) -> goto accept_S1, release!1",
+        "loop": {
+          "start": 39,
+          "steps": 18
+        }
+      },
+      "reason": "acceptance cycle: the loop of the counterexample passes through an accept state of the automaton for !([] (waiting0 -> <> working0)) infinitely often, so the run satisfies the negated property (SPIN pan -a: acceptance cycle)",
+      "temporal": {
+        "logic": "ltl",
+        "source": "formula",
+        "formula": "[] (waiting0 -> <> working0)",
+        "negated": "!([] (waiting0 -> <> working0))",
+        "atoms": [
+          "waiting0",
+          "working0"
+        ],
+        "stutter_invariant": true,
+        "automaton_states": 2,
+        "automaton_transitions": 3,
+        "automaton_accepting": 1,
+        "fairness": "none",
+        "claim": "never:ltl1"
+      }
+    },
+    {
+      "id": "ltl2",
+      "kind": "ltl",
+      "text": "[] (waiting1 -> <> working1)",
+      "status": "violated",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 22,
+        "transitions": 24,
+        "depth": 21,
+        "time_ms": 0,
+        "memory_bytes_est": 27500
+      },
+      "complete": false,
+      "counterexample": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "never:ltl2",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 2,
+            "process": "Client0:0",
+            "command": "waiting0 = true",
+            "changes": [
+              {
+                "var": "waiting0",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 16,
+              "name": "waiting0 = true"
+            }
+          },
+          {
+            "index": 3,
+            "process": "never:ltl2",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 4,
+            "process": "Client0:0",
+            "command": "request!0",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 17,
+              "name": "request!0"
+            },
+            "partner": {
+              "process": "Server:2",
+              "command": "request?0",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+                "line": 44,
+                "name": "request?0"
+              }
+            }
+          },
+          {
+            "index": 5,
+            "process": "never:ltl2",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 6,
+            "process": "Client0:0",
+            "command": "accepted0 = true",
+            "changes": [
+              {
+                "var": "accepted0",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 18,
+              "name": "accepted0 = true"
+            }
+          },
+          {
+            "index": 7,
+            "process": "never:ltl2",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 8,
+            "process": "Client1:1",
+            "command": "waiting1 = true",
+            "changes": [
+              {
+                "var": "waiting1",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 30,
+              "name": "waiting1 = true"
+            }
+          },
+          {
+            "index": 9,
+            "process": "never:ltl2",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 10,
+            "process": "Server:2",
+            "command": "grant0!1",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 45,
+              "name": "grant0!1"
+            },
+            "partner": {
+              "process": "Client0:0",
+              "command": "grant0?1",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+                "line": 19,
+                "name": "grant0?1"
+              }
+            }
+          },
+          {
+            "index": 11,
+            "process": "never:ltl2",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 12,
+            "process": "Client0:0",
+            "command": "accepted0 = false",
+            "changes": [
+              {
+                "var": "accepted0",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 20,
+              "name": "accepted0 = false"
+            }
+          },
+          {
+            "index": 13,
+            "process": "never:ltl2",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 14,
+            "process": "Client0:0",
+            "command": "waiting0 = false",
+            "changes": [
+              {
+                "var": "waiting0",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 21,
+              "name": "waiting0 = false"
+            }
+          },
+          {
+            "index": 15,
+            "process": "never:ltl2",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 16,
+            "process": "Client0:0",
+            "command": "working0 = true",
+            "changes": [
+              {
+                "var": "working0",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 22,
+              "name": "working0 = true"
+            }
+          },
+          {
+            "index": 17,
+            "process": "never:ltl2",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 18,
+            "process": "Client0:0",
+            "command": "working0 = false",
+            "changes": [
+              {
+                "var": "working0",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 23,
+              "name": "working0 = false"
+            }
+          },
+          {
+            "index": 19,
+            "process": "never:ltl2",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 20,
+            "process": "Client0:0",
+            "command": "release!0",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 24,
+              "name": "release!0"
+            },
+            "partner": {
+              "process": "Server:2",
+              "command": "release?0",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+                "line": 46,
+                "name": "release?0"
+              }
+            }
+          },
+          {
+            "index": 21,
+            "process": "never:ltl2",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 22,
+            "process": "Client0:0",
+            "command": "waiting0 = true",
+            "changes": [
+              {
+                "var": "waiting0",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 16,
+              "name": "waiting0 = true"
+            }
+          },
+          {
+            "index": 23,
+            "process": "never:ltl2",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 24,
+            "process": "Client0:0",
+            "command": "request!0",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 17,
+              "name": "request!0"
+            },
+            "partner": {
+              "process": "Server:2",
+              "command": "request?0",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+                "line": 44,
+                "name": "request?0"
+              }
+            }
+          },
+          {
+            "index": 25,
+            "process": "never:ltl2",
+            "command": "((waiting1) && !(working1)) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "((waiting1) && !(working1))"
+            }
+          },
+          {
+            "index": 26,
+            "process": "Client0:0",
+            "command": "accepted0 = true",
+            "changes": [
+              {
+                "var": "accepted0",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 18,
+              "name": "accepted0 = true"
+            }
+          },
+          {
+            "index": 27,
+            "process": "never:ltl2",
+            "command": "(!(working1)) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(!(working1))"
+            }
+          },
+          {
+            "index": 28,
+            "process": "Server:2",
+            "command": "grant0!1",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 45,
+              "name": "grant0!1"
+            },
+            "partner": {
+              "process": "Client0:0",
+              "command": "grant0?1",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+                "line": 19,
+                "name": "grant0?1"
+              }
+            }
+          },
+          {
+            "index": 29,
+            "process": "never:ltl2",
+            "command": "(!(working1)) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(!(working1))"
+            }
+          },
+          {
+            "index": 30,
+            "process": "Client0:0",
+            "command": "accepted0 = false",
+            "changes": [
+              {
+                "var": "accepted0",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 20,
+              "name": "accepted0 = false"
+            }
+          },
+          {
+            "index": 31,
+            "process": "never:ltl2",
+            "command": "(!(working1)) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(!(working1))"
+            }
+          },
+          {
+            "index": 32,
+            "process": "Client0:0",
+            "command": "waiting0 = false",
+            "changes": [
+              {
+                "var": "waiting0",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 21,
+              "name": "waiting0 = false"
+            }
+          },
+          {
+            "index": 33,
+            "process": "never:ltl2",
+            "command": "(!(working1)) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(!(working1))"
+            }
+          },
+          {
+            "index": 34,
+            "process": "Client0:0",
+            "command": "working0 = true",
+            "changes": [
+              {
+                "var": "working0",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 22,
+              "name": "working0 = true"
+            }
+          },
+          {
+            "index": 35,
+            "process": "never:ltl2",
+            "command": "(!(working1)) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(!(working1))"
+            }
+          },
+          {
+            "index": 36,
+            "process": "Client0:0",
+            "command": "working0 = false",
+            "changes": [
+              {
+                "var": "working0",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 23,
+              "name": "working0 = false"
+            }
+          },
+          {
+            "index": 37,
+            "process": "never:ltl2",
+            "command": "(!(working1)) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(!(working1))"
+            }
+          },
+          {
+            "index": 38,
+            "process": "Client0:0",
+            "command": "release!0",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 24,
+              "name": "release!0"
+            },
+            "partner": {
+              "process": "Server:2",
+              "command": "release?0",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+                "line": 46,
+                "name": "release?0"
+              }
+            }
+          },
+          {
+            "index": 39,
+            "process": "never:ltl2",
+            "command": "(!(working1)) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(!(working1))"
+            }
+          },
+          {
+            "index": 40,
+            "process": "Client0:0",
+            "command": "waiting0 = true",
+            "changes": [
+              {
+                "var": "waiting0",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 16,
+              "name": "waiting0 = true"
+            }
+          },
+          {
+            "index": 41,
+            "process": "never:ltl2",
+            "command": "(!(working1)) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(!(working1))"
+            }
+          },
+          {
+            "index": 42,
+            "process": "Client0:0",
+            "command": "request!0",
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 17,
+              "name": "request!0"
+            },
+            "partner": {
+              "process": "Server:2",
+              "command": "request?0",
+              "origin": {
+                "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+                "line": 44,
+                "name": "request?0"
+              }
+            }
+          },
+          {
+            "index": 43,
+            "process": "never:ltl2",
+            "command": "(!(working1)) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(!(working1))"
+            }
+          },
+          {
+            "index": 44,
+            "process": "Client0:0",
+            "command": "accepted0 = true",
+            "changes": [
+              {
+                "var": "accepted0",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml",
+              "line": 18,
+              "name": "accepted0 = true"
+            }
+          }
+        ],
+        "final_state": [
+          {
+            "var": "waiting0",
+            "value": 1
+          },
+          {
+            "var": "waiting1",
+            "value": 1
+          },
+          {
+            "var": "accepted0",
+            "value": 1
+          },
+          {
+            "var": "accepted1",
+            "value": 0
+          },
+          {
+            "var": "working0",
+            "value": 0
+          },
+          {
+            "var": "working1",
+            "value": 0
+          }
+        ],
+        "final_channels": [
+          {
+            "chan": "request",
+            "messages": []
+          },
+          {
+            "chan": "grant0",
+            "messages": []
+          },
+          {
+            "chan": "grant1",
+            "messages": []
+          },
+          {
+            "chan": "release",
+            "messages": []
+          }
+        ],
+        "summary": "(1) -> goto T0_init, waiting0 = true, (1) -> goto T0_init, request!0, (1) -> goto T0_init, accepted0 = true, (1) -> goto T0_init, waiting1 = true, (1) -> goto T0_init, grant0!1, (1) -> goto T0_init, accepted0 = false, (1) -> goto T0_init, waiting0 = false, (1) -> goto T0_init, working0 = true, (1) -> goto T0_init, working0 = false, (1) -> goto T0_init, release!0, (1) -> goto T0_init, waiting0 = true, (1) -> goto T0_init, request!0, ((waiting1) && !(working1)) -> goto accept_S1, accepted0 = true; loop: (!(working1)) -> goto accept_S1, grant0!1, (!(working1)) -> goto accept_S1, accepted0 = false, (!(working1)) -> goto accept_S1, waiting0 = false, (!(working1)) -> goto accept_S1, working0 = true, (!(working1)) -> goto accept_S1, working0 = false, (!(working1)) -> goto accept_S1, release!0, (!(working1)) -> goto accept_S1, waiting0 = true, (!(working1)) -> goto accept_S1, request!0, (!(working1)) -> goto accept_S1, accepted0 = true",
+        "loop": {
+          "start": 27,
+          "steps": 18
+        }
+      },
+      "reason": "acceptance cycle: the loop of the counterexample passes through an accept state of the automaton for !([] (waiting1 -> <> working1)) infinitely often, so the run satisfies the negated property (SPIN pan -a: acceptance cycle)",
+      "temporal": {
+        "logic": "ltl",
+        "source": "formula",
+        "formula": "[] (waiting1 -> <> working1)",
+        "negated": "!([] (waiting1 -> <> working1))",
+        "atoms": [
+          "waiting1",
+          "working1"
+        ],
+        "stutter_invariant": true,
+        "automaton_states": 2,
+        "automaton_transitions": 3,
+        "automaton_accepting": 1,
+        "fairness": "none",
+        "claim": "never:ltl2"
+      }
+    },
+    {
+      "id": "ltl3",
+      "kind": "ltl",
+      "text": "[] (accepted0 -> <> working0)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 41,
+        "transitions": 76,
+        "depth": 18,
+        "time_ms": 0,
+        "memory_bytes_est": 27922
+      },
+      "complete": true,
+      "reason": "no acceptance cycle in the complete product with the automaton for !([] (accepted0 -> <> working0)): no run satisfies the negated property",
+      "temporal": {
+        "logic": "ltl",
+        "source": "formula",
+        "formula": "[] (accepted0 -> <> working0)",
+        "negated": "!([] (accepted0 -> <> working0))",
+        "atoms": [
+          "accepted0",
+          "working0"
+        ],
+        "stutter_invariant": true,
+        "automaton_states": 2,
+        "automaton_transitions": 3,
+        "automaton_accepting": 1,
+        "fairness": "none",
+        "claim": "never:ltl3"
+      }
+    },
+    {
+      "id": "ltl4",
+      "kind": "ltl",
+      "text": "[] (accepted1 -> <> working1)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 41,
+        "transitions": 76,
+        "depth": 18,
+        "time_ms": 0,
+        "memory_bytes_est": 27922
+      },
+      "complete": true,
+      "reason": "no acceptance cycle in the complete product with the automaton for !([] (accepted1 -> <> working1)): no run satisfies the negated property",
+      "temporal": {
+        "logic": "ltl",
+        "source": "formula",
+        "formula": "[] (accepted1 -> <> working1)",
+        "negated": "!([] (accepted1 -> <> working1))",
+        "atoms": [
+          "accepted1",
+          "working1"
+        ],
+        "stutter_invariant": true,
+        "automaton_states": 2,
+        "automaton_transitions": 3,
+        "automaton_accepting": 1,
+        "fairness": "none",
+        "claim": "never:ltl4"
+      }
+    }
+  ]
+}

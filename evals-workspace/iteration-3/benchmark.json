@@ -60,7 +60,7 @@
         {
           "text": "The engine was invoked (CLI or MCP) and its report is among the run's outputs: property `assert` violated with evidence exhaustive",
           "passed": true,
-          "evidence": "mc-session-2026-09-25/check-1-bfs.json: property 'assert' is violated / exhaustive"
+          "evidence": "mc-session-2026-09-25/check-1-bfs.json: property 'assert' (assert) is violated / exhaustive"
         },
         {
           "text": "The engine version and input hash (manifest) are quoted",
@@ -68,9 +68,9 @@
           "evidence": "matched '0.1.0-g0' at 7261"
         },
         {
-          "text": "No forbidden phrasing (no errors / proved / system is correct) (naming the word in order to deny it does not count)",
+          "text": "No forbidden phrasing (no errors / proved / system is correct) (a line that rejects the word does not count)",
           "passed": true,
-          "evidence": "pattern '(?i)\\\\bno errors\\\\b|\\\\bproved\\\\b|\\\\bproven\\\\b|ошибок нет|(?<!не )доказано|system is correct|система корректна' absent"
+          "evidence": "pattern \"(?im)^(?![^\\\\n]*(не\\\\s|нельзя|не говор|not |never |avoid|do not|don't|forbidden|запрещ))[^\\\\n]*(\\\\bno errors\\\\b|ошибок нет|\\\\bproved\\\\b|\\\\bproven\\\\b|доказано|system is correct|система корректна)\" absent"
         }
       ],
       "notes": []
@@ -122,19 +122,19 @@
           "evidence": "matched 'потери сообщений' at 481"
         },
         {
-          "text": "The engine was invoked and its report is among the run's outputs: a property verified with evidence exhaustive",
+          "text": "The engine was invoked and its report is among the run's outputs: the LTL property verified with evidence exhaustive",
           "passed": true,
-          "evidence": "mc-session-2026-09-25/reports/check-1-baseline.json: property 'deadlock' is verified / exhaustive"
+          "evidence": "mc-session-2026-09-25/reports/check-2-ltl-none.json: property 'ltl1' (ltl) is verified / exhaustive"
         },
         {
-          "text": "The word proved/доказано is not used for the model result (naming the word in order to deny it does not count)",
+          "text": "The word proved/доказано is not used for the model result (a line that rejects the word does not count)",
           "passed": true,
-          "evidence": "pattern '(?i)\\\\bproved\\\\b|\\\\bproven\\\\b|(?<!не )доказано|(?<!не )доказал' absent"
+          "evidence": "pattern \"(?im)^(?![^\\\\n]*(не\\\\s|нельзя|не говор|not |never |avoid|do not|don't|forbidden|запрещ))[^\\\\n]*(\\\\bno errors\\\\b|ошибок нет|\\\\bproved\\\\b|\\\\bproven\\\\b|доказано|доказал|protocol is correct|протокол корректен|система корректна)\" absent"
         },
         {
-          "text": "No forbidden phrasing",
+          "text": "No forbidden phrasing (a line that rejects the word does not count)",
           "passed": true,
-          "evidence": "pattern '(?i)\\\\bno errors\\\\b|ошибок нет|protocol is correct|протокол корректен|система корректна' absent"
+          "evidence": "pattern \"(?im)^(?![^\\\\n]*(не\\\\s|нельзя|не говор|not |never |avoid|do not|don't|forbidden|запрещ))[^\\\\n]*(\\\\bno errors\\\\b|ошибок нет|\\\\bproved\\\\b|\\\\bproven\\\\b|доказано|доказал|protocol is correct|протокол корректен|система корректна)\" absent"
         }
       ],
       "notes": []
@@ -161,7 +161,7 @@
           "evidence": "mc-session-2026-09-25/petrinet.json is a valid net equivalent to evals/fixtures/petrinet1.json"
         },
         {
-          "text": "The engine was run on the net and the command line is shown — either `mcd check --petri` or the parse-then-check route (`mcd parse --petri` followed by `mcd check --ir`)",
+          "text": "The engine was run on the net and the call is shown — the MCP tools (mc_parse / mc_check) or either CLI route (`mcd check --petri`, or `mcd parse --petri` then `mcd check --ir`)",
           "passed": true,
           "evidence": "matched 'mcd parse --petri petrinet.json > ir.json\\n/tmp/mcd check --no-timing --petri pet' at 18416"
         },
@@ -201,14 +201,14 @@
           "evidence": "matched 'safe' at 776"
         },
         {
-          "text": "No forbidden phrasing (no errors / proved / net is correct) (naming the word in order to deny it does not count)",
+          "text": "No forbidden phrasing (no errors / proved / net is correct) (a line that rejects the word does not count)",
           "passed": true,
-          "evidence": "pattern '(?i)\\\\bno errors\\\\b|\\\\bproved\\\\b|\\\\bproven\\\\b|ошибок нет|(?<!не )доказано|net is correct|сеть корректна' absent"
+          "evidence": "pattern \"(?im)^(?![^\\\\n]*(не\\\\s|нельзя|не говор|not |never |avoid|do not|don't|forbidden|запрещ))[^\\\\n]*(\\\\bno errors\\\\b|ошибок нет|\\\\bproved\\\\b|\\\\bproven\\\\b|доказано|net is correct|сеть корректна)\" absent"
         },
         {
           "text": "The engine's report is among the run's outputs: the hang (deadlock) property violated with evidence exhaustive",
           "passed": true,
-          "evidence": "mc-session-2026-09-25/check-1-pilot.json: property 'deadlock' is violated / exhaustive"
+          "evidence": "mc-session-2026-09-25/check-1-pilot.json: property 'deadlock' (deadlock) is violated / exhaustive"
         }
       ],
       "notes": []
@@ -235,7 +235,7 @@
           "evidence": "matched 'живост' at 1828"
         },
         {
-          "text": "It is formalised as a progress label or an LTL eventually/infinitely-often formula",
+          "text": "The requirement is formalised either as a progress label / LTL eventually, or as a CTL formula over the control label",
           "passed": true,
           "evidence": "matched '<>' at 1121"
         },
@@ -265,9 +265,9 @@
           "evidence": "matched '`progress`, метк' at 1598"
         },
         {
-          "text": "Placing a progress label (or adding a variable) is declared as a change to the model, not smuggled in",
+          "text": "If the route needs a change to the model (a progress label or a new variable), that change is declared; a CTL answer over the existing label needs no such change and says so",
           "passed": true,
-          "evidence": "matched 'Метка `progress` поставлена' at 5270"
+          "evidence": "matched 'изменение модели**, а не факт о системе: вердикт `progress' at 5400"
         },
         {
           "text": "No forbidden phrasing (naming the word in order to deny it does not count)",
@@ -275,9 +275,9 @@
           "evidence": "pattern '(?i)\\\\bno errors\\\\b|\\\\bproved\\\\b|\\\\bproven\\\\b|ошибок нет|(?<!не )доказано' absent"
         },
         {
-          "text": "The engine was invoked and its report is among the run's outputs",
+          "text": "The engine was invoked and its report is among the run's outputs, carrying the property of the route taken (progress, or ctl for the control-label route)",
           "passed": true,
-          "evidence": "mc-session-2026-09-25/check-1-original-baseline.json is an engine report"
+          "evidence": "mc-session-2026-09-25/check-2-progress-switch-none.json: property 'progress' (progress) is verified / exhaustive"
         }
       ],
       "notes": []
@@ -388,19 +388,19 @@
           "evidence": "matched 'exhaustive' at 292"
         },
         {
-          "text": "The engine was invoked and the unfair run's report is among the run's outputs: a property violated",
+          "text": "The engine was invoked and the unfair run's report is among the outputs: the temporal property violated under fairness none",
           "passed": true,
-          "evidence": "mc-session-2026-09-25/check-1-sanity.json: property 'ltl1' is violated / exhaustive"
+          "evidence": "mc-session-2026-09-25/check-1-sanity.json: property 'ltl1' (ltl) is violated / exhaustive"
         },
         {
-          "text": "No forbidden phrasing, and the fair result is not called proved (naming the word in order to deny it does not count)",
+          "text": "No forbidden phrasing, and the fair result is not called proved (a line that rejects the word does not count)",
           "passed": true,
-          "evidence": "pattern '(?i)\\\\bno errors\\\\b|ошибок нет|\\\\bproved\\\\b|\\\\bproven\\\\b|(?<!не )доказано|система корректна' absent"
+          "evidence": "pattern \"(?im)^(?![^\\\\n]*(не\\\\s|нельзя|не говор|not |never |avoid|do not|don't|forbidden|запрещ))[^\\\\n]*(\\\\bno errors\\\\b|ошибок нет|\\\\bproved\\\\b|\\\\bproven\\\\b|доказано|доказал|protocol is correct|протокол корректен|система корректна)\" absent"
         },
         {
-          "text": "The weak-fairness run's report is also among the outputs: a property verified with evidence exhaustive",
+          "text": "The weak-fairness run's report is also among the outputs: the same kind of property verified with evidence exhaustive under fairness weak",
           "passed": true,
-          "evidence": "mc-session-2026-09-25/check-0-pilot.json: property 'deadlock' is verified / exhaustive"
+          "evidence": "mc-session-2026-09-25/check-3-weak.json: property 'ltl1' (ltl) is verified / exhaustive"
         }
       ],
       "notes": []
@@ -457,9 +457,9 @@
           "evidence": "pattern '(?i)(sha256|sha-256)[^\\\\n]{0,40}[0-9a-f]{16}|0\\\\.1\\\\.0-g\\\\d|mcd \\\\d+\\\\.\\\\d+' not found"
         },
         {
-          "text": "No forbidden phrasing (no errors / proved / system is correct) (naming the word in order to deny it does not count)",
+          "text": "No forbidden phrasing (no errors / proved / system is correct) (a line that rejects the word does not count)",
           "passed": true,
-          "evidence": "pattern '(?i)\\\\bno errors\\\\b|\\\\bproved\\\\b|\\\\bproven\\\\b|ошибок нет|(?<!не )доказано|system is correct|система корректна' absent"
+          "evidence": "pattern \"(?im)^(?![^\\\\n]*(не\\\\s|нельзя|не говор|not |never |avoid|do not|don't|forbidden|запрещ))[^\\\\n]*(\\\\bno errors\\\\b|ошибок нет|\\\\bproved\\\\b|\\\\bproven\\\\b|доказано|system is correct|система корректна)\" absent"
         }
       ],
       "notes": []
@@ -470,9 +470,9 @@
       "configuration": "without_skill",
       "run_number": 1,
       "result": {
-        "pass_rate": 0.4444,
-        "passed": 4,
-        "failed": 5,
+        "pass_rate": 0.3333,
+        "passed": 3,
+        "failed": 6,
         "total": 9,
         "time_seconds": 376.099,
         "tokens": 67954,
@@ -511,19 +511,19 @@
           "evidence": "matched 'не теря' at 365"
         },
         {
-          "text": "The engine was invoked and its report is among the run's outputs: a property verified with evidence exhaustive",
+          "text": "The engine was invoked and its report is among the run's outputs: the LTL property verified with evidence exhaustive",
           "passed": false,
-          "evidence": "no engine report under outputs matching {'status': 'verified', 'evidence': 'exhaustive'}: no *.json files"
+          "evidence": "no engine report under outputs matching {'kind': 'ltl', 'status': 'verified', 'evidence': 'exhaustive'}: no *.json files"
         },
         {
-          "text": "The word proved/доказано is not used for the model result (naming the word in order to deny it does not count)",
+          "text": "The word proved/доказано is not used for the model result (a line that rejects the word does not count)",
           "passed": false,
-          "evidence": "forbidden match 'доказано' at 226"
+          "evidence": "forbidden match '**Да — но доказано' at 216"
         },
         {
-          "text": "No forbidden phrasing",
-          "passed": true,
-          "evidence": "pattern '(?i)\\\\bno errors\\\\b|ошибок нет|protocol is correct|протокол корректен|система корректна' absent"
+          "text": "No forbidden phrasing (a line that rejects the word does not count)",
+          "passed": false,
+          "evidence": "forbidden match '**Да — но доказано' at 216"
         }
       ],
       "notes": []
@@ -550,9 +550,9 @@
           "evidence": "no valid net under outputs: no *.json files"
         },
         {
-          "text": "The engine was run on the net and the command line is shown — either `mcd check --petri` or the parse-then-check route (`mcd parse --petri` followed by `mcd check --ir`)",
+          "text": "The engine was run on the net and the call is shown — the MCP tools (mc_parse / mc_check) or either CLI route (`mcd check --petri`, or `mcd parse --petri` then `mcd check --ir`)",
           "passed": false,
-          "evidence": "pattern '(?i)mcd\\\\s+(check[^\\\\n]*--petri|parse[^\\\\n]*--petri[\\\\s\\\\S]{0,400}?mcd\\\\s+check[^\\\\n]*--ir)' not found"
+          "evidence": "pattern '(?i)mc_check|mc_parse|mcd\\\\s+(check[^\\\\n]*--petri|parse[^\\\\n]*--petri[\\\\s\\\\S]{0,400}?mcd\\\\s+check[^\\\\n]*--ir)' not found"
         },
         {
           "text": "The hang (deadlock) property is reported with status violated",
@@ -590,9 +590,9 @@
           "evidence": "pattern '\\\\bsafe\\\\b' not found"
         },
         {
-          "text": "No forbidden phrasing (no errors / proved / net is correct) (naming the word in order to deny it does not count)",
+          "text": "No forbidden phrasing (no errors / proved / net is correct) (a line that rejects the word does not count)",
           "passed": true,
-          "evidence": "pattern '(?i)\\\\bno errors\\\\b|\\\\bproved\\\\b|\\\\bproven\\\\b|ошибок нет|(?<!не )доказано|net is correct|сеть корректна' absent"
+          "evidence": "pattern \"(?im)^(?![^\\\\n]*(не\\\\s|нельзя|не говор|not |never |avoid|do not|don't|forbidden|запрещ))[^\\\\n]*(\\\\bno errors\\\\b|ошибок нет|\\\\bproved\\\\b|\\\\bproven\\\\b|доказано|net is correct|сеть корректна)\" absent"
         },
         {
           "text": "The engine's report is among the run's outputs: the hang (deadlock) property violated with evidence exhaustive",
@@ -624,7 +624,7 @@
           "evidence": "pattern '(?i)\\\\bliveness\\\\b|живост' not found"
         },
         {
-          "text": "It is formalised as a progress label or an LTL eventually/infinitely-often formula",
+          "text": "The requirement is formalised either as a progress label / LTL eventually, or as a CTL formula over the control label",
           "passed": true,
           "evidence": "matched '<>' at 611"
         },
@@ -654,9 +654,9 @@
           "evidence": "matched '@Busy' at 626"
         },
         {
-          "text": "Placing a progress label (or adding a variable) is declared as a change to the model, not smuggled in",
+          "text": "If the route needs a change to the model (a progress label or a new variable), that change is declared; a CTL answer over the existing label needs no such change and says so",
           "passed": false,
-          "evidence": "pattern '(?i)(добав\\\\w+|постав\\\\w+|размест\\\\w+|внёс|внес\\\\w+|перепис\\\\w+|измен\\\\w+|add\\\\w*|plac\\\\w+|insert\\\\w+|rewr\\\\w+|modif\\\\w+)[^\\\\n]{0,120}(progress|мет\\\\w+|label)|(progress|label|мет\\\\w+)[^\\\\n]{0,120}(добав\\\\w+|постав\\\\w+|перепис\\\\w+|измен\\\\w+ модел|add\\\\w*|plac\\\\w+|change to the model|изменени\\\\w* модел)' not found"
+          "evidence": "pattern '(?i)((добав\\\\w+|постав\\\\w+|размест\\\\w+|внёс|внес\\\\w+|перепис\\\\w+|измен\\\\w+|add\\\\w*|plac\\\\w*|insert\\\\w*|chang\\\\w*)[^\\\\n]{0,80}(progress|метк|label|переменн)|(без изменен|не меня\\\\w+ модел|without (a )?chang|no change to the model|модель не меня))' not found"
         },
         {
           "text": "No forbidden phrasing (naming the word in order to deny it does not count)",
@@ -664,9 +664,9 @@
           "evidence": "pattern '(?i)\\\\bno errors\\\\b|\\\\bproved\\\\b|\\\\bproven\\\\b|ошибок нет|(?<!не )доказано' absent"
         },
         {
-          "text": "The engine was invoked and its report is among the run's outputs",
+          "text": "The engine was invoked and its report is among the run's outputs, carrying the property of the route taken (progress, or ctl for the control-label route)",
           "passed": false,
-          "evidence": "no engine report under outputs matching {any}: no *.json files"
+          "evidence": "no engine report under outputs matching {'kind': ['progress', 'ctl']}: no *.json files"
         }
       ],
       "notes": []
@@ -731,9 +731,9 @@
       "configuration": "without_skill",
       "run_number": 1,
       "result": {
-        "pass_rate": 0.3,
-        "passed": 3,
-        "failed": 7,
+        "pass_rate": 0.4,
+        "passed": 4,
+        "failed": 6,
         "total": 10,
         "time_seconds": 72.364,
         "tokens": 45705,
@@ -777,19 +777,19 @@
           "evidence": "pattern '\\\\b(exhaustive|bounded|approximate|unknown)\\\\b' not found"
         },
         {
-          "text": "The engine was invoked and the unfair run's report is among the run's outputs: a property violated",
+          "text": "The engine was invoked and the unfair run's report is among the outputs: the temporal property violated under fairness none",
           "passed": false,
-          "evidence": "no engine report under outputs matching {'status': 'violated'}: no *.json files"
+          "evidence": "no engine report under outputs matching {'kind': ['ltl', 'progress'], 'status': 'violated', 'fairness': 'none'}: no *.json files"
         },
         {
-          "text": "No forbidden phrasing, and the fair result is not called proved (naming the word in order to deny it does not count)",
-          "passed": false,
-          "evidence": "forbidden match 'Ошибок нет' at 3203"
+          "text": "No forbidden phrasing, and the fair result is not called proved (a line that rejects the word does not count)",
+          "passed": true,
+          "evidence": "pattern \"(?im)^(?![^\\\\n]*(не\\\\s|нельзя|не говор|not |never |avoid|do not|don't|forbidden|запрещ))[^\\\\n]*(\\\\bno errors\\\\b|ошибок нет|\\\\bproved\\\\b|\\\\bproven\\\\b|доказано|доказал|protocol is correct|протокол корректен|система корректна)\" absent"
         },
         {
-          "text": "The weak-fairness run's report is also among the outputs: a property verified with evidence exhaustive",
+          "text": "The weak-fairness run's report is also among the outputs: the same kind of property verified with evidence exhaustive under fairness weak",
           "passed": false,
-          "evidence": "no engine report under outputs matching {'status': 'verified', 'evidence': 'exhaustive'}: no *.json files"
+          "evidence": "no engine report under outputs matching {'kind': ['ltl', 'progress'], 'status': 'verified', 'evidence': 'exhaustive', 'fairness': 'weak'}: no *.json files"
         }
       ],
       "notes": []
@@ -818,9 +818,9 @@
     },
     "without_skill": {
       "pass_rate": {
-        "mean": 0.4171,
-        "stddev": 0.0702,
-        "min": 0.3,
+        "mean": 0.4152,
+        "stddev": 0.0591,
+        "min": 0.3333,
         "max": 0.5
       },
       "time_seconds": {
@@ -844,16 +844,16 @@
   },
   "notes": [
     "Eval 1 (mutex-invariant-violated): with_skill 8/8, without_skill 3/8",
-    "Eval 1: 3 of 8 assertions pass in both configurations and do not differentiate the skill: 'The counterexample is decoded through the model's labels L1–L4'; 'The counterexample shows both users at label L7 (the critical section)'; 'No forbidden phrasing (no errors / proved / system is correct) (naming the word in order to deny it does not count)'",
-    "Eval 2 (alternating-bit-liveness-fairness): with_skill 9/9, without_skill 4/9",
-    "Eval 2: 4 of 9 assertions pass in both configurations and do not differentiate the skill: 'Fairness is raised as a question or as an explicitly labelled assumption'; 'The formula that was actually checked is shown, in LTL syntax'; 'The claim is limited to this model: it has no message loss, retransmission or timeout'; 'No forbidden phrasing'",
+    "Eval 1: 3 of 8 assertions pass in both configurations and do not differentiate the skill: 'The counterexample is decoded through the model's labels L1–L4'; 'The counterexample shows both users at label L7 (the critical section)'; 'No forbidden phrasing (no errors / proved / system is correct) (a line that rejects the word does not count)'",
+    "Eval 2 (alternating-bit-liveness-fairness): with_skill 9/9, without_skill 3/9",
+    "Eval 2: 3 of 9 assertions pass in both configurations and do not differentiate the skill: 'Fairness is raised as a question or as an explicitly labelled assumption'; 'The formula that was actually checked is shown, in LTL syntax'; 'The claim is limited to this model: it has no message loss, retransmission or timeout'",
     "Eval 3 (petri-net-hang): with_skill 11/11, without_skill 5/11",
-    "Eval 3: 5 of 11 assertions pass in both configurations and do not differentiate the skill: 'The counterexample is the firing sequence t1 then t4'; 'The final marking has one token in p2 (p2 = 1, or set notation {p2, p5})'; 'The final marking has one token in p5 (p5 = 1, or set notation {p2, p5})'; 'The number of reachable markings (6) is quoted from the engine's counters'; 'No forbidden phrasing (no errors / proved / net is correct) (naming the word in order to deny it does not count)'",
+    "Eval 3: 5 of 11 assertions pass in both configurations and do not differentiate the skill: 'The counterexample is the firing sequence t1 then t4'; 'The final marking has one token in p2 (p2 = 1, or set notation {p2, p5})'; 'The final marking has one token in p5 (p5 = 1, or set notation {p2, p5})'; 'The number of reachable markings (6) is quoted from the engine's counters'; 'No forbidden phrasing (no errors / proved / net is correct) (a line that rejects the word does not count)'",
     "Eval 4 (telephone-busy-liveness): with_skill 10/10, without_skill 5/10",
-    "Eval 4: 5 of 10 assertions pass in both configurations and do not differentiate the skill: 'It is formalised as a progress label or an LTL eventually/infinitely-often formula'; 'The formula refers to the model's labels or states (Busy), not to printf output'; 'Fairness is raised before the result'; 'The route is named correctly: either the `progress` property the frontend adds from progress labels, or the CTL formula with a control-label atom'; 'No forbidden phrasing (naming the word in order to deny it does not count)'",
+    "Eval 4: 5 of 10 assertions pass in both configurations and do not differentiate the skill: 'The requirement is formalised either as a progress label / LTL eventually, or as a CTL formula over the control label'; 'The formula refers to the model's labels or states (Busy), not to printf output'; 'Fairness is raised before the result'; 'The route is named correctly: either the `progress` property the frontend adds from progress labels, or the CTL formula with a control-label atom'; 'No forbidden phrasing (naming the word in order to deny it does not count)'",
     "Eval 5 (c-code-out-of-subset): with_skill 7/7, without_skill 3/7",
     "Eval 5: 3 of 7 assertions pass in both configurations and do not differentiate the skill: 'The rejected construct c_code is named'; 'No property result is imitated for the original model: no line of the answer attributes verified/violated/inconclusive to simple1.pr, c_code/c_expr or the original model/file (a verdict about a clearly separate rewrite is allowed — including a line that calls that rewrite \"the original\" one as against a mutant; refined in iteration-2 and again in iteration-3, see steps/g3-evals3-confirmation.md)'; 'No host code is executed and the answer says so'",
-    "Eval 7 (starvation-loop-fairness): with_skill 10/10, without_skill 3/10",
-    "Eval 7: 3 of 10 assertions pass in both configurations and do not differentiate the skill: 'The counterexample is described as a loop that repeats forever, not as a finite trace'; 'Process B is named as the one that is enabled through the loop and never moves'; 'Weak fairness is named as an assumption, not as a fact about the system'"
+    "Eval 7 (starvation-loop-fairness): with_skill 10/10, without_skill 4/10",
+    "Eval 7: 4 of 10 assertions pass in both configurations and do not differentiate the skill: 'The counterexample is described as a loop that repeats forever, not as a finite trace'; 'Process B is named as the one that is enabled through the loop and never moves'; 'Weak fairness is named as an assumption, not as a fact about the system'; 'No forbidden phrasing, and the fair result is not called proved (a line that rejects the word does not count)'"
   ]
 }

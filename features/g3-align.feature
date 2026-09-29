@@ -106,6 +106,7 @@ Feature: G3 skill package — alignment with the G0 engine
       | regex_order      |
       | petri_json_valid |
       | engine_report    |
+      | outputs_file     |
       | json_field       |
     And every eval in "evals/evals.json" has a "runnable_from" that is one of:
       | G0 |

@@ -2,7 +2,7 @@
   "eval_id": 2,
   "eval_name": "alternating-bit-liveness-fairness",
   "run": "eval-2-alternating-bit/without_skill",
-  "passed_count": 5,
+  "passed_count": 6,
   "total": 9,
   "expectations": [
     {
@@ -36,19 +36,19 @@
       "evidence": "matched 'повторных передач' at 959"
     },
     {
-      "text": "The engine was invoked and its report is among the run's outputs: a property verified with evidence exhaustive",
+      "text": "The engine was invoked and its report is among the run's outputs: the LTL property verified with evidence exhaustive",
       "passed": false,
-      "evidence": "no engine report under outputs matching {'status': 'verified', 'evidence': 'exhaustive'}: no *.json files"
+      "evidence": "no engine report under outputs matching {'kind': 'ltl', 'status': 'verified', 'evidence': 'exhaustive'}: no *.json files"
     },
     {
-      "text": "The word proved/доказано is not used for the model result (naming the word in order to deny it does not count)",
-      "passed": false,
-      "evidence": "forbidden match 'доказано' at 662"
-    },
-    {
-      "text": "No forbidden phrasing",
+      "text": "The word proved/доказано is not used for the model result (a line that rejects the word does not count)",
       "passed": true,
-      "evidence": "pattern '(?i)\\\\bno errors\\\\b|ошибок нет|protocol is correct|протокол корректен|система корректна' absent"
+      "evidence": "pattern \"(?im)^(?![^\\\\n]*(не\\\\s|нельзя|не говор|not |never |avoid|do not|don't|forbidden|запрещ))[^\\\\n]*(\\\\bno errors\\\\b|ошибок нет|\\\\bproved\\\\b|\\\\bproven\\\\b|доказано|доказал|protocol is correct|протокол корректен|система корректна)\" absent"
+    },
+    {
+      "text": "No forbidden phrasing (a line that rejects the word does not count)",
+      "passed": true,
+      "evidence": "pattern \"(?im)^(?![^\\\\n]*(не\\\\s|нельзя|не говор|not |never |avoid|do not|don't|forbidden|запрещ))[^\\\\n]*(\\\\bno errors\\\\b|ошибок нет|\\\\bproved\\\\b|\\\\bproven\\\\b|доказано|доказал|protocol is correct|протокол корректен|система корректна)\" absent"
     }
   ]
 }

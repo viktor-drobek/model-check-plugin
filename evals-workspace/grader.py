@@ -24,12 +24,22 @@ Check types (all objective — no judgement, no model call):
   json_field       {"file_glob", "path",  some file matching file_glob under
                     "equals"}             outputs has the value at the dotted
                                           path
+  outputs_file     {"globs": [...]}       some file under the outputs directory
+                                          matches one of the globs. For an
+                                          artefact the answer produces but does
+                                          not inline — a model file, say: asking
+                                          the prose to contain `proctype` tests
+                                          the formatting, not the work
   engine_report    {"property"?,          some *.json under outputs is a report
-                    "status"?,            the engine wrote (`engine.name` = mcd,
-                    "evidence"?}          `engine.report_schema` = mcd-report/*)
-                                          and, when the keys are given, carries
-                                          that property id with that status and
-                                          evidence. This is the one check the
+                    "kind"?,              the engine wrote (`engine.name` = mcd,
+                    "status"?,            `engine.report_schema` = mcd-report/*)
+                    "evidence"?,          and, when the keys are given, carries a
+                    "fairness"?}          property of that id and/or kind with
+                                          that status and evidence, checked under
+                                          that fairness (`temporal.fairness`).
+                                          Name the kind whenever the assertion is
+                                          about a kind: a bare status matches the
+                                          run's `deadlock` just as well. This is the one check the
                                           answer text cannot satisfy: it needs
                                           the run's own artefact, so an assertion
                                           about the engine having been invoked
@@ -43,6 +53,7 @@ Usage:
 
 import argparse
 import fnmatch
+import hashlib
 import json
 import os
 import re
@@ -172,8 +183,45 @@ def check_petri_json_valid(check, _answer, outputs, skill_dir):
     return False, "no valid net under outputs: " + ("; ".join(reasons) if reasons else "no *.json files")
 
 
-def engine_report_error(doc):
-    """Return None when doc looks like a report this engine wrote, else why not."""
+def check_outputs_file(check, _answer, outputs, _skill_dir):
+    """An artefact of the run, found by name.
+
+    The answer text is not consulted: a model the run wrote to a file is a
+    model whether or not the prose repeats it."""
+    globs = check["globs"]
+    found = []
+    for root, _dirs, files in os.walk(outputs):
+        for f in sorted(files):
+            rel = os.path.relpath(os.path.join(root, f), outputs)
+            for g in globs:
+                if fnmatch.fnmatch(f, g) or fnmatch.fnmatch(rel, g):
+                    return True, "%s matches %r" % (rel, g)
+            found.append(rel)
+    return False, "no file under outputs matches %s (saw %s)" % (
+        globs, ", ".join(found[:8]) if found else "no files")
+
+
+REPORT_SCHEMA = "mcd-report/1"
+
+
+def sha256_of(path):
+    h = hashlib.sha256()
+    with open(path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(65536), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def engine_report_error(doc, outputs, repo_root):
+    """Return None when doc is a report this engine wrote for a model that is
+    actually there, else why not.
+
+    Recognising the shape is not enough: a hand-written JSON has the same shape,
+    and an assertion about the engine having run must not be satisfiable by
+    typing one (steps/review-astra-skill.md, the implementation review of the
+    review fixes). So the report is also tied to its input: `inputs[].sha256`
+    has to be the hash of a file that exists — under the run's outputs or in the
+    repository — which means the model the verdict is about was really there."""
     if not isinstance(doc, dict):
         return "not an object"
     eng = doc.get("engine")
@@ -181,22 +229,78 @@ def engine_report_error(doc):
         return "no engine section"
     if eng.get("name") != "mcd":
         return "engine.name is %r, not 'mcd'" % (eng.get("name"),)
-    schema = str(eng.get("report_schema", ""))
-    if not schema.startswith("mcd-report/"):
-        return "engine.report_schema is %r" % (schema,)
+    if eng.get("report_schema") != REPORT_SCHEMA:
+        return "engine.report_schema is %r, not %r" % (eng.get("report_schema"), REPORT_SCHEMA)
+    if not str(eng.get("version") or "").strip():
+        return "engine.version is empty"
     if not isinstance(doc.get("properties"), list):
         return "no properties array"
+    inputs = doc.get("inputs")
+    if not isinstance(inputs, list) or not inputs:
+        return "no inputs section: the report names no model"
+    wanted = [(i.get("path"), i["sha256"]) for i in inputs
+              if isinstance(i, dict) and i.get("sha256")]
+    if not wanted:
+        return "no inputs[].sha256: the report is not tied to a model"
+    tried = []
+    for path, digest in wanted:
+        candidates = []
+        if path:
+            candidates += [path, os.path.join(outputs, os.path.basename(path))]
+            if repo_root:
+                candidates.append(os.path.join(repo_root, path))
+        candidates.append(os.path.join(outputs, os.path.basename(path or "")))
+        for c in candidates:
+            if not c or not os.path.isfile(c):
+                continue
+            try:
+                if sha256_of(c) == digest:
+                    return None
+            except OSError:
+                continue
+            tried.append("%s has another hash" % c)
+        tried.append("%s: not found" % (path or "<no path>"))
+    # Last resort: the model may have been written under a name of its own.
+    for root, _dirs, files in os.walk(outputs):
+        for f in files:
+            try:
+                if sha256_of(os.path.join(root, f)) in [d for _, d in wanted]:
+                    return None
+            except OSError:
+                continue
+    return "the report's input is not there: %s" % "; ".join(tried[:3])
+
+
+def matches(value, want):
+    """A wanted value is absent (anything goes), one value, or a list of them."""
+    if want is None:
+        return True
+    if isinstance(want, list):
+        return value in want
+    return value == want
+
+
+def repo_root_of(skill_dir):
+    """skills/model-check -> the repository root, so that a report naming a
+    corpus file by its repository path can be checked against that file."""
+    if not skill_dir:
+        return None
+    p = os.path.abspath(skill_dir)
+    for _ in range(6):
+        p = os.path.dirname(p)
+        if os.path.isdir(os.path.join(p, "model-check-plugin")):
+            return p
     return None
 
 
-def check_engine_report(check, _answer, outputs, _skill_dir):
+def check_engine_report(check, _answer, outputs, skill_dir):
     """The engine actually ran: one of the run's output files is its report.
 
     The answer text is not consulted at all. A grader that greps the prose for
     `mcd check` scores a fabricated answer full marks; this one needs the JSON
     the engine itself produced, with the property, status and evidence asked
     for."""
-    want = {k: check[k] for k in ("property", "status", "evidence") if k in check}
+    want = {k: check[k] for k in ("property", "kind", "status", "evidence", "fairness") if k in check}
     reasons = []
     for path in json_files(outputs):
         try:
@@ -205,7 +309,7 @@ def check_engine_report(check, _answer, outputs, _skill_dir):
         except (OSError, ValueError) as e:
             reasons.append("%s: %s" % (os.path.relpath(path, outputs), e))
             continue
-        err = engine_report_error(doc)
+        err = engine_report_error(doc, outputs, repo_root_of(skill_dir))
         if err:
             reasons.append("%s: %s" % (os.path.relpath(path, outputs), err))
             continue
@@ -215,14 +319,20 @@ def check_engine_report(check, _answer, outputs, _skill_dir):
         for prop in doc["properties"]:
             if not isinstance(prop, dict):
                 continue
-            if "property" in want and prop.get("id") != want["property"]:
+            if not matches(prop.get("id"), want.get("property")):
                 continue
-            if "status" in want and prop.get("status") != want["status"]:
+            if not matches(prop.get("kind"), want.get("kind")):
                 continue
-            if "evidence" in want and prop.get("evidence") != want["evidence"]:
+            if not matches(prop.get("status"), want.get("status")):
                 continue
-            return True, "%s: property %r is %s / %s" % (
-                rel, prop.get("id"), prop.get("status"), prop.get("evidence"))
+            if not matches(prop.get("evidence"), want.get("evidence")):
+                continue
+            if "fairness" in want:
+                temporal = prop.get("temporal")
+                if not isinstance(temporal, dict) or temporal.get("fairness") != want["fairness"]:
+                    continue
+            return True, "%s: property %r (%s) is %s / %s" % (
+                rel, prop.get("id"), prop.get("kind"), prop.get("status"), prop.get("evidence"))
         reasons.append("%s: no property matching %s" % (rel, want))
     return False, "no engine report under outputs matching %s: %s" % (
         want or "{any}", "; ".join(reasons) if reasons else "no *.json files")
@@ -265,6 +375,7 @@ CHECKS = {
     "petri_json_valid": check_petri_json_valid,
     "json_field": check_json_field,
     "engine_report": check_engine_report,
+    "outputs_file": check_outputs_file,
 }
 
 

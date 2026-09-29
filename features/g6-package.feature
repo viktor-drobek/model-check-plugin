@@ -123,12 +123,10 @@ Feature: G6 packaging, install validation and description triggering
     And it carries a train score and a test score for every description variant measured
     And the variant recorded as chosen is the one with the best test score
 
-  # @pending — правки по ревью 2026-09-29 (находка №19, steps/review-fixes-confirmation.md)
-  # изменили описание: активация задана намерением, а не списком слов, потому что прежний
-  # текст велел срабатывать на «гонку» и тут же исключал data-race-линтеры. Измеренный
-  # вариант в trigger-results.json относится к прежнему тексту; равенство восстанавливается
-  # перезамером триггеров на том же держанном разбиении.
-  @pending
+  # Перезамер 2026-09-29 после правки описания (находка №19): все четыре варианта
+  # судила одна популяция судей на том же разбиении и seed; v1 (текст в SKILL.md) и v0 делят 1.00
+  # на held-out, ничья по правилу достаётся действующему варианту. См. notes в trigger-results.json:
+  # набор эти два описания не различает, контроль vanti — 0.50.
   Scenario: the description in SKILL.md is the variant the measurement chose
     Given the file "evals-workspace/trigger-results.json"
     Then the description of "skills/model-check/SKILL.md" equals the chosen variant
@@ -140,10 +138,9 @@ Feature: G6 packaging, install validation and description triggering
     And its description still says that no external model checker is needed
 
   # ------------------------------------------------------------ full evals
-  # @pending — та же причина, что и у градированных прогонов g3-evals*: после правок по ревью
-  # 2026-09-29 в наборе есть eval 8 (допущение A7), которого в iteration-4 нет, а остальные
-  # прогоны градированы прежними assertions. Снимается перезамером набора.
-  @pending
+  # eval 8 (допущение A7) добавлен правками по ревью и прогнан в обеих конфигурациях
+  # 2026-09-29; этот сценарий и есть гарантия того, что новый eval не останется неизмеренным:
+  # исторические итерации спрашивают только про то, что набор содержал тогда (`first_measured_in`).
   Scenario: every eval the engine can run by G5 is graded in both configurations in iteration-4
     Given the eval file "skills/model-check/evals/evals.json"
     And the workspace iteration "evals-workspace/iteration-4"

@@ -184,8 +184,9 @@ carries a `progress` label, and a model with **no** progress label makes every c
 a non-progress cycle, so a `violated` `progress` on such a model means "no labels
 were placed", not "the system hangs". When a
 property returns `inconclusive`, increase the budget in steps (FR-024) and rerun; do
-not reformulate the result. When the engine reports an overflow (`byte` wrap, channel
-capacity, place capacity) the status is `invalid-model`: the engine cannot tell
+not reformulate the result. When the engine reports a domain overflow (`byte` wrap, a
+place above its capacity, an out-of-range index — but **not** an ordinary send into a full
+channel, which simply blocks) the status is `invalid-model`: the engine cannot tell
 whether the real system has the same bound, so fix or justify the domain in the
 model first and make no property claim until then. After any change to the model, rerun every property, not only the one
 that failed — fixing a deadlock can open a non-progress cycle.
@@ -194,10 +195,13 @@ that failed — fixing a deadlock can open a non-progress cycle.
 
 For every `violated` property **that carries a `counterexample`** call `mc_explain` with
 its id, to get the run as prefix and loop with the user's names and per-step variable
-diffs. Some verdicts carry no run at all and there is nothing to explain: a `reach` that
-completed without finding its state (`violated`, and that is the good news —
-`counterexamples.md` §6), a universal CTL property that holds, a failing existential one.
-They carry `temporal.witness_note` instead — quote it. `mc_explain` **decodes** the stored
+diffs. Some verdicts carry no run at all and there is nothing to explain, and what they carry
+instead differs by kind. A `reach` that completed without finding its state is `violated`
+with no `counterexample` and **no `temporal` block at all** — it is not a temporal
+property, so quote its `reason` ("no reachable state satisfies … (complete search)");
+that verdict is the good news for a regression check (`counterexamples.md` §6). A CTL
+verdict that no single run justifies — a universal property that holds, a failing
+existential one — carries `temporal.witness_note`, and that is what you quote there. `mc_explain` **decodes** the stored
 trace; it runs nothing, so write "decoded", and keep "replayed" for a `mc_simulate`
 `guided` run over those steps (`counterexamples.md` §5). When the record does have a
 `loop` (`counterexample.loop`) it gives `start` (the 1-based
@@ -278,14 +282,17 @@ the status, the status × evidence table, and the list of phrasings you must not
   with the trace to the blocked state. Partial-order reduction would be inapplicable here
   because of the priorities — a fact to record, not a knob to try.
 - **`CH14/version1`** — a telephone switch with labels and no variables. "Can it get stuck
-  in `Busy`?" is a branching question, and CTL asks it directly, because **CTL** accepts
-  control-label atoms: `AG EF switch@Idle` comes back `verified` / `exhaustive` on the
-  complete graph of 9 states, with `normalised` = `!E[true U !E[true U (pc(1) == 0)]]` and
-  a `witness_note` saying there is no single run to show — quote the normalised formula
-  and the note, not just the status. The **LTL** parser rejects `@`, so the same question
-  in LTL needs either a variable to point at or a `progress` label placed where the
-  requirement says progress is — and that placement is a change to the model, which you
-  declare.
+  in `Busy`?" has **two readings, and they are different properties**: *from every state
+  `Idle` is still reachable* (`AG EF switch@Idle`, possibility) and *every run returns to
+  `Idle`* (`[]<> idle`, obligation). The first is the branching one and CTL asks it as
+  written, because **CTL** accepts control-label atoms: on this model it comes back
+  `verified` / `exhaustive` on the complete graph of 9 states, with `normalised` =
+  `!E[true U !E[true U (pc(1) == 0)]]` and a `witness_note` saying there is no single run
+  to show — quote the normalised formula and the note, not just the status. It does **not**
+  answer the second reading: a run can circle forever without ever taking the path back.
+  For that one the **LTL** parser rejects `@`, so it needs a variable to point at or a
+  `progress` label placed where the requirement says progress is — and that placement is a
+  change to the model, which you declare. Ask the user which of the two they meant.
 - **`App_C/petrinet1`** — a Petri net encoded in Promela. As Petri JSON: initial
   marking `p1 = p4 = 1`; firing `t1` then `t4` leaves `p2 = p5 = 1` with no enabled
   transition. Expected: hang (deadlock) `violated` with the two-step counterexample.

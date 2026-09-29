@@ -1,0 +1,49 @@
+{
+  "eval_id": 8,
+  "eval_name": "ir-from-words",
+  "run": "eval-8-ir-from-words/with_skill",
+  "passed_count": 8,
+  "total": 8,
+  "expectations": [
+    {
+      "text": "The model the agent built from the words is among the run's outputs (a Promela-subset file, or an IR document when the experimental direct-IR route was taken)",
+      "passed": true,
+      "evidence": "all.ir.json matches '*.ir.json'"
+    },
+    {
+      "text": "The route the skill prescribes was taken: the model is written in the Promela subset, not authored directly as IR",
+      "passed": true,
+      "evidence": "two_clients.pml matches '*.pml'"
+    },
+    {
+      "text": "The mutual-exclusion question is asked of the engine as a property, not answered by reading the model",
+      "passed": true,
+      "evidence": "matched '[]' at 3869"
+    },
+    {
+      "text": "The mutual-exclusion question was answered by the engine: a state property (invariant or assert) verified with evidence exhaustive in a report among the outputs",
+      "passed": true,
+      "evidence": "liveness-none.report.json: property 'P1' (invariant) is verified / exhaustive"
+    },
+    {
+      "text": "The deadlock question is answered from the engine's own deadlock property",
+      "passed": true,
+      "evidence": "liveness-none.report.json: property 'deadlock' (deadlock) is verified / exhaustive"
+    },
+    {
+      "text": "The answer names the extra assumption of a self-built model: the verdict holds for the model, and that the model matches the words is a separate claim",
+      "passed": true,
+      "evidence": "matched 'model.ir.json](model.ir.json). Исходное состояние: все флаги ложны, три процесса' at 2201"
+    },
+    {
+      "text": "The modelling decisions the words did not fix are named (channel kind or capacity, ordering, what the working section is)",
+      "passed": true,
+      "evidence": "matched 'синхрон' at 1028"
+    },
+    {
+      "text": "No forbidden phrasing, and the self-built model is not presented as a result about the described system itself (a line that rejects the word does not count)",
+      "passed": true,
+      "evidence": "pattern \"(?im)^(?![^\\\\n]*(не\\\\s|нельзя|не говор|not |never |avoid|do not|don't|forbidden|запрещ))[^\\\\n]*(\\\\bno errors\\\\b|ошибок нет|\\\\bproved\\\\b|\\\\bproven\\\\b|доказано|система корректна|system is correct)\" absent"
+    }
+  ]
+}

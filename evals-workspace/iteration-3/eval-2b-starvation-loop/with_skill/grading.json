@@ -41,19 +41,19 @@
       "evidence": "matched 'exhaustive' at 292"
     },
     {
-      "text": "The engine was invoked and the unfair run's report is among the run's outputs: a property violated",
+      "text": "The engine was invoked and the unfair run's report is among the outputs: the temporal property violated under fairness none",
       "passed": true,
-      "evidence": "mc-session-2026-09-25/check-1-sanity.json: property 'ltl1' is violated / exhaustive"
+      "evidence": "mc-session-2026-09-25/check-1-sanity.json: property 'ltl1' (ltl) is violated / exhaustive"
     },
     {
-      "text": "No forbidden phrasing, and the fair result is not called proved (naming the word in order to deny it does not count)",
+      "text": "No forbidden phrasing, and the fair result is not called proved (a line that rejects the word does not count)",
       "passed": true,
-      "evidence": "pattern '(?i)\\\\bno errors\\\\b|ошибок нет|\\\\bproved\\\\b|\\\\bproven\\\\b|(?<!не )доказано|система корректна' absent"
+      "evidence": "pattern \"(?im)^(?![^\\\\n]*(не\\\\s|нельзя|не говор|not |never |avoid|do not|don't|forbidden|запрещ))[^\\\\n]*(\\\\bno errors\\\\b|ошибок нет|\\\\bproved\\\\b|\\\\bproven\\\\b|доказано|доказал|protocol is correct|протокол корректен|система корректна)\" absent"
     },
     {
-      "text": "The weak-fairness run's report is also among the outputs: a property verified with evidence exhaustive",
+      "text": "The weak-fairness run's report is also among the outputs: the same kind of property verified with evidence exhaustive under fairness weak",
       "passed": true,
-      "evidence": "mc-session-2026-09-25/check-0-pilot.json: property 'deadlock' is verified / exhaustive"
+      "evidence": "mc-session-2026-09-25/check-3-weak.json: property 'ltl1' (ltl) is verified / exhaustive"
     }
   ]
 }

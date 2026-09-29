@@ -1,0 +1,1 @@
+Formats Promela source files: normalises whitespace, aligns option arrows and sorts declarations. A pretty-printer only — it does not analyse, execute or verify anything.

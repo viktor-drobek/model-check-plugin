@@ -29,9 +29,10 @@ and — the part the engine cannot do — decide what it means.
 | `progress` | prefix + loop where the loop visits no `progress` label; the claim process is `np_` | a model with **no** `progress` label at all makes every cycle non-progress — read such a `violated` as "no progress labels were placed", not as a finding (`properties-ltl-ctl.md` §7) |
 | `ctl` — violation of `AG p`, witness for `EF p` | one finite path | |
 | `ctl` — witness for `EG p` | prefix + loop inside `p`-states | |
-| `ctl` — violation of nested formulas such as `AG EF p`, `AG(p -> AF q)` | one finite path **to the state where the outer property fails**, and nothing past it: the engine builds no tree and does not show why the nested subformula fails there — its `temporal.note` says so ("the counterexample ends at the state where the outer property fails…") | say in the report that the branch below that state was not enumerated; re-ask the nested subformula as its own property at that state if the user needs it (11 §11) |
+| `ctl` — violation of nested formulas such as `AG EF p`, `AG(p -> AF q)` | one finite path **to the state where the outer property fails**, and nothing past it: the engine builds no tree and does not show why the nested subformula fails there — its `temporal.witness_note` says so ("the counterexample ends at the state where the outer property fails…"); `temporal.note` is a different field — the self-loop rule | say in the report that the branch below that state was not enumerated; re-ask the nested subformula as its own property at that state if the user needs it (11 §11) |
 | `invalid-model` | finite path to the step that overflowed a domain or a capacity | this is a model defect, not a property result |
-| **no run at all** | a `reach` that completed without finding its state (`violated`, no counterexample); a universal CTL property that holds; a failing existential CTL property; a formula whose top operator is a boolean connective or an atom | the record carries `temporal.witness_note` instead of a run — "a universal property that holds is justified by the complete reachable graph, not by one run". Quote that note; do not call `mc_explain`, there is no id to pass it |
+| **no run at all** — `reach` | a `reach` that completed without finding its state: `violated`, no `counterexample`, and no `temporal` block either, because `reach` is not a temporal property | quote the engine's `reason`: "no reachable state satisfies … (complete search)". Do not look for `witness_note` here and do not call `mc_explain`, there is no id to pass it |
+| **no run at all** — `ctl` | a universal CTL property that holds; a failing existential one; a formula whose top operator is a boolean connective or an atom | the record carries `temporal.witness_note` instead of a run — "a universal property that holds is justified by the complete reachable graph, not by one run". Quote that note; again there is no id for `mc_explain` |
 
 ## 2. Reading `mc_explain` output
 
@@ -141,7 +142,7 @@ after the first is fixed, rerun and classify the new trace afresh.
 
 | # | Question | If yes → class | Typical evidence |
 |---|---|---|---|
-| 1 | Is the formula saying something other than the requirement? (wrong polarity, wrong atom, `[]<>` where `<>[]` was meant, LTL where the requirement was branching, missing sanity conjunct, vacuity) | **property defect** | `mc_lint_property` polarity/vacuity notes; paraphrase the formula and compare with the user's words; corpus: `CH4/prop.pml` shows `[]p` vs `![]p` as never claims |
+| 1 | Is the formula saying something other than the requirement? (wrong polarity, wrong atom, `[]<>` where `<>[]` was meant, LTL where the requirement was branching, missing sanity conjunct, vacuity) | **property defect** | `mc_lint_property`'s vacuity notes (it has **no** polarity note — `properties-ltl-ctl.md` §5); paraphrase the formula and compare with the user's words; corpus: `CH4/prop.pml` shows `[]p` vs `![]p` as never claims |
 | 2 | Does a step in the trace do something the real system cannot do? (only askable when a real system is named — see the paragraph after the table) (an interleaving hidden by a real lock but not by the model, a channel losing when the real one cannot, a capacity or domain smaller than reality, a missing `end` label, an environment allowed too much) | **model defect** (including translation/mapping defects and over-approximation artefacts) | compare each step with the system; 07 лекция 3: an over-approximating model admits traces the program does not have |
 | 3 | Does the loop rely on a scheduling that the user's stated assumptions exclude? (a ready process never runs; a message is lost forever) | **fairness / environment artefact** — logically a sub-case of 2, singled out because the remedy differs (a justified assumption, not a model change); handled by `fairness.md` §3: rerun with the assumption and report both | the starved transition in the loop |
 | 4 | None of the above: every step is possible in the real system — or there is no real system, and every step is possible in the object the user described — and the formula says what the requirement says | **system defect** (read the paragraph below before writing the words) | the trace replayed by `mc_simulate` in `guided` mode over the decoded step list (§5), not merely decoded |
@@ -179,14 +180,28 @@ steps) must keep the trace replayable by `mc_simulate`; a step you drop because 
 "looks irrelevant" may change what is enabled later (10 §10, causal slicing). When
 in doubt, show the full trace and highlight the causal slice.
 
-**Replaying one.** There is no call that replays a counterexample by its id. A replay is
-built by hand: take the decoded steps in order, pass each step's `command` (or its
-`user_name`, which is what `origin` recorded) as `edges` to `mc_simulate` with
-`mode: "guided"`, and read `stopped` — `edges exhausted` means the run followed the whole
-list, while `edge not enabled` means the list and the model disagree, and that
-disagreement is itself the finding. Only after such a run may a report say the
-counterexample was *replayed*; after `mc_explain` alone it was *decoded*. A lasso is
-replayed as its prefix plus as many copies of the loop as the point needs.
+**Replaying one, and what a replay can and cannot establish.** There is no call that
+replays a counterexample by its id, and building one by hand has two traps worth knowing
+before you quote the result.
+
+The recipe: take the decoded steps in order, pass each step's `command` (or its
+`user_name`) as `edges` to `mc_simulate` with `mode: "guided"`, then read `stopped` —
+`edges exhausted` means the run followed the whole list, `edge not enabled` means the list
+and the model disagree. **Then compare the run's final state with the counterexample's
+`final_state`**, because `stopped: "edges exhausted"` alone does not mean the same run was
+taken: an edge id is matched by text or by origin name, and when two edges of a process
+carry the same text the simulator takes the first enabled one. Equal final states (and,
+for a lasso, the loop closing where the record says) is what makes it a replay; anything
+else is a different run that happened to accept the same labels.
+
+The second trap is temporal: the trace of an `ltl` or `progress` violation interleaves the
+claim process (`never:…`, `np_`) and the null step `-` with the model's own steps, and
+those are not edges of the model. Drop them first — what is left is the **projection** of
+the lasso onto the model, which is what you can replay and what you should call it.
+
+Only after such a run may a report say the counterexample was *replayed*; after
+`mc_explain` alone it was *decoded*. A lasso is replayed as its prefix plus as many copies
+of the loop as the point needs.
 
 ## 6. Turning a counterexample into a regression check
 

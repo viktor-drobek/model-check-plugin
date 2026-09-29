@@ -20,8 +20,10 @@ Look: a hand-written `never` claim that accepts the *good* traces; an LTL formul
 passed with an extra or missing `!`. Corpus: `CH4/prop.pml` contains both a claim
 for `[]p` and one for `![]p` under `#ifdef PHI`; `CH12/leader.ltl` shows the SPIN
 convention — the claim is the *negated* formula. Loses its basis: the verdict as a
-whole; `verified` and `violated` swap meaning. Guard: `mc_lint_property` polarity
-note; paraphrase the accepted language in the report (`properties-ltl-ctl.md` §2).
+whole; `verified` and `violated` swap meaning. Guard: paraphrase the claim by hand and
+say which of the two it encodes — `mc_lint_property` does not read claims and has no
+polarity note (`properties-ltl-ctl.md` §5); then paraphrase the accepted language in the
+report (`properties-ltl-ctl.md` §2).
 
 ### 2. Properties over engine phases instead of source events
 

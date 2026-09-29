@@ -11,7 +11,7 @@
       "evidence": "pattern '(?i)\\\\bliveness\\\\b|живост' not found"
     },
     {
-      "text": "It is formalised as a progress label or an LTL eventually/infinitely-often formula",
+      "text": "The requirement is formalised either as a progress label / LTL eventually, or as a CTL formula over the control label",
       "passed": true,
       "evidence": "matched '<>' at 611"
     },
@@ -41,9 +41,9 @@
       "evidence": "matched '@Busy' at 626"
     },
     {
-      "text": "Placing a progress label (or adding a variable) is declared as a change to the model, not smuggled in",
+      "text": "If the route needs a change to the model (a progress label or a new variable), that change is declared; a CTL answer over the existing label needs no such change and says so",
       "passed": false,
-      "evidence": "pattern '(?i)(добав\\\\w+|постав\\\\w+|размест\\\\w+|внёс|внес\\\\w+|перепис\\\\w+|измен\\\\w+|add\\\\w*|plac\\\\w+|insert\\\\w+|rewr\\\\w+|modif\\\\w+)[^\\\\n]{0,120}(progress|мет\\\\w+|label)|(progress|label|мет\\\\w+)[^\\\\n]{0,120}(добав\\\\w+|постав\\\\w+|перепис\\\\w+|измен\\\\w+ модел|add\\\\w*|plac\\\\w+|change to the model|изменени\\\\w* модел)' not found"
+      "evidence": "pattern '(?i)((добав\\\\w+|постав\\\\w+|размест\\\\w+|внёс|внес\\\\w+|перепис\\\\w+|измен\\\\w+|add\\\\w*|plac\\\\w*|insert\\\\w*|chang\\\\w*)[^\\\\n]{0,80}(progress|метк|label|переменн)|(без изменен|не меня\\\\w+ модел|without (a )?chang|no change to the model|модель не меня))' not found"
     },
     {
       "text": "No forbidden phrasing (naming the word in order to deny it does not count)",
@@ -51,9 +51,9 @@
       "evidence": "pattern '(?i)\\\\bno errors\\\\b|\\\\bproved\\\\b|\\\\bproven\\\\b|ошибок нет|(?<!не )доказано' absent"
     },
     {
-      "text": "The engine was invoked and its report is among the run's outputs",
+      "text": "The engine was invoked and its report is among the run's outputs, carrying the property of the route taken (progress, or ctl for the control-label route)",
       "passed": false,
-      "evidence": "no engine report under outputs matching {any}: no *.json files"
+      "evidence": "no engine report under outputs matching {'kind': ['progress', 'ctl']}: no *.json files"
     }
   ]
 }

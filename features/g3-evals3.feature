@@ -156,6 +156,7 @@ Feature: G3 evals — stage 3 after G4: E2, E2b and E4 with and without the skil
       | regex_order        |
       | petri_json_valid   |
       | engine_report      |
+      | outputs_file       |
       | json_field         |
       | json_list_contains |
 
@@ -303,14 +304,11 @@ Feature: G3 evals — stage 3 after G4: E2, E2b and E4 with and without the skil
     And "references/promela-subset.md" says that the rows were derived by probing the engine
 
   # ---------------------------------------------------------- graded runs
-  # @pending — правки по ревью 2026-09-29 (steps/review-fixes-confirmation.md) изменили набор
-  # assertions: факт вызова движка теперь проверяется `engine_report` по отчёту движка,
-  # а не regex по тексту ответа, и добавлен eval 8 (допущение A7). Записанные прогоны
-  # iteration-2/3 градированы прежними assertions, и сравнивать их с нынешним evals.json
-  # нельзя. Сценарий снова становится исполнимым после перезамера набора живыми прогонами.
-  @pending
+  # Набор evals растёт, а итерация — снимок: она градирует то, что набор содержал на тот
+  # момент (поле `first_measured_in` в evals.json). Требование, чтобы новый eval вообще
+  # был измерен, живёт в сценарии последней итерации (features/g6-package.feature).
   Scenario: Every eval runnable from G4 or earlier has a graded run in iteration-3 in both configurations
-    Then every eval in "evals/evals.json" with "runnable_from" at or before "G4" has a graded run under the workspace "evals-workspace/iteration-3" with "with_skill" and "without_skill"
+    Then every eval in "evals/evals.json" with "runnable_from" at or before "G4" that the set already held then has a graded run under the workspace "evals-workspace/iteration-3" with "with_skill" and "without_skill"
 
   # Правки по ревью 2026-09-29 изменили набор assertions (факт вызова движка —
   # `engine_report` по отчёту, а не regex по тексту). Записанные прогоны не перезапускались:
