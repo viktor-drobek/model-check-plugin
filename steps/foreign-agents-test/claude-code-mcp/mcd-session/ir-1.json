@@ -1,0 +1,350 @@
+{
+  "schema": "mcd-ir/1",
+  "name": "inline",
+  "globals": [
+    {
+      "name": "busy",
+      "type": "bool",
+      "origin": {
+        "file": "inline",
+        "line": 1,
+        "name": "busy"
+      }
+    },
+    {
+      "name": "inside",
+      "type": "byte",
+      "origin": {
+        "file": "inline",
+        "line": 2,
+        "name": "inside"
+      }
+    }
+  ],
+  "processes": [
+    {
+      "name": "client:0",
+      "locations": [
+        {},
+        {},
+        {},
+        {},
+        {},
+        {}
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 1,
+          "guard": {
+            "op": "not",
+            "args": [
+              {
+                "op": "var",
+                "var": "busy"
+              }
+            ]
+          },
+          "text": "!busy",
+          "origin": {
+            "file": "inline",
+            "line": 7,
+            "name": "!busy"
+          }
+        },
+        {
+          "from": 1,
+          "to": 2,
+          "effect": [
+            {
+              "var": "busy",
+              "value": {
+                "op": "const",
+                "value": 1
+              }
+            }
+          ],
+          "text": "busy = true",
+          "origin": {
+            "file": "inline",
+            "line": 8,
+            "name": "busy = true"
+          }
+        },
+        {
+          "from": 2,
+          "to": 3,
+          "effect": [
+            {
+              "var": "inside",
+              "value": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "inside"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "inside++",
+          "origin": {
+            "file": "inline",
+            "line": 9,
+            "name": "inside++"
+          }
+        },
+        {
+          "from": 3,
+          "to": 4,
+          "assert": {
+            "op": "eq",
+            "args": [
+              {
+                "op": "var",
+                "var": "inside"
+              },
+              {
+                "op": "const",
+                "value": 1
+              }
+            ]
+          },
+          "text": "assert(inside == 1)",
+          "origin": {
+            "file": "inline",
+            "line": 10,
+            "name": "assert(inside == 1)"
+          }
+        },
+        {
+          "from": 4,
+          "to": 5,
+          "effect": [
+            {
+              "var": "inside",
+              "value": {
+                "op": "sub",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "inside"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "inside--",
+          "origin": {
+            "file": "inline",
+            "line": 11,
+            "name": "inside--"
+          }
+        },
+        {
+          "from": 5,
+          "to": 0,
+          "effect": [
+            {
+              "var": "busy",
+              "value": {
+                "op": "const"
+              }
+            }
+          ],
+          "text": "busy = false",
+          "origin": {
+            "file": "inline",
+            "line": 12,
+            "name": "busy = false"
+          }
+        }
+      ],
+      "origin": {
+        "file": "inline",
+        "line": 4,
+        "name": "client"
+      }
+    },
+    {
+      "name": "client:1",
+      "locations": [
+        {},
+        {},
+        {},
+        {},
+        {},
+        {}
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 1,
+          "guard": {
+            "op": "not",
+            "args": [
+              {
+                "op": "var",
+                "var": "busy"
+              }
+            ]
+          },
+          "text": "!busy",
+          "origin": {
+            "file": "inline",
+            "line": 7,
+            "name": "!busy"
+          }
+        },
+        {
+          "from": 1,
+          "to": 2,
+          "effect": [
+            {
+              "var": "busy",
+              "value": {
+                "op": "const",
+                "value": 1
+              }
+            }
+          ],
+          "text": "busy = true",
+          "origin": {
+            "file": "inline",
+            "line": 8,
+            "name": "busy = true"
+          }
+        },
+        {
+          "from": 2,
+          "to": 3,
+          "effect": [
+            {
+              "var": "inside",
+              "value": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "inside"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "inside++",
+          "origin": {
+            "file": "inline",
+            "line": 9,
+            "name": "inside++"
+          }
+        },
+        {
+          "from": 3,
+          "to": 4,
+          "assert": {
+            "op": "eq",
+            "args": [
+              {
+                "op": "var",
+                "var": "inside"
+              },
+              {
+                "op": "const",
+                "value": 1
+              }
+            ]
+          },
+          "text": "assert(inside == 1)",
+          "origin": {
+            "file": "inline",
+            "line": 10,
+            "name": "assert(inside == 1)"
+          }
+        },
+        {
+          "from": 4,
+          "to": 5,
+          "effect": [
+            {
+              "var": "inside",
+              "value": {
+                "op": "sub",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "inside"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "inside--",
+          "origin": {
+            "file": "inline",
+            "line": 11,
+            "name": "inside--"
+          }
+        },
+        {
+          "from": 5,
+          "to": 0,
+          "effect": [
+            {
+              "var": "busy",
+              "value": {
+                "op": "const"
+              }
+            }
+          ],
+          "text": "busy = false",
+          "origin": {
+            "file": "inline",
+            "line": 12,
+            "name": "busy = false"
+          }
+        }
+      ],
+      "origin": {
+        "file": "inline",
+        "line": 4,
+        "name": "client"
+      }
+    }
+  ],
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)"
+    },
+    {
+      "id": "assert",
+      "kind": "assert",
+      "text": "no assert statement fails (SPIN: assertion violations)"
+    }
+  ],
+  "origin": {
+    "file": "inline",
+    "name": "inline"
+  }
+}

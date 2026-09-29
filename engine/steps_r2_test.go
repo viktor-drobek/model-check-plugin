@@ -163,6 +163,34 @@ func registerR2Steps(sc *godog.ScenarioContext) {
 		return nil
 	})
 
+	sc.Step(`^"([^"]+)" points its mcpServers at "([^"]+)"$`, func(manifestRel, target string) error {
+		var doc map[string]any
+		if err := readJSON(filepath.Join(w.plugin, manifestRel), &doc); err != nil {
+			return err
+		}
+		if got := fmt.Sprint(doc["mcpServers"]); got != target {
+			return fmt.Errorf("%s points mcpServers at %q, want %q", manifestRel, got, target)
+		}
+		// The file it points at has to be the one the other record was built from.
+		if _, err := os.Stat(filepath.Join(w.plugin, strings.TrimPrefix(target, "./"))); err != nil {
+			return fmt.Errorf("%s names %s, which is not there: %v", manifestRel, target, err)
+		}
+		return nil
+	})
+
+	sc.Step(`^the run's "([^"]+)" keeps the tokens "([^"]+)" and "([^"]+)"$`, func(file, a, b string) error {
+		text, err := readText(file)
+		if err != nil {
+			return err
+		}
+		for _, tok := range []string{a, b} {
+			if !strings.Contains(text, tok) {
+				return fmt.Errorf("%s does not keep the token %q as the engine returns it (SKILL.md step 8)", file, tok)
+			}
+		}
+		return nil
+	})
+
 	sc.Step(`^the run's tool log names each of:$`, func(t *godog.Table) error {
 		log, err := readText("tool-log.txt")
 		if err != nil {
