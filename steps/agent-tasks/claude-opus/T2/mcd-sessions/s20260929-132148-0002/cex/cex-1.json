@@ -1,0 +1,119 @@
+{
+  "steps": [
+    {
+      "index": 1,
+      "process": "worker:0",
+      "command": "total \u003c= 3",
+      "origin": {
+        "file": "inline",
+        "line": 6,
+        "name": "total \u003c= 3"
+      }
+    },
+    {
+      "index": 2,
+      "process": "worker:0",
+      "command": "total = total + 1",
+      "changes": [
+        {
+          "var": "total",
+          "before": 0,
+          "after": 1
+        }
+      ],
+      "origin": {
+        "file": "inline",
+        "line": 6,
+        "name": "total = total + 1"
+      }
+    },
+    {
+      "index": 3,
+      "process": "worker:0",
+      "command": "total \u003c= 3",
+      "origin": {
+        "file": "inline",
+        "line": 6,
+        "name": "total \u003c= 3"
+      }
+    },
+    {
+      "index": 4,
+      "process": "worker:0",
+      "command": "total = total + 1",
+      "changes": [
+        {
+          "var": "total",
+          "before": 1,
+          "after": 2
+        }
+      ],
+      "origin": {
+        "file": "inline",
+        "line": 6,
+        "name": "total = total + 1"
+      }
+    },
+    {
+      "index": 5,
+      "process": "worker:0",
+      "command": "total \u003c= 3",
+      "origin": {
+        "file": "inline",
+        "line": 6,
+        "name": "total \u003c= 3"
+      }
+    },
+    {
+      "index": 6,
+      "process": "worker:0",
+      "command": "total = total + 1",
+      "changes": [
+        {
+          "var": "total",
+          "before": 2,
+          "after": 3
+        }
+      ],
+      "origin": {
+        "file": "inline",
+        "line": 6,
+        "name": "total = total + 1"
+      }
+    },
+    {
+      "index": 7,
+      "process": "worker:0",
+      "command": "total \u003c= 3",
+      "origin": {
+        "file": "inline",
+        "line": 6,
+        "name": "total \u003c= 3"
+      }
+    },
+    {
+      "index": 8,
+      "process": "worker:0",
+      "command": "total = total + 1",
+      "changes": [
+        {
+          "var": "total",
+          "before": 3,
+          "after": 4
+        }
+      ],
+      "origin": {
+        "file": "inline",
+        "line": 6,
+        "name": "total = total + 1"
+      }
+    }
+  ],
+  "final_state": [
+    {
+      "var": "total",
+      "value": 4
+    }
+  ],
+  "summary": "total \u003c= 3, total = total + 1, total \u003c= 3, total = total + 1, total \u003c= 3, total = total + 1, total \u003c= 3, total = total + 1"
+}

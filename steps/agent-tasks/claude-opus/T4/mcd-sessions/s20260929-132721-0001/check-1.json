@@ -1,0 +1,65 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "promela",
+      "path": "inline",
+      "sha256": "f61b6e4ac4df35082b0d235b7238c0912b97318349b6708ff6cdea5005761b92"
+    }
+  ],
+  "model": {
+    "name": "inline",
+    "state_bytes": 9,
+    "processes": 4,
+    "variables": 4
+  },
+  "search": {
+    "mode": "dfs",
+    "budget": {
+      "states": 1000000,
+      "depth": 1000000,
+      "time_ms": 900,
+      "mem_bytes": 1073741824
+    },
+    "stop": "time budget exhausted",
+    "complete": false
+  },
+  "properties": [
+    {
+      "id": "all200",
+      "kind": "reach",
+      "text": "a, b, c, d одновременно равны 200",
+      "status": "inconclusive",
+      "evidence": "unknown",
+      "counters": {
+        "states": 48128,
+        "transitions": 62609,
+        "depth": 48126,
+        "time_ms": 978,
+        "memory_bytes_est": 5809024
+      },
+      "complete": false,
+      "reason": "time budget exhausted"
+    },
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "status": "inconclusive",
+      "evidence": "unknown",
+      "counters": {
+        "states": 48128,
+        "transitions": 62609,
+        "depth": 48126,
+        "time_ms": 978,
+        "memory_bytes_est": 5809024
+      },
+      "complete": false,
+      "reason": "time budget exhausted"
+    }
+  ]
+}

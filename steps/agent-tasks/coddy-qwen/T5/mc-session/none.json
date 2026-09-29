@@ -1,0 +1,577 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "promela",
+      "path": "model.pml",
+      "sha256": "2c57132877d7c018b943bd5fb48a7fe7d52ad8b43f27d73ea1fd406276b51ee0"
+    }
+  ],
+  "model": {
+    "name": "model",
+    "state_bytes": 8,
+    "processes": 2,
+    "variables": 4
+  },
+  "search": {
+    "mode": "dfs",
+    "budget": {
+      "states": 1000000,
+      "depth": 1000000,
+      "time_ms": 60000,
+      "mem_bytes": 1073741824
+    },
+    "stop": "complete",
+    "complete": true
+  },
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 18,
+        "transitions": 36,
+        "depth": 9,
+        "time_ms": 0,
+        "memory_bytes_est": 25920
+      },
+      "complete": true
+    },
+    {
+      "id": "ltl1",
+      "kind": "ltl",
+      "text": "[]<> served == 1",
+      "status": "violated",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 20,
+        "transitions": 27,
+        "depth": 19,
+        "time_ms": 0,
+        "memory_bytes_est": 27240
+      },
+      "complete": false,
+      "counterexample": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 2,
+            "process": "client:0",
+            "command": "want[me] = true",
+            "changes": [
+              {
+                "var": "want[0]",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model.pml",
+              "line": 8,
+              "name": "want[me] = true"
+            }
+          },
+          {
+            "index": 3,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 4,
+            "process": "client:0",
+            "command": "served = me",
+            "origin": {
+              "file": "model.pml",
+              "line": 9,
+              "name": "served = me"
+            }
+          },
+          {
+            "index": 5,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 6,
+            "process": "client:1",
+            "command": "want[me] = true",
+            "changes": [
+              {
+                "var": "want[1]",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model.pml",
+              "line": 8,
+              "name": "want[me] = true"
+            }
+          },
+          {
+            "index": 7,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 8,
+            "process": "client:0",
+            "command": "want[me] = false",
+            "changes": [
+              {
+                "var": "want[0]",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "model.pml",
+              "line": 10,
+              "name": "want[me] = false"
+            }
+          },
+          {
+            "index": 9,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 10,
+            "process": "client:0",
+            "command": "want[me] = true",
+            "changes": [
+              {
+                "var": "want[0]",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model.pml",
+              "line": 8,
+              "name": "want[me] = true"
+            }
+          },
+          {
+            "index": 11,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 12,
+            "process": "client:1",
+            "command": "served = me",
+            "changes": [
+              {
+                "var": "served",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model.pml",
+              "line": 9,
+              "name": "served = me"
+            }
+          },
+          {
+            "index": 13,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 14,
+            "process": "client:0",
+            "command": "served = me",
+            "changes": [
+              {
+                "var": "served",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "model.pml",
+              "line": 9,
+              "name": "served = me"
+            }
+          },
+          {
+            "index": 15,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 16,
+            "process": "client:0",
+            "command": "want[me] = false",
+            "changes": [
+              {
+                "var": "want[0]",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "model.pml",
+              "line": 10,
+              "name": "want[me] = false"
+            }
+          },
+          {
+            "index": 17,
+            "process": "never:ltl1",
+            "command": "(1) -> goto T0_init",
+            "location": "T0_init",
+            "origin": {
+              "name": "(1)"
+            }
+          },
+          {
+            "index": 18,
+            "process": "client:0",
+            "command": "want[me] = true",
+            "changes": [
+              {
+                "var": "want[0]",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model.pml",
+              "line": 8,
+              "name": "want[me] = true"
+            }
+          },
+          {
+            "index": 19,
+            "process": "never:ltl1",
+            "command": "(!(served == 1)) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(!(served == 1))"
+            }
+          },
+          {
+            "index": 20,
+            "process": "client:0",
+            "command": "served = me",
+            "origin": {
+              "file": "model.pml",
+              "line": 9,
+              "name": "served = me"
+            }
+          },
+          {
+            "index": 21,
+            "process": "never:ltl1",
+            "command": "(!(served == 1)) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(!(served == 1))"
+            }
+          },
+          {
+            "index": 22,
+            "process": "client:0",
+            "command": "want[me] = false",
+            "changes": [
+              {
+                "var": "want[0]",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "model.pml",
+              "line": 10,
+              "name": "want[me] = false"
+            }
+          },
+          {
+            "index": 23,
+            "process": "never:ltl1",
+            "command": "(!(served == 1)) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(!(served == 1))"
+            }
+          },
+          {
+            "index": 24,
+            "process": "client:0",
+            "command": "want[me] = true",
+            "changes": [
+              {
+                "var": "want[0]",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model.pml",
+              "line": 8,
+              "name": "want[me] = true"
+            }
+          },
+          {
+            "index": 25,
+            "process": "never:ltl1",
+            "command": "(!(served == 1)) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(!(served == 1))"
+            }
+          },
+          {
+            "index": 26,
+            "process": "client:1",
+            "command": "want[me] = false",
+            "changes": [
+              {
+                "var": "want[1]",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "model.pml",
+              "line": 10,
+              "name": "want[me] = false"
+            }
+          },
+          {
+            "index": 27,
+            "process": "never:ltl1",
+            "command": "(!(served == 1)) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(!(served == 1))"
+            }
+          },
+          {
+            "index": 28,
+            "process": "client:0",
+            "command": "served = me",
+            "origin": {
+              "file": "model.pml",
+              "line": 9,
+              "name": "served = me"
+            }
+          },
+          {
+            "index": 29,
+            "process": "never:ltl1",
+            "command": "(!(served == 1)) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(!(served == 1))"
+            }
+          },
+          {
+            "index": 30,
+            "process": "client:0",
+            "command": "want[me] = false",
+            "changes": [
+              {
+                "var": "want[0]",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "model.pml",
+              "line": 10,
+              "name": "want[me] = false"
+            }
+          },
+          {
+            "index": 31,
+            "process": "never:ltl1",
+            "command": "(!(served == 1)) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(!(served == 1))"
+            }
+          },
+          {
+            "index": 32,
+            "process": "client:1",
+            "command": "want[me] = true",
+            "changes": [
+              {
+                "var": "want[1]",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model.pml",
+              "line": 8,
+              "name": "want[me] = true"
+            }
+          },
+          {
+            "index": 33,
+            "process": "never:ltl1",
+            "command": "(!(served == 1)) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(!(served == 1))"
+            }
+          },
+          {
+            "index": 34,
+            "process": "client:0",
+            "command": "want[me] = true",
+            "changes": [
+              {
+                "var": "want[0]",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model.pml",
+              "line": 8,
+              "name": "want[me] = true"
+            }
+          },
+          {
+            "index": 35,
+            "process": "never:ltl1",
+            "command": "(!(served == 1)) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(!(served == 1))"
+            }
+          },
+          {
+            "index": 36,
+            "process": "client:0",
+            "command": "served = me",
+            "origin": {
+              "file": "model.pml",
+              "line": 9,
+              "name": "served = me"
+            }
+          },
+          {
+            "index": 37,
+            "process": "never:ltl1",
+            "command": "(!(served == 1)) -> goto accept_S1",
+            "location": "accept_S1",
+            "origin": {
+              "name": "(!(served == 1))"
+            }
+          },
+          {
+            "index": 38,
+            "process": "client:0",
+            "command": "want[me] = false",
+            "changes": [
+              {
+                "var": "want[0]",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "model.pml",
+              "line": 10,
+              "name": "want[me] = false"
+            }
+          }
+        ],
+        "final_state": [
+          {
+            "var": "client:0.me",
+            "value": 0
+          },
+          {
+            "var": "client:1.me",
+            "value": 1
+          },
+          {
+            "var": "want[0]",
+            "value": 0
+          },
+          {
+            "var": "want[1]",
+            "value": 1
+          },
+          {
+            "var": "served",
+            "value": 0
+          }
+        ],
+        "summary": "(1) -> goto T0_init, want[me] = true, (1) -> goto T0_init, served = me, (1) -> goto T0_init, want[me] = true, (1) -> goto T0_init, want[me] = false, (1) -> goto T0_init, want[me] = true, (1) -> goto T0_init, served = me, (1) -> goto T0_init, served = me, (1) -> goto T0_init, want[me] = false, (1) -> goto T0_init, want[me] = true, (!(served == 1)) -> goto accept_S1, served = me, (!(served == 1)) -> goto accept_S1, want[me] = false, (!(served == 1)) -> goto accept_S1, want[me] = true, (!(served == 1)) -> goto accept_S1, want[me] = false, (!(served == 1)) -> goto accept_S1, served = me, (!(served == 1)) -> goto accept_S1, want[me] = false, (!(served == 1)) -> goto accept_S1, want[me] = true; loop: (!(served == 1)) -> goto accept_S1, want[me] = true, (!(served == 1)) -> goto accept_S1, served = me, (!(served == 1)) -> goto accept_S1, want[me] = false",
+        "loop": {
+          "start": 33,
+          "steps": 6
+        }
+      },
+      "reason": "acceptance cycle: the loop of the counterexample passes through an accept state of the automaton for !([]<> served == 1) infinitely often, so the run satisfies the negated property (SPIN pan -a: acceptance cycle); in the loop only client:0, never:ltl1 move(s); client:1 is enabled throughout the loop and never moves (the loop is not weakly fair; rerun with fairness weak to exclude such runs)",
+      "temporal": {
+        "logic": "ltl",
+        "source": "formula",
+        "formula": "[]<> served == 1",
+        "negated": "!([]<> served == 1)",
+        "atoms": [
+          "served == 1"
+        ],
+        "stutter_invariant": true,
+        "automaton_states": 2,
+        "automaton_transitions": 3,
+        "automaton_accepting": 1,
+        "fairness": "none",
+        "claim": "never:ltl1"
+      }
+    }
+  ]
+}

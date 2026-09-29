@@ -1,0 +1,50 @@
+{
+  "steps": [
+    {
+      "index": 1,
+      "process": "p1:0",
+      "command": "a \u003c 255",
+      "origin": {
+        "file": "inline",
+        "line": 3,
+        "name": "a \u003c 255"
+      }
+    },
+    {
+      "index": 2,
+      "process": "p1:0",
+      "command": "a++",
+      "changes": [
+        {
+          "var": "a",
+          "before": 0,
+          "after": 1
+        }
+      ],
+      "origin": {
+        "file": "inline",
+        "line": 3,
+        "name": "a++"
+      }
+    }
+  ],
+  "final_state": [
+    {
+      "var": "a",
+      "value": 1
+    },
+    {
+      "var": "b",
+      "value": 0
+    },
+    {
+      "var": "c",
+      "value": 0
+    },
+    {
+      "var": "d",
+      "value": 0
+    }
+  ],
+  "summary": "a \u003c 255, a++"
+}

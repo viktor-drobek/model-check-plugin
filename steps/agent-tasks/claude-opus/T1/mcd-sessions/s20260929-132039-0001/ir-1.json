@@ -1,0 +1,135 @@
+{
+  "schema": "mcd-ir/1",
+  "name": "inline",
+  "globals": [
+    {
+      "name": "credits",
+      "type": "byte",
+      "origin": {
+        "file": "inline",
+        "line": 1,
+        "name": "credits"
+      }
+    }
+  ],
+  "processes": [
+    {
+      "name": "issuer:0",
+      "locations": [
+        {}
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 0,
+          "effect": [
+            {
+              "var": "credits",
+              "value": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "credits"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "credits++",
+          "origin": {
+            "file": "inline",
+            "line": 6,
+            "name": "credits++"
+          }
+        }
+      ],
+      "origin": {
+        "file": "inline",
+        "line": 3,
+        "name": "issuer"
+      }
+    },
+    {
+      "name": "spender:1",
+      "locations": [
+        {},
+        {}
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 1,
+          "guard": {
+            "op": "gt",
+            "args": [
+              {
+                "op": "var",
+                "var": "credits"
+              },
+              {
+                "op": "const"
+              }
+            ]
+          },
+          "text": "credits > 0",
+          "origin": {
+            "file": "inline",
+            "line": 13,
+            "name": "credits > 0"
+          }
+        },
+        {
+          "from": 1,
+          "to": 0,
+          "effect": [
+            {
+              "var": "credits",
+              "value": {
+                "op": "sub",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "credits"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "credits--",
+          "origin": {
+            "file": "inline",
+            "line": 13,
+            "name": "credits--"
+          }
+        }
+      ],
+      "origin": {
+        "file": "inline",
+        "line": 10,
+        "name": "spender"
+      }
+    }
+  ],
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)"
+    }
+  ],
+  "origin": {
+    "file": "inline",
+    "name": "inline"
+  }
+}

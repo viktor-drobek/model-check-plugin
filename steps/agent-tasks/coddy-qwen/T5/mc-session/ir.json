@@ -1,0 +1,226 @@
+{
+  "schema": "mcd-ir/1",
+  "name": "model",
+  "globals": [
+    {
+      "name": "want",
+      "type": "bool",
+      "len": 2,
+      "origin": {
+        "file": "model.pml",
+        "line": 1,
+        "name": "want"
+      }
+    },
+    {
+      "name": "served",
+      "type": "byte",
+      "origin": {
+        "file": "model.pml",
+        "line": 2,
+        "name": "served"
+      }
+    }
+  ],
+  "processes": [
+    {
+      "name": "client:0",
+      "locals": [
+        {
+          "name": "me",
+          "type": "byte",
+          "init": [
+            0
+          ],
+          "origin": {
+            "file": "model.pml",
+            "line": 6,
+            "name": "me"
+          }
+        }
+      ],
+      "locations": [
+        {},
+        {},
+        {}
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 1,
+          "effect": [
+            {
+              "var": "want",
+              "index": {
+                "op": "var",
+                "var": "me"
+              },
+              "value": {
+                "op": "const",
+                "value": 1
+              }
+            }
+          ],
+          "text": "want[me] = true",
+          "origin": {
+            "file": "model.pml",
+            "line": 8,
+            "name": "want[me] = true"
+          }
+        },
+        {
+          "from": 1,
+          "to": 2,
+          "effect": [
+            {
+              "var": "served",
+              "value": {
+                "op": "var",
+                "var": "me"
+              }
+            }
+          ],
+          "text": "served = me",
+          "origin": {
+            "file": "model.pml",
+            "line": 9,
+            "name": "served = me"
+          }
+        },
+        {
+          "from": 2,
+          "to": 0,
+          "effect": [
+            {
+              "var": "want",
+              "index": {
+                "op": "var",
+                "var": "me"
+              },
+              "value": {
+                "op": "const"
+              }
+            }
+          ],
+          "text": "want[me] = false",
+          "origin": {
+            "file": "model.pml",
+            "line": 10,
+            "name": "want[me] = false"
+          }
+        }
+      ],
+      "origin": {
+        "file": "model.pml",
+        "line": 4,
+        "name": "client"
+      }
+    },
+    {
+      "name": "client:1",
+      "locals": [
+        {
+          "name": "me",
+          "type": "byte",
+          "init": [
+            1
+          ],
+          "origin": {
+            "file": "model.pml",
+            "line": 6,
+            "name": "me"
+          }
+        }
+      ],
+      "locations": [
+        {},
+        {},
+        {}
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 1,
+          "effect": [
+            {
+              "var": "want",
+              "index": {
+                "op": "var",
+                "var": "me"
+              },
+              "value": {
+                "op": "const",
+                "value": 1
+              }
+            }
+          ],
+          "text": "want[me] = true",
+          "origin": {
+            "file": "model.pml",
+            "line": 8,
+            "name": "want[me] = true"
+          }
+        },
+        {
+          "from": 1,
+          "to": 2,
+          "effect": [
+            {
+              "var": "served",
+              "value": {
+                "op": "var",
+                "var": "me"
+              }
+            }
+          ],
+          "text": "served = me",
+          "origin": {
+            "file": "model.pml",
+            "line": 9,
+            "name": "served = me"
+          }
+        },
+        {
+          "from": 2,
+          "to": 0,
+          "effect": [
+            {
+              "var": "want",
+              "index": {
+                "op": "var",
+                "var": "me"
+              },
+              "value": {
+                "op": "const"
+              }
+            }
+          ],
+          "text": "want[me] = false",
+          "origin": {
+            "file": "model.pml",
+            "line": 10,
+            "name": "want[me] = false"
+          }
+        }
+      ],
+      "origin": {
+        "file": "model.pml",
+        "line": 4,
+        "name": "client"
+      }
+    }
+  ],
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)"
+    }
+  ],
+  "origin": {
+    "file": "model.pml",
+    "name": "model"
+  }
+}

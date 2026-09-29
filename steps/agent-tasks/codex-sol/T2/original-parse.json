@@ -1,0 +1,8 @@
+{
+  "error": {
+    "kind": "outside-subset",
+    "status": "not-executed",
+    "path": "original.pml:7:3",
+    "message": "construct outside subset: unless (plan 14 §5.2: outside the subset) (original.pml, line 7)"
+  }
+}

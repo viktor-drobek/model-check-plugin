@@ -1,0 +1,123 @@
+{
+  "schema": "mcd-ir/1",
+  "name": "inline",
+  "globals": [
+    {
+      "name": "total",
+      "type": "int",
+      "origin": {
+        "file": "inline",
+        "line": 1,
+        "name": "total"
+      }
+    }
+  ],
+  "processes": [
+    {
+      "name": "worker:0",
+      "locations": [
+        {},
+        {
+          "labels": [
+            "end"
+          ]
+        },
+        {
+          "name": "-dead-"
+        },
+        {}
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 3,
+          "guard": {
+            "op": "le",
+            "args": [
+              {
+                "op": "var",
+                "var": "total"
+              },
+              {
+                "op": "const",
+                "value": 3
+              }
+            ]
+          },
+          "text": "total <= 3",
+          "origin": {
+            "file": "inline",
+            "line": 6,
+            "name": "total <= 3"
+          }
+        },
+        {
+          "from": 3,
+          "to": 0,
+          "effect": [
+            {
+              "var": "total",
+              "value": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "total"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "total = total + 1",
+          "origin": {
+            "file": "inline",
+            "line": 6,
+            "name": "total = total + 1"
+          }
+        },
+        {
+          "from": 0,
+          "to": 1,
+          "else": true,
+          "text": "else",
+          "origin": {
+            "file": "inline",
+            "line": 7,
+            "name": "else"
+          }
+        },
+        {
+          "from": 1,
+          "to": 2,
+          "text": "-end-",
+          "origin": {
+            "file": "inline",
+            "line": 9,
+            "name": "-end-"
+          }
+        }
+      ],
+      "origin": {
+        "file": "inline",
+        "line": 3,
+        "name": "worker"
+      }
+    }
+  ],
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)"
+    }
+  ],
+  "origin": {
+    "file": "inline",
+    "name": "inline"
+  }
+}

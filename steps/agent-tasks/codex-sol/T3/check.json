@@ -1,0 +1,84 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "promela",
+      "path": "counters.pml",
+      "sha256": "f61b6e4ac4df35082b0d235b7238c0912b97318349b6708ff6cdea5005761b92"
+    }
+  ],
+  "model": {
+    "name": "counters",
+    "state_bytes": 9,
+    "processes": 4,
+    "variables": 4
+  },
+  "search": {
+    "mode": "dfs",
+    "budget": {
+      "states": 200000,
+      "depth": 1000000,
+      "time_ms": 10000,
+      "mem_bytes": 1073741824
+    },
+    "stop": "state budget exhausted: 200000 states stored",
+    "complete": false
+  },
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)",
+      "status": "inconclusive",
+      "evidence": "bounded",
+      "counters": {
+        "states": 200000,
+        "transitions": 265673,
+        "depth": 199536,
+        "time_ms": 5756,
+        "memory_bytes_est": 23123264
+      },
+      "complete": false,
+      "reason": "state budget exhausted: 200000 states stored"
+    },
+    {
+      "id": "ltl1",
+      "kind": "ltl",
+      "text": "[] !(a == 200 && b == 200 && c == 200 && d == 200)",
+      "status": "inconclusive",
+      "evidence": "bounded",
+      "counters": {
+        "states": 200000,
+        "transitions": 265673,
+        "depth": 199536,
+        "time_ms": 3947,
+        "memory_bytes_est": 23523264
+      },
+      "complete": false,
+      "reason": "state budget exhausted: 200000 states stored",
+      "temporal": {
+        "logic": "ltl",
+        "source": "formula",
+        "formula": "[] !(a == 200 && b == 200 && c == 200 && d == 200)",
+        "negated": "!([] !(a == 200 && b == 200 && c == 200 && d == 200))",
+        "atoms": [
+          "a == 200",
+          "b == 200",
+          "c == 200",
+          "d == 200"
+        ],
+        "stutter_invariant": true,
+        "automaton_states": 2,
+        "automaton_transitions": 3,
+        "automaton_accepting": 1,
+        "fairness": "none",
+        "claim": "never:ltl1"
+      }
+    }
+  ]
+}

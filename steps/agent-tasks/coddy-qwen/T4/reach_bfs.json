@@ -1,0 +1,78 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "promela",
+      "path": "model.pml",
+      "sha256": "f61b6e4ac4df35082b0d235b7238c0912b97318349b6708ff6cdea5005761b92"
+    }
+  ],
+  "model": {
+    "name": "model",
+    "state_bytes": 9,
+    "processes": 4,
+    "variables": 4
+  },
+  "search": {
+    "mode": "bfs",
+    "budget": {
+      "states": 1000000,
+      "depth": 1000000,
+      "time_ms": 900,
+      "mem_bytes": 1073741824
+    },
+    "stop": "time budget exhausted",
+    "complete": false
+  },
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)",
+      "status": "inconclusive",
+      "evidence": "unknown",
+      "counters": {
+        "states": 765952,
+        "transitions": 3659234,
+        "depth": 44,
+        "memory_bytes_est": 68100096
+      },
+      "complete": false,
+      "reason": "time budget exhausted"
+    },
+    {
+      "id": "ctl1",
+      "kind": "ctl",
+      "text": "EF (a == 200 && b == 200 && c == 200 && d == 200)",
+      "status": "inconclusive",
+      "evidence": "unknown",
+      "counters": {
+        "states": 1024,
+        "transitions": 3008,
+        "depth": 8,
+        "memory_bytes_est": 124412
+      },
+      "complete": false,
+      "reason": "time budget exhausted; a CTL verdict needs the complete reachable graph, because a fixed point over a partial graph answers a different question",
+      "temporal": {
+        "logic": "ctl",
+        "source": "formula",
+        "formula": "EF (a == 200 && b == 200 && c == 200 && d == 200)",
+        "normalised": "E[true U ((((a == 200) && (b == 200)) && (c == 200)) && (d == 200))]",
+        "atoms": [
+          "a == 200",
+          "b == 200",
+          "c == 200",
+          "d == 200"
+        ],
+        "fairness": "none",
+        "note": "CTL is evaluated over the whole reachable graph; a state in which no process can move (a deadlock, or a system whose processes have all terminated) carries a self-loop, so that the transition relation is total and EG/AF are defined there — the same stutter extension the LTL product uses"
+      }
+    }
+  ]
+}

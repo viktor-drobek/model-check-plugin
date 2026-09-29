@@ -1,0 +1,523 @@
+{
+  "schema": "mcd-ir/1",
+  "name": "counters",
+  "globals": [
+    {
+      "name": "a",
+      "type": "byte",
+      "origin": {
+        "file": "counters.pml",
+        "line": 1,
+        "name": "a"
+      }
+    },
+    {
+      "name": "b",
+      "type": "byte",
+      "origin": {
+        "file": "counters.pml",
+        "line": 1,
+        "name": "b"
+      }
+    },
+    {
+      "name": "c",
+      "type": "byte",
+      "origin": {
+        "file": "counters.pml",
+        "line": 1,
+        "name": "c"
+      }
+    },
+    {
+      "name": "d",
+      "type": "byte",
+      "origin": {
+        "file": "counters.pml",
+        "line": 1,
+        "name": "d"
+      }
+    }
+  ],
+  "processes": [
+    {
+      "name": "p1:0",
+      "locations": [
+        {},
+        {},
+        {}
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 1,
+          "guard": {
+            "op": "lt",
+            "args": [
+              {
+                "op": "var",
+                "var": "a"
+              },
+              {
+                "op": "const",
+                "value": 255
+              }
+            ]
+          },
+          "text": "a < 255",
+          "origin": {
+            "file": "counters.pml",
+            "line": 3,
+            "name": "a < 255"
+          }
+        },
+        {
+          "from": 1,
+          "to": 0,
+          "effect": [
+            {
+              "var": "a",
+              "value": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "a"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "a++",
+          "origin": {
+            "file": "counters.pml",
+            "line": 3,
+            "name": "a++"
+          }
+        },
+        {
+          "from": 0,
+          "to": 2,
+          "guard": {
+            "op": "gt",
+            "args": [
+              {
+                "op": "var",
+                "var": "a"
+              },
+              {
+                "op": "const"
+              }
+            ]
+          },
+          "text": "a > 0",
+          "origin": {
+            "file": "counters.pml",
+            "line": 3,
+            "name": "a > 0"
+          }
+        },
+        {
+          "from": 2,
+          "to": 0,
+          "effect": [
+            {
+              "var": "a",
+              "value": {
+                "op": "sub",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "a"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "a--",
+          "origin": {
+            "file": "counters.pml",
+            "line": 3,
+            "name": "a--"
+          }
+        }
+      ],
+      "origin": {
+        "file": "counters.pml",
+        "line": 3,
+        "name": "p1"
+      }
+    },
+    {
+      "name": "p2:1",
+      "locations": [
+        {},
+        {},
+        {}
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 1,
+          "guard": {
+            "op": "lt",
+            "args": [
+              {
+                "op": "var",
+                "var": "b"
+              },
+              {
+                "op": "const",
+                "value": 255
+              }
+            ]
+          },
+          "text": "b < 255",
+          "origin": {
+            "file": "counters.pml",
+            "line": 4,
+            "name": "b < 255"
+          }
+        },
+        {
+          "from": 1,
+          "to": 0,
+          "effect": [
+            {
+              "var": "b",
+              "value": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "b"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "b++",
+          "origin": {
+            "file": "counters.pml",
+            "line": 4,
+            "name": "b++"
+          }
+        },
+        {
+          "from": 0,
+          "to": 2,
+          "guard": {
+            "op": "gt",
+            "args": [
+              {
+                "op": "var",
+                "var": "b"
+              },
+              {
+                "op": "const"
+              }
+            ]
+          },
+          "text": "b > 0",
+          "origin": {
+            "file": "counters.pml",
+            "line": 4,
+            "name": "b > 0"
+          }
+        },
+        {
+          "from": 2,
+          "to": 0,
+          "effect": [
+            {
+              "var": "b",
+              "value": {
+                "op": "sub",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "b"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "b--",
+          "origin": {
+            "file": "counters.pml",
+            "line": 4,
+            "name": "b--"
+          }
+        }
+      ],
+      "origin": {
+        "file": "counters.pml",
+        "line": 4,
+        "name": "p2"
+      }
+    },
+    {
+      "name": "p3:2",
+      "locations": [
+        {},
+        {},
+        {}
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 1,
+          "guard": {
+            "op": "lt",
+            "args": [
+              {
+                "op": "var",
+                "var": "c"
+              },
+              {
+                "op": "const",
+                "value": 255
+              }
+            ]
+          },
+          "text": "c < 255",
+          "origin": {
+            "file": "counters.pml",
+            "line": 5,
+            "name": "c < 255"
+          }
+        },
+        {
+          "from": 1,
+          "to": 0,
+          "effect": [
+            {
+              "var": "c",
+              "value": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "c"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "c++",
+          "origin": {
+            "file": "counters.pml",
+            "line": 5,
+            "name": "c++"
+          }
+        },
+        {
+          "from": 0,
+          "to": 2,
+          "guard": {
+            "op": "gt",
+            "args": [
+              {
+                "op": "var",
+                "var": "c"
+              },
+              {
+                "op": "const"
+              }
+            ]
+          },
+          "text": "c > 0",
+          "origin": {
+            "file": "counters.pml",
+            "line": 5,
+            "name": "c > 0"
+          }
+        },
+        {
+          "from": 2,
+          "to": 0,
+          "effect": [
+            {
+              "var": "c",
+              "value": {
+                "op": "sub",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "c"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "c--",
+          "origin": {
+            "file": "counters.pml",
+            "line": 5,
+            "name": "c--"
+          }
+        }
+      ],
+      "origin": {
+        "file": "counters.pml",
+        "line": 5,
+        "name": "p3"
+      }
+    },
+    {
+      "name": "p4:3",
+      "locations": [
+        {},
+        {},
+        {}
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 1,
+          "guard": {
+            "op": "lt",
+            "args": [
+              {
+                "op": "var",
+                "var": "d"
+              },
+              {
+                "op": "const",
+                "value": 255
+              }
+            ]
+          },
+          "text": "d < 255",
+          "origin": {
+            "file": "counters.pml",
+            "line": 6,
+            "name": "d < 255"
+          }
+        },
+        {
+          "from": 1,
+          "to": 0,
+          "effect": [
+            {
+              "var": "d",
+              "value": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "d"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "d++",
+          "origin": {
+            "file": "counters.pml",
+            "line": 6,
+            "name": "d++"
+          }
+        },
+        {
+          "from": 0,
+          "to": 2,
+          "guard": {
+            "op": "gt",
+            "args": [
+              {
+                "op": "var",
+                "var": "d"
+              },
+              {
+                "op": "const"
+              }
+            ]
+          },
+          "text": "d > 0",
+          "origin": {
+            "file": "counters.pml",
+            "line": 6,
+            "name": "d > 0"
+          }
+        },
+        {
+          "from": 2,
+          "to": 0,
+          "effect": [
+            {
+              "var": "d",
+              "value": {
+                "op": "sub",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "d"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "d--",
+          "origin": {
+            "file": "counters.pml",
+            "line": 6,
+            "name": "d--"
+          }
+        }
+      ],
+      "origin": {
+        "file": "counters.pml",
+        "line": 6,
+        "name": "p4"
+      }
+    }
+  ],
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)"
+    }
+  ],
+  "origin": {
+    "file": "counters.pml",
+    "name": "counters"
+  }
+}

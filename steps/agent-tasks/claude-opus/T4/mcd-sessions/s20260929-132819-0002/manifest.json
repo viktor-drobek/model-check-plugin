@@ -1,0 +1,68 @@
+{
+  "session_id": "s20260929-132819-0002",
+  "created": "2026-09-29T13:28:19Z",
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1",
+    "mcp_schema": "mcd-mcp/1"
+  },
+  "server": {
+    "default_budget": {
+      "states": 1000000,
+      "depth": 1000000,
+      "ms": 60000,
+      "memory_mb": 1024
+    },
+    "ceiling": {
+      "states": 5000000,
+      "depth": 5000000,
+      "ms": 300000,
+      "memory_mb": 2048
+    },
+    "concurrency": 2,
+    "allow_read": []
+  },
+  "inputs": [
+    {
+      "kind": "promela",
+      "source": "inline",
+      "sha256": "bdb9f4332a16fd496f4d8aac5d2013af582612e51d3f58bfff769f39dbf3503c",
+      "path": "ir-1.json"
+    }
+  ],
+  "calls": [
+    {
+      "n": 1,
+      "tool": "mc_parse",
+      "started": "2026-09-29T13:28:19Z",
+      "duration_ms": 5,
+      "outcome": "ok",
+      "artifacts": [
+        "ir-1.json"
+      ]
+    },
+    {
+      "n": 2,
+      "tool": "mc_check",
+      "started": "2026-09-29T13:28:22Z",
+      "duration_ms": 26,
+      "outcome": "ok",
+      "params": {
+        "search": "bfs",
+        "fairness": "none",
+        "budget_applied": {
+          "states": 1000000,
+          "depth": 1000000,
+          "ms": 500,
+          "memory_mb": 1024
+        }
+      },
+      "artifacts": [
+        "check-1.json",
+        "cex/cex-1.json"
+      ]
+    }
+  ]
+}

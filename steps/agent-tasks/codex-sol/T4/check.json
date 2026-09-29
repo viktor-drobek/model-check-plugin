@@ -1,0 +1,66 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "ir",
+      "path": "reach.ir.json",
+      "sha256": "a4b4a16ce4747e3c303fd338b003e0f3adbf98f7a55ab6aaab4ef2d25900f0d1"
+    }
+  ],
+  "model": {
+    "name": "model",
+    "state_bytes": 9,
+    "processes": 4,
+    "variables": 4
+  },
+  "search": {
+    "mode": "dfs",
+    "budget": {
+      "states": 1000000,
+      "depth": 1000000,
+      "time_ms": 500,
+      "mem_bytes": 1073741824
+    },
+    "stop": "time budget exhausted",
+    "complete": false
+  },
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)",
+      "status": "inconclusive",
+      "evidence": "unknown",
+      "counters": {
+        "states": 99328,
+        "transitions": 130556,
+        "depth": 99208,
+        "time_ms": 500,
+        "memory_bytes_est": 11723648
+      },
+      "complete": false,
+      "reason": "time budget exhausted"
+    },
+    {
+      "id": "all200",
+      "kind": "reach",
+      "text": "a == 200 && b == 200 && c == 200 && d == 200",
+      "status": "inconclusive",
+      "evidence": "unknown",
+      "counters": {
+        "states": 99328,
+        "transitions": 130556,
+        "depth": 99208,
+        "time_ms": 500,
+        "memory_bytes_est": 11723648
+      },
+      "complete": false,
+      "reason": "time budget exhausted"
+    }
+  ]
+}

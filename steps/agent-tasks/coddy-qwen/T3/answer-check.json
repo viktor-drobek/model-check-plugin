@@ -1,0 +1,49 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "ir",
+      "path": "model-reach.ir.json",
+      "sha256": "78addf32f93fc33c30e8d5544f3b5d66e5adab3d5e8dd912e987ceaea45f7b95"
+    }
+  ],
+  "model": {
+    "name": "model",
+    "state_bytes": 9,
+    "processes": 4,
+    "variables": 4
+  },
+  "search": {
+    "mode": "dfs",
+    "budget": {
+      "states": 2000000,
+      "depth": 850,
+      "time_ms": 90000,
+      "mem_bytes": 1073741824
+    },
+    "stop": "state budget exhausted: 2000000 states stored",
+    "complete": false
+  },
+  "properties": [
+    {
+      "id": "all200",
+      "kind": "reach",
+      "text": "reach a==200 && b==200 && c==200 && d==200",
+      "status": "inconclusive",
+      "evidence": "bounded",
+      "counters": {
+        "states": 2000000,
+        "transitions": 6360355,
+        "depth": 850,
+        "memory_bytes_est": 71056448
+      },
+      "complete": false,
+      "reason": "state budget exhausted: 2000000 states stored"
+    }
+  ]
+}

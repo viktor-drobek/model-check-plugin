@@ -1,0 +1,315 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "promela",
+      "path": "inline",
+      "sha256": "34c9fcd21d12d43d2f434703761fa8dfb65a59bd6b0f006017978885a40d0e5f"
+    }
+  ],
+  "model": {
+    "name": "inline",
+    "state_bytes": 6,
+    "processes": 1,
+    "variables": 1
+  },
+  "search": {
+    "mode": "bfs",
+    "budget": {
+      "states": 1000000,
+      "depth": 1000000,
+      "time_ms": 60000,
+      "mem_bytes": 1073741824
+    },
+    "stop": "complete",
+    "complete": true
+  },
+  "properties": [
+    {
+      "id": "le3",
+      "kind": "invariant",
+      "text": "total никогда не превышает 3",
+      "status": "violated",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 11,
+        "transitions": 10,
+        "depth": 10,
+        "memory_bytes_est": 25344
+      },
+      "complete": true,
+      "counterexample": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "worker:0",
+            "command": "total <= 3",
+            "origin": {
+              "file": "inline",
+              "line": 6,
+              "name": "total <= 3"
+            }
+          },
+          {
+            "index": 2,
+            "process": "worker:0",
+            "command": "total = total + 1",
+            "changes": [
+              {
+                "var": "total",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "inline",
+              "line": 6,
+              "name": "total = total + 1"
+            }
+          },
+          {
+            "index": 3,
+            "process": "worker:0",
+            "command": "total <= 3",
+            "origin": {
+              "file": "inline",
+              "line": 6,
+              "name": "total <= 3"
+            }
+          },
+          {
+            "index": 4,
+            "process": "worker:0",
+            "command": "total = total + 1",
+            "changes": [
+              {
+                "var": "total",
+                "before": 1,
+                "after": 2
+              }
+            ],
+            "origin": {
+              "file": "inline",
+              "line": 6,
+              "name": "total = total + 1"
+            }
+          },
+          {
+            "index": 5,
+            "process": "worker:0",
+            "command": "total <= 3",
+            "origin": {
+              "file": "inline",
+              "line": 6,
+              "name": "total <= 3"
+            }
+          },
+          {
+            "index": 6,
+            "process": "worker:0",
+            "command": "total = total + 1",
+            "changes": [
+              {
+                "var": "total",
+                "before": 2,
+                "after": 3
+              }
+            ],
+            "origin": {
+              "file": "inline",
+              "line": 6,
+              "name": "total = total + 1"
+            }
+          },
+          {
+            "index": 7,
+            "process": "worker:0",
+            "command": "total <= 3",
+            "origin": {
+              "file": "inline",
+              "line": 6,
+              "name": "total <= 3"
+            }
+          },
+          {
+            "index": 8,
+            "process": "worker:0",
+            "command": "total = total + 1",
+            "changes": [
+              {
+                "var": "total",
+                "before": 3,
+                "after": 4
+              }
+            ],
+            "origin": {
+              "file": "inline",
+              "line": 6,
+              "name": "total = total + 1"
+            }
+          }
+        ],
+        "final_state": [
+          {
+            "var": "total",
+            "value": 4
+          }
+        ],
+        "summary": "total <= 3, total = total + 1, total <= 3, total = total + 1, total <= 3, total = total + 1, total <= 3, total = total + 1"
+      },
+      "reason": "invariant total <= 3 is false in the final state of the counterexample"
+    },
+    {
+      "id": "reach4",
+      "kind": "reach",
+      "text": "sanity: total == 4 достижимо",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 11,
+        "transitions": 10,
+        "depth": 10,
+        "memory_bytes_est": 25344
+      },
+      "complete": true,
+      "witness": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "worker:0",
+            "command": "total <= 3",
+            "origin": {
+              "file": "inline",
+              "line": 6,
+              "name": "total <= 3"
+            }
+          },
+          {
+            "index": 2,
+            "process": "worker:0",
+            "command": "total = total + 1",
+            "changes": [
+              {
+                "var": "total",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "inline",
+              "line": 6,
+              "name": "total = total + 1"
+            }
+          },
+          {
+            "index": 3,
+            "process": "worker:0",
+            "command": "total <= 3",
+            "origin": {
+              "file": "inline",
+              "line": 6,
+              "name": "total <= 3"
+            }
+          },
+          {
+            "index": 4,
+            "process": "worker:0",
+            "command": "total = total + 1",
+            "changes": [
+              {
+                "var": "total",
+                "before": 1,
+                "after": 2
+              }
+            ],
+            "origin": {
+              "file": "inline",
+              "line": 6,
+              "name": "total = total + 1"
+            }
+          },
+          {
+            "index": 5,
+            "process": "worker:0",
+            "command": "total <= 3",
+            "origin": {
+              "file": "inline",
+              "line": 6,
+              "name": "total <= 3"
+            }
+          },
+          {
+            "index": 6,
+            "process": "worker:0",
+            "command": "total = total + 1",
+            "changes": [
+              {
+                "var": "total",
+                "before": 2,
+                "after": 3
+              }
+            ],
+            "origin": {
+              "file": "inline",
+              "line": 6,
+              "name": "total = total + 1"
+            }
+          },
+          {
+            "index": 7,
+            "process": "worker:0",
+            "command": "total <= 3",
+            "origin": {
+              "file": "inline",
+              "line": 6,
+              "name": "total <= 3"
+            }
+          },
+          {
+            "index": 8,
+            "process": "worker:0",
+            "command": "total = total + 1",
+            "changes": [
+              {
+                "var": "total",
+                "before": 3,
+                "after": 4
+              }
+            ],
+            "origin": {
+              "file": "inline",
+              "line": 6,
+              "name": "total = total + 1"
+            }
+          }
+        ],
+        "final_state": [
+          {
+            "var": "total",
+            "value": 4
+          }
+        ],
+        "summary": "total <= 3, total = total + 1, total <= 3, total = total + 1, total <= 3, total = total + 1, total <= 3, total = total + 1"
+      },
+      "reason": "a reachable state satisfies total == 4; see the witness"
+    },
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 11,
+        "transitions": 10,
+        "depth": 10,
+        "memory_bytes_est": 25344
+      },
+      "complete": true
+    }
+  ]
+}

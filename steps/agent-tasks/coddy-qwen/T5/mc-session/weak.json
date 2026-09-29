@@ -1,0 +1,80 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "promela",
+      "path": "model.pml",
+      "sha256": "2c57132877d7c018b943bd5fb48a7fe7d52ad8b43f27d73ea1fd406276b51ee0"
+    }
+  ],
+  "model": {
+    "name": "model",
+    "state_bytes": 8,
+    "processes": 2,
+    "variables": 4
+  },
+  "search": {
+    "mode": "dfs",
+    "budget": {
+      "states": 1000000,
+      "depth": 1000000,
+      "time_ms": 60000,
+      "mem_bytes": 1073741824
+    },
+    "stop": "complete",
+    "complete": true
+  },
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 18,
+        "transitions": 36,
+        "depth": 9,
+        "time_ms": 0,
+        "memory_bytes_est": 25920
+      },
+      "complete": true
+    },
+    {
+      "id": "ltl1",
+      "kind": "ltl",
+      "text": "[]<> served == 1",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 60,
+        "transitions": 168,
+        "depth": 30,
+        "time_ms": 0,
+        "memory_bytes_est": 27960
+      },
+      "complete": true,
+      "reason": "no acceptance cycle in the complete product with the automaton for !([]<> served == 1): no run satisfies the negated property; under weak fairness",
+      "temporal": {
+        "logic": "ltl",
+        "source": "formula",
+        "formula": "[]<> served == 1",
+        "negated": "!([]<> served == 1)",
+        "atoms": [
+          "served == 1"
+        ],
+        "stutter_invariant": true,
+        "automaton_states": 2,
+        "automaton_transitions": 3,
+        "automaton_accepting": 1,
+        "fairness": "weak",
+        "claim": "never:ltl1"
+      }
+    }
+  ]
+}

@@ -283,7 +283,6 @@ func registerR2Steps(sc *godog.ScenarioContext) {
 		if found == "" {
 			return fmt.Errorf("no manifest.json under %s: the server's session was not kept", w.dir)
 		}
-		w.dir = w.dir // keep
 		return nil
 	})
 

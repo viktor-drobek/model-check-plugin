@@ -1,0 +1,145 @@
+{
+  "schema": "mcd-ir/1",
+  "name": "inline",
+  "globals": [
+    {
+      "name": "a",
+      "type": "byte",
+      "origin": {
+        "file": "inline",
+        "line": 1,
+        "name": "a"
+      }
+    }
+  ],
+  "processes": [
+    {
+      "name": "p1:0",
+      "locations": [
+        {},
+        {},
+        {}
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 1,
+          "guard": {
+            "op": "lt",
+            "args": [
+              {
+                "op": "var",
+                "var": "a"
+              },
+              {
+                "op": "const",
+                "value": 255
+              }
+            ]
+          },
+          "text": "a < 255",
+          "origin": {
+            "file": "inline",
+            "line": 2,
+            "name": "a < 255"
+          }
+        },
+        {
+          "from": 1,
+          "to": 0,
+          "effect": [
+            {
+              "var": "a",
+              "value": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "a"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "a++",
+          "origin": {
+            "file": "inline",
+            "line": 2,
+            "name": "a++"
+          }
+        },
+        {
+          "from": 0,
+          "to": 2,
+          "guard": {
+            "op": "gt",
+            "args": [
+              {
+                "op": "var",
+                "var": "a"
+              },
+              {
+                "op": "const"
+              }
+            ]
+          },
+          "text": "a > 0",
+          "origin": {
+            "file": "inline",
+            "line": 2,
+            "name": "a > 0"
+          }
+        },
+        {
+          "from": 2,
+          "to": 0,
+          "effect": [
+            {
+              "var": "a",
+              "value": {
+                "op": "sub",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "a"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "a--",
+          "origin": {
+            "file": "inline",
+            "line": 2,
+            "name": "a--"
+          }
+        }
+      ],
+      "origin": {
+        "file": "inline",
+        "line": 2,
+        "name": "p1"
+      }
+    }
+  ],
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)"
+    }
+  ],
+  "origin": {
+    "file": "inline",
+    "name": "inline"
+  }
+}

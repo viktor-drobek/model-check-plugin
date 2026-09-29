@@ -1,0 +1,81 @@
+{
+  "session_id": "s20260929-132721-0001",
+  "created": "2026-09-29T13:27:21Z",
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1",
+    "mcp_schema": "mcd-mcp/1"
+  },
+  "server": {
+    "default_budget": {
+      "states": 1000000,
+      "depth": 1000000,
+      "ms": 60000,
+      "memory_mb": 1024
+    },
+    "ceiling": {
+      "states": 5000000,
+      "depth": 5000000,
+      "ms": 300000,
+      "memory_mb": 2048
+    },
+    "concurrency": 2,
+    "allow_read": []
+  },
+  "inputs": [
+    {
+      "kind": "promela",
+      "source": "inline",
+      "sha256": "f61b6e4ac4df35082b0d235b7238c0912b97318349b6708ff6cdea5005761b92",
+      "path": "ir-1.json"
+    }
+  ],
+  "calls": [
+    {
+      "n": 1,
+      "tool": "mc_parse",
+      "started": "2026-09-29T13:27:22Z",
+      "duration_ms": 101,
+      "outcome": "ok",
+      "artifacts": [
+        "ir-1.json"
+      ]
+    },
+    {
+      "n": 2,
+      "tool": "mc_check",
+      "started": "2026-09-29T13:27:30Z",
+      "duration_ms": 1068,
+      "outcome": "ok",
+      "params": {
+        "search": "dfs",
+        "fairness": "none",
+        "budget_applied": {
+          "states": 1000000,
+          "depth": 1000000,
+          "ms": 900,
+          "memory_mb": 1024
+        }
+      },
+      "artifacts": [
+        "check-1.json"
+      ]
+    },
+    {
+      "n": 3,
+      "tool": "mc_simulate",
+      "started": "2026-09-29T13:27:52Z",
+      "duration_ms": 5,
+      "outcome": "ok",
+      "params": {
+        "steps": 10,
+        "mode": "guided"
+      },
+      "artifacts": [
+        "sim-1.json"
+      ]
+    }
+  ]
+}

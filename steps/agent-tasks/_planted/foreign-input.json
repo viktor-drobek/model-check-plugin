@@ -1,0 +1,19 @@
+{
+  "name": "petrinet1",
+  "places": [
+    {"name": "p1", "initial": 1, "capacity": 255},
+    {"name": "p2", "initial": 0, "capacity": 255},
+    {"name": "p3", "initial": 0, "capacity": 255},
+    {"name": "p4", "initial": 1, "capacity": 255},
+    {"name": "p5", "initial": 0, "capacity": 255},
+    {"name": "p6", "initial": 0, "capacity": 255}
+  ],
+  "transitions": [
+    {"name": "t1", "inputs": [{"place": "p1", "weight": 1}], "outputs": [{"place": "p2", "weight": 1}]},
+    {"name": "t2", "inputs": [{"place": "p2", "weight": 1}, {"place": "p4", "weight": 1}], "outputs": [{"place": "p3", "weight": 1}]},
+    {"name": "t3", "inputs": [{"place": "p3", "weight": 1}], "outputs": [{"place": "p1", "weight": 1}, {"place": "p4", "weight": 1}]},
+    {"name": "t4", "inputs": [{"place": "p4", "weight": 1}], "outputs": [{"place": "p5", "weight": 1}]},
+    {"name": "t5", "inputs": [{"place": "p1", "weight": 1}, {"place": "p5", "weight": 1}], "outputs": [{"place": "p6", "weight": 1}]},
+    {"name": "t6", "inputs": [{"place": "p6", "weight": 1}], "outputs": [{"place": "p4", "weight": 1}, {"place": "p1", "weight": 1}]}
+  ]
+}
