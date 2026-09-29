@@ -1,0 +1,106 @@
+{
+  "steps": [
+    {
+      "index": 1,
+      "process": "client:0",
+      "command": "!busy",
+      "origin": {
+        "file": "inline",
+        "line": 7,
+        "name": "!busy"
+      }
+    },
+    {
+      "index": 2,
+      "process": "client:1",
+      "command": "!busy",
+      "origin": {
+        "file": "inline",
+        "line": 7,
+        "name": "!busy"
+      }
+    },
+    {
+      "index": 3,
+      "process": "client:0",
+      "command": "busy = true",
+      "changes": [
+        {
+          "var": "busy",
+          "before": 0,
+          "after": 1
+        }
+      ],
+      "origin": {
+        "file": "inline",
+        "line": 8,
+        "name": "busy = true"
+      }
+    },
+    {
+      "index": 4,
+      "process": "client:0",
+      "command": "inside++",
+      "changes": [
+        {
+          "var": "inside",
+          "before": 0,
+          "after": 1
+        }
+      ],
+      "origin": {
+        "file": "inline",
+        "line": 9,
+        "name": "inside++"
+      }
+    },
+    {
+      "index": 5,
+      "process": "client:1",
+      "command": "busy = true",
+      "origin": {
+        "file": "inline",
+        "line": 8,
+        "name": "busy = true"
+      }
+    },
+    {
+      "index": 6,
+      "process": "client:1",
+      "command": "inside++",
+      "changes": [
+        {
+          "var": "inside",
+          "before": 1,
+          "after": 2
+        }
+      ],
+      "origin": {
+        "file": "inline",
+        "line": 9,
+        "name": "inside++"
+      }
+    },
+    {
+      "index": 7,
+      "process": "client:0",
+      "command": "assert(inside == 1)",
+      "origin": {
+        "file": "inline",
+        "line": 10,
+        "name": "assert(inside == 1)"
+      }
+    }
+  ],
+  "final_state": [
+    {
+      "var": "busy",
+      "value": 1
+    },
+    {
+      "var": "inside",
+      "value": 2
+    }
+  ],
+  "summary": "!busy, !busy, busy = true, inside++, busy = true, inside++, assert(inside == 1)"
+}

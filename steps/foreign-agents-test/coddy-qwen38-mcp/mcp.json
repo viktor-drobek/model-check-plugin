@@ -1,0 +1,24 @@
+{
+  "mcpServers": {
+    "model-check": {
+      "type": "stdio",
+      "command": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/engine/bin/mcd",
+      "args": [
+        "serve",
+        "--max-states",
+        "5000000",
+        "--max-depth",
+        "5000000",
+        "--max-ms",
+        "300000",
+        "--max-memory-mb",
+        "2048",
+        "--concurrency",
+        "2"
+      ],
+      "env": {
+        "MCD_SESSION_DIR": "/tmp/claude-1000/-home-user-Desktop-VirtualBuddyShared-Yandex-Disk-localized-drobek-model-check/c5ac50eb-c0b5-4038-8df3-395ea9a1cee0/scratchpad/test-mcp/mcd-sessions"
+      }
+    }
+  }
+}

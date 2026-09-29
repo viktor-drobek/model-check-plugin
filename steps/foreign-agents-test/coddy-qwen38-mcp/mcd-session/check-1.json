@@ -1,0 +1,268 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "promela",
+      "path": "inline",
+      "sha256": "bd0be25755ce45b36b30eb972bb3e58ec5be48c7991c2b8f76d02952939cc93b"
+    }
+  ],
+  "model": {
+    "name": "inline",
+    "state_bytes": 5,
+    "processes": 2,
+    "variables": 2
+  },
+  "search": {
+    "mode": "bfs",
+    "budget": {
+      "states": 1000000,
+      "depth": 1000000,
+      "time_ms": 60000,
+      "mem_bytes": 1073741824
+    },
+    "stop": "all properties decided",
+    "complete": false
+  },
+  "properties": [
+    {
+      "id": "cs-two",
+      "kind": "reach",
+      "text": "оба клиента в критической секции одновременно (inside == 2)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 28,
+        "transitions": 39,
+        "depth": 6,
+        "time_ms": 8,
+        "memory_bytes_est": 26112
+      },
+      "complete": false,
+      "witness": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "client:0",
+            "command": "!busy",
+            "origin": {
+              "file": "inline",
+              "line": 7,
+              "name": "!busy"
+            }
+          },
+          {
+            "index": 2,
+            "process": "client:1",
+            "command": "!busy",
+            "origin": {
+              "file": "inline",
+              "line": 7,
+              "name": "!busy"
+            }
+          },
+          {
+            "index": 3,
+            "process": "client:0",
+            "command": "busy = true",
+            "changes": [
+              {
+                "var": "busy",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "inline",
+              "line": 8,
+              "name": "busy = true"
+            }
+          },
+          {
+            "index": 4,
+            "process": "client:0",
+            "command": "inside++",
+            "changes": [
+              {
+                "var": "inside",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "inline",
+              "line": 9,
+              "name": "inside++"
+            }
+          },
+          {
+            "index": 5,
+            "process": "client:1",
+            "command": "busy = true",
+            "origin": {
+              "file": "inline",
+              "line": 8,
+              "name": "busy = true"
+            }
+          },
+          {
+            "index": 6,
+            "process": "client:1",
+            "command": "inside++",
+            "changes": [
+              {
+                "var": "inside",
+                "before": 1,
+                "after": 2
+              }
+            ],
+            "origin": {
+              "file": "inline",
+              "line": 9,
+              "name": "inside++"
+            }
+          }
+        ],
+        "final_state": [
+          {
+            "var": "busy",
+            "value": 1
+          },
+          {
+            "var": "inside",
+            "value": 2
+          }
+        ],
+        "summary": "!busy, !busy, busy = true, inside++, busy = true, inside++"
+      },
+      "reason": "a reachable state satisfies inside == 2; see the witness"
+    },
+    {
+      "id": "assert",
+      "kind": "assert",
+      "text": "no assert statement fails",
+      "status": "violated",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 28,
+        "transitions": 39,
+        "depth": 6,
+        "time_ms": 8,
+        "memory_bytes_est": 26112
+      },
+      "complete": false,
+      "counterexample": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "client:0",
+            "command": "!busy",
+            "origin": {
+              "file": "inline",
+              "line": 7,
+              "name": "!busy"
+            }
+          },
+          {
+            "index": 2,
+            "process": "client:1",
+            "command": "!busy",
+            "origin": {
+              "file": "inline",
+              "line": 7,
+              "name": "!busy"
+            }
+          },
+          {
+            "index": 3,
+            "process": "client:0",
+            "command": "busy = true",
+            "changes": [
+              {
+                "var": "busy",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "inline",
+              "line": 8,
+              "name": "busy = true"
+            }
+          },
+          {
+            "index": 4,
+            "process": "client:0",
+            "command": "inside++",
+            "changes": [
+              {
+                "var": "inside",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "inline",
+              "line": 9,
+              "name": "inside++"
+            }
+          },
+          {
+            "index": 5,
+            "process": "client:1",
+            "command": "busy = true",
+            "origin": {
+              "file": "inline",
+              "line": 8,
+              "name": "busy = true"
+            }
+          },
+          {
+            "index": 6,
+            "process": "client:1",
+            "command": "inside++",
+            "changes": [
+              {
+                "var": "inside",
+                "before": 1,
+                "after": 2
+              }
+            ],
+            "origin": {
+              "file": "inline",
+              "line": 9,
+              "name": "inside++"
+            }
+          },
+          {
+            "index": 7,
+            "process": "client:0",
+            "command": "assert(inside == 1)",
+            "origin": {
+              "file": "inline",
+              "line": 10,
+              "name": "assert(inside == 1)"
+            }
+          }
+        ],
+        "final_state": [
+          {
+            "var": "busy",
+            "value": 1
+          },
+          {
+            "var": "inside",
+            "value": 2
+          }
+        ],
+        "summary": "!busy, !busy, busy = true, inside++, busy = true, inside++, assert(inside == 1)"
+      },
+      "reason": "assert(inside == 1) fails in the last step of the counterexample"
+    }
+  ]
+}
