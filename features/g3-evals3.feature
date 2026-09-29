@@ -142,19 +142,20 @@ Feature: G3 evals — stage 3 after G4: E2, E2b and E4 with and without the skil
   # ---------------------------------------------------------- evals.json
   Scenario: evals.json has E2 rewritten for the lock-step model and E2b for the starvation model
     Then "evals/evals.json" parses as JSON
-    And "evals/evals.json" has exactly 7 evals with ids 1 to 7
+    And "evals/evals.json" has exactly 8 evals with ids 1 to 8
     And the eval with id 7 has "variant_of" equal to 2
     And the eval with id 7 has "dir" equal to "eval-2b-starvation-loop"
     And the eval with id 7 has "fixture" equal to "model-check-plugin/engine/testdata/promela/starvation.pml"
     And the eval with id 2 has "runnable_from" equal to "G4"
     And the eval with id 4 has "runnable_from" equal to "G4"
     And the eval with id 7 has "runnable_from" equal to "G4"
-    And the evals in "evals/evals.json" with "runnable_from" at or before "G4" are exactly ids "1, 2, 3, 4, 5, 7"
+    And the evals in "evals/evals.json" with "runnable_from" at or before "G4" are exactly ids "1, 2, 3, 4, 5, 7, 8"
     And every assertion in "evals/evals.json" has a "text" and a "check" whose "type" is one of:
       | regex              |
       | not_regex          |
       | regex_order        |
       | petri_json_valid   |
+      | engine_report      |
       | json_field         |
       | json_list_contains |
 
@@ -302,9 +303,21 @@ Feature: G3 evals — stage 3 after G4: E2, E2b and E4 with and without the skil
     And "references/promela-subset.md" says that the rows were derived by probing the engine
 
   # ---------------------------------------------------------- graded runs
+  # @pending — правки по ревью 2026-09-29 (steps/review-fixes-confirmation.md) изменили набор
+  # assertions: факт вызова движка теперь проверяется `engine_report` по отчёту движка,
+  # а не regex по тексту ответа, и добавлен eval 8 (допущение A7). Записанные прогоны
+  # iteration-2/3 градированы прежними assertions, и сравнивать их с нынешним evals.json
+  # нельзя. Сценарий снова становится исполнимым после перезамера набора живыми прогонами.
+  @pending
   Scenario: Every eval runnable from G4 or earlier has a graded run in iteration-3 in both configurations
     Then every eval in "evals/evals.json" with "runnable_from" at or before "G4" has a graded run under the workspace "evals-workspace/iteration-3" with "with_skill" and "without_skill"
 
+  # @pending — правки по ревью 2026-09-29 (steps/review-fixes-confirmation.md) изменили набор
+  # assertions: факт вызова движка теперь проверяется `engine_report` по отчёту движка,
+  # а не regex по тексту ответа, и добавлен eval 8 (допущение A7). Записанные прогоны
+  # iteration-2/3 градированы прежними assertions, и сравнивать их с нынешним evals.json
+  # нельзя. Сценарий снова становится исполнимым после перезамера набора живыми прогонами.
+  @pending
   Scenario Outline: The staged criterion — the run with the skill passes every assertion, the baseline does not
     Given the evals workspace "evals-workspace/iteration-3/<dir>"
     Then "eval_metadata.json" names eval id <id> and the prompt of that eval in "evals/evals.json"

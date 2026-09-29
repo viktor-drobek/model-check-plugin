@@ -140,14 +140,29 @@ When strong fairness is the user's assumption and the weak-fairness run returned
    the loop** — enabled, not taken.
 2. For each, check whether it is **taken somewhere in the loop**.
 3. If every transition enabled somewhere in the loop is also taken in the loop, the
-   loop is strongly fair and the counterexample stands under strong fairness →
-   `violated` for the strong-fairness reading.
+   loop is strongly fair and this one counterexample survives the assumption — provided
+   step 1 listed *every* transition enabled in *every* state of the loop. That listing is
+   yours, not the engine's: say in the report how you obtained it, and if the loop is long
+   or the enabling conditions are data-dependent, say that the check is a reading of the
+   trace rather than a search. **The
+   status does not change**: the engine answered `not-executed` / `unknown` for
+   `fairness: strong` and that is what the status field and the report's property table
+   keep saying (`evidence-and-status.md` §1). What you add is a sentence of your own, in
+   the analysis and not in the status column: "this lasso is strongly fair, checked by
+   hand over its N steps, so the requirement fails on it as well; no search for other
+   strongly fair counterexamples was performed." Attribute it to yourself, because a
+   reader who sees `violated` will otherwise believe a search produced it.
 4. If some transition is enabled in the loop and never taken, the loop is not
    strongly fair. The counterexample does not stand under strong fairness, and the
    engine cannot search for another one → status `not-executed` for the
    strong-fairness reading, reason "strong fairness unsupported; the weak-fairness
    counterexample is excluded by the assumption", next step: model the fairness
-   explicitly (e.g. a bounded counter of consecutive skips) and rerun.
+   explicitly and rerun. The usual device — a counter that forces the skipped
+   transition after k consecutive skips — is **not** an encoding of strong fairness:
+   strong fairness puts no bound on how long the wait may be (§1), so a bounded counter
+   assumes strictly more than the user asked for and removes real behaviours from the
+   model. Name that loss in the report, or ask the question in a tool that has strong
+   fairness.
 
 This procedure decides one lasso, not the property; say so.
 

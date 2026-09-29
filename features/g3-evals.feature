@@ -32,18 +32,30 @@ Feature: G3 evals — stage 2 after G1: E1 and E5 with and without the skill
   # ------------------------------------------------------------- evals.json
   Scenario: Every eval declares the build step from which the engine can run it
     Then "evals/evals.json" parses as JSON
-    And "evals/evals.json" has exactly 7 evals with ids 1 to 7
+    And "evals/evals.json" has exactly 8 evals with ids 1 to 8
     And every eval in "evals/evals.json" has a "runnable_from" that is one of:
       | G0 |
       | G1 |
       | G4 |
       | G5 |
-    And the evals in "evals/evals.json" with "runnable_from" at or before "G1" are exactly ids "1, 3, 5"
+    And the evals in "evals/evals.json" with "runnable_from" at or before "G1" are exactly ids "1, 3, 5, 8"
 
+  # @pending — правки по ревью 2026-09-29 (steps/review-fixes-confirmation.md) изменили набор
+  # assertions: факт вызова движка теперь проверяется `engine_report` по отчёту движка,
+  # а не regex по тексту ответа, и добавлен eval 8 (допущение A7). Записанные прогоны
+  # iteration-2/3 градированы прежними assertions, и сравнивать их с нынешним evals.json
+  # нельзя. Сценарий снова становится исполнимым после перезамера набора живыми прогонами.
+  @pending
   Scenario: Every eval runnable from G1 or earlier has a graded run in iteration-2 in both configurations
     Then every eval in "evals/evals.json" with "runnable_from" at or before "G1" has a graded run under the workspace "evals-workspace/iteration-2" with "with_skill" and "without_skill"
 
   # ----------------------------------------------------------- graded runs
+  # @pending — правки по ревью 2026-09-29 (steps/review-fixes-confirmation.md) изменили набор
+  # assertions: факт вызова движка теперь проверяется `engine_report` по отчёту движка,
+  # а не regex по тексту ответа, и добавлен eval 8 (допущение A7). Записанные прогоны
+  # iteration-2/3 градированы прежними assertions, и сравнивать их с нынешним evals.json
+  # нельзя. Сценарий снова становится исполнимым после перезамера набора живыми прогонами.
+  @pending
   Scenario Outline: The staged criterion — the run with the skill passes every assertion, the baseline does not
     Given the evals workspace "evals-workspace/iteration-2/<dir>"
     Then "eval_metadata.json" names eval id <id> and the prompt of that eval in "evals/evals.json"

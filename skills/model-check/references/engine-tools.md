@@ -177,9 +177,8 @@ with the budget flags, and property lists through the edited IR as just describe
 and `final_state` in the report (§5.3) — the CLI report carries the same steps, so
 the only thing missing is the `loop_note` sentence, which you write yourself; `mc_simulate` → no equivalent, skip the walk and say so;
 `mc_lint_property` → classify by `properties-ltl-ctl.md` and say it was manual;
-`mc_estimate` → a `mcd check` with a small `--budget-states` is a crude stand-in (its
-`counters.states` at the budget says how far the budget reached, not how the count
-grows); `mc_manifest` → the report's `engine`, `inputs` (with `sha256`) and
+`mc_estimate` → `mcd check --estimate` (with `--target-depth` and the `size` class, G5):
+the CLI has the real thing, so no stand-in is needed; `mc_manifest` → the report's `engine`, `inputs` (with `sha256`) and
 `search.budget` cover versions, hashes and budgets; seed and start/end times have no
 counterpart — record the command line and wall-clock time yourself and say the
 manifest was assembled by hand.
@@ -204,11 +203,11 @@ manifest was assembled by hand.
 | `id`, `kind`, `text` | the Petri frontend generates `deadlock` (kind `deadlock`) and `safe` (kind `invariant`); the Promela frontend generates `deadlock` and, when some statement is an `assert`, `assert` (kind `assert`), **and from the model itself**: `never` (kind `ltl`) when the file has a never claim, `accept` (kind `ltl`) when a process has an `accept` label and there is no claim, `progress` (kind `progress`) when some process has a `progress` label — you did not ask for these and they are still yours to read (`properties-ltl-ctl.md` §7). The CLI adds `ltl1`, `ltl2`, … for each `--ltl`, and `progress` for `--progress`; the IR may add `reach` and `invariant` |
 | `status` | one of the six words (`evidence-and-status.md` §1) |
 | `evidence` | `exhaustive`, `bounded`, `approximate`, `unknown` |
-| `counters` | `states`, `transitions`, `depth` (greatest depth expanded), `time_ms` (absent under `--no-timing`), `memory_bytes_est`; the same for every property of one run |
+| `counters` | `states`, `transitions`, `depth` (greatest depth expanded), `time_ms` (absent under `--no-timing`), `memory_bytes_est`. The state properties of one run share the reachability search and so share its counters; a temporal property (`ltl`, `progress`, `ctl`) carries the counters of **its own** product or labelling instead — compare a temporal count only with another run of the same formula |
 | `complete` | for a state property, a copy of `search.complete`; a temporal property has its **own** `complete` — its search is a separate product with its own automaton, and `false` here means that product was not exhausted (a `violated` lasso stops the search, so `violated` normally comes with `complete: false` and evidence `exhaustive` — see §6) |
-| `temporal` | present for `ltl`, `progress` and `ctl`. Always: `logic` (`ltl` \| `ctl`), `source` (`formula` for `--ltl`/`--ctl`, `claim` for the model's never claim, `np` for non-progress), `formula`, `atoms` in first-occurrence order, `fairness` (`none`/`weak`/`strong` as asked). **`ltl`/`progress` only**: `negated` (the engine builds the automaton for the negation), `stutter_invariant` (false exactly when the formula uses `X`), `automaton_states`, `automaton_transitions`, `automaton_accepting`, `claim` (the claim process's name in the trace: `never:<property id>` — `never:ltl1` for the CLI's first `--ltl` — or `np_`). **`ctl` only**: `normalised` (the formula rewritten into the `EX`/`EU`/`EG` basis, which is what was actually labelled — `AG (cnt <= 1)` becomes `!E[true U !(cnt <= 1)]`; quote this, not just `formula`, when the two differ), `note` (why a blocked state carries a self-loop), `witness_note` (why a verdict carries no run — "a universal property that holds is justified by the complete reachable graph, not by one run"), and the vacuity pair `vacuous` / `vacuous_atom` |
+| `temporal` | present for `ltl`, `progress` and `ctl`. Always: `logic` (`ltl` \| `ctl`), `source` (`formula` for `--ltl`/`--ctl`, `never-claim` for the model's own claim, `accept-labels` for a claim synthesised from `accept` labels, `np` for non-progress), `formula`, `atoms` in first-occurrence order, `fairness` (`none`/`weak`/`strong` as asked). **`ltl`/`progress` only**: `negated` (the engine builds the automaton for the negation), `stutter_invariant` (false exactly when the formula uses `X`), `automaton_states`, `automaton_transitions`, `automaton_accepting`, `claim` (the claim process's name in the trace: `never:<property id>` — `never:ltl1` for the CLI's first `--ltl` — or `np_`). **`ctl` only**: `normalised` (the formula rewritten into the `EX`/`EU`/`EG` basis, which is what was actually labelled — `AG (cnt <= 1)` becomes `!E[true U !(cnt <= 1)]`; quote this, not just `formula`, when the two differ), `note` (why a blocked state carries a self-loop), `witness_note` (why a verdict carries no run — "a universal property that holds is justified by the complete reachable graph, not by one run"), and the vacuity pair `vacuous` / `vacuous_atom` |
 | `warnings` (per property) | a property may carry its own `warnings` beside the report's. This is where CTL vacuity reaches a reader in words: "vacuity hint for ctl1: the atom `cnt == 7` is never true in any of the 429 reachable states…" and, for an implication, "vacuous: the antecedent … is never true … the verdict below is unchanged — this is a hint, not a status". Read them: a `verified` with a vacuity warning is the case AC-13 forbids you to report as a guarantee |
-| `counterexample` | present for `violated` (the violating run) and for `invalid-model` (the run to the offending step); §5.3 |
+| `counterexample` | present for `violated` **when there is a run to show** (the violating run) and for `invalid-model` (the run to the offending step); §5.3. Absent for a `reach` that was violated by a complete search finding no such state, and for CTL verdicts that no single run justifies — those carry `temporal.witness_note` instead. Check the field before calling `mc_explain`; there is no id to pass it otherwise |
 | `witness` | present for a `reach` that came back `verified`: the run that reaches the condition |
 | `reason` | for `inconclusive` the exhausted resource; for `not-executed` / `invalid-model` what is missing or overflowed; for `violated` the engine may add a one-line diagnosis (`deadlock`: which processes are blocked; `assert`: "assert(…) fails in the last step of the counterexample"; `reach`: no state satisfies the condition) |
 
@@ -274,8 +273,13 @@ construction — it advances the fairness copy without any process moving
 
 Determinism (NFR-006): the same input and flags produce the same report except
 `time_ms`; `--no-timing` / `no_timing` makes it byte-for-byte equal (the `petrinet2`
-golden test and the G2 "two identical `mc_check` calls" scenario rely on that).
-Anything else that differs between two runs is an engine defect to report.
+golden test and the G2 "two identical `mc_check` calls" scenario rely on that) — **for
+runs that were not stopped by the clock**. `--no-timing` only removes `time_ms` from the
+report; the wall-clock time limit still applies, so two runs that both end in a time stop
+may differ in states reached, in which properties got decided and in the traces. A
+difference between two runs that ran to their natural end is an engine defect to report;
+a difference between two time-stopped runs is the machine, and the way to compare them is
+to rerun with a states or depth budget instead.
 
 ## 7. Reading a response, in this order
 
@@ -308,7 +312,7 @@ Anything else that differs between two runs is an engine defect to report.
 | `ltl` (never claims and `--ltl` formulas), `progress` (`--progress` and `progress` labels), weak fairness, lasso counterexamples (`loop`), `--unlimited`, the same budget rule in both layers, `mc_parse{promela}` over MCP | **G4 (built)**. Plan §11 kept LTL evidence at `unknown` only "while experimental"; the differential oracle of `steps/g4-confirmation.md` §3.1 (43 triples agreeing with `pan`) is what ends that, so LTL results now carry the ordinary evidence levels of §6 |
 | `ctl` (`--ctl`, graph labelling), vacuity for temporal formulas, the growth model of `mc_estimate` (`--estimate`, `--target-depth`, and a `size` class), Promela v1 (`inline`, `typedef`, `provided`, channels in messages, arrays of channels, `_nr_pr`, `pc_value`, `run` in a loop with `--max-procs`) | **G5 (built)**. The fields are in §5.2 (`temporal`, per-property `warnings`) and §4 (`mc_check`, `mc_lint_property`, `mc_estimate`, `mc_parse`); the subset is in `promela-subset.md` §3, re-derived from the engine by the probes of `steps/g3-evals3-subset-probe.md`. The vocabulary of `features/g5-ctl-v1.feature` is the authority for witness and counterexample shapes |
 | the G5 addendum: no stutter extension inside the `np_` product, and one instance pool per proctype (`counterexamples.md` §2a, `promela-subset.md` §2) | **G5 addendum (built)** |
-| plugin installation (`mcp/servers.json`, the cross-platform binary build and `BUILD-INFO.json`) validated with a real client | **G6 (built)** |
+| plugin installation (`mcp/servers.json`, the cross-platform binary build and `BUILD-INFO.json`) validated with a real client on **linux/arm64**: five binaries are built and checksummed (linux and darwin, amd64 and arm64, plus the Windows exe), and `mcp/servers.json` launches the POSIX `engine/bin/mcd` shell wrapper — the `mcd.cmd` wrapper beside it is what a Windows client would need, and nothing in this repository has run it. Say "validated on linux/arm64, built for the rest" rather than "cross-platform", and report a platform that fails rather than assuming it works (`steps/g6-confirmation.md` §7.3) | **G6 (built, one platform run)** |
 | bitstate (`approximate`), POR, parallel BFS | G7 (vNext, if chosen) |
 
 ## 9. Session directory and artefacts (11 §13)

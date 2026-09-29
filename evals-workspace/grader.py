@@ -24,6 +24,17 @@ Check types (all objective — no judgement, no model call):
   json_field       {"file_glob", "path",  some file matching file_glob under
                     "equals"}             outputs has the value at the dotted
                                           path
+  engine_report    {"property"?,          some *.json under outputs is a report
+                    "status"?,            the engine wrote (`engine.name` = mcd,
+                    "evidence"?}          `engine.report_schema` = mcd-report/*)
+                                          and, when the keys are given, carries
+                                          that property id with that status and
+                                          evidence. This is the one check the
+                                          answer text cannot satisfy: it needs
+                                          the run's own artefact, so an assertion
+                                          about the engine having been invoked
+                                          belongs here and not in a regex over
+                                          the prose (review-astra-skill.md §D)
 
 Usage:
   grader.py --evals EVALS_JSON --id N --answer ANSWER_FILE
@@ -161,6 +172,62 @@ def check_petri_json_valid(check, _answer, outputs, skill_dir):
     return False, "no valid net under outputs: " + ("; ".join(reasons) if reasons else "no *.json files")
 
 
+def engine_report_error(doc):
+    """Return None when doc looks like a report this engine wrote, else why not."""
+    if not isinstance(doc, dict):
+        return "not an object"
+    eng = doc.get("engine")
+    if not isinstance(eng, dict):
+        return "no engine section"
+    if eng.get("name") != "mcd":
+        return "engine.name is %r, not 'mcd'" % (eng.get("name"),)
+    schema = str(eng.get("report_schema", ""))
+    if not schema.startswith("mcd-report/"):
+        return "engine.report_schema is %r" % (schema,)
+    if not isinstance(doc.get("properties"), list):
+        return "no properties array"
+    return None
+
+
+def check_engine_report(check, _answer, outputs, _skill_dir):
+    """The engine actually ran: one of the run's output files is its report.
+
+    The answer text is not consulted at all. A grader that greps the prose for
+    `mcd check` scores a fabricated answer full marks; this one needs the JSON
+    the engine itself produced, with the property, status and evidence asked
+    for."""
+    want = {k: check[k] for k in ("property", "status", "evidence") if k in check}
+    reasons = []
+    for path in json_files(outputs):
+        try:
+            with open(path, encoding="utf-8") as fh:
+                doc = json.load(fh)
+        except (OSError, ValueError) as e:
+            reasons.append("%s: %s" % (os.path.relpath(path, outputs), e))
+            continue
+        err = engine_report_error(doc)
+        if err:
+            reasons.append("%s: %s" % (os.path.relpath(path, outputs), err))
+            continue
+        rel = os.path.relpath(path, outputs)
+        if not want:
+            return True, "%s is an engine report" % rel
+        for prop in doc["properties"]:
+            if not isinstance(prop, dict):
+                continue
+            if "property" in want and prop.get("id") != want["property"]:
+                continue
+            if "status" in want and prop.get("status") != want["status"]:
+                continue
+            if "evidence" in want and prop.get("evidence") != want["evidence"]:
+                continue
+            return True, "%s: property %r is %s / %s" % (
+                rel, prop.get("id"), prop.get("status"), prop.get("evidence"))
+        reasons.append("%s: no property matching %s" % (rel, want))
+    return False, "no engine report under outputs matching %s: %s" % (
+        want or "{any}", "; ".join(reasons) if reasons else "no *.json files")
+
+
 def get_path(doc, dotted):
     cur = doc
     for part in dotted.split("."):
@@ -197,6 +264,7 @@ CHECKS = {
     "regex_order": check_regex_order,
     "petri_json_valid": check_petri_json_valid,
     "json_field": check_json_field,
+    "engine_report": check_engine_report,
 }
 
 

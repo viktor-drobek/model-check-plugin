@@ -51,7 +51,7 @@ need the user's explicit confirmation, defaults are not enough.
 ### Node 1 — goal
 
 - A guarantee is wanted (alone or together with bug-finding) → continue; nodes 3 and 6 must both pass for `exhaustive` to be possible.
-- Bounded assurance is enough → continue; the report will carry evidence `bounded` or `inconclusive` by construction.
+- Bounded assurance is enough → continue with a declared states or depth budget. Do not promise the outcome in advance: a run under a budget still returns `violated` / `exhaustive` when it finds a counterexample, and `verified` / `exhaustive` for a `reach` whose witness it found, because one run decides both. `inconclusive` / `bounded` is what you get only if nothing was decided before the budget stopped it.
 - Only a concrete failing scenario is wanted → continue with early stop enabled (`mc_check` stops at the first violation per property).
 
 ### Node 2 — is there a model?
@@ -86,7 +86,10 @@ need the user's explicit confirmation, defaults are not enough.
 
 ### Node 7 — fairness (liveness only)
 
-- First run the liveness property **without** fairness and look at the lasso.
+- First run the liveness property **without** fairness and read what came back. Three
+  outcomes, not one: `verified` (no lasso exists — say that the result does not depend on
+  fairness and go on), `inconclusive`/`unknown` (the budget stopped the run — fairness is
+  not the question yet, node 9 is), or `violated` with a lasso, which is the case below.
 - If the lasso is realistic → it is a counterexample; continue to node 11.
 - If the lasso is an unfair scheduling artefact and the user can justify weak fairness from the operating environment → rerun with weak fairness; report both results as different results.
 - If only strong fairness would exclude the lasso → **exit** for that property with `not-executed`, reason "strong fairness unsupported"; offer the manual check described in `fairness.md` §5.
@@ -102,7 +105,19 @@ Run `mc_estimate` and record states, transitions, growth, and the projected fit 
 
 ### Node 10 — artefacts
 
-Before running: model, property list with IDs, mapping table, intake card, and the budget. All are inputs to `mc_manifest`.
+Before running: model, property list with IDs, mapping table, intake card, and the budget.
+
+`mc_manifest` takes **only** `session_id`. It renders what the session recorded by itself:
+the tool calls in order with their applied parameters (search, fairness, budget, seed,
+steps, time limit), the artefacts each call wrote, engine version and hashes. It does
+**not** receive or store the intake card, the mapping table, or the expression of a state
+property — the report keeps a property's `text`, its `kind` and, for temporal ones,
+`temporal.formula`, but not the `expr` JSON the check was given. So, for FR-012/NFR-002:
+
+- put the exact expression into the property's `text` field, so the report carries it;
+- save the `mc_check` request itself (the property list as sent) beside the report, and
+  attach it to the report with the intake card and the mapping table;
+- quote the manifest for versions, parameters and hashes — the things it does hold.
 
 ### Node 11 — staged run (11 §10)
 
@@ -116,8 +131,8 @@ Before running: model, property list with IDs, mapping table, intake card, and t
 
 ### Node 12 — interpretation
 
-- `verified` only with `exhaustive` evidence (or explicitly flagged experimental LTL, see `evidence-and-status.md` §4).
-- `violated` only after `mc_explain` replayed the trace and you classified the cause.
+- `verified` only with `exhaustive` evidence (`evidence-and-status.md` §4; the experimental-LTL exception ended with the G4 oracle and is no longer written).
+- `violated` only after `mc_explain` decoded the trace and you classified the cause. Say *decoded*; the word *replayed* belongs to a run of `mc_simulate` in `guided` mode over those steps (`counterexamples.md` §5), and a verdict that carries no run at all — an unreachable `reach`, a CTL verdict with `witness_note` — has nothing to pass to `mc_explain`.
 - Everything else: `inconclusive` / `unknown` with the reason, what was covered, what was not, and the next minimal step (bigger budget, smaller model, different fairness, different logic).
 
 ## 4. Exit summary

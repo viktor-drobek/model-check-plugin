@@ -119,6 +119,8 @@ Feature: G3 skill package — documentation half
       | safe          |
       | AG EF fire    |
       | []<> fire     |
+      | enabled       |
+      | proxy         |
       | inhibitor     |
       | petrinet1     |
       | t1            |
@@ -166,7 +168,7 @@ Feature: G3 skill package — documentation half
   Scenario: evals.json holds the six plan §8.2 prompts with assertions (aligned)
     Then "evals/evals.json" parses as JSON
     And "evals/evals.json" has "skill_name" equal to "model-check"
-    And "evals/evals.json" has exactly 7 evals with ids 1 to 7
+    And "evals/evals.json" has exactly 8 evals with ids 1 to 8
     And every eval in "evals/evals.json" has a non-empty "prompt" and a non-empty "assertions" list
     And "evals/fixtures/README.md" exists
     And "evals/fixtures/README.md" explains that fixtures reference corpus paths and hashes instead of copying files

@@ -130,8 +130,8 @@ run, explain the +2 in the state count before anything else.
 | safe | `invariant` `safe`: every place `≤ 1` | invariant | none needed | G0 (generated) |
 | bounded by `k` | `invariant`: every place `≤ k` (authored in IR today); capacity overflow is `invalid-model` | invariant | none needed | G0 (IR), frontend option later |
 | transition `t` dead (never fires) | `reach` on "inputs of `t` hold their weights" — unreachable ⇒ dead (§3: no `fire(t)` atom yet) | reachability | none needed | G0 (IR), atom in G4 |
-| transition `t` can always fire again | `ctl`: `AG EF fire(t)` | CTL | **none** — by construction | G5 |
-| transition `t` fires infinitely often on every run | `ltl`: `[]<> fire(t)` | LTL | **required** — ask before running | G4 |
+| transition `t` can always fire again | `ctl`: `AG EF fire(t)`, written as `AG EF (‹inputs of t hold their weights›)` — e.g. `AG EF (p1 >= 1)` for a `t` whose only input is `p1`, `AG EF (p2 >= 1 && p4 >= 1)` for two inputs | CTL | **none** — by construction | G5 (built) |
+| transition `t` fires infinitely often on every run | `ltl`: `[]<> fire(t)`, written as `[]<> (‹inputs of t hold their weights›)` — a **proxy**, see below | LTL | **required** — ask before running | G4 (built, as the proxy) |
 
 The last two rows are the distinction the plan insists on (§2.2, §5.3) and the one
 users most often blur. `AG EF fire(t)` says: from every reachable marking there is
@@ -141,9 +141,29 @@ independent of how transitions are scheduled.
 statement about obligation, false whenever a conflicting transition can win the
 conflict forever; it becomes meaningful only after a fairness assumption excludes
 those runs (`fairness.md`). Present both to the user as two different questions,
-run the one they mean — today neither can be run, and the answer is `not-executed`
-with the kind named (`engine-tools.md` §5) — and never report a CTL answer to an
-LTL question or the reverse (FR-007).
+run the one they mean, and never report a CTL answer to an LTL question or the reverse
+(FR-007).
+
+**How `fire(t)` is written.** There is no `fire(t)` atom: the frontend turns places into
+variables and a transition into a guarded command, and it generates only `deadlock` and
+`safe` — no event variable exists to point at (`engine-tools.md` §7). What you write
+instead is the transition's **enabling condition**, the same conjunction the guard uses:
+one `‹place› >= ‹weight›` per input arc. On `App_C/petrinet1` (the fixture in
+`evals/fixtures/petrinet1.json`), `AG EF (p1 >= 1)` runs and comes back `violated` /
+`exhaustive`. The reason is not that `p1` empties — `t3` and `t6` both put a token back
+into it — but that the net can reach the dead marking `p2 = p5 = 1`, where nothing is
+enabled and no continuation refills `p1`. One reachable state without a continuation is
+enough to refute an `AG EF`, and naming *which* state it is belongs in the report.
+
+**Where the proxy holds and where it does not.** For the CTL row it is exact: *enabled
+again* and *can fire again* coincide, because a state in which `t` is enabled has a
+continuation in which `t` fires. For the LTL row it is **not** exact, and the plan says
+so (14 §5.3, "заявленный прокси"): `[]<> enabled(t)` says `t` is *offered* infinitely
+often, while `[]<> fire(t)` says it is *taken* infinitely often — a transition in conflict
+with another can stay enabled forever and never be chosen, and the proxy calls that run
+good. Say which of the two you checked, and when the user means firing, either add a
+counter place that the firing of `t` increments and ask about that counter, or route the
+question to a tool with transition events.
 
 Note 04 гл. 3 mentions Murata's liveness ladder L0–L4. The engine maps only the two
 ends that the plan defines: L0 (dead) ⇔ `fire(t)` unreachable, and "can fire again

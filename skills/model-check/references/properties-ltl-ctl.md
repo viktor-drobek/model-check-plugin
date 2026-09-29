@@ -45,8 +45,10 @@ names work as atoms. A ready-made `never { }` claim is accepted as an alternativ
 a formula (§6); the corpus uses never claims, not `ltl { }` blocks, and the engine
 follows that priority.
 
-**Control-label atoms (`proc@label`, `proc[i]@label`): rejected in LTL, accepted in
-CTL.** In an `--ltl` formula `mcd` rejects the whole run with `kind: "ltl"`
+**Control-label atoms (`proc@label`, `proc:pid@label`): rejected in LTL, accepted in
+CTL.** The bracket form `proc[i]@label` is *not* parsed — the instance is selected with a
+colon and the engine's own 1-based pid (`switch:1@Idle`), and a bare `switch@Idle` means
+the first instance of that proctype. In an `--ltl` formula `mcd` rejects the whole run with `kind: "ltl"`
 ("unexpected character '@'") and produces no report. In a `--ctl` formula the same
 atom is accepted and normalised to a program-counter test: `AG EF (subscriber@Idle)`
 on `CH14/version1` is evaluated as `!E[true U !E[true U (pc(0) == 0)]]` and comes
@@ -62,7 +64,9 @@ Routes 2 and 3 change the model and must be declared as such in the report; rout
 does not, and is the one to reach for first when the question is branching anyway
 ("from every state, can it get back to `Idle`?").
 
-**`stutter_invariant`.** Every temporal property record carries it (`temporal`,
+**`stutter_invariant`.** Carried by the records the engine compiled a formula for — `ltl`
+and `progress`; it is `omitempty`, so a `ctl` record and a record without a compiled
+formula simply do not have the field, and its absence is not `false` (`temporal`,
 `engine-tools.md` §5.2). It is `false` exactly when the formula uses `X`, and true
 otherwise. An `X`-formula distinguishes runs that differ only in how one step is
 split, so its verdict depends on the model's atomic-step decisions — the `atomic`
@@ -71,7 +75,8 @@ about. When you see `stutter_invariant: false`, either justify the atomic step i
 the report or rewrite the requirement without `X` (checklist step 6).
 
 CTL — `A`/`E` path quantifiers directly followed by `X`, `F`, `G`, `U`: `AG p`,
-`EF p`, `AG(p -> AF q)`, `E(p U q)`, `AG EF p` — **is executed since G5**, by
+`EF p`, `AG(p -> AF q)`, `E[p U q]`, `A[p U q]`, `AG EF p` — **is executed since G5**,
+(until is written with brackets: `E(p U q)` is rejected with "expected U inside `[ … U … ]`"), by
 labelling the reachable graph (`--ctl 'φ'`, properties `ctl1`, `ctl2`, …; over MCP a
 property of kind `ctl` with `formula`, not `expr`). The record carries
 `temporal.logic` = `ctl`, the `normalised` form the engine actually evaluated
@@ -132,9 +137,11 @@ logics are incomparable (05 гл. 6; 03 гл. 2; 09 гл. 2).
   `[] !p`, and a `violated` result *is* the witness.
 - **Fairness.** LTL can put the fairness assumption into the formula
   (`fair -> φ`) or the engine applies weak fairness in the search (`fairness.md`).
-  CTL cannot express fairness in a formula, and this build does not check CTL at
-  all, so there is no CTL result to qualify; do not promise how a future CTL engine
-  will treat fairness.
+  CTL cannot express fairness in a formula, and this build does not check CTL **under**
+  fairness either: a `ctl` property asked with `fairness: weak` or `strong` comes back
+  `not-executed` with that reason, never as a quietly unfair answer. So a CTL result is
+  always a fairness-free result — say so, and put a liveness question that needs a
+  fairness assumption in LTL.
 - **Witness shape.** LTL violation: one lasso (prefix + loop). CTL: a path for
   `EF`/`EG` witnesses and for `AG p` violations; a tree for violations of nested
   universal-existential formulas such as `AG EF p` (11 §8, 05 гл. 6). Say in the
@@ -153,8 +160,8 @@ accepts both (eval E6 in plan §8.2 checks exactly this).
 | atoms | the atomic expressions with their definedness in the IR | an undefined atom → fix the `#define` or the label; do not run |
 | class | safety / liveness (syntactic classification) | liveness → fairness question (FR-008) |
 | x_free | whether the formula contains `X` | `X` present → the result depends on the atomic step; POR (vNext) will be disabled |
-| vacuity candidates | antecedent of an implication never true, an atom that is constant on all reachable states | add a reachability property for the antecedent; if unreachable, report the main property as vacuous and do not call it a guarantee (AC-13) |
-| polarity note | for a hand-written never claim: whether it looks like the property or its negation | confirm with the user which one it is |
+| vacuity candidates | **syntactic only**: the antecedent of an implication, and an expression the engine can fold to a constant. `mc_lint_property` explores nothing, so it cannot know which atoms are reachable — its note says "check it with a reach property" | add that reachability property and run it; the *reachable*-state vacuity hint comes later, from `mc_check`'s per-property `warnings`. If the antecedent is unreachable, report the main property as vacuous and do not call it a guarantee (AC-13) |
+| — (no polarity note) | `mc_lint_property` takes `invariant`, `reach`, `ltl` and `ctl`, and a claim is not one of them: nothing in the engine reads a hand-written `never { }` and tells you whether it encodes the property or its negation | do it by hand — paraphrase the claim, say which of the two it is, and confirm with the user before quoting a verdict from it |
 
 ## 6. Never claims and claim semantics (G4)
 
@@ -213,8 +220,10 @@ You mark the statements that count as progress with labels whose name begins wit
 
 - **The `progress` property is added automatically when the model has progress
   labels.** The Promela frontend puts a property `progress` (kind `progress`) into
-  the IR as soon as some process carries such a label; it appears in every report
-  for that model whether or not you asked for it, alongside `deadlock`. `--progress`
+  the IR as soon as some process carries such a label; it appears alongside `deadlock` in
+  every report of a run **that used the model's own property list**. Pass your own
+  `properties` and it is gone with the rest of them — only the implicit `assert` survives
+  (`SKILL.md` step 6), so put it back into the list you send. `--progress`
   (MCP: a property of kind `progress`) asks for the same search on a model that has
   no label of its own.
 - **A model with no progress label makes every cycle a non-progress cycle.** Running

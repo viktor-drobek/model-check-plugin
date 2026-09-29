@@ -25,14 +25,20 @@ and — the part the engine cannot do — decide what it means.
 |---|---|---|
 | `invariant`, `assert`, `reach` (as a witness) | finite path from an initial state to the bad (or sought) state | BFS gives the shortest by number of steps; DFS gives the first found |
 | `deadlock` | finite path to a state with no enabled transition; the list of processes and where each is blocked | `end`-labelled processes are shown as legitimately finished |
-| `ltl` | **prefix + loop** (lasso): a finite stem, then a cycle that repeats forever; the acceptance obligation that is never discharged is named (which `<>`/`U` promise stays open) | for a liveness formula the loop is essential — a finite sequence alone refutes nothing (AC-18); for a safety formula there is no `loop` at all: the prefix is already a bad prefix (05 гл. 3). A never claim that reaches its own end is also a violation on a finite prefix, with no loop (`properties-ltl-ctl.md` §6) |
+| `ltl` | **prefix + loop** (lasso): a finite stem, then a cycle that repeats forever; the acceptance obligation that is never discharged is named (which `<>`/`U` promise stays open) | for a liveness formula the loop is essential — a finite sequence alone refutes nothing (AC-18); a safety formula is usually refuted by a bad prefix with no `loop` at all (05 гл. 3), and a never claim that reaches its own end likewise (`properties-ltl-ctl.md` §6). **Read the shape from the record, not from the class**: `counterexample.loop` is present or it is not, and the engine's own automaton can close an accepting cycle on a safety formula too (`steps/g4-confirmation.md` §3.1) |
 | `progress` | prefix + loop where the loop visits no `progress` label; the claim process is `np_` | a model with **no** `progress` label at all makes every cycle non-progress — read such a `violated` as "no progress labels were placed", not as a finding (`properties-ltl-ctl.md` §7) |
 | `ctl` — violation of `AG p`, witness for `EF p` | one finite path | |
 | `ctl` — witness for `EG p` | prefix + loop inside `p`-states | |
-| `ctl` — violation of nested formulas such as `AG EF p`, `AG(p -> AF q)` | may be a **tree**: a state from which *every* continuation fails; `mc_explain` returns the path to that state and, per branch, why it fails | say in the report whether one trace was enough (11 §11) |
+| `ctl` — violation of nested formulas such as `AG EF p`, `AG(p -> AF q)` | one finite path **to the state where the outer property fails**, and nothing past it: the engine builds no tree and does not show why the nested subformula fails there — its `temporal.note` says so ("the counterexample ends at the state where the outer property fails…") | say in the report that the branch below that state was not enumerated; re-ask the nested subformula as its own property at that state if the user needs it (11 §11) |
 | `invalid-model` | finite path to the step that overflowed a domain or a capacity | this is a model defect, not a property result |
+| **no run at all** | a `reach` that completed without finding its state (`violated`, no counterexample); a universal CTL property that holds; a failing existential CTL property; a formula whose top operator is a boolean connective or an atom | the record carries `temporal.witness_note` instead of a run — "a universal property that holds is justified by the complete reachable graph, not by one run". Quote that note; do not call `mc_explain`, there is no id to pass it |
 
 ## 2. Reading `mc_explain` output
+
+`mc_explain` **decodes** the trace the check already stored: it reads the session file
+by `counterexample_id` and splits it into prefix and loop with your names. It runs
+nothing, so it can neither confirm nor refute the trace — it is the engine's own record,
+read back. Re-executing it is a separate, optional step (§5).
 
 Each step records: the process that moved, the statement (with file and line from
 the mapping), the variables whose values changed (old → new), sends and receives
@@ -138,7 +144,7 @@ after the first is fixed, rerun and classify the new trace afresh.
 | 1 | Is the formula saying something other than the requirement? (wrong polarity, wrong atom, `[]<>` where `<>[]` was meant, LTL where the requirement was branching, missing sanity conjunct, vacuity) | **property defect** | `mc_lint_property` polarity/vacuity notes; paraphrase the formula and compare with the user's words; corpus: `CH4/prop.pml` shows `[]p` vs `![]p` as never claims |
 | 2 | Does a step in the trace do something the real system cannot do? (only askable when a real system is named — see the paragraph after the table) (an interleaving hidden by a real lock but not by the model, a channel losing when the real one cannot, a capacity or domain smaller than reality, a missing `end` label, an environment allowed too much) | **model defect** (including translation/mapping defects and over-approximation artefacts) | compare each step with the system; 07 лекция 3: an over-approximating model admits traces the program does not have |
 | 3 | Does the loop rely on a scheduling that the user's stated assumptions exclude? (a ready process never runs; a message is lost forever) | **fairness / environment artefact** — logically a sub-case of 2, singled out because the remedy differs (a justified assumption, not a model change); handled by `fairness.md` §3: rerun with the assumption and report both | the starved transition in the loop |
-| 4 | None of the above: every step is possible in the real system — or there is no real system, and every step is possible in the object the user described — and the formula says what the requirement says | **system defect** (read the paragraph below before writing the words) | the trace replayed by `mc_simulate` in `guided` mode from the counterexample id |
+| 4 | None of the above: every step is possible in the real system — or there is no real system, and every step is possible in the object the user described — and the formula says what the requirement says | **system defect** (read the paragraph below before writing the words) | the trace replayed by `mc_simulate` in `guided` mode over the decoded step list (§5), not merely decoded |
 
 When the model **is** the object — a Petri net, or an algorithm the user gave in words or as a `.pml` file, with no real system behind it (E3 and E1 of the evals) — questions 2 and 4 cannot be asked as written: there is no real system to compare a step against. Ask them of the object the user described instead, and write the class as "defect of the described object", not "system defect": the bare phrase reads as a statement about an implementation, and the intake card's "relation to the implementation" field is empty by construction. Watch for the contradiction this produces if you do not: a report that says in its summary "nothing follows about the real system" and in its classification "every step is possible in the real system" has used the word *system* in two senses and says both nothing and something about the same thing.
 
@@ -173,8 +179,34 @@ steps) must keep the trace replayable by `mc_simulate`; a step you drop because 
 "looks irrelevant" may change what is enabled later (10 §10, causal slicing). When
 in doubt, show the full trace and highlight the causal slice.
 
+**Replaying one.** There is no call that replays a counterexample by its id. A replay is
+built by hand: take the decoded steps in order, pass each step's `command` (or its
+`user_name`, which is what `origin` recorded) as `edges` to `mc_simulate` with
+`mode: "guided"`, and read `stopped` — `edges exhausted` means the run followed the whole
+list, while `edge not enabled` means the list and the model disagree, and that
+disagreement is itself the finding. Only after such a run may a report say the
+counterexample was *replayed*; after `mc_explain` alone it was *decoded*. A lasso is
+replayed as its prefix plus as many copies of the loop as the point needs.
+
 ## 6. Turning a counterexample into a regression check
 
 Record the scenario as a `reach` property (the bad state is reachable) or keep the
-guided step list. After the fix, rerun: the `reach` property should become
-`verified` on `[] !bad` (unreachable), and every other property must be rerun too.
+guided step list. After the fix, rerun — and read the result in the engine's terms, which
+are the opposite of the intuitive ones for `reach`:
+
+- the `reach bad` property becomes **`violated`** with evidence `exhaustive` and the
+  reason "no reachable state satisfies … (complete search)". For the question asked
+  *here* — "is the old scenario gone?" — that `violated` is the answer you wanted; for a
+  `reach` asked to find a witness it would be the disappointing one, so the word carries
+  no evaluation of its own. It is also the only status that establishes unreachability,
+  since the engine emits it for `reach` exactly when a **complete** search found no such
+  state;
+- the property that becomes **`verified`** after the fix is the corresponding invariant
+  `!bad`, or the LTL `[] !bad` — a different property, not the same one read differently.
+  Keep both when the report is read by someone who will not remember this asymmetry: the
+  invariant carries the reassuring word, the `reach` carries the proof that the old
+  scenario is gone;
+- a `reach` that is still satisfiable comes back `verified` with the witness attached,
+  and `complete` may be false there, because one run is enough.
+
+Every other property must be rerun too.

@@ -121,6 +121,34 @@ class GraderTest(unittest.TestCase):
         check["path"] = "properties.5.status"
         self.assertFalse(grader.check_json_field(check, "", self.outputs, None)[0])
 
+    def test_engine_report(self):
+        """The check reads the engine's artefact, never the answer text."""
+        report = {
+            "engine": {"name": "mcd", "version": "0.1.0", "report_schema": "mcd-report/1"},
+            "properties": [
+                {"id": "deadlock", "status": "verified", "evidence": "exhaustive"},
+                {"id": "ctl1", "status": "violated", "evidence": "exhaustive"},
+            ],
+        }
+        answer = "I ran mcd check and everything is verified / exhaustive"
+        # No report among the outputs: the prose does not help.
+        self.assertFalse(grader.check_engine_report({"type": "engine_report"}, answer, self.outputs, None)[0])
+        self.write(os.path.join(self.outputs, "check-1.json"), report)
+        self.assertTrue(grader.check_engine_report({"type": "engine_report"}, "", self.outputs, None)[0])
+        ok, ev = grader.check_engine_report(
+            {"property": "ctl1", "status": "violated", "evidence": "exhaustive"}, "", self.outputs, None)
+        self.assertTrue(ok)
+        self.assertIn("ctl1", ev)
+        # Right property, wrong verdict; and a property that is not there.
+        self.assertFalse(grader.check_engine_report({"property": "ctl1", "status": "verified"}, "", self.outputs, None)[0])
+        self.assertFalse(grader.check_engine_report({"property": "ltl9"}, "", self.outputs, None)[0])
+        # A JSON file that is not this engine's report does not count.
+        self.write(os.path.join(self.outputs, "other.json"), {"engine": {"name": "spin"}, "properties": []})
+        ok, _ = grader.check_engine_report({"property": "deadlock", "status": "verified"}, "", self.outputs, None)
+        self.assertTrue(ok)
+        os.remove(os.path.join(self.outputs, "check-1.json"))
+        self.assertFalse(grader.check_engine_report({"type": "engine_report"}, "", self.outputs, None)[0])
+
     # --- grade -----------------------------------------------------------
     def test_grade_shapes_grading_json(self):
         entry = {

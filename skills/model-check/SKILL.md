@@ -11,15 +11,19 @@ description: >
   nets, alternating-bit or handshake protocols, telephone switches, producer/consumer,
   leader election, "can this hang", "is a counterexample possible", "verify this
   protocol", "check this model", "model checking", "deadlock", "counterexample".
-  Russian triggers, use the skill for any of them: «проверь модель», «может ли
+  Russian signals: «проверь модель», «может ли
   зависнуть», «докажи, что никогда», «сеть Петри», «тупик», «инвариант», «взаимное
   исключение», «живость», «liveness», «справедливость», «Promela», «never claim»,
   «LTL», «CTL», «model checking», «верификация протокола», «контрпример», «гонка»,
   «переведи сеть Петри во что-нибудь проверяемое». Also use it when the user only
   describes the system in words and asks whether something bad can ever happen or
   something good must eventually happen — that is a model-checking question even if
-  they do not say so. Do not use it for unit tests of sequential code, data-race
-  linters, single-function theorem proving, or for drawing diagrams without analysis.
+  they do not say so. What decides is the question, not the word: use the skill when the
+  question is whether some behaviour of a system with several interacting parts is
+  possible or unavoidable, and do not use it for unit tests of sequential code, for
+  finding races in real source with a linter or sanitiser, for single-function theorem
+  proving, or for drawing diagrams without analysis — even when one of the words above
+  appears there.
 ---
 
 # model-check
@@ -89,8 +93,12 @@ tool class would fit), no imitation of a result. Details and the branch table:
 ### 3. Model → IR with `mc_parse`
 
 Two layers reach the same engine (`references/engine-tools.md`). When the plugin's MCP
-server is registered in the session, call the `mc_*` tools; otherwise every `mc_*` name
-in this file means its `mcd` CLI equivalent: `mcd parse --petri|--ir|--promela [-D …]`
+server is registered in the session, call the `mc_*` tools; otherwise most `mc_*` names
+in this file have an `mcd` CLI equivalent — with two gaps to declare in the report:
+`mc_simulate` has none (skip the pilot walk and say so), and `mc_lint_property` has none
+(classify the property by `references/properties-ltl-ctl.md` by hand and say it was
+manual). `mc_estimate` is `mcd check --estimate`, and `mc_manifest` is replaced by the
+report's own `engine`, `inputs` and parameters. The CLI forms: `mcd parse --petri|--ir|--promela [-D …]`
 and `mcd check --petri|--ir|--promela [-D …] [--ltl 'φ']… [--progress]
 [--fairness none|weak] [--budget-*] [--unlimited] [--bfs] [--sweep] [--no-timing]`.
 Promela input goes through the `promela` field of `mc_parse` or through
@@ -101,7 +109,10 @@ rejection meant below; exit code 0 / `outcome: report` is a result even when it 
 a verdict.
 
 Call `mc_parse` on the Promela text or the Petri JSON. Read the warnings, not just the
-success flag: `printf` ignored, never claim not executed, capacity defaults applied.
+success flag: `printf` kept as a no-op step (its output is not produced, the state count
+stays SPIN's), capacity defaults applied, a construct silently narrowed. A never claim in the file no longer
+warns that it was not executed: the frontend turns it into an executable `never` property
+(kind `ltl`) and checks it — read the property list of the report to see it.
 If the parser rejects a construct, the choices are to rewrite the model inside the
 subset or to explain the boundary; working around the parser (hand-editing its
 output, faking the construct) is not one of them, because the differential tests that
@@ -111,8 +122,10 @@ back the `exhaustive` evidence level only cover the grammar the parser accepts.
 
 Classify each property on three axes (FR-004): class (safety / reachability /
 liveness), logic (invariant / LTL / CTL), extension (untimed / timed / probabilistic).
-Run `mc_lint_property` on every property before checking — a state property by
-`expr`, an LTL property by `formula` — it returns the atoms, whether they are
+Run `mc_lint_property` on every property it accepts — `invariant`, `reach`, `ltl` and
+`ctl`; `progress` is refused, because it is a label search and not a formula, and its
+sanity check is a `reach` on the label instead. A state property goes by `expr`, a
+temporal one by `formula` — it returns the atoms, whether they are
 defined, vacuity candidates, the safety/liveness class and whether the formula is
 `X`-free. Always add at least one sanity reachability property (is the trigger
 reachable? is the interesting state reachable?) next to the main requirement; a
@@ -152,9 +165,17 @@ property.
 
 ### 6. Check with `mc_check`
 
-Pass the IR, the property list, the fairness setting and an explicit budget. An
+Pass the IR, the property list, the fairness setting and an explicit budget. Pass it as
+the **`session_id`** whenever the model came from Promela: an IR handed over inline drops
+the `#define` table with it, so a formula that mentions a macro stops resolving — either
+keep the session or expand the macros in the formula yourself. An
 absent or zero budget field means the default in both layers; only the CLI can lift
-a budget, with `--unlimited`. Liveness is run **without** fairness first
+a budget, with `--unlimited`. **A property list you pass replaces the model's own**: the
+frontend's `deadlock`, `safe`, `never`, `accept` and `progress` are gone from that run —
+only the implicit `assert` is always added. So when you add a sanity `reach`, add the
+frontend's properties back into the same list, or run the model's own properties first in
+a separate call and keep both reports. A `deadlock` that silently disappeared from the
+second run leaves a report in which nothing failed and nothing was asked. Liveness is run **without** fairness first
 (`references/fairness.md` §3). Note which properties you did not ask for: the
 Promela frontend adds `deadlock`, the model's own `assert`, and — from the model —
 `never`, `accept` and `progress` when the corresponding labels or claim are there.
@@ -171,9 +192,15 @@ that failed — fixing a deadlock can open a non-progress cycle.
 
 ### 7. Analyse with `mc_explain`
 
-For every `violated` property call `mc_explain` to get the counterexample as prefix
-and loop with the user's names and per-step variable diffs. A temporal violation is
-a **lasso**: its `loop` record (`counterexample.loop`) gives `start` (the 1-based
+For every `violated` property **that carries a `counterexample`** call `mc_explain` with
+its id, to get the run as prefix and loop with the user's names and per-step variable
+diffs. Some verdicts carry no run at all and there is nothing to explain: a `reach` that
+completed without finding its state (`violated`, and that is the good news —
+`counterexamples.md` §6), a universal CTL property that holds, a failing existential one.
+They carry `temporal.witness_note` instead — quote it. `mc_explain` **decodes** the stored
+trace; it runs nothing, so write "decoded", and keep "replayed" for a `mc_simulate`
+`guided` run over those steps (`counterexamples.md` §5). When the record does have a
+`loop` (`counterexample.loop`) it gives `start` (the 1-based
 index of the first loop step) and `steps`, and everything from there repeats forever — say that plainly, or
 the reader counts the steps and asks what happens next. Three process names in a
 lasso are not the user's processes and must be dropped or explained: the claim
@@ -201,12 +228,12 @@ Every property gets one status from the vocabulary of 11 §14 and one evidence l
 
 | Status | Meaning |
 |---|---|
-| `verified` | search completed, no violation found |
-| `violated` | the engine found a concrete counterexample; you replay and classify it before reporting |
+| `verified` | the search completed and found no violation — except for `reach`, which is verified by one witness run, so `complete` may be false there |
+| `violated` | the engine found a concrete counterexample — you decode and classify it before reporting; for `reach` it is the opposite: `violated` means a complete search found no such state, and it carries no run |
 | `inconclusive` | a correct but incomplete search: budget exhausted, bounded, approximate |
 | `unknown` | the result cannot be read even as partial coverage |
-| `not-executed` | nothing was run: out of subset, unsupported semantics, no binary, user declined |
-| `invalid-model` | the model itself is defective (overflow, capacity, undefined atom) |
+| `not-executed` | nothing was run: input rejected by the frontend (a construct outside the subset, an undeclared name in a property), unsupported semantics, `fairness: strong`, no binary, user declined |
+| `invalid-model` | the run reached a defect of the model itself: a `byte` wrap, a place above its capacity, a division by zero, an out-of-range index. Not the same as a rejected input (that is `not-executed`) and not the same as a send into a full channel, which is an ordinary blocked step, not a defect |
 
 Evidence: `exhaustive`, `bounded`, `approximate`, `unknown`. Only `verified` with
 `exhaustive` may be phrased as "the property holds on the model". Everything else is
@@ -233,7 +260,7 @@ the status, the status × evidence table, and the list of phrasings you must not
 | `references/evidence-and-status.md` | writing the report; any doubt about which status applies |
 | `references/pitfalls.md` | reviewing a model or a property someone else wrote; before declaring `verified` |
 
-## Four short examples from the corpus
+## Five short examples from the corpus
 
 - **`CH2/mutex_flaw.pml`** — invariant `assert(cnt == 1)` in the critical section.
   Expected: `violated`, evidence `exhaustive`, counterexample through labels `L1`–`L4`
@@ -246,15 +273,19 @@ the status, the status × evidence table, and the list of phrasings you must not
   protocol — say which. For the opposite case (a liveness property that is
   `violated` by an unfair loop and `verified` under `fairness: weak`) use
   `engine/testdata/promela/starvation.pml`.
-- **`CH5/pathfinder.pml`** — deadlock through priority inversion. The model uses
-  `provided`, which is v1 of the subset; until then the honest status is
-  `not-executed` with the construct named. When accepted, partial-order reduction is
-  inapplicable because of the priorities — a fact to record, not a knob to try.
-- **`CH14/version1`** — a telephone switch with labels and no variables. "Can it
-  get stuck in `Busy`?" is liveness, and it cannot be written as a formula here:
-  label atoms are not accepted and the model has no variable to point at. The route
-  is a `progress` label placed where the requirement says progress is, declared as a
-  change to the model, and then the `progress` property the frontend adds by itself.
+- **`CH5/pathfinder.pml`** — deadlock through priority inversion. `provided` entered the
+  subset in v1 (G5), so the model runs: `deadlock` comes back `violated` / `exhaustive`
+  with the trace to the blocked state. Partial-order reduction would be inapplicable here
+  because of the priorities — a fact to record, not a knob to try.
+- **`CH14/version1`** — a telephone switch with labels and no variables. "Can it get stuck
+  in `Busy`?" is a branching question, and CTL asks it directly, because **CTL** accepts
+  control-label atoms: `AG EF switch@Idle` comes back `verified` / `exhaustive` on the
+  complete graph of 9 states, with `normalised` = `!E[true U !E[true U (pc(1) == 0)]]` and
+  a `witness_note` saying there is no single run to show — quote the normalised formula
+  and the note, not just the status. The **LTL** parser rejects `@`, so the same question
+  in LTL needs either a variable to point at or a `progress` label placed where the
+  requirement says progress is — and that placement is a change to the model, which you
+  declare.
 - **`App_C/petrinet1`** — a Petri net encoded in Promela. As Petri JSON: initial
   marking `p1 = p4 = 1`; firing `t1` then `t4` leaves `p2 = p5 = 1` with no enabled
   transition. Expected: hang (deadlock) `violated` with the two-step counterexample.
@@ -263,9 +294,10 @@ the status, the status × evidence table, and the list of phrasings you must not
 
 - It does not run or recommend external model checkers; the built-in engine is the
   backend, and SPIN exists in the project only as an oracle for the engine's tests.
-- It does not check CTL yet (`ctl` → `not-executed`, G5) and it does not check
-  strong fairness (`not-executed`, FR-008); it says so rather than substituting a
-  neighbouring result.
+- It does not check strong fairness: `fairness: strong` is accepted and answered
+  `not-executed` / `unknown` (FR-008), and the weak-fairness run is never presented in its
+  place. Every other property kind — `invariant`, `reach`, `deadlock`, `assert`, `ltl`,
+  `progress` and, since G5, `ctl` — does run.
 - It does not check timed, probabilistic, BDD-symbolic or SAT-bounded problems.
   For those it produces the model, the property classification and a plan with status
   `not-executed` (FR-020, FR-021 stay at routing level).

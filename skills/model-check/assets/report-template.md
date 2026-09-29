@@ -47,7 +47,8 @@ deadlock): `verified`, evidence `exhaustive`, 128 states."
 
 - Manifest: *path from `mc_manifest`*
 - Budget: time / states / depth / memory
-- Metrics per run: states, transitions, depth, elapsed, peak memory
+- Metrics per run: states, transitions, depth, elapsed, and `memory_bytes_est` — the
+  engine's estimate of the state table, not a peak RSS; call it an estimate
 - Staging: parse → simulate (seed) → estimate → check (pilot budget → target budget)
 
 ## 7. Result
@@ -70,9 +71,11 @@ reasoning; whether one trace was enough (CTL).
 
 ## 9. Limitations
 
-*What is not established: bounds, unreduced but incomplete coverage, experimental
-LTL evidence, fairness assumptions, abstraction losses (Petri/CPN loss list),
-constructs not executed, the missing conformance argument for the implementation.*
+*What is not established: what a `bounded` run did **not** cover (`evidence-and-status.md`
+§3), unreduced search, fairness assumptions, the `enabled(t)` proxy when a Petri liveness
+question was asked in LTL, abstraction losses (Petri/CPN loss list), constructs not
+executed, platforms the binary was not run on, and the missing conformance argument for
+the implementation.*
 
 ## 10. Next actions
 

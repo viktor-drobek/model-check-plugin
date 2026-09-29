@@ -51,7 +51,7 @@ report the engine's word and the disagreement.
 | 2 | Was the property still undecided when the run hit a defect of the model itself? A domain overflow gives `invalid-model`: a `byte` wrap, a place above its capacity, a division by zero or an out-of-range index in a guard or effect | `invalid-model` | `unknown` | the run to the offending step is attached as `counterexample`; every property still undecided gets this status, a property already decided keeps its verdict (g0-confirmation §4, decision 3) |
 | 3 | Did the run find a concrete violation — a bad state, a hang, a failing `assert` — or, for `reach`, complete the search without any state satisfying the condition? | `violated` | `exhaustive` | `violated` carries evidence `exhaustive` always: the counterexample is an exact run of the model whatever cut the search afterwards; for `reach` because only a complete search establishes unreachability |
 | 4 | Did the search complete (whole reachable graph expanded) without a violation? For `reach`: was a state satisfying the condition found? | `verified` | `exhaustive` | `verified` requires `complete` = true, except for `reach`, which is verified by a witness — the exact run attached as `witness`, so `complete` may be false |
-| 5 | Did a budget stop the run first (states, depth, time, memory)? Budget exhaustion gives `inconclusive` with `reason` naming the exhausted resource | `inconclusive` | `bounded` for a **states** or **depth** stop, `unknown` for a **time** or **memory** stop (§3) | `complete` is false; with `bounded` the search covered everything up to the named bound and nothing beyond, with `unknown` not even that much can be said |
+| 5 | Did a budget stop the run first (states, depth, time, memory)? Budget exhaustion gives `inconclusive` with `reason` naming the exhausted resource | `inconclusive` | `bounded` for a **states** or **depth** stop, `unknown` for a **time** or **memory** stop (§3) | `complete` is false; with `bounded` the engine can name the bound that stopped it, and §3 says what that bound does and does not cover, with `unknown` not even the bound can be named |
 | 6 | Otherwise: the outcome cannot be read even as partial coverage (semantics ambiguous, result not interpretable, an interruption without a bound) | `unknown` | `unknown` | in the vocabulary, but the G0 engine never emits it; it is reserved for tool errors without a bound (plan §6) and for experimental modes |
 
 Notes on exclusivity:
@@ -79,9 +79,9 @@ fixed: Aggregation priority: `invalid-model` > `not-executed` > `violated` > `in
 | Level | Meaning | Produced when |
 |---|---|---|
 | `exhaustive` | the whole reachable state space (of the model × property automaton) was explored with an exact visited set, or an exact run decides the property | a complete search (`verified`); any `violated`; a `reach` witness |
-| `bounded` | the search covered everything up to an explicit bound and nothing beyond, and the result is stated relative to that bound | a budget cut the run at a point the engine can name: N states, depth D, the time or memory limit at N states (`inconclusive`) |
+| `bounded` | the search stopped at a bound the engine can name; the result is reported by naming that bound, which is not the same as being covered up to it — see the caveat below | a declared search bound cut the run: N stored states, depth D, or the process-instance pool (`inconclusive`) |
 | `approximate` | the visited set may have lost states (hash collisions); coverage is a probability, not a fact | bitstate / hash-compact modes (vNext only) |
-| `unknown` | the engine does not vouch for coverage | `not-executed`, `invalid-model`, `unknown`, experimental LTL (plan §11) |
+| `unknown` | the engine does not vouch for coverage | `not-executed`, `invalid-model`, `unknown`, and an `inconclusive` stopped by time or memory |
 
 The rule that separates the last two (plan §6): `bounded` is used when the engine can
 name the bound at which it stopped and the result is phrased relative to it;
@@ -89,8 +89,8 @@ name the bound at which it stopped and the result is phrased relative to it;
 result that cannot be classified.
 
 **Which budget stop gets which (as built in G4).** A **states** or **depth** stop is
-`bounded`: "everything up to 10⁶ stored states" and "everything up to depth D" are
-statements a reader can act on, and the same run repeated gives the same coverage. A
+`bounded`: the engine names the bound it stopped at, and the same run repeated stops
+at the same place. A
 **time** or **memory** stop is `unknown`: the engine knows how many states it had
 stored when the clock or the estimate ran out, but that number is not a *bound* on
 anything — it is an artefact of the machine and the load, it is not reproducible,
@@ -100,10 +100,27 @@ both the temporal and the safety search, and the rule above is the one the engin
 now follows. Quoting `counters.states` next to an `unknown` is still useful — as a
 measurement, not as coverage.
 
+**What `bounded` does not mean.** It names the bound that stopped the search; it does
+not say that everything below the bound was searched. Under a **depth** budget the DFS
+stores a state it reaches deeper than D without expanding it (`reason`: "N state(s) at
+depth > D were stored but not expanded"), and a state it has already stored is never
+expanded a second time — so when a later, shorter path reaches that same state at a
+depth below D, its successors still go unexplored. Paths of length ≤ D through such a
+state are therefore missing from the search. It is not a bound in the other direction either: the
+search evaluates a newly stored state's properties *before* it tests the depth limit, so a
+property can be decided — `violated` with a real counterexample — at depth D+1. Under a
+**states** budget the run simply stops at the N-th state, which is a point in the
+traversal, not a horizon in the model.
+Write "no counterexample was found before the run stopped at <bound>", never "everything
+up to <bound> was checked". The one bound that does cover what it names is
+`complete: true`: nothing was cut.
+
 **LTL evidence.** Plan §11 asked for evidence `unknown` on LTL results "while the
 translation is experimental". The differential oracle that ends that condition ran
-in G4: 43 triples (engine, engine with SPIN's own claim, `pan`) agree on verdicts
-and product state counts (`steps/g4-confirmation.md` §3.1). LTL results therefore
+in G4: 43 triples (engine, engine with SPIN's own claim, `pan`) agree on every
+verdict, and the product state counts agree with `pan` where they are comparable —
+not under `pan -f`, whose copies do not enter "stored", and not under the engine's own
+automaton, where the count follows the automaton (`steps/g4-confirmation.md` §3.1–3.2). LTL results therefore
 carry the ordinary evidence levels of this file — `exhaustive` for a completed
 product search or any counterexample — and the sentence "the LTL translation is
 experimental, treat this as not established" is no longer written. What still has to
@@ -118,11 +135,11 @@ the fairness setting it was checked under (`engine-tools.md` §7).
 | `verified` | `exhaustive`, for an `ltl` or `progress` property | "Formula φ holds on model M under fairness F; the product with the automaton for !φ was searched exhaustively (N states)." Name the formula and the fairness; a temporal verdict without them is unreadable | "holds" without the formula or the fairness; anything about the implementation |
 | `verified` | `bounded`, `approximate` | not produced: an incomplete search without a violation is `inconclusive` (§2, row 5) | — |
 | `violated` | `exhaustive` (the only combination the engine emits) | "P is violated on M; counterexample replayed: … (final state …)." | "the system has a bug" before the cause classification (`counterexamples.md` §3) |
-| `inconclusive` | `bounded` | "No counterexample within N states / depth D; beyond that nothing is known." (AC-02) | "holds up to k" as if it said something about beyond k; "no errors" |
+| `inconclusive` | `bounded` | "No counterexample was found before the run stopped at N states / depth D; what lies beyond — and, for a depth stop, what lies below it through an unexpanded state — is not known." (AC-02) | "holds up to k" as if it said something about beyond k; "everything up to the bound was checked"; "no errors" |
 | `inconclusive` | `approximate` | "No counterexample found in an approximate search with estimated coverage c." (AC-12) | "exhaustive", "proved" |
 | `inconclusive` | `unknown` | produced since G4 by a **time** or **memory** budget stop (§3): "The run stopped after T ms with N states stored; how much of the state space that is, is not known." | "up to N states" as if N were a bound; any coverage claim |
 | `unknown` | `unknown` | "The engine could not classify the result: reason. Next step: …" (AC-15) | any of the other five statuses |
-| `not-executed` | `unknown` | "Not checked: reason (construct X at line n / kind `ctl` not executed by this build / strong fairness not implemented, FR-008 / no engine). Model and properties are attached; route: …" | any result, including "likely fine"; for strong fairness, the weak-fairness verdict presented as if it answered the question |
+| `not-executed` | `unknown` | "Not checked: reason (construct X at line n / strong fairness not implemented, FR-008 / no engine binary / user declined). Model and properties are attached; route: …" | any result, including "likely fine"; for strong fairness, the weak-fairness verdict presented as if it answered the question |
 | `invalid-model` | `unknown` | "The model overflowed domain D at step s (trace attached); fix the model before any property claim." | "violated"; "the system overflows" |
 
 ## 5. Size bounds (plan §12 A4 as fixed at control point K1, measured in G0)
@@ -132,7 +149,7 @@ bounds; smaller budgets are set with the `--budget-*` flags (`engine-tools.md` �
 
 | Class | States | DFS depth | State vector | Time | Memory |
 |---|---|---|---|---|---|
-| small | ≤ 10⁵ | ≤ 10⁵ | — | 60 s | 1 GB |
+| small | ≤ 10⁵ | ≤ 10⁵ | ≤ 128 bytes | 60 s | 1 GB |
 | medium | ≤ 10⁶ | ≤ 10⁶ | ≤ 128 bytes | 60 s | 1 GB |
 
 Depth is a budget of its own, separate from the state count. G0 measurements
@@ -141,7 +158,11 @@ Depth is a budget of its own, separate from the state count. G0 measurements
 overhead the plan allowed (≤ 20× the Spike) came out below 1× on that model, with
 the caveat that its guards are trivial. Above the medium class a full run ends
 `inconclusive` with the resource named, not in silent waiting; `mc_estimate` (G5)
-will warn before the run. Quote the numbers of the actual run from the report's
+extrapolates the state count and the vector width from a short run and warns before the
+run — it does not estimate memory per state (`steps/g5-confirmation.md` §7), so its
+warning is a signal about size, not a prediction of the memory budget. The table is a target, not a guarantee:
+the G0 numbers come from a model with trivial guards, and a temporal product or a CTL
+labelling over the same state count costs more. Quote the numbers of the actual run from the report's
 `counters`, not this table.
 
 ## 6. Forbidden phrasings
@@ -151,10 +172,11 @@ a user's phrasing when you quote it back.
 
 | Do not write | Because | Write instead |
 |---|---|---|
-| "no errors", "the model has no errors", "ошибок нет" | 11 §14 forbids it outright; it claims completeness that only `exhaustive` supports and hides which properties were checked | "no counterexample was found for properties P1–P3 in an exhaustive search" / "…in a bounded search up to N states" |
+| "no errors", "the model has no errors", "ошибок нет" | 11 §14 forbids it outright; it claims completeness that only `exhaustive` supports and hides which properties were checked | "no counterexample was found for properties P1–P3 in an exhaustive search" / "…before the bounded run stopped at N stored states" |
 | "proved", "proven", "доказано", "verified" as a plain adjective | only `verified` + `exhaustive` supports it, and only about the model | "P holds on model M under assumptions A (exhaustive search)" |
 | "the system is correct", "the protocol is safe", "the implementation is verified" | the result is about the model; transfer needs a conformance argument (11 §1.3; 10 §12) | "on the model M, …; carrying this to the implementation requires …" |
-| "holds up to k" implying beyond k | AC-02, AC-07 | "no counterexample of length ≤ k; nothing is claimed beyond k" |
+| "holds up to k" implying beyond k | AC-02, AC-07 | "no counterexample was found before the run stopped at k; nothing is claimed beyond k, and §3 says what a bound does not cover below it" |
+| "everything up to depth D was checked", "all states within the budget were explored" | a depth-bounded DFS leaves states stored but not expanded, and never re-expands a state a shorter path reaches later (§3) | "the run stopped at depth D with N state(s) stored but not expanded; paths through them were not followed" |
 | "the search timed out but found nothing, so it is probably fine" | 11 §10: budget exhaustion is `inconclusive`, never a hint of `verified` | "inconclusive: time budget exhausted after N states; nothing is known beyond them" |
 | "with fairness the property holds" without the result without fairness | AC-05; 03 гл. 6: fairness can prove by forbidding | both results, each with its assumption |
 | "the property holds under weak fairness" when the run without fairness already returned `verified` | it presents an assumption as a premise of a result that does not need it (`fairness.md` §6a) | "the result does not depend on the fairness setting; it holds with `none` and with `weak`" |

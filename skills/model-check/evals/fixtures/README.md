@@ -27,6 +27,7 @@ Hashes computed with `sha256sum` on 2026-09-24.
 | E3 (reference) | `Promela - examples/App_C/petrinet1` (the corpus encoding the net comes from; not an input of the eval) | `b20970178bb7adfec73a131d56c7f9e6fc00e7ec07c995f9a1c7285f60d81d87` | 526 |
 | E4, E6 | `Promela - examples/CH14/version1` | `acdfcacad083c29ff47cba18de2fb84ec784e9e064e0b64c435497e07121ec3b` | 752 |
 | E5 | `Promela - examples/CH17/simple1.pr` | `d7a34d649c9cc83ecb852dd2ca584c1ce3b977fceb5a2dbb5d09db542b2d4b70` | 184 |
+| E8 | `model-check-plugin/skills/model-check/evals/fixtures/handshake.pml` (own model, not corpus: the hand-written reference for the eval that checks assumption A7) | `68481c2b15db36d94bb643708b288c52f26167895f17a4fb9d0bbcee7cea0bd0` | 1054 |
 | E2b | `model-check-plugin/engine/testdata/promela/starvation.pml` (not corpus: the engine's own test model, written in G4) | `43092539c371572b0314278ddd7ba4bddd7c8af66a6f5362fb37ca62f4397c0b` | 450 |
 
 Which evals can run today: E3 (Petri JSON through `mcd check --petri`, build step
@@ -153,6 +154,17 @@ requirement says progress is (the subscriber's `Idle`) as a declared change to t
 model, and rerun: the frontend then adds the `progress` property by itself and the
 answer is `verified` / `exhaustive`, complete — the phone cannot stay in `Busy`
 forever.
+
+`handshake.pml` is the second file that lives here, and like `petrinet1.json` it is
+our own: the hand-written reference model for **E8**, the eval that checks assumption
+A7 (the agent builds the model itself, from words). The eval's prompt gives the two
+clients and the server in prose and no model at all; this file is what a correct
+translation of those words looks like, with its own modelling decisions written out
+(rendezvous channels, one working step, a server that grants to one client at a time).
+It is a comparison model, never an input: the agent does not see it. Run by hand on
+2026-09-29 it gives `deadlock` `verified` / `exhaustive` and `assert` `verified` /
+`exhaustive` on a complete search of 12 states, and those are the verdicts E8's
+assertions expect from the agent's own model.
 
 How to add a corpus fixture: add a row with path, hash and size; never add the file
 itself. Models from the second corpus (lectures 07, Karpov 03, Velder 09 — extracted

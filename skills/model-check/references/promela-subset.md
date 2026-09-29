@@ -58,7 +58,7 @@ authority for any particular file.
 
 | Topic | Engine | SPIN (`pan`) | What to tell the user |
 |---|---|---|---|
-| **Byte/short/int overflow** (`byte` leaving 0–255, channel capacity exceeded) | `invalid-model`, evidence `unknown`, the run to the offending step attached as `counterexample`, the overflow named in `reason`; every property still undecided at that point gets `invalid-model` (plan §4.1) | **wraps silently** (`255 + 1 = 0`) and keeps searching | Say it explicitly: `CH3/counter.pml`, `counter2.pml`, `xr.pml` give `invalid-model` here and "no errors" in SPIN. The model's domain, not the engine, is what differs; fix or justify the domain before any property claim |
+| **Domain overflow** (`byte` leaving 0–255, a Petri place above its declared capacity, an out-of-range index — *not* a send into a full channel, which is an ordinary blocked step and can only end in a deadlock, never in `invalid-model`) | `invalid-model`, evidence `unknown`, the run to the offending step attached as `counterexample`, the overflow named in `reason`; every property still undecided at that point gets `invalid-model` (plan §4.1) | **wraps silently** (`255 + 1 = 0`) and keeps searching | Say it explicitly: `CH3/counter.pml`, `counter2.pml`, `xr.pml` give `invalid-model` here and "no errors" in SPIN. The model's domain, not the engine, is what differs; fix or justify the domain before any property claim |
 | **Blocking inside `d_step`** | `invalid-model` with reason "block in d_step seq" (03 гл. 5: a modelling error) | run-time error, search aborts | Same verdict class; the engine attaches the run |
 | **Nondeterminism inside `d_step`** | the first executable alternative is taken (as SPIN) | same | — |
 | **`atomic` storage rule** (explanatory) | intermediate states inside an `atomic` sequence are **not stored** while the holder can move; the state where an `atomic` sequence is interrupted (its statement blocks) **is stored** | same rule | This is why `App_C/petrinet1` has 8 states, not 28: the marking updates inside `atomic` are one stored step. Invariants and `reach` are checked on **stored** states; `assert` on every step. Counters compare with `pan -c0`, not with the number of statements executed |
@@ -129,9 +129,18 @@ assignment. Do not report any of them as a boundary.
 ### Name collisions — `semantic` refusals, and SPIN refuses them too
 
 These are **not** boundaries of the subset: nothing here is a construct the engine
-declines to support, so the status is not `not-executed`. They are model errors, the
-engine names the identifier, the file and the line, and SPIN 6.5.2 rejects the same
-models. Report them as "fix the model", quoting the message.
+declines to support. They are model errors — the engine names the identifier, the file
+and the line, and SPIN 6.5.2 rejects the same models. Report them as "fix the model",
+quoting the message.
+
+The **status** is still `not-executed`, and so is the status of every other rejected
+input: the frontend refused the file, nothing ran, and `evidence-and-status.md` §2 row 1
+gives that case `not-executed` / `unknown`. What the reason says is what distinguishes
+the two: "outside the subset, construct X" sends the user to a different tool, "name
+collision at line n" sends them back to the model. The same holds for a property the
+engine will not compile — an undeclared variable in an `--ltl`/`--ctl` formula answers
+`"status": "not-executed"` with the offending atom named, not `invalid-model`, because
+`invalid-model` is reserved for a defect a **running** search walked into.
 
 **The rule** (established by running 52 collision shapes against SPIN, not inferred
 from a couple of examples — `steps/g5-addendum2-confirmation.md` §2): a declaration is

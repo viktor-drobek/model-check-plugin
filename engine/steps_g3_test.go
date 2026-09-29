@@ -1729,7 +1729,7 @@ func registerG3Steps(sc *godog.ScenarioContext) {
 		return statesRule(rel, phrase("(?is)claim reaching its end is a violation on a finite prefix"), "a claim reaching its end is a violation on a finite prefix")
 	})
 	sc.Step(`^"([^"]+)" says that label atoms are rejected in ltl and accepted in ctl$`, func(rel string) error {
-		return statesRule(rel, phrase("(?is)Control-label atoms \\(`proc@label`, `proc\\[i\\]@label`\\): rejected in LTL, accepted in\\s+CTL"), "label atoms are rejected in ltl and accepted in ctl")
+		return statesRule(rel, phrase("(?is)Control-label atoms \\(`proc@label`, `proc:pid@label`\\): rejected in LTL, accepted in\\s+CTL"), "label atoms are rejected in ltl and accepted in ctl")
 	})
 	sc.Step(`^"([^"]+)" says that the progress property is added when the model has progress labels$`, func(rel string) error {
 		return statesRule(rel, phrase("(?is)`progress` property is added automatically when the model has progress\\s+labels"), "the progress property is added when the model has progress labels")
