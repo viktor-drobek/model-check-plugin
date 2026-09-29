@@ -1,0 +1,347 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.1.0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "promela",
+      "path": "model.pml",
+      "sha256": "f6be8a0bf1f7f98c847222de7e32f500f052d875001a1ee4fbdf172f7995e815"
+    }
+  ],
+  "model": {
+    "name": "model",
+    "state_bytes": 5,
+    "processes": 2,
+    "variables": 2
+  },
+  "search": {
+    "mode": "dfs",
+    "budget": {
+      "states": 1000000,
+      "depth": 1000000,
+      "time_ms": 60000,
+      "mem_bytes": 1073741824
+    },
+    "stop": "complete",
+    "complete": true
+  },
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 52,
+        "transitions": 96,
+        "depth": 30,
+        "time_ms": 0,
+        "memory_bytes_est": 27456
+      },
+      "complete": true
+    },
+    {
+      "id": "assert",
+      "kind": "assert",
+      "text": "no assert statement fails (SPIN: assertion violations)",
+      "status": "violated",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 52,
+        "transitions": 96,
+        "depth": 30,
+        "time_ms": 0,
+        "memory_bytes_est": 27456
+      },
+      "complete": true,
+      "counterexample": {
+        "steps": [
+          {
+            "index": 1,
+            "process": "client:0",
+            "command": "!busy",
+            "origin": {
+              "file": "model.pml",
+              "line": 7,
+              "name": "!busy"
+            }
+          },
+          {
+            "index": 2,
+            "process": "client:1",
+            "command": "!busy",
+            "origin": {
+              "file": "model.pml",
+              "line": 7,
+              "name": "!busy"
+            }
+          },
+          {
+            "index": 3,
+            "process": "client:0",
+            "command": "busy = true",
+            "changes": [
+              {
+                "var": "busy",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model.pml",
+              "line": 8,
+              "name": "busy = true"
+            }
+          },
+          {
+            "index": 4,
+            "process": "client:0",
+            "command": "inside++",
+            "changes": [
+              {
+                "var": "inside",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model.pml",
+              "line": 9,
+              "name": "inside++"
+            }
+          },
+          {
+            "index": 5,
+            "process": "client:0",
+            "command": "assert(inside == 1)",
+            "origin": {
+              "file": "model.pml",
+              "line": 10,
+              "name": "assert(inside == 1)"
+            }
+          },
+          {
+            "index": 6,
+            "process": "client:0",
+            "command": "inside--",
+            "changes": [
+              {
+                "var": "inside",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "model.pml",
+              "line": 11,
+              "name": "inside--"
+            }
+          },
+          {
+            "index": 7,
+            "process": "client:1",
+            "command": "busy = true",
+            "origin": {
+              "file": "model.pml",
+              "line": 8,
+              "name": "busy = true"
+            }
+          },
+          {
+            "index": 8,
+            "process": "client:0",
+            "command": "busy = false",
+            "changes": [
+              {
+                "var": "busy",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "model.pml",
+              "line": 12,
+              "name": "busy = false"
+            }
+          },
+          {
+            "index": 9,
+            "process": "client:0",
+            "command": "!busy",
+            "origin": {
+              "file": "model.pml",
+              "line": 7,
+              "name": "!busy"
+            }
+          },
+          {
+            "index": 10,
+            "process": "client:0",
+            "command": "busy = true",
+            "changes": [
+              {
+                "var": "busy",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model.pml",
+              "line": 8,
+              "name": "busy = true"
+            }
+          },
+          {
+            "index": 11,
+            "process": "client:0",
+            "command": "inside++",
+            "changes": [
+              {
+                "var": "inside",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model.pml",
+              "line": 9,
+              "name": "inside++"
+            }
+          },
+          {
+            "index": 12,
+            "process": "client:0",
+            "command": "assert(inside == 1)",
+            "origin": {
+              "file": "model.pml",
+              "line": 10,
+              "name": "assert(inside == 1)"
+            }
+          },
+          {
+            "index": 13,
+            "process": "client:1",
+            "command": "inside++",
+            "changes": [
+              {
+                "var": "inside",
+                "before": 1,
+                "after": 2
+              }
+            ],
+            "origin": {
+              "file": "model.pml",
+              "line": 9,
+              "name": "inside++"
+            }
+          },
+          {
+            "index": 14,
+            "process": "client:0",
+            "command": "inside--",
+            "changes": [
+              {
+                "var": "inside",
+                "before": 2,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model.pml",
+              "line": 11,
+              "name": "inside--"
+            }
+          },
+          {
+            "index": 15,
+            "process": "client:0",
+            "command": "busy = false",
+            "changes": [
+              {
+                "var": "busy",
+                "before": 1,
+                "after": 0
+              }
+            ],
+            "origin": {
+              "file": "model.pml",
+              "line": 12,
+              "name": "busy = false"
+            }
+          },
+          {
+            "index": 16,
+            "process": "client:0",
+            "command": "!busy",
+            "origin": {
+              "file": "model.pml",
+              "line": 7,
+              "name": "!busy"
+            }
+          },
+          {
+            "index": 17,
+            "process": "client:0",
+            "command": "busy = true",
+            "changes": [
+              {
+                "var": "busy",
+                "before": 0,
+                "after": 1
+              }
+            ],
+            "origin": {
+              "file": "model.pml",
+              "line": 8,
+              "name": "busy = true"
+            }
+          },
+          {
+            "index": 18,
+            "process": "client:0",
+            "command": "inside++",
+            "changes": [
+              {
+                "var": "inside",
+                "before": 1,
+                "after": 2
+              }
+            ],
+            "origin": {
+              "file": "model.pml",
+              "line": 9,
+              "name": "inside++"
+            }
+          },
+          {
+            "index": 19,
+            "process": "client:0",
+            "command": "assert(inside == 1)",
+            "origin": {
+              "file": "model.pml",
+              "line": 10,
+              "name": "assert(inside == 1)"
+            }
+          }
+        ],
+        "final_state": [
+          {
+            "var": "busy",
+            "value": 1
+          },
+          {
+            "var": "inside",
+            "value": 2
+          }
+        ],
+        "summary": "!busy, !busy, busy = true, inside++, assert(inside == 1), inside--, busy = true, busy = false, !busy, busy = true, inside++, assert(inside == 1), inside++, inside--, busy = false, !busy, busy = true, inside++, assert(inside == 1)"
+      },
+      "reason": "assert(inside == 1) fails in the last step of the counterexample"
+    }
+  ]
+}
