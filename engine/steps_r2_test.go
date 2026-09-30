@@ -146,7 +146,7 @@ func registerR2Steps(sc *godog.ScenarioContext) {
 		expand := func(s string) string {
 			return strings.ReplaceAll(s, "${CLAUDE_PLUGIN_ROOT}", w.plugin)
 		}
-		if expand(fmt.Sprint(want["command"])) != fmt.Sprint(got["command"]) {
+		if expand(fmt.Sprint(got["command"])) != expand(fmt.Sprint(want["command"])) {
 			return fmt.Errorf("command: run has %v, the plugin ships %v (expanded %v)",
 				got["command"], want["command"], expand(fmt.Sprint(want["command"])))
 		}

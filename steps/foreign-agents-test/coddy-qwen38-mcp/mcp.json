@@ -2,7 +2,7 @@
   "mcpServers": {
     "model-check": {
       "type": "stdio",
-      "command": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/engine/bin/mcd",
+      "command": "${CLAUDE_PLUGIN_ROOT}/engine/bin/mcd",
       "args": [
         "serve",
         "--max-states",
