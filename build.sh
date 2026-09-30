@@ -68,7 +68,7 @@ case "$VERSION" in
   ''|*[![:print:]]*|*' '*) die "bad version string: '$VERSION'" ;;
 esac
 
-GO_VERSION="$(go env GOVERSION)"
+GO_VERSION="$(cd "$ENGINE_DIR" && go env GOVERSION)"
 HOST_GOOS="$(go env GOHOSTOS)"
 HOST_GOARCH="$(go env GOHOSTARCH)"
 SOURCE_COMMIT="$(git -C "$PLUGIN_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)"

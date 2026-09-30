@@ -1,5 +1,8 @@
 #!/bin/sh
+# Wrapper: exec the mcd binary matching this machine (runtime.GOOS/GOARCH names).
 set -e
+# ${0%/*} rather than dirname(1): the wrapper is the plugin's MCP command and
+# must not depend on more of the host than a POSIX shell and uname.
 case "$0" in
   */*) dir=$(CDPATH= cd -- "${0%/*}" && pwd) ;;
   *)   dir=$(pwd) ;;
