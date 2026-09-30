@@ -4,6 +4,100 @@
 
 This directory is the complete public plugin artifact. Do not distribute only `skills/model-check/`, only `engine/bin/mcd`, or only `mcp/servers.json`; the manifest, engine, features, steps, evaluations, references, build protocol, and release metadata are part of the plugin.
 
+## The model flow in one minute
+
+The plugin checks a **finite model**, not the implementation directly. First choose a
+small, explicit abstraction of the system and state what one atomic step means. The
+frontend then lowers the input to the common intermediate representation (IR), and
+the explicit-state engine explores the reachable state graph. A `verified` result is
+therefore a claim about the model, its bounds, its transition semantics, and its
+fairness assumptions; it becomes a claim about the implementation only after a
+separate conformance argument.
+
+```mermaid
+flowchart LR
+    A[System, protocol, or design] --> B{Choose a finite abstraction}
+    B -->|Processes, channels, shared state| P[Promela subset]
+    B -->|Places, tokens, transitions| N[P/T Petri-net JSON]
+    B -->|Existing canonical graph| I[IR JSON]
+    P --> Q[mc_parse / mcd parse]
+    N --> Q
+    I --> Q
+    Q --> R[Common IR]
+    R --> S[Reachable finite state graph]
+    S --> E[mc_estimate]
+    E --> C[mc_check / mcd check]
+    C --> O{Result and evidence}
+    O -->|verified| V[Property holds for the explored model]
+    O -->|violated| X[Counterexample or witness]
+    O -->|inconclusive| U[Increase budget or reduce the model]
+    O -->|not-executed| D[Use a supported formalism or specialised tool]
+```
+
+The recommended order is: **model → parse → simulate → estimate → sanity/reachability
+checks → safety/deadlock → liveness and fairness → explain every counterexample →
+retain the manifest and artifacts**. See [`skills/model-check/SKILL.md`](skills/model-check/SKILL.md)
+for the full decision tree and exit conditions.
+
+## Which model should I use?
+
+These are input formalisms, not competing verification algorithms. Promela and Petri
+JSON are two ways to describe a system; IR is the normal form shared by both. Choose
+the representation that makes the states, transitions, and assumptions easiest to
+review.
+
+| Model or notation | What it represents | Use it when | Particularly useful checks | Important boundary |
+|---|---|---|---|---|
+| **Promela subset** (`.pml`) | Concurrent processes, program locations, finite variables, shared state, FIFO channels, rendezvous, and nondeterministic interleaving | The system is a protocol or concurrent program with message exchange and process control flow | Mutual exclusion, races in the abstraction, deadlocks, reachability, response properties, progress, LTL, CTL, and weak-fairness questions | Only the documented subset is accepted; time, probability, embedded C, and unbounded data are outside this engine |
+| **P/T Petri net** (JSON) | Places hold tokens; transitions fire when their input markings are available; a marking is the state | The problem is naturally about resources, workflow, causal concurrency, or token flow | Reachable hangs/deadlocks, place safety, boundedness, resource conflicts, and reachability of a marking | The frontend accepts basic place/transition nets; inhibitor arcs are rejected, and coloured/timed features require an explicit lossy translation |
+| **Canonical IR** (JSON) | The engine's finite state variables, control locations, transitions, and properties after parsing | A tool needs a stable interchange format, custom properties, or reproducible debugging | Re-running a parsed model, inspecting the lowering, and attaching explicit invariant/reachability properties | Prefer generating IR with `mc_parse`/`mcd parse`; direct authoring is an advanced interface and must respect `mcd-ir/1` |
+| **Automata/program abstraction** | A finite control graph plus bounded data and labelled actions | The source design is already an FSM, EFSM, statechart, or automata program | State coverage, illegal transitions, deadlock, recovery, and temporal response | Map each source event and atomic action explicitly to the model; the result is about that mapping |
+
+### Model choice at a glance
+
+```mermaid
+flowchart TD
+    Q[What is the dominant structure?]
+    Q -->|Processes, messages, guards, shared variables| P[Promela]
+    Q -->|Tokens, resources, workflow, firing rules| N[Petri-net JSON]
+    Q -->|States and transitions already enumerated| I[IR JSON or Promela init/goto]
+    Q -->|Clocks or deadlines are part of the property| T[Not executed by this engine: use timed model checking]
+    Q -->|Probabilities or expected values are required| R[Not executed by this engine: use probabilistic model checking]
+    Q -->|Unbounded queues, integers, processes, or heap| U[Add a visible bound, or use an unbounded/symbolic method]
+    P --> F[Finite, untimed, explicit-state search]
+    N --> F
+    I --> F
+```
+
+A protocol can contain a timeout and still be an untimed model when `timeout` means
+“no ordinary action is currently executable”. It becomes a timed-model question only
+when the requirement says *within five seconds*, uses clocks, or otherwise depends on
+elapsed time. The same distinction applies to “rarely”: it is a safety question if it
+means “never”, but a probabilistic question if it asks for a probability.
+
+## What should I check?
+
+The input model and the property logic answer different questions. Start with a small
+safety or reachability check to validate the abstraction, then move to liveness only
+after the trigger, atomic step, and fairness assumptions are explicit.
+
+| User question | Property to prefer | Evidence to expect | Typical example |
+|---|---|---|---|
+| “Can the system ever reach a bad state?” | `reach` or an invariant/safety property | A finite witness for reachability, or a finite bad prefix for a violation | `cnt > 1`, both processes in a critical section |
+| “Can the system get stuck?” | `deadlock` | A finite counterexample ending in a state with no executable transition | A producer and consumer both waiting |
+| “Is this always safe?” | `invariant` | Exhaustive reachable-state search for `verified`; a finite counterexample for `violated` | `!(cs1 && cs2)`, every place has at most one token |
+| “Will every request eventually receive a response?” | LTL, for example `[](request -> <> response)` | Usually a finite prefix plus a lasso when the liveness property is violated | A request that can be postponed forever |
+| “From every state, is recovery possible along some continuation?” | CTL, for example `AG EF recovered` | A branching-state witness/counterexample, not necessarily one linear trace | Every reachable failure state has a route back to idle |
+| “Does useful work continue forever?” | `progress` or LTL recurrence, with an explicit fairness decision | A non-progress lasso, or exhaustive absence of one under the stated assumptions | A scheduler can spin without visiting a progress label |
+| “How large will the search be?” | `mc_estimate` before verification | Approximate growth data, never a verification verdict | Choose state, depth, time, and memory budgets |
+
+LTL and CTL are deliberately not interchangeable. LTL describes every complete path
+as a sequence; CTL can quantify over the branching set of continuations. For example,
+`AG EF reset` means that every reachable state has *some* path to `reset`, whereas
+`[]<> reset` requires every path to visit `reset` infinitely often. Liveness may need a
+justified weak-fairness assumption; the report must name it rather than silently
+discarding an unfair counterexample.
+
 ## Contents
 
 - `.claude-plugin/plugin.json` — plugin metadata and references to `./skills` and `./mcp/servers.json`.
@@ -290,17 +384,121 @@ Before publishing this plugin:
 
 ## Literature and provenance
 
-The plugin's engine and skill are grounded in the following source corpus and synthesis notes:
+This section answers two different questions:
 
-- Clarke, Grumberg, and Peled, *Handbook of Model Checking*.
-- Gerard Holzmann, *Design and Validation of Computer Protocols*.
-- U. Karpov, *Model checking*.
-- Baier and Katoen, *Principles of Model Checking*.
-- *Verification Protocols Web*.
-- Automata-program verification notes.
-- SPIN graph-encoded tuple-set material.
-- Lecture notes 01–09.
-- `modelchk` material.
-- Cross-book synthesis, requirements, coverage, and the skill-building plan.
+1. **Which public works explain the ideas?** The links below point to a publisher,
+   author, DOI, or institutional catalogue rather than to an unverified mirror.
+2. **Which local material shaped this plugin?** The repository paths point to the
+   extracted source texts, reading notes, examples, and engineering synthesis used
+   to turn those ideas into tested behavior.
 
-In the monorepo, source texts and notes are under `books-md/` and `model-check-skill-notes/`. The project README contains the path-level provenance index. New sources must be added to the public documentation and coverage records; bibliography is not a substitute for current tests and implementation behavior.
+The bibliography is background and provenance, not an implementation guarantee. The
+current engine behavior is defined by the Go code, the references under
+`skills/model-check/references/`, the feature scenarios, and the confirmation records.
+
+### Foundational model-checking references
+
+- **Clarke, Henzinger, Veith, and Bloem (eds.), [*Handbook of Model
+  Checking*](https://link.springer.com/book/10.1007/978-3-319-10575-8).** A broad
+  research reference covering transition systems, temporal logic, algorithms,
+  abstraction, and applications. It explains the general landscape in which this
+  plugin's finite explicit-state engine sits; it is not a promise that every method
+  in the handbook is implemented here. The earlier Clarke–Grumberg–Peled tradition
+  is part of the same provenance line. Local source and notes:
+  `books-md/1clarke_edmund_handbook_of_model_checking/` and
+  `model-check-skill-notes/01-handbook-of-model-checking.md`.
+
+- **Baier and Katoen, [*Principles of Model Checking*](https://mitpress.mit.edu/9780262026499/principles-of-model-checking/).** The main textbook
+  reference for transition systems, safety and liveness, LTL, CTL/CTL*, fairness,
+  automata, and state-space algorithms. It is the conceptual source for the
+  plugin's property classification and the explanation of why LTL and CTL answer
+  different questions. Local source and notes:
+  `books-md/_principles_of_model_checking/` and
+  `model-check-skill-notes/05-principles-of-model-checking.md`.
+
+- **Karpov, [*Model Checking: Verification of Parallel and Distributed Software
+  Systems*](https://books.google.com/books/about/MODEL_%D0%A1HECKING_%D0%92%D0%B5%D1%80%D0%B8%D1%84%D0%B8%D0%BA%D0%B0%D1%86%D0%B8%D1%8F.html?id=xpui56eRsHgC)** (Russian). A practical
+  Russian-language treatment of parallel programs, temporal properties, and model
+  checking examples. It is especially useful for terminology and for the LTL/CTL
+  distinction used in the Russian notes. Local source and notes:
+  `books-md/Karpov_U._Model_checking/` and
+  `model-check-skill-notes/03-karpov-model-checking.md`.
+
+### Promela, SPIN, and protocol modelling
+
+- **Holzmann, [*Design and Validation of Computer Protocols*](http://spinroot.com/gerard/popd.html).** The book that introduced the protocol-modelling
+  perspective used here: processes, channels, executable Promela statements,
+  interleaving, assertions, progress labels, and counterexample-oriented debugging.
+  Local source and notes:
+  `books-md/Design_and_Validation_of_Computer_Protocols_-_Gerard_Holzmann/` and
+  `model-check-skill-notes/02-design-and-validation-of-computer-protocols.md`.
+
+- **Holzmann, [“The Model Checker SPIN”](https://doi.org/10.1109/32.588521).** A
+  concise primary reference for SPIN's automata-theoretic verification approach and
+  its use for distributed software. The repository's Promela corpus and differential
+  checks use SPIN as an oracle for the accepted subset where the semantics are meant
+  to agree. Local corpus: `Promela - examples/`; local comparison records:
+  `steps/g1-confirmation.md` and `steps/g4-confirmation.md`.
+
+- **[SPIN project and author materials](https://spinroot.com/).** The official
+  project site is useful for the tool, manuals, Promela examples, and historical
+  context. SPIN is a comparison and test dependency in this repository; an already
+  built `mcd` binary does not need SPIN for ordinary runtime checks.
+
+### Petri nets, automata, and supporting material
+
+- **Verification Protocols Web.** This is the repository's captured teaching/service
+  material about verification workflows, finite-state models, Petri nets, coloured
+  and hierarchical nets, and service-oriented verification. It is a local source
+  collection rather than a single canonical publication: `books-md/Verification
+  Protocols Web - tok/`, with the extracted interpretation in
+  `model-check-skill-notes/04-verification-web-services.md`. The plugin uses it to
+  document the Petri-net translation and its explicit loss list; it does not claim to
+  implement timed or coloured-net semantics natively.
+
+- **Automata-program verification material.** These notes describe event/transition
+  automata and the mapping from automata programs to finite verification models. The
+  local source is `books-md/velder_verification_posobie_nauka/`; the plugin's
+  interpretation is `model-check-skill-notes/09-verification-of-automata-programs.md`.
+  Such systems normally enter this engine through an explicit Promela abstraction,
+  with the event-to-step mapping recorded in the report.
+
+- **SPIN graph-encoded tuple-set material.** This is a local technical source about
+  representing tuple sets as graph structures for SPIN-oriented state-space work,
+  not a separate frontend exposed by this plugin. The captured material is in
+  `books-md/graph-encoded-tuple-set-for-spin/` and `books-md/graph encoded tuple set
+  for SPIN/`; the engineering note is
+  `model-check-skill-notes/06-state-space-compression-gets.md`.
+
+### Lectures, `modelchk`, and project synthesis
+
+- **Lecture notes 01–09.** `books-md/lect01-lect09.md` is a local nine-lecture
+  teaching sequence, not the title of one external book or a claim of affiliation
+  with a particular university course. In this project the sequence is used as
+  follows: lectures 1–3 introduce transition systems and concurrent execution;
+  lectures 4–5 explain executable Promela statements, blocking, guards, channels,
+  and program-graph semantics; lecture 6 covers safety/liveness and fairness;
+  lectures 7–8 cover never claims, LTL, and automata-based checking; lecture 9
+  introduces branching-time/CTL ideas. The corresponding checked interpretation is
+  `model-check-skill-notes/07-lectures-01-09.md`.
+
+- **`modelchk` material.** `books-md/modelchk/` is a local reference/tool corpus
+  used for terminology, examples, and comparison of model-checking workflows. It is
+  not the `mcd` implementation and is not an additional runtime dependency. The
+  project-specific synthesis is `model-check-skill-notes/08-modelchk.md`.
+
+- **Cross-book synthesis and requirements.** These are the project's engineering
+  bridge from the reading corpus to observable behavior: the taxonomy of finite,
+  untimed, probabilistic, timed, and concurrent models; the intake questions; the
+  property and status vocabulary; and the staged workflow. Read
+  `model-check-skill-notes/10-cross-book-synthesis.md`,
+  `model-check-skill-notes/11-skill-requirements.md`,
+  `model-check-skill-notes/13-coverage-matrix.md`, and
+  `model-check-skill-notes/14-skill-building-plan.md` together with the executable
+  references in `skills/model-check/references/`.
+
+When adding a new source, update this bibliography, the relevant local notes, and
+the coverage/provenance matrix in the same change. Never use a citation to fill a
+capability gap: if the current engine does not support timed, probabilistic,
+unbounded, or game semantics, the honest outcome is `not-executed` with a route to a
+specialised method.
