@@ -834,6 +834,46 @@ func registerG6Steps(sc *godog.ScenarioContext) {
 		return g6ReadJSON(filepath.Join(w.plugin, rel), &w.manifest)
 	})
 
+	sc.Step(`^the plugin file "([^"]+)" contains each of:$`, func(rel string, t *godog.Table) error {
+		if err := setPlugin(); err != nil {
+			return err
+		}
+		body, err := os.ReadFile(filepath.Join(w.plugin, rel))
+		if err != nil {
+			return err
+		}
+		text := string(body)
+		var missing []string
+		for _, phrase := range tableColumn(t) {
+			if !strings.Contains(text, phrase) {
+				missing = append(missing, phrase)
+			}
+		}
+		if len(missing) > 0 {
+			return fmt.Errorf("%s does not contain: %v", rel, missing)
+		}
+		return nil
+	})
+
+	sc.Step(`^the Coddy MCP declaration uses the portable workspace command "([^"]+)"$`, func(want string) error {
+		if err := setPlugin(); err != nil {
+			return err
+		}
+		var cfg struct {
+			MCPServers map[string]struct {
+				Command string `json:"command"`
+			} `json:"mcpServers"`
+		}
+		if err := g6ReadJSON(filepath.Join(w.plugin, ".coddy", "mcp.json"), &cfg); err != nil {
+			return err
+		}
+		server, ok := cfg.MCPServers["model-check"]
+		if !ok {
+			return fmt.Errorf(".coddy/mcp.json has no model-check server")
+		}
+		return must(server.Command == want, ".coddy/mcp.json command is %q, want %q", server.Command, want)
+	})
+
 	sc.Step(`^the manifest is valid JSON with a kebab-case "name" and a "version"$`, func() error {
 		name, _ := w.manifest["name"].(string)
 		if name == "" {

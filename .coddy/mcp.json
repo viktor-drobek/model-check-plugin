@@ -1,0 +1,21 @@
+{
+  "mcpServers": {
+    "model-check": {
+      "type": "stdio",
+      "command": "${CWD}/engine/bin/mcd",
+      "args": [
+        "serve",
+        "--max-states",
+        "5000000",
+        "--max-depth",
+        "5000000",
+        "--max-ms",
+        "300000",
+        "--max-memory-mb",
+        "2048",
+        "--concurrency",
+        "2"
+      ]
+    }
+  }
+}

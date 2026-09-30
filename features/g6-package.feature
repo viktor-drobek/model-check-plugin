@@ -106,6 +106,19 @@ Feature: G6 packaging, install validation and description triggering
     And the plugin root holds no ".mcp.json", which a client also reads as a project config
     And the repository root holds no ".mcp.json" that declares a server named "model-check"
 
+  Scenario: the standalone plugin carries Codex and Coddy integration instructions
+    Given the plugin file "AGENTS.md" contains each of:
+      | skills/model-check/SKILL.md |
+      | codex mcp add model-check   |
+      | .coddy/mcp.json             |
+    And the plugin file ".codex/README.md" contains each of:
+      | codex mcp add model-check |
+      | skills/model-check       |
+    And the plugin file ".coddy/README.md" contains each of:
+      | coddy mcp trust model-check |
+      | coddy plugin install       |
+    And the Coddy MCP declaration uses the portable workspace command "${CWD}/engine/bin/mcd"
+
   # --------------------------------------------------- trigger eval set (§8.2)
   Scenario: the trigger eval set has at least sixteen queries and both classes
     Given the file "evals-workspace/trigger-eval.json"

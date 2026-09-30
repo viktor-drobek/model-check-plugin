@@ -552,3 +552,34 @@ trigger-results.json, trigger-runs/}`; `evals-workspace/iteration-4/` (7 кат�
 8. **A6 (§12) выполнено в объёме одной платформы.** Стоит записать в план, что «чистая
    машина» для A6 означает «без Go-инструментария», и что проверка запуском на пяти
    платформах требует пяти машин или CI-матрицы, которой в плане нет.
+
+## 7.5. Codex and Coddy integration addendum
+
+Scope: portable agent-facing files added to the standalone plugin checkout:
+`AGENTS.md`, `.codex/README.md`, `.coddy/mcp.json`, and `.coddy/README.md`, plus
+the G6 packaging scenario that checks their presence and the portable Coddy command.
+
+Verification on 2026-09-30:
+
+- `claude plugin validate model-check-plugin` — passed.
+- `go test -count=1 -run TestFeatures` — **396 scenarios and 2040 steps passed**.
+- `go test ./...` — passed, including `modelcheck/tools/pandiff`.
+- `go vet ./...` — passed.
+- `go fmt ./...` and `git diff --check` — passed.
+- Codex CLI `codex-cli 0.159.2`, invoked through `npx --yes @openai/codex exec`
+  in ephemeral/read-only mode, read the new files and ran
+  `engine/bin/mcd version`: `mcd 0.1.0 (ir mcd-ir/1, report mcd-report/1)`.
+- The Codex command surface was exercised in a temporary `CODEX_HOME`: `codex mcp
+  add`, `codex mcp get`, and `codex mcp list` recorded exactly one `model-check`
+  stdio server with the expected command and limits. The temporary configuration
+  was removed afterwards.
+- Coddy 1.2.45 ran the same read-only one-shot prompt successfully and reported
+  the same engine version. `coddy mcp list --cwd model-check-plugin` showed the
+  project-local `model-check` server as ready with `${CWD}/engine/bin/mcd`.
+
+The Coddy global `--dry-run` was also attempted. It reported one timeout from the
+unrelated global `whentofly` server and missing optional global directories; this
+does not invalidate the local `model-check` declaration, which was independently
+listed as ready. No user files, credentials, or permanent Codex configuration were
+changed by these checks. The addendum demonstrates discovery, command resolution,
+and CLI execution; it does not claim that every global Coddy MCP server is healthy.

@@ -70,6 +70,46 @@ Confirm the following before starting a verification session:
 
 The server belongs in `mcp/servers.json`. Do not add a second root `.mcp.json` for this plugin: that can register the same server twice and leave `${CLAUDE_PLUGIN_ROOT}` unset in the duplicate registration.
 
+### Codex CLI and Coddy
+
+The plugin also ships agent-facing integration files for Codex and Coddy:
+
+- `AGENTS.md` is the portable Codex project-instruction file.
+- `.codex/README.md` documents Codex skill and MCP registration.
+- `.coddy/mcp.json` declares the project-local Coddy MCP server using `${CWD}`.
+- `.coddy/README.md` documents Coddy trust and skill installation.
+
+Codex does not consume the Claude Code plugin manifest as a native plugin. From the
+plugin root, expose the skill and register the bundled MCP server as follows:
+
+```bash
+mkdir -p "${CODEX_HOME:-$HOME/.codex}/skills"
+ln -sfn "$PWD/skills/model-check" \
+  "${CODEX_HOME:-$HOME/.codex}/skills/model-check"
+codex mcp add model-check -- \
+  "$PWD/engine/bin/mcd" serve \
+  --max-states 5000000 --max-depth 5000000 --max-ms 300000 \
+  --max-memory-mb 2048 --concurrency 2
+codex mcp get model-check
+```
+
+Coddy can install the skill from the public source and use the project-local MCP
+declaration when the plugin checkout is the workspace:
+
+```bash
+coddy plugin install https://github.com/viktor-drobek/model-check-plugin.git
+cd /path/to/model-check-plugin
+coddy mcp list --cwd "$PWD"
+coddy mcp trust model-check --cwd "$PWD"
+coddy --dry-run
+```
+
+Project-local Coddy MCP declarations are untrusted by default. Approve only the
+exact command you intend to run. Keep one `model-check` registration; do not add a
+second `.mcp.json` or duplicate global server entry. `coddy --dry-run` also probes
+other global MCP servers, so an unrelated global timeout is not a failure of this
+local declaration; inspect the local row with `coddy mcp list --cwd`.
+
 ### Smoke test
 
 ```bash

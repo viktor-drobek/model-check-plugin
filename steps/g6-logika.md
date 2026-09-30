@@ -99,3 +99,21 @@ simpliciter`, и именно в пропущенном обстоятельст
 регистрации) оказалась не педантизмом: сценарий и не мог бы поймать этот дефект, потому что
 дефект виден только клиенту. После правки сценарий проверяет ещё и отсутствие `.mcp.json`
 в корне плагина — то есть ровно то условие, нарушение которого дефект порождает.
+
+## Addendum: Codex and Coddy integration review
+
+Материал: `AGENTS.md`, `.codex/README.md`, `.coddy/mcp.json`, `.coddy/README.md`,
+новый сценарий `g6-package.feature` и раздел README.
+
+| Claim | Evidence | Boundary kept in the wording |
+|---|---|---|
+| Codex can use the plugin skill | Root `AGENTS.md` names `skills/model-check/SKILL.md`; the Codex smoke session read it successfully | Claude's `.claude-plugin/plugin.json` is not presented as a native Codex manifest |
+| Codex can register the bundled MCP server | A temporary `CODEX_HOME` accepted `codex mcp add`, and `mcp get/list` showed the expected one server | The stored command is intentionally absolute and machine-specific; it is a user config, not a committed plugin file |
+| Coddy can discover the project MCP server | `coddy mcp list --cwd model-check-plugin` showed local `model-check` as ready | Project-local declarations remain trust-gated; the docs require explicit `coddy mcp trust` |
+| The Coddy declaration is portable | JSON and the G6 step require `${CWD}/engine/bin/mcd` | `${CWD}` is valid only when the plugin checkout is the session workspace |
+| Both agent CLIs can execute the packaged engine | Read-only one-shot runs returned the exact `mcd 0.1.0` version | This is a smoke test, not proof that all seven MCP tools were called by both agents |
+
+No logical contradiction was found. The global Coddy `--dry-run` result is kept as a
+qualified observation: it failed on the unrelated `whentofly` endpoint, while the
+project-local server remained ready. The documentation now distinguishes those two
+scopes instead of treating a whole-host dry-run as proof of plugin health.
