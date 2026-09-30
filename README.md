@@ -15,7 +15,7 @@ fairness assumptions; it becomes a claim about the implementation only after a
 separate conformance argument.
 
 ```mermaid
-flowchart LR
+flowchart TD
     A[System, protocol, or design] --> B{Choose a finite abstraction}
     B -->|Processes, channels, shared state| P[Promela subset]
     B -->|Places, tokens, transitions| N[P/T Petri-net JSON]
