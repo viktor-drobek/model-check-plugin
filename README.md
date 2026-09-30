@@ -15,7 +15,7 @@ fairness assumptions; it becomes a claim about the implementation only after a
 separate conformance argument.
 
 ```mermaid
-flowchart LR
+flowchart TD
     A[System, protocol, or design] --> B{Choose a finite abstraction}
     B -->|Processes, channels, shared state| P[Promela subset]
     B -->|Places, tokens, transitions| N[P/T Petri-net JSON]
@@ -100,11 +100,13 @@ discarding an unfair counterexample.
 
 ## Contents
 
-- `.claude-plugin/plugin.json` — plugin metadata and references to `./skills` and `./mcp/servers.json`.
+- `plugin.json` — portable Agent Plugins 1.0 metadata.
+- `.claude-plugin/plugin.json` — Claude Code compatibility metadata and reference to `./mcp/servers.json`.
 - `engine/` — Go module `modelcheck`, source packages, tests, fixtures, CLI, MCP server, and release binaries.
 - `features/` — Gherkin scenarios for the engine layers and integration tracks.
 - `steps/` — confirmation records, logical reviews, MCP sessions, and evaluation evidence.
-- `mcp/servers.json` — the stdio MCP server declaration.
+- `mcp.json` — portable stdio MCP server declaration using `${PLUGIN_ROOT}`.
+- `mcp/servers.json` — Claude Code stdio MCP server declaration using `${CLAUDE_PLUGIN_ROOT}`.
 - `skills/model-check/` — `SKILL.md`, workflows, property guidance, format references, assets, and report templates.
 - `evals-workspace/` — evaluation fixtures, graders, benchmark runs, and review data when included in the release.
 - `BUILD-PROTOCOL.md` — the six-part BDD/build protocol.
@@ -157,10 +159,11 @@ claude --plugin-dir /path/to/model-check-plugin
 
 Confirm the following before starting a verification session:
 
-1. `.claude-plugin/plugin.json` exists and names `./skills` and `./mcp/servers.json`.
-2. `mcp/servers.json` resolves `${CLAUDE_PLUGIN_ROOT}/engine/bin/mcd`.
-3. The selected binary is executable and matches the host platform.
-4. The host shows one `model-check` MCP server, not a duplicate project-level registration.
+1. `plugin.json` and `mcp.json` are present for portable Agent Plugins hosts.
+2. `.claude-plugin/plugin.json` exists for Claude Code and names `./skills` and `./mcp/servers.json`.
+3. `mcp.json` resolves `${PLUGIN_ROOT}/engine/bin/mcd`; Claude Code's `mcp/servers.json` resolves `${CLAUDE_PLUGIN_ROOT}/engine/bin/mcd`.
+4. The selected binary is executable and matches the host platform.
+5. The host shows one `model-check` MCP server, not a duplicate project-level registration.
 
 The server belongs in `mcp/servers.json`. Do not add a second root `.mcp.json` for this plugin: that can register the same server twice and leave `${CLAUDE_PLUGIN_ROOT}` unset in the duplicate registration.
 
@@ -374,7 +377,7 @@ Start from a clean checkout, use the declared Go toolchain and `GOTOOLCHAIN=loca
 Before publishing this plugin:
 
 - preserve the complete versioned `model-check-plugin/` tree;
-- validate `.claude-plugin/plugin.json` and `mcp/servers.json`;
+- validate `plugin.json`, `mcp.json`, `.claude-plugin/plugin.json`, and `mcp/servers.json`;
 - run `go test ./...`, `go vet ./...`, formatting, and SPIN checks;
 - run `./build.sh --version <VERSION> --verify-repro`;
 - verify `engine/bin/SHA256SUMS`, `BUILD-INFO.json`, the host wrapper, and platform records;

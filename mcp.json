@@ -1,0 +1,23 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "model-check": {
+      "type": "stdio",
+      "command": "${PLUGIN_ROOT}/engine/bin/mcd",
+      "args": [
+        "serve",
+        "--max-states",
+        "5000000",
+        "--max-depth",
+        "5000000",
+        "--max-ms",
+        "300000",
+        "--max-memory-mb",
+        "2048",
+        "--concurrency",
+        "2"
+      ],
+      "cwd": "${PLUGIN_ROOT}"
+    }
+  }
+}
