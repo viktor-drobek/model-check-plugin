@@ -4,19 +4,19 @@
       "file": "mcd-darwin-amd64",
       "goarch": "amd64",
       "goos": "darwin",
-      "size_bytes": 9330912
+      "size_bytes": 9331040
     },
     {
       "file": "mcd-darwin-arm64",
       "goarch": "arm64",
       "goos": "darwin",
-      "size_bytes": 8627330
+      "size_bytes": 8627458
     },
     {
       "file": "mcd-linux-amd64",
       "goarch": "amd64",
       "goos": "linux",
-      "size_bytes": 9101474
+      "size_bytes": 9105570
     },
     {
       "file": "mcd-linux-arm64",
@@ -28,20 +28,20 @@
       "file": "mcd-windows-amd64.exe",
       "goarch": "amd64",
       "goos": "windows",
-      "size_bytes": 9365504
+      "size_bytes": 9367552
     }
   ],
   "build_flags": [
     "-trimpath",
     "-buildvcs=false",
     "-ldflags",
-    "-s -w -X modelcheck/report.EngineVersion=0.1.0"
+    "-s -w -X modelcheck/report.EngineVersion=0.1.1"
   ],
   "cgo_enabled": "0",
   "engine_module": "modelcheck",
-  "go_version": "go1.26.0",
+  "go_version": "go1.26.1",
   "note": "No wall-clock value is recorded, so BUILD-INFO.json is a function of the source tree and the arguments only. Cross-built binaries are produced and hashed here; only the host binary is executed by the build's own checks.",
-  "source_commit": "cbebd82",
-  "version": "0.1.0",
+  "source_commit": "78ca1a1",
+  "version": "0.1.1",
   "version_stamp": "overlay"
 }
