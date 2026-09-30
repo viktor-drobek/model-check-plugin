@@ -41,7 +41,7 @@
   "engine_module": "modelcheck",
   "go_version": "go1.26.0",
   "note": "No wall-clock value is recorded, so BUILD-INFO.json is a function of the source tree and the arguments only. Cross-built binaries are produced and hashed here; only the host binary is executed by the build's own checks.",
-  "source_commit": "8500d32",
+  "source_commit": "69bab7b",
   "version": "0.1.0",
   "version_stamp": "overlay"
 }
