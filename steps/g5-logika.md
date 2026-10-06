@@ -1,6 +1,6 @@
 # G5 — логическое ревью (протокол, п. 5)
 
-Скилл: `logika` 2.0.0, режим «Ревью» (`/home/user/.claude/plugins/cache/rpa-skills/logika/2.0.0/SKILL.md`, `references/errors.md`).
+Скилл: `logika` 2.0.0, режим «Ревью» (`SKILL.md`, `references/errors.md` из установленного skill-каталога).
 
 Материал ревью: `features/g5-ctl-v1.feature`; `engine/ctl/{ctl.go, normal.go, label.go}`;
 `engine/explore/{graph.go, ctlcheck.go}`; `engine/estimate/estimate.go`;

@@ -1,5 +1,90 @@
 # G6 — подтверждение (протокол, п. 6)
 
+> **Historical record.** The detailed measurements below describe the original G6
+> run and intentionally retain its historical engine/version values. They are not
+> the release evidence for the current plugin.
+
+## Current release addendum — 0.2.0
+
+The current release source commit is the exact value recorded in
+`engine/bin/BUILD-INFO.json` under `source_commit`; the release-artifacts commit is
+the commit that contains the tracked files under `engine/bin/`.
+The tracked release contains Linux amd64/arm64, Darwin amd64/arm64, and Windows
+amd64 binaries, plus the POSIX `mcd` wrapper, the Windows `mcd.cmd` wrapper, and
+`mcd.exe` (a byte copy of the Windows binary: the file Windows resolves the
+portable declaration's `engine/bin/mcd` command to). `BUILD-INFO.json`
+reports version `0.2.0`, Go `go1.26.1`, `cgo_enabled` `0`, and the source commit
+`dcc65bad6f1075e8c5955efb37ce8c86455d046f` ("Set the version to 0.2.0");
+`SHA256SUMS` validates all eight generated files. `./build.sh --verify-repro`
+compares the complete generated artifact directory, not only native binaries: the
+release was built twice and the two builds agree on every generated artifact.
+
+What 0.2.0 adds to 0.1.1 (the version is a minor step because the report gained an
+opt-in field and a new CLI/MCP option; the default behaviour is unchanged):
+
+- `mcd check --por` and `mc_check` `por`: partial-order reduction of the safety
+  search, with a `search.reduction` record that says whether it was applied, why not,
+  and how many states it reduced (`PROVENANCE.md`, "What the partial-order reduction
+  (0.2.0) rests on"; `steps/perf2-confirmation.md`, `perf3-confirmation.md`,
+  `perf4-confirmation.md`, which include the three cross-review rounds);
+- directed buffered channels: the send end and the receive end of a buffered channel
+  are separate cells, so the stages of a pipeline are explored one after the other;
+- a visited set whose arena is chunked (a stored vector is never copied or moved;
+  the table of 64-bit slots, kept at most half full so at least two slots per
+  state, is rebuilt by rehashing when it doubles) and a search stack that doubles
+  its capacity (it still copies the frames, but far less often than `append`'s
+  quarter steps), which lowers the memory of large complete runs; without `--por`
+  no state or transition count changes, and no verdict changes unless a memory
+  budget decides the run (the reported `memory_bytes_est` is smaller, so a run
+  that stopped `inconclusive` on `--budget-mem-mb` under 0.1.1 can now go on; the
+  `petrinet2` golden was re-pinned for the estimate).
+
+The current verification record is, on the Linux amd64 host (Go 1.26.1, SPIN 6.5.2):
+`go test -count=1 ./...` (the engine module including the godog suite over 288
+scenario definitions in 16 feature files, and `tools/pandiff` against SPIN) passes;
+`go vet ./...` and `gofmt -l .` are clean; the manifest synchronization checks pass;
+host `mcd version` prints `mcd 0.2.0 (ir mcd-ir/1, report mcd-report/1)`;
+`sha256sum -c SHA256SUMS` reports OK for all eight files; and a Promela smoke check of
+`testdata/promela/bench-indep.pml` (`-D N=4 -D K=4 --sweep`) gives `deadlock verified
+exhaustive` both without `--por` (41 371 states) and with it (57 states).
+
+Platforms **built and hashed but not executed** on this host: Linux arm64, Darwin
+amd64, Darwin arm64, Windows amd64 (and the `mcd.exe` alias and `mcd.cmd` wrapper).
+Only the Linux amd64 binary was run, so nothing here claims that the plugin works
+on the other four platforms.
+
+Cross-review of this release (three independent reviewers on different models, the
+findings verified by an orchestrator who also rebuilt all five platforms from the
+release source commit and got byte-identical binaries, `SHA256SUMS` and `BUILD-INFO.json`):
+verdict "approve with changes". The documentation findings (the corpus-test claim,
+the citation, the mutation-testing wording, the refusal lists, the build
+instructions, the wording on the memory changes and on `mcd.exe`, a stale sentence
+in the LTL reference) were corrected in the commit that follows the artifacts commit;
+no Go source changed, so the binaries and checksums are those recorded above. A
+second cross-review of those corrections (fresh brief, same three reviewers) found
+that they had added `_pid` to the list of refusals although the frontend folds
+`_pid` to a constant and only `_nr_pr` is refused, and several smaller
+imprecisions (the Windows files, the wording about which commit is the source
+commit, the scope of the corpus test, a memory sentence); these were corrected in
+the commit after it. Not
+changed in this release, because each needs a Go edit and therefore a rebuild of
+every binary: the usage strings of `mcd` (`cli.go`) omit `serve`, and the schema
+text of the `por` field of `mc_check` (`mcp/check.go`) does not list dynamic
+channels and reads of the process table among the refusals; the `search.reduction`
+reason in the report is complete. Still open: the CI workflow
+(`.github/workflows/ci.yml`, outside the plugin tree) sets up Go 1.24 with
+`GOTOOLCHAIN=local` while `engine/go.mod` requires 1.26.1, and no CI run exists for
+this release, so no CI result is claimed here; and `go test ./...` has not been run
+in a clean checkout of the public plugin repository alone, where scenarios that read
+`model-check-skill-notes/` and `Promela - examples/` (monorepo directories) need
+those directories.
+
+Nothing was pushed, tagged, or deployed to the public `model-check-plugin` project
+as part of this record; publishing is a separate, explicit step.
+
+The previous release record (0.1.1) is the history of this file and of the public
+tags `v0.1.0` and `v0.1.1`.
+
 Шаг: **G6** (план 14 §9, строка G6). Критерий выхода дословно: «Все evals;
 триггер-точность на held-out ≥ порога; плагин устанавливается на чистой машине без Go;
 реальный клиент подтверждает, что `plugin.json` и корневой `.mcp.json` не регистрируют

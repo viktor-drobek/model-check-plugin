@@ -149,10 +149,14 @@ basis: `verified`; coverage was not achieved (AC-02, AC-11, AC-12). Guard: §2 o
 Look: reduction switched on for a formula with `X`, or for a model with
 `provided`. Corpus: `CH5/pathfinder.pml` — its header says POR cannot be used
 because `provided` models priorities; `CH12/leader.ltl` carries SPIN's warning
-that the claim must be stutter-closed. The current engine has no POR, so today
-this cannot be committed; when vNext adds it, the engine refuses it for `X`
-formulas and priorities (FR-017). Loses its basis: `verified` for liveness and
-for `X`-properties (missed interleavings). Guard: the `X`-free flag; AC-06.
+that the claim must be stutter-closed. The engine's `--por` cannot commit it: it
+reduces the safety search only, refuses any `ltl`, `progress` or `ctl` property
+in the same run (so an `X` formula never meets it), and refuses models with
+`provided` (FR-017). What remains to get wrong is reading a reduced count as the
+size of the state space, or a reduced run's first counterexample as the one an
+unreduced search finds. Loses its basis: a state count compared with `pan -c0`,
+and `verified` for liveness and for `X`-properties (missed interleavings).
+Guard: `search.reduction` in the report; the `X`-free flag; AC-06.
 
 ### 15. Comparing results obtained under different fairness or atomicity
 

@@ -16,7 +16,7 @@ is no CLI equivalent of `mc_simulate`, so no random walk was made.
 | version | `0.1.0-g0` |
 | ir_schema | `mcd-ir/1` |
 | report_schema | `mcd-report/1` |
-| binary | `/tmp/mcd` (pre-built; not rebuilt in this session) |
+| binary | `${TMP_DIR}/mcd` (pre-built; not rebuilt in this session) |
 | layer | CLI (`mcd parse`, `mcd check`) — MCP server not registered |
 | reductions | none (unreduced search) |
 | session date (UTC) | 2026-09-25 |
@@ -42,26 +42,26 @@ The single exception is call 7, a deliberate pilot with `--budget-states 5`.
 ## Calls
 
 All commands were run from the repository root
-`/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check`.
+`${REPO_ROOT}`.
 `$S` below is `model-check-plugin/evals-workspace/iteration-3/eval-4-telephone-busy/with_skill/outputs/mc-session-2026-09-25`.
 
 | # | tool | command | outcome | artefact |
 |---|---|---|---|---|
-| 1 | `mc_parse` | `/tmp/mcd parse --promela "Promela - examples/CH14/version1"` | ok (exit 0), 1 warning | `$S/ir-1-original.json`, `$S/parse-1-original.stderr` |
-| 2 | `mc_check` | `/tmp/mcd check --no-timing --promela "Promela - examples/CH14/version1"` | ok (exit 0) | `$S/check-1-original-baseline.json` |
-| 3 | `mc_parse` | `/tmp/mcd parse --promela "$S/version1-progress-switch.pml"` | ok (exit 0) | `$S/ir-2-progress-switch.json` |
-| 4 | `mc_check` | `/tmp/mcd check --no-timing --promela "$S/version1-progress-switch.pml"` | ok (exit 0), fairness `none` | `$S/check-2-progress-switch-none.json` |
+| 1 | `mc_parse` | `${TMP_DIR}/mcd parse --promela "Promela - examples/CH14/version1"` | ok (exit 0), 1 warning | `$S/ir-1-original.json`, `$S/parse-1-original.stderr` |
+| 2 | `mc_check` | `${TMP_DIR}/mcd check --no-timing --promela "Promela - examples/CH14/version1"` | ok (exit 0) | `$S/check-1-original-baseline.json` |
+| 3 | `mc_parse` | `${TMP_DIR}/mcd parse --promela "$S/version1-progress-switch.pml"` | ok (exit 0) | `$S/ir-2-progress-switch.json` |
+| 4 | `mc_check` | `${TMP_DIR}/mcd check --no-timing --promela "$S/version1-progress-switch.pml"` | ok (exit 0), fairness `none` | `$S/check-2-progress-switch-none.json` |
 | 5 | `mc_check` | `… --fairness weak` (same model) | ok (exit 0), fairness `weak` | `$S/check-3-progress-switch-weak.json` |
-| 6 | `mc_check` | `/tmp/mcd check --no-timing --promela "Promela - examples/CH14/version1" --progress` | ok (exit 0) — the deliberate "no progress label" demonstration | `$S/check-4-original-progress-nolabels.json` |
-| 7 | `mc_parse` | `/tmp/mcd parse --promela "$S/version1-progress-subscriber.pml"` | ok (exit 0), 1 warning | `$S/ir-version1-progress-subscriber.json` |
-| 8 | `mc_check` | `/tmp/mcd check --no-timing --promela "$S/version1-progress-subscriber.pml"` | ok (exit 0), fairness `none` | `$S/check-5-progress-subscriber-none.json` |
+| 6 | `mc_check` | `${TMP_DIR}/mcd check --no-timing --promela "Promela - examples/CH14/version1" --progress` | ok (exit 0) — the deliberate "no progress label" demonstration | `$S/check-4-original-progress-nolabels.json` |
+| 7 | `mc_parse` | `${TMP_DIR}/mcd parse --promela "$S/version1-progress-subscriber.pml"` | ok (exit 0), 1 warning | `$S/ir-version1-progress-subscriber.json` |
+| 8 | `mc_check` | `${TMP_DIR}/mcd check --no-timing --promela "$S/version1-progress-subscriber.pml"` | ok (exit 0), fairness `none` | `$S/check-5-progress-subscriber-none.json` |
 | 9 | `mc_check` | `… --fairness weak` (same model) | ok (exit 0), fairness `weak` | `$S/check-6-progress-subscriber-weak.json` |
-| 10 | `mc_parse` | `/tmp/mcd parse --promela "$S/version1-obs.pml"` | ok (exit 0), no warnings | `$S/ir-version1-obs.json` |
-| 11 | `mc_estimate` stand-in | `/tmp/mcd check --no-timing --promela "$S/version1-obs.pml" --budget-states 5` | ok (exit 0) — pilot; `deadlock` came back `inconclusive` / `bounded`, reason `state budget exhausted: 5 states stored` | `$S/check-7-obs-pilot.json` |
-| 12 | `mc_check` | `/tmp/mcd check --no-timing --promela "$S/version1-obs.pml" --ltl '[] (sw != BUSY)' --ltl '[] ((sw == BUSY) -> <> (sw != BUSY))' --ltl '[] <> (sw == IDLE)' --ltl '[] (sub_busy == 0)' --ltl '[] ((sub_busy == 1) -> <> (sub_busy == 0))'` | ok (exit 0), fairness `none` | `$S/check-8-obs-ltl-none.json` |
+| 10 | `mc_parse` | `${TMP_DIR}/mcd parse --promela "$S/version1-obs.pml"` | ok (exit 0), no warnings | `$S/ir-version1-obs.json` |
+| 11 | `mc_estimate` stand-in | `${TMP_DIR}/mcd check --no-timing --promela "$S/version1-obs.pml" --budget-states 5` | ok (exit 0) — pilot; `deadlock` came back `inconclusive` / `bounded`, reason `state budget exhausted: 5 states stored` | `$S/check-7-obs-pilot.json` |
+| 12 | `mc_check` | `${TMP_DIR}/mcd check --no-timing --promela "$S/version1-obs.pml" --ltl '[] (sw != BUSY)' --ltl '[] ((sw == BUSY) -> <> (sw != BUSY))' --ltl '[] <> (sw == IDLE)' --ltl '[] (sub_busy == 0)' --ltl '[] ((sub_busy == 1) -> <> (sub_busy == 0))'` | ok (exit 0), fairness `none` | `$S/check-8-obs-ltl-none.json` |
 | 13 | `mc_check` | the same five `--ltl` with `--fairness weak` | ok (exit 0), fairness `weak` | `$S/check-9-obs-ltl-weak.json` |
-| 14 | `mc_check` | `/tmp/mcd check --no-timing --bfs --promela "$S/version1-obs.pml" --ltl '[] (sw != BUSY)'` | ok (exit 0) — BFS cross-check | `$S/check-10-obs-bfs.json` |
-| 15 | `mc_check` | `/tmp/mcd check --no-timing --promela "Promela - examples/CH14/version1" --ltl '[] (switch@Busy -> <> !switch@Busy)'` | **rejected input**, exit 2, `kind: "ltl"`, `status: "not-executed"`, message `property ltl1: formula: unexpected character '@' (at offset 10)` — no report produced | `$S/check-11-label-atom-rejected.json` |
+| 14 | `mc_check` | `${TMP_DIR}/mcd check --no-timing --bfs --promela "$S/version1-obs.pml" --ltl '[] (sw != BUSY)'` | ok (exit 0) — BFS cross-check | `$S/check-10-obs-bfs.json` |
+| 15 | `mc_check` | `${TMP_DIR}/mcd check --no-timing --promela "Promela - examples/CH14/version1" --ltl '[] (switch@Busy -> <> !switch@Busy)'` | **rejected input**, exit 2, `kind: "ltl"`, `status: "not-executed"`, message `property ltl1: formula: unexpected character '@' (at offset 10)` — no report produced | `$S/check-11-label-atom-rejected.json` |
 
 `mc_simulate` (step 5 of the skill's workflow) has no CLI equivalent; the sanity walk
 was **not** made, and nothing in this report rests on one. `mc_lint_property` also has

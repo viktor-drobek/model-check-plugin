@@ -418,7 +418,7 @@
    "outcome": "rejected",
    "kind": "outside-subset",
    "message": "construct outside subset: remote reference (P@label) (outside the subset) (in-remote-label-in-never.pml, line 8)",
-   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/in-remote-label-in-never.pml:8:15"
+   "path": "${REPO_ROOT}/model-check-plugin/evals-workspace/subset-probes/in-remote-label-in-never.pml:8:15"
   },
   {
    "id": "out-inline",
@@ -535,7 +535,7 @@
    "outcome": "rejected",
    "kind": "outside-subset",
    "message": "construct outside subset: unless (plan 14 §5.2: outside the subset) (out-unless.pml, line 5)",
-   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-unless.pml:5:40"
+   "path": "${REPO_ROOT}/model-check-plugin/evals-workspace/subset-probes/out-unless.pml:5:40"
   },
   {
    "id": "out-c-code",
@@ -547,7 +547,7 @@
    "outcome": "rejected",
    "kind": "outside-subset",
    "message": "construct outside subset: c_code (embedded C is outside the subset) (out-c-code.pml, line 4)",
-   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-c-code.pml:4:1"
+   "path": "${REPO_ROOT}/model-check-plugin/evals-workspace/subset-probes/out-c-code.pml:4:1"
   },
   {
    "id": "out-c-expr",
@@ -559,7 +559,7 @@
    "outcome": "rejected",
    "kind": "outside-subset",
    "message": "construct outside subset: c_expr (embedded C is outside the subset) (out-c-expr.pml, line 4)",
-   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-c-expr.pml:4:29"
+   "path": "${REPO_ROOT}/model-check-plugin/evals-workspace/subset-probes/out-c-expr.pml:4:29"
   },
   {
    "id": "out-c-decl",
@@ -571,7 +571,7 @@
    "outcome": "rejected",
    "kind": "outside-subset",
    "message": "construct outside subset: c_decl (embedded C is outside the subset) (out-c-decl.pml, line 4)",
-   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-c-decl.pml:4:1"
+   "path": "${REPO_ROOT}/model-check-plugin/evals-workspace/subset-probes/out-c-decl.pml:4:1"
   },
   {
    "id": "out-c-state",
@@ -583,7 +583,7 @@
    "outcome": "rejected",
    "kind": "outside-subset",
    "message": "construct outside subset: c_state (embedded C is outside the subset) (out-c-state.pml, line 4)",
-   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-c-state.pml:4:1"
+   "path": "${REPO_ROOT}/model-check-plugin/evals-workspace/subset-probes/out-c-state.pml:4:1"
   },
   {
    "id": "out-c-track",
@@ -595,7 +595,7 @@
    "outcome": "rejected",
    "kind": "outside-subset",
    "message": "construct outside subset: c_code (embedded C is outside the subset) (out-c-track.pml, line 4)",
-   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-c-track.pml:4:1"
+   "path": "${REPO_ROOT}/model-check-plugin/evals-workspace/subset-probes/out-c-track.pml:4:1"
   },
   {
    "id": "out-eval-in-receive",
@@ -607,7 +607,7 @@
    "outcome": "rejected",
    "kind": "outside-subset",
    "message": "construct outside subset: eval (plan 14 §5.2: not in the corpus, outside the subset) (out-eval-in-receive.pml, line 5)",
-   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-eval-in-receive.pml:5:33"
+   "path": "${REPO_ROOT}/model-check-plugin/evals-workspace/subset-probes/out-eval-in-receive.pml:5:33"
   },
   {
    "id": "out-priority",
@@ -619,7 +619,7 @@
    "outcome": "rejected",
    "kind": "outside-subset",
    "message": "construct outside subset: priority (process priorities are outside the subset) (out-priority.pml, line 4)",
-   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-priority.pml:4:21"
+   "path": "${REPO_ROOT}/model-check-plugin/evals-workspace/subset-probes/out-priority.pml:4:21"
   },
   {
    "id": "out-bit-operators",
@@ -631,7 +631,7 @@
    "outcome": "rejected",
    "kind": "outside-subset",
    "message": "construct outside subset: bitwise operator & (outside the subset) (out-bit-operators.pml, line 5)",
-   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-bit-operators.pml:5:30"
+   "path": "${REPO_ROOT}/model-check-plugin/evals-workspace/subset-probes/out-bit-operators.pml:5:30"
   },
   {
    "id": "out-shift-operators",
@@ -643,7 +643,7 @@
    "outcome": "rejected",
    "kind": "outside-subset",
    "message": "construct outside subset: bitwise operator << (outside the subset) (out-shift-operators.pml, line 5)",
-   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-shift-operators.pml:5:30"
+   "path": "${REPO_ROOT}/model-check-plugin/evals-workspace/subset-probes/out-shift-operators.pml:5:30"
   },
   {
    "id": "out-conditional-expr",
@@ -655,7 +655,7 @@
    "outcome": "rejected",
    "kind": "outside-subset",
    "message": "construct outside subset: conditional expression (c -> a : b) (outside the subset) (out-conditional-expr.pml, line 5)",
-   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-conditional-expr.pml:5:27"
+   "path": "${REPO_ROOT}/model-check-plugin/evals-workspace/subset-probes/out-conditional-expr.pml:5:27"
   },
   {
    "id": "out-run-in-expression",
@@ -683,7 +683,7 @@
    "outcome": "rejected",
    "kind": "outside-subset",
    "message": "construct outside subset: run inside an expression (run is accepted as a statement, on its own or as `pid = run P(...)`, not inside a larger expression) (out-run-nested-in-expression.pml, line 6)",
-   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-run-nested-in-expression.pml:6:16"
+   "path": "${REPO_ROOT}/model-check-plugin/evals-workspace/subset-probes/out-run-nested-in-expression.pml:6:16"
   },
   {
    "id": "out-remote-variable",
@@ -695,7 +695,7 @@
    "outcome": "rejected",
    "kind": "syntax",
    "message": "expected \";\" or \"->\" after a statement, got : (out-remote-variable.pml, line 5)",
-   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-remote-variable.pml:5:39"
+   "path": "${REPO_ROOT}/model-check-plugin/evals-workspace/subset-probes/out-remote-variable.pml:5:39"
   },
   {
    "id": "out-poll-receive",
@@ -707,7 +707,7 @@
    "outcome": "rejected",
    "kind": "outside-subset",
    "message": "construct outside subset: channel poll (?[…]) (outside the subset) (out-poll-receive.pml, line 5)",
-   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-poll-receive.pml:5:37"
+   "path": "${REPO_ROOT}/model-check-plugin/evals-workspace/subset-probes/out-poll-receive.pml:5:37"
   },
   {
    "id": "out-sorted-receive",
@@ -719,7 +719,7 @@
    "outcome": "rejected",
    "kind": "outside-subset",
    "message": "construct outside subset: random receive (??) (outside the subset) (out-sorted-receive.pml, line 5)",
-   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-sorted-receive.pml:5:31"
+   "path": "${REPO_ROOT}/model-check-plugin/evals-workspace/subset-probes/out-sorted-receive.pml:5:31"
   },
   {
    "id": "out-copy-receive",
@@ -731,7 +731,7 @@
    "outcome": "rejected",
    "kind": "outside-subset",
    "message": "construct outside subset: copy receive (?<…>) (outside the subset) (out-copy-receive.pml, line 5)",
-   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-copy-receive.pml:5:31"
+   "path": "${REPO_ROOT}/model-check-plugin/evals-workspace/subset-probes/out-copy-receive.pml:5:31"
   },
   {
    "id": "out-unsigned",
@@ -743,7 +743,7 @@
    "outcome": "rejected",
    "kind": "outside-subset",
    "message": "construct outside subset: unsigned (outside the subset) (out-unsigned.pml, line 4)",
-   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-unsigned.pml:4:1"
+   "path": "${REPO_ROOT}/model-check-plugin/evals-workspace/subset-probes/out-unsigned.pml:4:1"
   },
   {
    "id": "out-hidden-qualifier",
@@ -755,7 +755,7 @@
    "outcome": "rejected",
    "kind": "outside-subset",
    "message": "construct outside subset: hidden (variable qualifiers are outside the subset) (out-hidden-qualifier.pml, line 4)",
-   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-hidden-qualifier.pml:4:1"
+   "path": "${REPO_ROOT}/model-check-plugin/evals-workspace/subset-probes/out-hidden-qualifier.pml:4:1"
   },
   {
    "id": "out-local-qualifier",
@@ -767,7 +767,7 @@
    "outcome": "rejected",
    "kind": "outside-subset",
    "message": "construct outside subset: local (variable qualifiers are outside the subset) (out-local-qualifier.pml, line 4)",
-   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-local-qualifier.pml:4:1"
+   "path": "${REPO_ROOT}/model-check-plugin/evals-workspace/subset-probes/out-local-qualifier.pml:4:1"
   },
   {
    "id": "out-show-qualifier",
@@ -779,7 +779,7 @@
    "outcome": "rejected",
    "kind": "outside-subset",
    "message": "construct outside subset: show (variable qualifiers are outside the subset) (out-show-qualifier.pml, line 4)",
-   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-show-qualifier.pml:4:1"
+   "path": "${REPO_ROOT}/model-check-plugin/evals-workspace/subset-probes/out-show-qualifier.pml:4:1"
   },
   {
    "id": "out-ltl-block",
@@ -791,7 +791,7 @@
    "outcome": "rejected",
    "kind": "outside-subset",
    "message": "construct outside subset: ltl (inline LTL blocks are outside the subset; use never { }) (out-ltl-block.pml, line 6)",
-   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-ltl-block.pml:6:1"
+   "path": "${REPO_ROOT}/model-check-plugin/evals-workspace/subset-probes/out-ltl-block.pml:6:1"
   },
   {
    "id": "out-pc-value",
@@ -822,7 +822,7 @@
    "outcome": "rejected",
    "kind": "outside-subset",
    "message": "construct outside subset: #include (the model must be a single file) (out-include.pml, line 4)",
-   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-include.pml:4:1"
+   "path": "${REPO_ROOT}/model-check-plugin/evals-workspace/subset-probes/out-include.pml:4:1"
   },
   {
    "id": "out-redeclare-enclosing",
@@ -834,7 +834,7 @@
    "outcome": "rejected",
    "kind": "semantic",
    "message": "redeclaration of n: the name is already declared in this scope or in one still open around it (SPIN: \"redeclaration of 'n'\"); only a block that has closed frees the name (out-redeclare-enclosing.pml, line 4)",
-   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-redeclare-enclosing.pml:4:45"
+   "path": "${REPO_ROOT}/model-check-plugin/evals-workspace/subset-probes/out-redeclare-enclosing.pml:4:45"
   },
   {
    "id": "out-redeclare-same-scope",
@@ -846,7 +846,7 @@
    "outcome": "rejected",
    "kind": "semantic",
    "message": "redeclaration of n: the name is already declared in this scope or in one still open around it (SPIN: \"redeclaration of 'n'\"); only a block that has closed frees the name (out-redeclare-same-scope.pml, line 4)",
-   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-redeclare-same-scope.pml:4:36"
+   "path": "${REPO_ROOT}/model-check-plugin/evals-workspace/subset-probes/out-redeclare-same-scope.pml:4:36"
   },
   {
    "id": "out-redeclare-parameter",
@@ -858,7 +858,7 @@
    "outcome": "rejected",
    "kind": "semantic",
    "message": "redeclaration of n: the name is already declared in this scope or in one still open around it (SPIN: \"redeclaration of 'n'\"); only a block that has closed frees the name (out-redeclare-parameter.pml, line 4)",
-   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-redeclare-parameter.pml:4:27"
+   "path": "${REPO_ROOT}/model-check-plugin/evals-workspace/subset-probes/out-redeclare-parameter.pml:4:27"
   },
   {
    "id": "out-redeclare-global",
@@ -870,7 +870,7 @@
    "outcome": "rejected",
    "kind": "semantic",
    "message": "redeclaration of n: it is already a global variable, and a local of that name would shadow it (SPIN refuses the same) (out-redeclare-global.pml, line 5)",
-   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-redeclare-global.pml:5:28"
+   "path": "${REPO_ROOT}/model-check-plugin/evals-workspace/subset-probes/out-redeclare-global.pml:5:28"
   },
   {
    "id": "out-redeclare-if-options",
@@ -882,7 +882,7 @@
    "outcome": "rejected",
    "kind": "semantic",
    "message": "redeclaration of n: the name is already declared in this scope or in one still open around it (SPIN: \"redeclaration of 'n'\"); only a block that has closed frees the name (out-redeclare-if-options.pml, line 4)",
-   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-redeclare-if-options.pml:4:51"
+   "path": "${REPO_ROOT}/model-check-plugin/evals-workspace/subset-probes/out-redeclare-if-options.pml:4:51"
   },
   {
    "id": "out-duplicate-label",
@@ -894,7 +894,7 @@
    "outcome": "rejected",
    "kind": "semantic",
    "message": "label L redeclared: P already has a statement labelled L (SPIN reports the same) (out-duplicate-label.pml, line 6)",
-   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-duplicate-label.pml:6:1"
+   "path": "${REPO_ROOT}/model-check-plugin/evals-workspace/subset-probes/out-duplicate-label.pml:6:1"
   },
   {
    "id": "out-label-and-variable",
@@ -906,7 +906,7 @@
    "outcome": "rejected",
    "kind": "semantic",
    "message": "L is already a label of P: one identifier cannot be both a variable and a control location (SPIN refuses the same) (out-label-and-variable.pml, line 4)",
-   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-label-and-variable.pml:4:28"
+   "path": "${REPO_ROOT}/model-check-plugin/evals-workspace/subset-probes/out-label-and-variable.pml:4:28"
   },
   {
    "id": "out-label-and-global",
@@ -918,7 +918,7 @@
    "outcome": "rejected",
    "kind": "semantic",
    "message": "label g: the name is already a global variable, and SPIN keeps one namespace for both (it reports \"bad label-name g\") (out-label-and-global.pml, line 6)",
-   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-label-and-global.pml:6:1"
+   "path": "${REPO_ROOT}/model-check-plugin/evals-workspace/subset-probes/out-label-and-global.pml:6:1"
   },
   {
    "id": "out-label-and-mtype",
@@ -930,7 +930,7 @@
    "outcome": "rejected",
    "kind": "semantic",
    "message": "label m: the name is already an mtype constant, and SPIN keeps one namespace for both (it reports \"bad label-name m\") (out-label-and-mtype.pml, line 6)",
-   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-label-and-mtype.pml:6:1"
+   "path": "${REPO_ROOT}/model-check-plugin/evals-workspace/subset-probes/out-label-and-mtype.pml:6:1"
   },
   {
    "id": "out-proctype-and-global",
@@ -942,7 +942,7 @@
    "outcome": "rejected",
    "kind": "semantic",
    "message": "proctype P: the name is already a global variable, and SPIN keeps one namespace for both (out-proctype-and-global.pml, line 5)",
-   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-proctype-and-global.pml:5:1"
+   "path": "${REPO_ROOT}/model-check-plugin/evals-workspace/subset-probes/out-proctype-and-global.pml:5:1"
   },
   {
    "id": "out-proctype-and-mtype",
@@ -954,7 +954,7 @@
    "outcome": "rejected",
    "kind": "semantic",
    "message": "proctype P: the name is already an mtype constant, and SPIN keeps one namespace for both (out-proctype-and-mtype.pml, line 5)",
-   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-proctype-and-mtype.pml:5:1"
+   "path": "${REPO_ROOT}/model-check-plugin/evals-workspace/subset-probes/out-proctype-and-mtype.pml:5:1"
   },
   {
    "id": "out-two-globals",
@@ -966,7 +966,7 @@
    "outcome": "rejected",
    "kind": "semantic",
    "message": "redeclaration of n: the name is already a global variable, channel or mtype constant (SPIN: \"redeclaration of 'n'\") (out-two-globals.pml, line 5)",
-   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-two-globals.pml:5:6"
+   "path": "${REPO_ROOT}/model-check-plugin/evals-workspace/subset-probes/out-two-globals.pml:5:6"
   },
   {
    "id": "in-redeclare-siblings",
@@ -993,7 +993,7 @@
    "outcome": "rejected",
    "kind": "semantic",
    "message": "run P: 0 argument(s) for 1 parameter(s) (out-run-arity-few.pml, line 5)",
-   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-run-arity-few.pml:5:8"
+   "path": "${REPO_ROOT}/model-check-plugin/evals-workspace/subset-probes/out-run-arity-few.pml:5:8"
   },
   {
    "id": "out-run-arity-many",
@@ -1005,7 +1005,7 @@
    "outcome": "rejected",
    "kind": "semantic",
    "message": "run P: 2 argument(s) for 1 parameter(s) (out-run-arity-many.pml, line 5)",
-   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-run-arity-many.pml:5:8"
+   "path": "${REPO_ROOT}/model-check-plugin/evals-workspace/subset-probes/out-run-arity-many.pml:5:8"
   },
   {
    "id": "out-sibling-different-types",
@@ -1017,7 +1017,7 @@
    "outcome": "rejected",
    "kind": "semantic",
    "message": "y is declared twice in P with different types (int and byte); the engine keeps one flat set of locals per process (out-sibling-different-types.pml, line 4)",
-   "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/subset-probes/out-sibling-different-types.pml:4:48"
+   "path": "${REPO_ROOT}/model-check-plugin/evals-workspace/subset-probes/out-sibling-different-types.pml:4:48"
   }
  ]
 }

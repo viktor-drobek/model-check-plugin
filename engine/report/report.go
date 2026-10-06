@@ -44,7 +44,7 @@ import (
 
 const (
 	EngineName    = "mcd"
-	EngineVersion = "0.1.0-g0"
+	EngineVersion = "0.2.0"
 	ReportSchema  = "mcd-report/1"
 )
 
@@ -92,6 +92,9 @@ type Search struct {
 	Budget   Budget `json:"budget"`
 	Stop     string `json:"stop"`
 	Complete bool   `json:"complete"`
+	// Reduction is present only when a reduction was asked for (mcd check
+	// --por): whether the search applied it, and what its counts then mean.
+	Reduction *explore.Reduction `json:"reduction,omitempty"`
 }
 
 // Budget echoes the limits the run was given (0 = no limit, which the CLI
@@ -191,7 +194,7 @@ func Build(m *ir.Model, res *explore.Result, meta Meta) (*Report, error) {
 		Engine:   Engine{Name: EngineName, Version: EngineVersion, IRSchema: ir.Schema, ReportSchema: ReportSchema},
 		Inputs:   meta.Inputs,
 		Model:    ModelInfo{Name: m.Name, StateBytes: res.StateBytes, Processes: len(m.Processes), Variables: countVars(m)},
-		Search:   Search{Mode: string(meta.Mode), Budget: meta.Budget, Stop: res.Stop, Complete: res.Complete},
+		Search:   Search{Mode: string(meta.Mode), Budget: meta.Budget, Stop: res.Stop, Complete: res.Complete, Reduction: res.Reduction},
 		Warnings: meta.Warnings,
 	}
 	if r.Inputs == nil {

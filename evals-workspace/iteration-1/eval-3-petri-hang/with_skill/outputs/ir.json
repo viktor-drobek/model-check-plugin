@@ -9,7 +9,7 @@
         1
       ],
       "origin": {
-        "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
+        "file": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
         "name": "p1"
       }
     },
@@ -17,7 +17,7 @@
       "name": "p2",
       "type": "byte",
       "origin": {
-        "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
+        "file": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
         "name": "p2"
       }
     },
@@ -25,7 +25,7 @@
       "name": "p3",
       "type": "byte",
       "origin": {
-        "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
+        "file": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
         "name": "p3"
       }
     },
@@ -36,7 +36,7 @@
         1
       ],
       "origin": {
-        "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
+        "file": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
         "name": "p4"
       }
     },
@@ -44,7 +44,7 @@
       "name": "p5",
       "type": "byte",
       "origin": {
-        "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
+        "file": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
         "name": "p5"
       }
     },
@@ -52,7 +52,7 @@
       "name": "p6",
       "type": "byte",
       "origin": {
-        "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
+        "file": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
         "name": "p6"
       }
     }
@@ -118,7 +118,7 @@
           ],
           "text": "t1",
           "origin": {
-            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
+            "file": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
             "name": "t1"
           }
         },
@@ -206,7 +206,7 @@
           ],
           "text": "t2",
           "origin": {
-            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
+            "file": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
             "name": "t2"
           }
         },
@@ -277,7 +277,7 @@
           ],
           "text": "t3",
           "origin": {
-            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
+            "file": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
             "name": "t3"
           }
         },
@@ -332,7 +332,7 @@
           ],
           "text": "t4",
           "origin": {
-            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
+            "file": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
             "name": "t4"
           }
         },
@@ -420,7 +420,7 @@
           ],
           "text": "t5",
           "origin": {
-            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
+            "file": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
             "name": "t5"
           }
         },
@@ -491,13 +491,13 @@
           ],
           "text": "t6",
           "origin": {
-            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
+            "file": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
             "name": "t6"
           }
         }
       ],
       "origin": {
-        "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
+        "file": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
         "name": "user_net_p1_p6"
       }
     }
@@ -508,7 +508,7 @@
       "kind": "deadlock",
       "text": "hang (Holzmann §8.10): a reachable marking in which no transition is enabled",
       "origin": {
-        "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
+        "file": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
         "name": "hang"
       }
     },
@@ -620,13 +620,13 @@
       },
       "text": "safe (Holzmann §8.10): every place holds at most one token in every reachable marking",
       "origin": {
-        "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
+        "file": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
         "name": "safe"
       }
     }
   ],
   "origin": {
-    "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
+    "file": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
     "name": "user_net_p1_p6"
   }
 }

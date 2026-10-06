@@ -3,7 +3,7 @@
   "session_id": "mc-session-2026-09-25 (eval-3-petri-hang/with_skill)",
   "created": "2026-09-25T09:46:55Z",
   "host": "Linux 7.0.0-31-generic aarch64",
-  "engine": {"name": "mcd", "version": "0.1.0-g0", "ir_schema": "mcd-ir/1", "report_schema": "mcd-report/1", "binary": "/tmp/mcd", "layer": "CLI (MCP server not registered)"},
+  "engine": {"name": "mcd", "version": "0.1.0-g0", "ir_schema": "mcd-ir/1", "report_schema": "mcd-report/1", "binary": "${TMP_DIR}/mcd", "layer": "CLI (MCP server not registered)"},
   "inputs": [
     {"kind": "petri", "path": "net.json", "sha256": "3841c79adb38e3ebb318e69834e2bc5231b73dba0276542361ebda7dc9aa7ab5", "source": "the user's message of 2026-09-25, transcribed by the assistant"},
     {"kind": "ir", "path": "ir.json", "sha256": "cbf78665ec469772ea5506012976bdf8c3e3c91c49748d15e24b2290132934e7", "source": "mcd parse --petri net.json"},

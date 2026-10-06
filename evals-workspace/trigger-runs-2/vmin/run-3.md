@@ -47,7 +47,7 @@ skill. Do not explain, do not hedge, do not answer the requests themselves.
 
 ## Output
 
-Write a JSON file to `/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/trigger-runs-2/vmin/run-3.json` and nothing else. Its content must be exactly a JSON object
+Write a JSON file to `${REPO_ROOT}/model-check-plugin/evals-workspace/trigger-runs-2/vmin/run-3.json` and nothing else. Its content must be exactly a JSON object
 mapping each request number (as a string) to "yes" or "no", for example:
 
 {"1": "no", "2": "yes", "3": "no"}

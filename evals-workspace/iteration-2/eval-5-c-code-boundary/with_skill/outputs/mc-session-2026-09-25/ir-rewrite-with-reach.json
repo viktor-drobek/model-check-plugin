@@ -6,7 +6,7 @@
       "name": "x",
       "type": "int",
       "origin": {
-        "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-2/eval-5-c-code-boundary/with_skill/outputs/mc-session-2026-09-25/simple1-rewrite.pml",
+        "file": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-2/eval-5-c-code-boundary/with_skill/outputs/mc-session-2026-09-25/simple1-rewrite.pml",
         "line": 8,
         "name": "x"
       }
@@ -45,7 +45,7 @@
           ],
           "text": "x = 2",
           "origin": {
-            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-2/eval-5-c-code-boundary/with_skill/outputs/mc-session-2026-09-25/simple1-rewrite.pml",
+            "file": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-2/eval-5-c-code-boundary/with_skill/outputs/mc-session-2026-09-25/simple1-rewrite.pml",
             "line": 12,
             "name": "x = 2"
           }
@@ -73,7 +73,7 @@
           ],
           "text": "x = x + 2",
           "origin": {
-            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-2/eval-5-c-code-boundary/with_skill/outputs/mc-session-2026-09-25/simple1-rewrite.pml",
+            "file": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-2/eval-5-c-code-boundary/with_skill/outputs/mc-session-2026-09-25/simple1-rewrite.pml",
             "line": 14,
             "name": "x = x + 2"
           }
@@ -96,7 +96,7 @@
           },
           "text": "assert(x == 4)",
           "origin": {
-            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-2/eval-5-c-code-boundary/with_skill/outputs/mc-session-2026-09-25/simple1-rewrite.pml",
+            "file": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-2/eval-5-c-code-boundary/with_skill/outputs/mc-session-2026-09-25/simple1-rewrite.pml",
             "line": 14,
             "name": "assert(x == 4)"
           }
@@ -124,7 +124,7 @@
           ],
           "text": "x = x * 3",
           "origin": {
-            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-2/eval-5-c-code-boundary/with_skill/outputs/mc-session-2026-09-25/simple1-rewrite.pml",
+            "file": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-2/eval-5-c-code-boundary/with_skill/outputs/mc-session-2026-09-25/simple1-rewrite.pml",
             "line": 15,
             "name": "x = x * 3"
           }
@@ -147,7 +147,7 @@
           },
           "text": "assert(x == 6)",
           "origin": {
-            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-2/eval-5-c-code-boundary/with_skill/outputs/mc-session-2026-09-25/simple1-rewrite.pml",
+            "file": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-2/eval-5-c-code-boundary/with_skill/outputs/mc-session-2026-09-25/simple1-rewrite.pml",
             "line": 15,
             "name": "assert(x == 6)"
           }
@@ -157,14 +157,14 @@
           "to": 2,
           "text": "-end-",
           "origin": {
-            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-2/eval-5-c-code-boundary/with_skill/outputs/mc-session-2026-09-25/simple1-rewrite.pml",
+            "file": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-2/eval-5-c-code-boundary/with_skill/outputs/mc-session-2026-09-25/simple1-rewrite.pml",
             "line": 17,
             "name": "-end-"
           }
         }
       ],
       "origin": {
-        "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-2/eval-5-c-code-boundary/with_skill/outputs/mc-session-2026-09-25/simple1-rewrite.pml",
+        "file": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-2/eval-5-c-code-boundary/with_skill/outputs/mc-session-2026-09-25/simple1-rewrite.pml",
         "line": 10,
         "name": "simple"
       }
@@ -219,7 +219,7 @@
     }
   ],
   "origin": {
-    "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-2/eval-5-c-code-boundary/with_skill/outputs/mc-session-2026-09-25/simple1-rewrite.pml",
+    "file": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-2/eval-5-c-code-boundary/with_skill/outputs/mc-session-2026-09-25/simple1-rewrite.pml",
     "name": "simple1-rewrite"
   }
 }

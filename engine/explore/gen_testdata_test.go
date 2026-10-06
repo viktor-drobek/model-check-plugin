@@ -8,7 +8,7 @@ import (
 )
 
 // TestGenerateTestdata writes the IR-encoded counters models used by the
-// feature file and by the throughput measurement. Run explicitly:
+// feature file and by the throughput measurement, and the G7 models (por-visible, por-enabling, por-dstep). Run explicitly:
 //
 //	MCD_GEN_TESTDATA=1 go test ./explore -run TestGenerateTestdata
 func TestGenerateTestdata(t *testing.T) {
@@ -24,6 +24,19 @@ func TestGenerateTestdata(t *testing.T) {
 			t.Fatal(err)
 		}
 		if err := os.WriteFile("../testdata/ir/"+c.file, b, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for file, m := range map[string]*ir.Model{
+		"por-visible.json":  porVisible(),
+		"por-enabling.json": porEnabling(),
+		"por-dstep.json":    porDStepGuard(),
+	} {
+		b, err := ir.MarshalJSON(m)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile("../testdata/ir/"+file, b, 0o644); err != nil {
 			t.Fatal(err)
 		}
 	}

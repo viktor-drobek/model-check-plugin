@@ -387,7 +387,7 @@ func runCycle(ctx0 *search, base *ir.Model, prop ir.Property, propIndex int, opt
 	s.next = cs.pnext[:cs.size]
 	newVisited := opt.NewVisited
 	if newVisited == nil {
-		newVisited = func(n int) Visited { return NewCompact(n, 1024) }
+		newVisited = defaultVisited
 	}
 	s.visited = newVisited(cs.pl)
 	// The outcome slot: cs.decide writes into s.res.Outcomes[0].
@@ -661,7 +661,7 @@ func (cs *cycleSearch) run() {
 	copy(init, l.Initial())
 	idx0, _ := s.visited.Add(init)
 	cs.inner, cs.onStack = []bool{false}, []bool{true}
-	s.stack = append(s.stack, newFrame(int32(idx0), productMove{claim: -1}))
+	s.stack = pushFrame(s.stack, newFrame(int32(idx0), productMove{claim: -1}))
 	var istack []frame // the inner stack, kept for the trace of a found cycle
 
 	for len(s.stack) > 0 && s.stop == "" {
@@ -732,7 +732,7 @@ func (cs *cycleSearch) run() {
 					cs.res.MaxDepth = depth
 				}
 				s.tmp = append(s.tmp, append([]byte(nil), cs.pnext...))
-				s.stack = append(s.stack, newFrame(-int32(len(s.tmp)), pm))
+				s.stack = pushFrame(s.stack, newFrame(-int32(len(s.tmp)), pm))
 				continue
 			}
 		}
@@ -752,7 +752,7 @@ func (cs *cycleSearch) run() {
 			cs.res.MaxDepth = depth
 		}
 		cs.onStack[idx] = true
-		s.stack = append(s.stack, newFrame(int32(idx), pm))
+		s.stack = pushFrame(s.stack, newFrame(int32(idx), pm))
 	}
 	cs.res.States = s.visited.Len()
 	cs.res.MemBytes = s.visited.Bytes() + int64(cap(s.stack))*frameBytes + int64(len(cs.inner))*2
@@ -768,7 +768,7 @@ func (cs *cycleSearch) run() {
 func (cs *cycleSearch) innerDFS(seed int, istack *[]frame) (closing int, closeMove productMove, found bool, err error) {
 	s := cs.s
 	*istack = (*istack)[:0]
-	*istack = append(*istack, newFrame(int32(seed), productMove{claim: -1}))
+	*istack = pushFrame(*istack, newFrame(int32(seed), productMove{claim: -1}))
 	cs.inner[seed] = true
 	tmpBase := len(s.tmp)
 	defer func() { s.tmp = s.tmp[:tmpBase] }()
@@ -818,7 +818,7 @@ func (cs *cycleSearch) innerDFS(seed int, istack *[]frame) (closing int, closeMo
 					cs.res.MaxDepth = depth
 				}
 				s.tmp = append(s.tmp, append([]byte(nil), cs.pnext...))
-				*istack = append(*istack, newFrame(-int32(len(s.tmp)), pm))
+				*istack = pushFrame(*istack, newFrame(-int32(len(s.tmp)), pm))
 				continue
 			}
 		}
@@ -852,7 +852,7 @@ func (cs *cycleSearch) innerDFS(seed int, istack *[]frame) (closing int, closeMo
 		if depth > cs.res.MaxDepth {
 			cs.res.MaxDepth = depth
 		}
-		*istack = append(*istack, newFrame(int32(idx), pm))
+		*istack = pushFrame(*istack, newFrame(int32(idx), pm))
 	}
 	return 0, productMove{}, false, nil
 }

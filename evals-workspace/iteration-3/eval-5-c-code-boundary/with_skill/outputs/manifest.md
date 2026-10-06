@@ -7,7 +7,7 @@ from the report's `engine`, `inputs` and `search.budget`; the command lines and 
 wall-clock time are recorded here by hand. There is no seed: `mc_simulate` has no
 CLI equivalent, so no simulation was run.
 
-- Engine: `mcd 0.1.0-g0 (ir mcd-ir/1, report mcd-report/1)`, binary `/tmp/mcd`
+- Engine: `mcd 0.1.0-g0 (ir mcd-ir/1, report mcd-report/1)`, binary `${TMP_DIR}/mcd`
   (pre-built for this session; not rebuilt)
 - Host: linux/aarch64
 - Date (UTC): 2026-09-25
@@ -25,14 +25,14 @@ CLI equivalent, so no simulation was run.
 
 | # | Command (cwd = repo root, except runs 3–7 whose cwd is this `outputs/` directory) | Exit | Artefact |
 |---|---|---|---|
-| 0 | `/tmp/mcd version` | 0 | `session/00-version.txt` |
-| 1 | `/tmp/mcd parse --promela "Promela - examples/CH17/simple1.pr"` | **2** | `session/01-parse-original.stdout.json` |
-| 2 | `/tmp/mcd check --promela "Promela - examples/CH17/simple1.pr"` | **2** | `session/02-check-original.stdout.json` |
-| 3 | `/tmp/mcd parse --promela model/simple1-rewrite.pml` | 0 | `session/03-parse-rewrite.ir.json` |
-| 4 | `/tmp/mcd check --promela model/simple1-rewrite.pml --budget-states 3` | 0 | `session/04-check-pilot-3states.json` |
-| 5 | `/tmp/mcd check --promela model/simple1-rewrite.pml --sweep` | 0 | `session/05-check-main.json` |
-| 6 | `/tmp/mcd check --promela model/simple1-rewrite.pml --ltl '[] !(x == 4)' --ltl '[] !(x == 6)' --sweep` | 0 | `session/06-check-reachability-ltl.json` |
-| 7 | `/tmp/mcd check --promela model/simple1-mutant-assert5.pml --bfs` | 0 | `session/07-check-mutant.json` |
+| 0 | `${TMP_DIR}/mcd version` | 0 | `session/00-version.txt` |
+| 1 | `${TMP_DIR}/mcd parse --promela "Promela - examples/CH17/simple1.pr"` | **2** | `session/01-parse-original.stdout.json` |
+| 2 | `${TMP_DIR}/mcd check --promela "Promela - examples/CH17/simple1.pr"` | **2** | `session/02-check-original.stdout.json` |
+| 3 | `${TMP_DIR}/mcd parse --promela model/simple1-rewrite.pml` | 0 | `session/03-parse-rewrite.ir.json` |
+| 4 | `${TMP_DIR}/mcd check --promela model/simple1-rewrite.pml --budget-states 3` | 0 | `session/04-check-pilot-3states.json` |
+| 5 | `${TMP_DIR}/mcd check --promela model/simple1-rewrite.pml --sweep` | 0 | `session/05-check-main.json` |
+| 6 | `${TMP_DIR}/mcd check --promela model/simple1-rewrite.pml --ltl '[] !(x == 4)' --ltl '[] !(x == 6)' --sweep` | 0 | `session/06-check-reachability-ltl.json` |
+| 7 | `${TMP_DIR}/mcd check --promela model/simple1-mutant-assert5.pml --bfs` | 0 | `session/07-check-mutant.json` |
 
 Budgets applied in runs 5–7: the CLI defaults — `states 1000000`, `depth 1000000`,
 `time_ms 60000`, `mem_bytes 1073741824`. Run 4 lowered `states` to 3 on purpose

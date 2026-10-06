@@ -8,7 +8,7 @@
     "version": "0.1.0-g0",
     "ir_schema": "mcd-ir/1",
     "report_schema": "mcd-report/1",
-    "binary": "/tmp/mcd (pre-built for this session; not rebuilt)",
+    "binary": "${TMP_DIR}/mcd (pre-built for this session; not rebuilt)",
     "version_string": "mcd 0.1.0-g0 (ir mcd-ir/1, report mcd-report/1)",
     "note": "the version string says g0, but this build carries the G4 flags --ltl, --progress, --fairness and --unlimited; the LTL runs below were executed by it"
   },
@@ -37,7 +37,7 @@
     {
       "n": 1,
       "tool": "mcd parse (mc_parse)",
-      "command": "/tmp/mcd parse --petri petrinet.json",
+      "command": "${TMP_DIR}/mcd parse --petri petrinet.json",
       "outcome": "ok",
       "exit_code": 0,
       "artifacts": ["ir.json"],
@@ -46,7 +46,7 @@
     {
       "n": 2,
       "tool": "mcd check (mc_estimate stand-in: pilot budget)",
-      "command": "/tmp/mcd check --no-timing --petri petrinet.json --budget-states 50",
+      "command": "${TMP_DIR}/mcd check --no-timing --petri petrinet.json --budget-states 50",
       "params": {"search": "dfs", "fairness": "none", "budget_applied": {"states": 50, "depth": 1000000, "time_ms": 60000, "mem_bytes": 1073741824}},
       "outcome": "ok",
       "exit_code": 0,
@@ -55,7 +55,7 @@
     {
       "n": 3,
       "tool": "mcd check (target budget, DFS)",
-      "command": "/tmp/mcd check --no-timing --petri petrinet.json",
+      "command": "${TMP_DIR}/mcd check --no-timing --petri petrinet.json",
       "params": {"search": "dfs", "fairness": "none", "budget_applied": {"states": 1000000, "depth": 1000000, "time_ms": 60000, "mem_bytes": 1073741824}},
       "outcome": "ok",
       "exit_code": 0,
@@ -64,7 +64,7 @@
     {
       "n": 4,
       "tool": "mcd check (BFS, shortest counterexample)",
-      "command": "/tmp/mcd check --no-timing --bfs --petri petrinet.json",
+      "command": "${TMP_DIR}/mcd check --no-timing --bfs --petri petrinet.json",
       "params": {"search": "bfs", "fairness": "none"},
       "outcome": "ok",
       "exit_code": 0,
@@ -73,7 +73,7 @@
     {
       "n": 5,
       "tool": "mcd check (--sweep, whole graph as pan -c0)",
-      "command": "/tmp/mcd check --no-timing --sweep --petri petrinet.json",
+      "command": "${TMP_DIR}/mcd check --no-timing --sweep --petri petrinet.json",
       "params": {"search": "dfs", "fairness": "none"},
       "outcome": "ok",
       "exit_code": 0,
@@ -82,7 +82,7 @@
     {
       "n": 6,
       "tool": "mcd check (authored reach properties)",
-      "command": "/tmp/mcd check --no-timing --ir ir-props.json",
+      "command": "${TMP_DIR}/mcd check --no-timing --ir ir-props.json",
       "params": {"search": "dfs", "fairness": "none"},
       "outcome": "ok",
       "exit_code": 0,
@@ -91,7 +91,7 @@
     {
       "n": 7,
       "tool": "mcd check (LTL: is the hang inevitable?)",
-      "command": "/tmp/mcd check --no-timing --petri petrinet.json --ltl '<> (p2 > 0 && p5 > 0)'",
+      "command": "${TMP_DIR}/mcd check --no-timing --petri petrinet.json --ltl '<> (p2 > 0 && p5 > 0)'",
       "params": {"search": "dfs", "fairness": "none"},
       "outcome": "ok",
       "exit_code": 0,
@@ -100,7 +100,7 @@
     {
       "n": 8,
       "tool": "mcd check (LTL: the hang as a safety formula)",
-      "command": "/tmp/mcd check --no-timing --petri petrinet.json --ltl '[] !(p2 > 0 && p5 > 0)'",
+      "command": "${TMP_DIR}/mcd check --no-timing --petri petrinet.json --ltl '[] !(p2 > 0 && p5 > 0)'",
       "params": {"search": "dfs", "fairness": "none"},
       "outcome": "ok",
       "exit_code": 0,
@@ -109,7 +109,7 @@
     {
       "n": 9,
       "tool": "mcd check (fairness sensitivity run)",
-      "command": "/tmp/mcd check --no-timing --petri petrinet.json --ltl '<> (p2 > 0 && p5 > 0)' --fairness weak",
+      "command": "${TMP_DIR}/mcd check --no-timing --petri petrinet.json --ltl '<> (p2 > 0 && p5 > 0)' --fairness weak",
       "params": {"search": "dfs", "fairness": "weak"},
       "outcome": "ok",
       "exit_code": 0,
@@ -118,7 +118,7 @@
     {
       "n": 10,
       "tool": "mcd check (CTL boundary probe)",
-      "command": "/tmp/mcd check --no-timing --petri petrinet.json --ltl 'AG EF (p1 > 0)'",
+      "command": "${TMP_DIR}/mcd check --no-timing --petri petrinet.json --ltl 'AG EF (p1 > 0)'",
       "outcome": "error",
       "exit_code": 2,
       "error": "rejected input, kind `ltl`: \"property ltl1: formula: atom AG: undeclared variable \\\"AG\\\" (at offset 0)\" — the CLI has no CTL path; a `ctl` property is `not-executed` until G5",
@@ -127,7 +127,7 @@
     {
       "n": 11,
       "tool": "wall-clock measurement (no mc_manifest available)",
-      "command": "/usr/bin/time -f '%e s, %M KB max RSS' /tmp/mcd check --petri petrinet.json",
+      "command": "/usr/bin/time -f '%e s, %M KB max RSS' ${TMP_DIR}/mcd check --petri petrinet.json",
       "outcome": "ok",
       "result": "0.01 s, 19092 KB max RSS; the report's per-property time_ms is 0",
       "artifacts": ["timing.txt"]

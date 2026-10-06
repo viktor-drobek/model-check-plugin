@@ -7,10 +7,10 @@
   "expected_output": "Delivery is formalised as an LTL formula over the model and checked; the fairness question is raised (as a question or as an explicitly labelled assumption) before the liveness run; the result is `verified` with evidence `exhaustive`, and the answer says the verdict does not depend on the fairness setting because sender and receiver alternate in lock-step. The claim is limited to this model: it has no message loss, no retransmission and no timeout, so nothing is said about the alternating-bit protocol's behaviour on a lossy channel. The word \"proved\" is not used for the model result.",
   "fixture": "Promela - examples/CH3/alternatingbit.pml",
   "runnable_from": "G4",
-  "engine": "mcd 0.1.0-g0 built from model-check-plugin/engine at the G4 commit 85aa78e (go build -o /tmp/mcd ./cmd/mcd); the binary carries the G4 flags --ltl/--progress/--fairness/--unlimited although its version string still says 0.1.0-g0",
+  "engine": "mcd 0.1.0-g0 built from model-check-plugin/engine at the G4 commit 85aa78e (go build -o ${TMP_DIR}/mcd ./cmd/mcd); the binary carries the G4 flags --ltl/--progress/--fairness/--unlimited although its version string still says 0.1.0-g0",
   "protocol": {
     "executor": "one general-purpose subagent per configuration, all twelve launched in parallel, same model as the coordinating session",
-    "with_skill": "prompt + repository root + output directory + path of skills/model-check/SKILL.md ('follow it literally, including the references') + path of the built binary /tmp/mcd; told that the MCP server is not registered (CLI fallback of SKILL.md step 3) and not to run SPIN",
+    "with_skill": "prompt + repository root + output directory + path of skills/model-check/SKILL.md ('follow it literally, including the references') + path of the built binary ${TMP_DIR}/mcd; told that the MCP server is not registered (CLI fallback of SKILL.md step 3) and not to run SPIN",
     "without_skill": "prompt + repository root + output directory only (as in iterations 1 and 2); SPIN was not forbidden and every baseline used it",
     "mcp": "not exercised by the runs: an MCP server cannot be registered into a subagent's session dynamically. The MCP path was exercised once by hand instead — steps/g3-evals3-mcp-session.md",
     "questions": "the user is not available; both configurations were told to record an explicitly labelled assumption instead of asking",

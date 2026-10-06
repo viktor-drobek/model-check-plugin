@@ -154,6 +154,25 @@ Feature: G0 engine — Petri nets through IR to a JSON verdict via the mcd CLI
     And the report is complete
     And the report counts 100000 states
 
+  # Growing the exact visited set (performance plan, step 1). The store is an
+  # open-addressing table over an arena of full state vectors. An arena that
+  # grows by append copies every stored vector again and again (Go grows a
+  # large slice by about a quarter at a time, so the copies add up to several
+  # times the final arena); a chunked arena never moves a stored vector. The
+  # observable consequence is pinned here: the verdict and the counts do not
+  # change, and the bytes a complete run allocates stay within a small
+  # multiple of the memory it reports. The bound is deliberately loose (the
+  # table still doubles, and the report, the IR and the frames are allocated
+  # too); it separates "grows in place" from "copies on every growth".
+  Scenario: a complete run allocates little more than the memory it reports
+    Given the IR file "testdata/ir/counters-10-5.json"
+    When I run "mcd check --ir <file> --budget-states 200000 --budget-depth 200000 --budget-ms 60000 --no-timing" measuring the bytes allocated
+    Then the exit code is 0
+    And the property "deadlock" has status "verified" with evidence "exhaustive"
+    And the report is complete
+    And the report counts 100000 states
+    And the bytes allocated are at most 3 times the reported memory estimate
+
   # --- Search modes --------------------------------------------------------
 
   # bfs-shortest.json: t1: p1→a, t2: a→b, t3: b→dead, t4: p1→dead. DFS in

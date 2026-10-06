@@ -8,7 +8,7 @@
   "inputs": [
     {
       "kind": "promela",
-      "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+      "path": "${REPO_ROOT}/Promela - examples/CH14/version1",
       "sha256": "acdfcacad083c29ff47cba18de2fb84ec784e9e064e0b64c435497e07121ec3b"
     }
   ],

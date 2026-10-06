@@ -26,7 +26,7 @@ no simulation was run.
 | promela (derived variant, this session) | `…/with_skill/outputs/models/version1-progress.pml` | `9ec15da3ba0289fb04e28b8a0d942c130f5b0ce47129b4a3921e942f0c8e2094` |
 
 Paths are relative to the repository root
-`/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check`, which
+`${REPO_ROOT}`, which
 is also the working directory of every command below.
 
 ## Calls

@@ -48,7 +48,7 @@
 
 ## 5. Method and backend
 
-- Движок: `mcd 0.1.0-g0` (встроенный explicit-state движок; схемы `mcd-ir/1`, `mcd-report/1`), бинарник `/tmp/mcd`, слой CLI (MCP-сервер в этой сессии не зарегистрирован, Promela-фронтенд в сервер этой сборки не слинкован).
+- Движок: `mcd 0.1.0-g0` (встроенный explicit-state движок; схемы `mcd-ir/1`, `mcd-report/1`), бинарник `${TMP_DIR}/mcd`, слой CLI (MCP-сервер в этой сессии не зарегистрирован, Promela-фронтенд в сервер этой сборки не слинкован).
 - Поиск: DFS (основной) и BFS (кратчайший контрпример для safety); fairness `none`; редукции: none (нередуцированный поиск, POR в этой сборке нет).
 - Почему подходит: модель конечна (2 процесса, 4 байтовых переменных, значения 0..2), без времени и вероятностей, свойства — инварианты/достижимость/тупик; это ровно класс, для которого explicit-state перебор даёт исчерпывающий ответ.
 
@@ -60,13 +60,13 @@
 - Команды (пути относительно корня репозитория; модель передавалась файлом, текст в командную строку не подставлялся):
 
 ```
-/tmp/mcd parse --promela "Promela - examples/CH2/mutex_flaw.pml"                        > ir.json
-/tmp/mcd check --ir ir-with-properties.json --budget-states 200 --no-timing            > check-pilot-states200.json
-/tmp/mcd check --promela "Promela - examples/CH2/mutex_flaw.pml"                        > check-promela-dfs.json
-/tmp/mcd check --promela "Promela - examples/CH2/mutex_flaw.pml" --bfs                  > check-promela-bfs.json
-/tmp/mcd check --ir ir-with-properties.json                                             > check-ir-dfs.json
-/tmp/mcd check --ir ir-with-properties.json --bfs                                       > check-ir-bfs.json
-/tmp/mcd check --ir ir-with-properties.json --sweep --no-timing                         > check-ir-sweep.json
+${TMP_DIR}/mcd parse --promela "Promela - examples/CH2/mutex_flaw.pml"                        > ir.json
+${TMP_DIR}/mcd check --ir ir-with-properties.json --budget-states 200 --no-timing            > check-pilot-states200.json
+${TMP_DIR}/mcd check --promela "Promela - examples/CH2/mutex_flaw.pml"                        > check-promela-dfs.json
+${TMP_DIR}/mcd check --promela "Promela - examples/CH2/mutex_flaw.pml" --bfs                  > check-promela-bfs.json
+${TMP_DIR}/mcd check --ir ir-with-properties.json                                             > check-ir-dfs.json
+${TMP_DIR}/mcd check --ir ir-with-properties.json --bfs                                       > check-ir-bfs.json
+${TMP_DIR}/mcd check --ir ir-with-properties.json --sweep --no-timing                         > check-ir-sweep.json
 ```
 
 - Метрики (одинаковы для всех свойств одного прогона):

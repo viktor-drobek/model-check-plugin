@@ -75,7 +75,7 @@ fairness:
   confirmed_by_user: false   # user not available; default stated in the report
 
 backend:
-  engine: mcd 0.1.0-g0 (CLI fallback: the MCP server is not registered in this session; binary /tmp/mcd)
+  engine: mcd 0.1.0-g0 (CLI fallback: the MCP server is not registered in this session; binary ${TMP_DIR}/mcd)
   search_mode: dfs (plus one bfs run for the shortest hang and one --sweep run for the full state count)
   reductions: none
 

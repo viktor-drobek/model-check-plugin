@@ -84,7 +84,7 @@ fairness:
   confirmed_by_user: false
 
 backend:
-  engine: mcd        # CLI /tmp/mcd, version 0.1.0-g0; the plugin's MCP server is not registered in this session
+  engine: mcd        # CLI ${TMP_DIR}/mcd, version 0.1.0-g0; the plugin's MCP server is not registered in this session
   search_mode: dfs   # plus one bfs run for the negative control
   reductions: none
 

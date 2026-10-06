@@ -1,0 +1,247 @@
+{
+  "schema": "mcd-ir/1",
+  "name": "por-visible",
+  "globals": [
+    {
+      "name": "x",
+      "type": "byte"
+    }
+  ],
+  "processes": [
+    {
+      "name": "A",
+      "locations": [
+        {
+          "name": "a0"
+        },
+        {
+          "name": "a1"
+        },
+        {
+          "name": "a2"
+        }
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 1,
+          "effect": [
+            {
+              "var": "x",
+              "value": {
+                "op": "const",
+                "value": 1
+              }
+            }
+          ],
+          "text": "x = 1"
+        },
+        {
+          "from": 1,
+          "to": 2,
+          "effect": [
+            {
+              "var": "x",
+              "value": {
+                "op": "const",
+                "value": 2
+              }
+            }
+          ],
+          "text": "x = 2"
+        }
+      ]
+    },
+    {
+      "name": "B",
+      "locals": [
+        {
+          "name": "c",
+          "type": "byte"
+        }
+      ],
+      "locations": [
+        {
+          "name": "count"
+        },
+        {
+          "name": "done"
+        }
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 0,
+          "guard": {
+            "op": "lt",
+            "args": [
+              {
+                "op": "var",
+                "var": "c"
+              },
+              {
+                "op": "const",
+                "value": 3
+              }
+            ]
+          },
+          "effect": [
+            {
+              "var": "c",
+              "value": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "c"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "c < 3 -> c++"
+        },
+        {
+          "from": 0,
+          "to": 1,
+          "guard": {
+            "op": "ge",
+            "args": [
+              {
+                "op": "var",
+                "var": "c"
+              },
+              {
+                "op": "const",
+                "value": 3
+              }
+            ]
+          },
+          "text": "c >= 3"
+        }
+      ]
+    },
+    {
+      "name": "C",
+      "locals": [
+        {
+          "name": "c",
+          "type": "byte"
+        }
+      ],
+      "locations": [
+        {
+          "name": "count"
+        },
+        {
+          "name": "done"
+        }
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 0,
+          "guard": {
+            "op": "lt",
+            "args": [
+              {
+                "op": "var",
+                "var": "c"
+              },
+              {
+                "op": "const",
+                "value": 3
+              }
+            ]
+          },
+          "effect": [
+            {
+              "var": "c",
+              "value": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "c"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "c < 3 -> c++"
+        },
+        {
+          "from": 0,
+          "to": 1,
+          "guard": {
+            "op": "ge",
+            "args": [
+              {
+                "op": "var",
+                "var": "c"
+              },
+              {
+                "op": "const",
+                "value": 3
+              }
+            ]
+          },
+          "text": "c >= 3"
+        }
+      ]
+    }
+  ],
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock"
+    },
+    {
+      "id": "inv",
+      "kind": "invariant",
+      "expr": {
+        "op": "ne",
+        "args": [
+          {
+            "op": "var",
+            "var": "x"
+          },
+          {
+            "op": "const",
+            "value": 2
+          }
+        ]
+      },
+      "text": "x != 2"
+    },
+    {
+      "id": "can1",
+      "kind": "reach",
+      "expr": {
+        "op": "eq",
+        "args": [
+          {
+            "op": "var",
+            "var": "x"
+          },
+          {
+            "op": "const",
+            "value": 1
+          }
+        ]
+      },
+      "text": "x == 1"
+    }
+  ]
+}

@@ -9,8 +9,8 @@
 ## Как воспроизвести
 
 ```
-cd model-check-plugin/engine && go build -o /tmp/mcd ./cmd/mcd
-cd ../evals-workspace/subset-probes && python3 probe.py --mcd /tmp/mcd
+cd model-check-plugin/engine && go build -o ${TMP_DIR}/mcd ./cmd/mcd
+cd ../evals-workspace/subset-probes && python3 probe.py --mcd ${TMP_DIR}/mcd
 ```
 
 `probe.py` для каждой строки справки пишет минимальную модель, которая упражняет
@@ -171,7 +171,7 @@ G5 внёс в подмножество то, что план 14 §5.2 отно�
 принимал то, что SPIN отвергает, — и свёл их к шести дефектам. Теперь:
 
 ```
-$ /tmp/mcd parse --promela out-redeclare-enclosing.pml        # exit 2
+$ ${TMP_DIR}/mcd parse --promela out-redeclare-enclosing.pml        # exit 2
 semantic: redeclaration of n: the name is already declared in this scope or in one
           still open around it …
 ```

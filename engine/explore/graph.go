@@ -72,7 +72,7 @@ func BuildGraph(ctx context.Context, m *ir.Model, opt Options) (*Graph, error) {
 	}
 	newVisited := opt.NewVisited
 	if newVisited == nil {
-		newVisited = func(n int) Visited { return NewCompact(n, 1024) }
+		newVisited = defaultVisited
 	}
 	s := &search{c: c, opt: opt, ctx: ctx, visited: newVisited(c.layout.Size), res: &Result{StateBytes: c.layout.Size}}
 	// The graph carries no properties of its own: the labelling decides them.

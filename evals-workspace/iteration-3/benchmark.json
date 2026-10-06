@@ -163,7 +163,7 @@
         {
           "text": "The engine was run on the net and the call is shown — the MCP tools (mc_parse / mc_check) or either CLI route (`mcd check --petri`, or `mcd parse --petri` then `mcd check --ir`)",
           "passed": true,
-          "evidence": "matched 'mcd parse --petri petrinet.json > ir.json\\n/tmp/mcd check --no-timing --petri pet' at 18416"
+          "evidence": "matched 'mcd parse --petri petrinet.json > ir.json\\n${TMP_DIR}/mcd check --no-timing --petri pet' at 18416"
         },
         {
           "text": "The hang (deadlock) property is reported with status violated",

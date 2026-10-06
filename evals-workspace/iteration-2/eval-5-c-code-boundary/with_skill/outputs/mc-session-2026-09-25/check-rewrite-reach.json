@@ -85,7 +85,7 @@
               }
             ],
             "origin": {
-              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-2/eval-5-c-code-boundary/with_skill/outputs/mc-session-2026-09-25/simple1-rewrite.pml",
+              "file": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-2/eval-5-c-code-boundary/with_skill/outputs/mc-session-2026-09-25/simple1-rewrite.pml",
               "line": 12,
               "name": "x = 2"
             }
@@ -102,7 +102,7 @@
               }
             ],
             "origin": {
-              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-2/eval-5-c-code-boundary/with_skill/outputs/mc-session-2026-09-25/simple1-rewrite.pml",
+              "file": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-2/eval-5-c-code-boundary/with_skill/outputs/mc-session-2026-09-25/simple1-rewrite.pml",
               "line": 14,
               "name": "x = x + 2"
             }
@@ -145,7 +145,7 @@
               }
             ],
             "origin": {
-              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-2/eval-5-c-code-boundary/with_skill/outputs/mc-session-2026-09-25/simple1-rewrite.pml",
+              "file": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-2/eval-5-c-code-boundary/with_skill/outputs/mc-session-2026-09-25/simple1-rewrite.pml",
               "line": 12,
               "name": "x = 2"
             }
@@ -162,7 +162,7 @@
               }
             ],
             "origin": {
-              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-2/eval-5-c-code-boundary/with_skill/outputs/mc-session-2026-09-25/simple1-rewrite.pml",
+              "file": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-2/eval-5-c-code-boundary/with_skill/outputs/mc-session-2026-09-25/simple1-rewrite.pml",
               "line": 15,
               "name": "x = x * 3"
             }

@@ -120,7 +120,7 @@ sanity-свойства (шаг 4 рабочего процесса): без н�
 ## 5. Method and backend
 
 - Движок: `mcd` версии `0.1.0-g0` (встроенный explicit-state движок; схемы `mcd-ir/1`,
-  `mcd-report/1`), через CLI `/tmp/mcd` — MCP-сервер в сессии не зарегистрирован, а в
+  `mcd-report/1`), через CLI `${TMP_DIR}/mcd` — MCP-сервер в сессии не зарегистрирован, а в
   этой сборке сервер и так не подключает Promela-фронтенд, так что CLI — единственный
   путь для Promela.
 - Поиск: DFS (основной прогон) и контрольный BFS; справедливость `none`; редукции: нет
@@ -142,14 +142,14 @@ sanity-свойства (шаг 4 рабочего процесса): без н�
 
   | # | Команда | Код выхода | Итог |
   |---|---|---|---|
-  | 1 | `/tmp/mcd parse --promela "Promela - examples/CH17/simple1.pr"` | **2** | отказ `outside-subset` (см. ниже) |
-  | 2 | `/tmp/mcd check --promela "Promela - examples/CH17/simple1.pr" --no-timing` | **2** | тот же отказ, отчёт не создан |
-  | 3 | `/tmp/mcd parse --promela simple1-rewrite.pml` | 0 | IR, предупреждений нет |
-  | 4 | `/tmp/mcd check --promela simple1-rewrite.pml --budget-states 1000 --budget-depth 1000 --budget-ms 10000 --no-timing` (пилот, замена `mc_estimate`) | 0 | `stop: complete`; 8 состояний, 7 переходов, глубина 4 |
-  | 5 | `/tmp/mcd check --promela simple1-rewrite.pml --sweep` (целевой бюджет, DFS) | 0 | `stop: complete`, `complete: true`; 8 / 7 / 4; time_ms 0; memory_bytes_est 25 024 |
-  | 6 | `/tmp/mcd check --promela simple1-rewrite.pml --bfs --sweep --no-timing` | 0 | `stop: complete`; те же 8 / 7 / 4 |
+  | 1 | `${TMP_DIR}/mcd parse --promela "Promela - examples/CH17/simple1.pr"` | **2** | отказ `outside-subset` (см. ниже) |
+  | 2 | `${TMP_DIR}/mcd check --promela "Promela - examples/CH17/simple1.pr" --no-timing` | **2** | тот же отказ, отчёт не создан |
+  | 3 | `${TMP_DIR}/mcd parse --promela simple1-rewrite.pml` | 0 | IR, предупреждений нет |
+  | 4 | `${TMP_DIR}/mcd check --promela simple1-rewrite.pml --budget-states 1000 --budget-depth 1000 --budget-ms 10000 --no-timing` (пилот, замена `mc_estimate`) | 0 | `stop: complete`; 8 состояний, 7 переходов, глубина 4 |
+  | 5 | `${TMP_DIR}/mcd check --promela simple1-rewrite.pml --sweep` (целевой бюджет, DFS) | 0 | `stop: complete`, `complete: true`; 8 / 7 / 4; time_ms 0; memory_bytes_est 25 024 |
+  | 6 | `${TMP_DIR}/mcd check --promela simple1-rewrite.pml --bfs --sweep --no-timing` | 0 | `stop: complete`; те же 8 / 7 / 4 |
   | 7 | `jq` — добавление P3/P4 (`reach`) в IR переписи → `ir-rewrite-with-reach.json` | 0 | — |
-  | 8 | `/tmp/mcd check --ir ir-rewrite-with-reach.json --sweep --no-timing` | 0 | `stop: complete`; 4 свойства, свидетели для P3/P4 |
+  | 8 | `${TMP_DIR}/mcd check --ir ir-rewrite-with-reach.json --sweep --no-timing` | 0 | `stop: complete`; 4 свойства, свидетели для P3/P4 |
 
 - Дословный ответ движка на исходный файл (stdout, вызовы 1 и 2 идентичны):
 

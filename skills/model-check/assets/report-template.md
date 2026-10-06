@@ -48,7 +48,9 @@ deadlock): `verified`, evidence `exhaustive`, 128 states."
 - Manifest: *path from `mc_manifest`*
 - Budget: time / states / depth / memory
 - Metrics per run: states, transitions, depth, elapsed, and `memory_bytes_est` — the
-  engine's estimate of the state table, not a peak RSS; call it an estimate
+  engine's estimate of the state table, not a peak RSS; call it an estimate. A run with
+  `--por` says so here and quotes `search.reduction` (applied, reduced and fully expanded
+  states): its counts are those of the reduced graph
 - Staging: parse → simulate (seed) → estimate → check (pilot budget → target budget)
 
 ## 7. Result

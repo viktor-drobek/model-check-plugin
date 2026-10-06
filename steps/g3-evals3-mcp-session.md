@@ -3,12 +3,12 @@
 Protocol point 4 of the step: the examples in `skills/model-check/references/engine-tools.md`
 must be copied from real server output, not written from memory. This file is that
 output. It was produced by one JSON-RPC session over **stdio** against the binary
-built from `model-check-plugin/engine` (`go build -o /tmp/mcd ./cmd/mcd`), driven by
+built from `model-check-plugin/engine` (`go build -o ${TMP_DIR}/mcd ./cmd/mcd`), driven by
 a small Python client (`initialize` → `notifications/initialized` → `tools/call`),
 the same way `steps/g2-confirmation.md` §3 drove the G2 server.
 
 ```
-/tmp/mcd serve --session-dir <session-dir> --max-states 1000000 --max-ms 60000
+${TMP_DIR}/mcd serve --session-dir <session-dir> --max-states 1000000 --max-ms 60000
 mcd serve 0.1.0-g0: sessions under <session-dir>
 ```
 

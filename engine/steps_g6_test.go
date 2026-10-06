@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"sort"
 	"strings"
@@ -832,6 +833,100 @@ func registerG6Steps(sc *godog.ScenarioContext) {
 			return err
 		}
 		return g6ReadJSON(filepath.Join(w.plugin, rel), &w.manifest)
+	})
+
+	sc.Step(`^the portable plugin manifest "([^"]+)"$`, func(rel string) error {
+		if err := setPlugin(); err != nil {
+			return err
+		}
+		return g6ReadJSON(filepath.Join(w.plugin, rel), &w.manifest)
+	})
+
+	sc.Step(`^its version matches "([^"]+)"$`, func(rel string) error {
+		var other map[string]any
+		if err := g6ReadJSON(filepath.Join(w.plugin, rel), &other); err != nil {
+			return err
+		}
+		got, _ := w.manifest["version"].(string)
+		want, _ := other["version"].(string)
+		return must(got != "" && got == want,
+			"portable manifest version %q does not match %s version %q", got, rel, want)
+	})
+
+	sc.Step(`^its MCP declaration "([^"]+)" matches "([^"]+)" for server "([^"]+)"$`,
+		func(portableRel, claudeRel, name string) error {
+			var portable, claude struct {
+				MCPServers map[string]map[string]any `json:"mcpServers"`
+			}
+			if err := g6ReadJSON(filepath.Join(w.plugin, portableRel), &portable); err != nil {
+				return err
+			}
+			if err := g6ReadJSON(filepath.Join(w.plugin, claudeRel), &claude); err != nil {
+				return err
+			}
+			p, pok := portable.MCPServers[name]
+			c, cok := claude.MCPServers[name]
+			if !pok || !cok {
+				return fmt.Errorf("server %q is missing from portable=%t Claude=%t declarations", name, pok, cok)
+			}
+			if len(portable.MCPServers) != 1 || len(claude.MCPServers) != 1 {
+				return fmt.Errorf("declarations must contain exactly one server: portable=%d Claude=%d",
+					len(portable.MCPServers), len(claude.MCPServers))
+			}
+			if len(p) != len(c) {
+				return fmt.Errorf("server %q declarations have different key sets: portable=%v Claude=%v", name, p, c)
+			}
+			for key := range p {
+				if _, ok := c[key]; !ok {
+					return fmt.Errorf("server %q Claude declaration is missing key %q", name, key)
+				}
+			}
+			for _, key := range []string{"type", "args"} {
+				if !reflect.DeepEqual(p[key], c[key]) {
+					return fmt.Errorf("server %q field %s differs: portable=%v Claude=%v", name, key, p[key], c[key])
+				}
+			}
+			if p["command"] != "${PLUGIN_ROOT}/engine/bin/mcd" ||
+				c["command"] != "${CLAUDE_PLUGIN_ROOT}/engine/bin/mcd" ||
+				p["cwd"] != "${PLUGIN_ROOT}" || c["cwd"] != "${CLAUDE_PLUGIN_ROOT}" {
+				return fmt.Errorf("server %q has invalid root variables: portable=%v Claude=%v", name, p, c)
+			}
+			normalizeRoot := func(v any) string {
+				s := fmt.Sprint(v)
+				s = strings.ReplaceAll(s, "${PLUGIN_ROOT}", "${ROOT}")
+				return strings.ReplaceAll(s, "${CLAUDE_PLUGIN_ROOT}", "${ROOT}")
+			}
+			for _, key := range []string{"command", "cwd"} {
+				portableValue := normalizeRoot(p[key])
+				claudeValue := normalizeRoot(c[key])
+				if portableValue != claudeValue {
+					return fmt.Errorf("server %q field %s differs after root normalization: portable=%q Claude=%q",
+						name, key, portableValue, claudeValue)
+				}
+			}
+			if normalizeRoot(p["command"]) != "${ROOT}/engine/bin/mcd" {
+				return fmt.Errorf("server %q command must resolve to ${ROOT}/engine/bin/mcd: %v", name, p["command"])
+			}
+			return nil
+		})
+
+	sc.Step(`^the release contains the Windows binary alias "([^"]+)"$`, func(rel string) error {
+		if err := setPlugin(); err != nil {
+			return err
+		}
+		info, err := os.Stat(filepath.Join(w.plugin, rel))
+		if err != nil {
+			return err
+		}
+		return must(info.Mode()&0o111 != 0, "%s is not executable", rel)
+	})
+
+	sc.Step(`^the Windows binary "([^"]+)" exists$`, func(rel string) error {
+		if err := setPlugin(); err != nil {
+			return err
+		}
+		_, err := os.Stat(filepath.Join(w.plugin, rel))
+		return err
 	})
 
 	sc.Step(`^the plugin file "([^"]+)" contains each of:$`, func(rel string, t *godog.Table) error {

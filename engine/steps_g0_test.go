@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/cucumber/godog"
@@ -24,6 +25,9 @@ type g0World struct {
 	outputs [][]byte
 	saved   map[string][]byte
 	tmp     string
+	// allocated is the bytes the last measured run allocated in total
+	// (runtime.MemStats.TotalAlloc), garbage included.
+	allocated uint64
 }
 
 func init() {
@@ -66,6 +70,14 @@ func registerG0Steps(sc *godog.ScenarioContext) {
 	}
 	sc.Step(`^I run "mcd ([^"]*)"$`, func(cmd string) error {
 		run(cmd)
+		return nil
+	})
+	sc.Step(`^I run "mcd ([^"]*)" measuring the bytes allocated$`, func(cmd string) error {
+		var before, after runtime.MemStats
+		runtime.ReadMemStats(&before)
+		run(cmd)
+		runtime.ReadMemStats(&after)
+		w.allocated = after.TotalAlloc - before.TotalAlloc
 		return nil
 	})
 	sc.Step(`^I run "mcd ([^"]*)" twice$`, func(cmd string) error {
@@ -204,6 +216,22 @@ func registerG0Steps(sc *godog.ScenarioContext) {
 	}
 	sc.Step(`^the report is complete$`, func() error { return complete(true) })
 	sc.Step(`^the report is not complete$`, func() error { return complete(false) })
+	sc.Step(`^the bytes allocated are at most (\d+) times the reported memory estimate$`, func(factor int) error {
+		r, err := w.report()
+		if err != nil {
+			return err
+		}
+		p := r["properties"].([]any)[0].(map[string]any)
+		est := uint64(p["counters"].(map[string]any)["memory_bytes_est"].(float64))
+		if est == 0 {
+			return fmt.Errorf("the report carries no memory estimate")
+		}
+		if w.allocated > uint64(factor)*est {
+			return fmt.Errorf("run allocated %d bytes = %.1f x the memory estimate %d, want at most %d x",
+				w.allocated, float64(w.allocated)/float64(est), est, factor)
+		}
+		return nil
+	})
 	sc.Step(`^the report counts (\d+) states$`, func(n int) error {
 		r, err := w.report()
 		if err != nil {

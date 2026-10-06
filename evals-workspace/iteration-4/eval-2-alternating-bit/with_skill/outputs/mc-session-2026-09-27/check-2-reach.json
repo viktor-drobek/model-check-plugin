@@ -76,7 +76,7 @@
               }
             ],
             "origin": {
-              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH3/alternatingbit.pml",
+              "file": "${REPO_ROOT}/Promela - examples/CH3/alternatingbit.pml",
               "line": 8,
               "name": "to_rcvr!msg1"
             }
@@ -132,7 +132,7 @@
               }
             ],
             "origin": {
-              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH3/alternatingbit.pml",
+              "file": "${REPO_ROOT}/Promela - examples/CH3/alternatingbit.pml",
               "line": 8,
               "name": "to_rcvr!msg1"
             }
@@ -148,7 +148,7 @@
               }
             ],
             "origin": {
-              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH3/alternatingbit.pml",
+              "file": "${REPO_ROOT}/Promela - examples/CH3/alternatingbit.pml",
               "line": 17,
               "name": "to_rcvr?msg1"
             }
@@ -168,7 +168,7 @@
               }
             ],
             "origin": {
-              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH3/alternatingbit.pml",
+              "file": "${REPO_ROOT}/Promela - examples/CH3/alternatingbit.pml",
               "line": 18,
               "name": "to_sndr!ack1"
             }

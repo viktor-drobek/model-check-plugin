@@ -2,7 +2,7 @@
   "note": "Manifest assembled by hand from the CLI reports (mc_manifest has no CLI counterpart; the MCP server was not registered in this session). Versions, hashes and budgets are copied from the reports' engine/inputs/search fields; start and end times were recorded by the operator (run-times.txt). No seed: mc_simulate was not run (no CLI equivalent).",
   "created": "2026-09-25T09:47:10Z",
   "wall_clock": { "start": "2026-09-25T09:47:10Z", "end": "2026-09-25T09:47:10Z" },
-  "engine": { "name": "mcd", "version": "0.1.0-g0", "ir_schema": "mcd-ir/1", "report_schema": "mcd-report/1", "binary": "/tmp/mcd", "layer": "CLI" },
+  "engine": { "name": "mcd", "version": "0.1.0-g0", "ir_schema": "mcd-ir/1", "report_schema": "mcd-report/1", "binary": "${TMP_DIR}/mcd", "layer": "CLI" },
   "inputs": [
     { "kind": "promela", "path": "Promela - examples/CH2/mutex_flaw.pml", "sha256": "b9cb0230f9a306494af4a12592df3411988254b35526b5fbcdbf17ab328fdac4", "copy": "input-mutex_flaw.pml.copy" },
     { "kind": "ir", "path": "ir.json", "sha256": "0e9294579cfc5e38da0d72f971de8be824d54c8756e15f96d64f8997e80719f8", "derived_by": "mcd parse --promela (unchanged parser output)" },

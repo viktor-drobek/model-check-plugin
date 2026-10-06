@@ -250,6 +250,7 @@ type Call struct {
 type Params struct {
 	Search        string  `json:"search,omitempty"`
 	Fairness      string  `json:"fairness,omitempty"`
+	POR           bool    `json:"por,omitempty"`
 	BudgetApplied *Budget `json:"budget_applied,omitempty"`
 	Seed          *int64  `json:"seed,omitempty"`
 	Steps         int     `json:"steps,omitempty"`

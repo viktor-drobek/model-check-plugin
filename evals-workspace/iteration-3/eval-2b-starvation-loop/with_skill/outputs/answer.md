@@ -124,11 +124,11 @@ liveness, поэтому вопрос о справедливости задан
 
 | # | Команда | Результат |
 |---|---|---|
-| 1 | `/tmp/mcd parse --promela starvation.pml > ir-1.json` | exit 0, предупреждений нет, в IR только свойство `deadlock` |
-| 2 | `/tmp/mcd check --no-timing --promela starvation.pml --sweep --budget-states 50` | `search.stop = complete`, `complete = true`: весь граф — **6 состояний, 10 переходов, глубина 5** |
-| 3 | `/tmp/mcd check --no-timing --promela starvation.pml --ltl '[] (done == 0)' --fairness none` | P2 `violated` / `exhaustive`; 8 состояний произведения, 12 переходов, глубина 7 |
-| 4 | `/tmp/mcd check --no-timing --promela starvation.pml --ltl '<> done' --fairness none` | P1 `violated` / `exhaustive`; 4 состояния произведения, 5 переходов, глубина 3 |
-| 5 | `/tmp/mcd check --no-timing --promela starvation.pml --ltl '<> done' --fairness weak` | P1 `verified` / `exhaustive` / `complete = true`; 11 состояний произведения, 24 перехода, глубина 8 |
+| 1 | `${TMP_DIR}/mcd parse --promela starvation.pml > ir-1.json` | exit 0, предупреждений нет, в IR только свойство `deadlock` |
+| 2 | `${TMP_DIR}/mcd check --no-timing --promela starvation.pml --sweep --budget-states 50` | `search.stop = complete`, `complete = true`: весь граф — **6 состояний, 10 переходов, глубина 5** |
+| 3 | `${TMP_DIR}/mcd check --no-timing --promela starvation.pml --ltl '[] (done == 0)' --fairness none` | P2 `violated` / `exhaustive`; 8 состояний произведения, 12 переходов, глубина 7 |
+| 4 | `${TMP_DIR}/mcd check --no-timing --promela starvation.pml --ltl '<> done' --fairness none` | P1 `violated` / `exhaustive`; 4 состояния произведения, 5 переходов, глубина 3 |
+| 5 | `${TMP_DIR}/mcd check --no-timing --promela starvation.pml --ltl '<> done' --fairness weak` | P1 `verified` / `exhaustive` / `complete = true`; 11 состояний произведения, 24 перехода, глубина 8 |
 
 Во всех прогонах `search.stop = "complete"`: ни один бюджет не срабатывал. Время —
 меньше миллисекунды на прогон (в повторном прогоне с таймингом `counters.time_ms = 0`;

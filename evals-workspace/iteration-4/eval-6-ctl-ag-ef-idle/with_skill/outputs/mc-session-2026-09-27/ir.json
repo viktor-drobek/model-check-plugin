@@ -9,7 +9,7 @@
         "byte"
       ],
       "origin": {
-        "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+        "file": "${REPO_ROOT}/Promela - examples/CH14/version1",
         "line": 5,
         "name": "tpc"
       }
@@ -22,7 +22,7 @@
         {
           "name": "Idle",
           "origin": {
-            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "file": "${REPO_ROOT}/Promela - examples/CH14/version1",
             "line": 9,
             "name": "Idle"
           }
@@ -30,7 +30,7 @@
         {
           "name": "Busy",
           "origin": {
-            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "file": "${REPO_ROOT}/Promela - examples/CH14/version1",
             "line": 11,
             "name": "Busy"
           }
@@ -52,7 +52,7 @@
           },
           "text": "tpc!offhook",
           "origin": {
-            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "file": "${REPO_ROOT}/Promela - examples/CH14/version1",
             "line": 9,
             "name": "tpc!offhook"
           }
@@ -71,7 +71,7 @@
           },
           "text": "tpc!digits",
           "origin": {
-            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "file": "${REPO_ROOT}/Promela - examples/CH14/version1",
             "line": 12,
             "name": "tpc!digits"
           }
@@ -90,14 +90,14 @@
           },
           "text": "tpc!onhook",
           "origin": {
-            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "file": "${REPO_ROOT}/Promela - examples/CH14/version1",
             "line": 13,
             "name": "tpc!onhook"
           }
         }
       ],
       "origin": {
-        "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+        "file": "${REPO_ROOT}/Promela - examples/CH14/version1",
         "line": 7,
         "name": "subscriber"
       }
@@ -108,7 +108,7 @@
         {
           "name": "Idle",
           "origin": {
-            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "file": "${REPO_ROOT}/Promela - examples/CH14/version1",
             "line": 20,
             "name": "Idle"
           }
@@ -116,7 +116,7 @@
         {
           "name": "Dial",
           "origin": {
-            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "file": "${REPO_ROOT}/Promela - examples/CH14/version1",
             "line": 24,
             "name": "Dial"
           }
@@ -124,7 +124,7 @@
         {
           "name": "Wait",
           "origin": {
-            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "file": "${REPO_ROOT}/Promela - examples/CH14/version1",
             "line": 29,
             "name": "Wait"
           }
@@ -132,7 +132,7 @@
         {
           "name": "Connect",
           "origin": {
-            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "file": "${REPO_ROOT}/Promela - examples/CH14/version1",
             "line": 34,
             "name": "Connect"
           }
@@ -140,7 +140,7 @@
         {
           "name": "Busy",
           "origin": {
-            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "file": "${REPO_ROOT}/Promela - examples/CH14/version1",
             "line": 39,
             "name": "Busy"
           }
@@ -168,7 +168,7 @@
           },
           "text": "tpc?offhook",
           "origin": {
-            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "file": "${REPO_ROOT}/Promela - examples/CH14/version1",
             "line": 21,
             "name": "tpc?offhook"
           }
@@ -178,7 +178,7 @@
           "to": 1,
           "text": "printf(\"MSC: dialtone\\n\")",
           "origin": {
-            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "file": "${REPO_ROOT}/Promela - examples/CH14/version1",
             "line": 21,
             "name": "printf(\"MSC: dialtone\\n\")"
           }
@@ -199,7 +199,7 @@
           },
           "text": "tpc?digits",
           "origin": {
-            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "file": "${REPO_ROOT}/Promela - examples/CH14/version1",
             "line": 25,
             "name": "tpc?digits"
           }
@@ -209,7 +209,7 @@
           "to": 2,
           "text": "printf(\"MSC: notone\\n\")",
           "origin": {
-            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "file": "${REPO_ROOT}/Promela - examples/CH14/version1",
             "line": 25,
             "name": "printf(\"MSC: notone\\n\")"
           }
@@ -230,7 +230,7 @@
           },
           "text": "tpc?onhook",
           "origin": {
-            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "file": "${REPO_ROOT}/Promela - examples/CH14/version1",
             "line": 26,
             "name": "tpc?onhook"
           }
@@ -240,7 +240,7 @@
           "to": 0,
           "text": "printf(\"MSC: notone\\n\")",
           "origin": {
-            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "file": "${REPO_ROOT}/Promela - examples/CH14/version1",
             "line": 26,
             "name": "printf(\"MSC: notone\\n\")"
           }
@@ -250,7 +250,7 @@
           "to": 3,
           "text": "printf(\"MSC: ringtone\\n\")",
           "origin": {
-            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "file": "${REPO_ROOT}/Promela - examples/CH14/version1",
             "line": 30,
             "name": "printf(\"MSC: ringtone\\n\")"
           }
@@ -260,7 +260,7 @@
           "to": 4,
           "text": "printf(\"MSC: busytone\\n\")",
           "origin": {
-            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "file": "${REPO_ROOT}/Promela - examples/CH14/version1",
             "line": 31,
             "name": "printf(\"MSC: busytone\\n\")"
           }
@@ -270,7 +270,7 @@
           "to": 4,
           "text": "printf(\"MSC: busytone\\n\")",
           "origin": {
-            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "file": "${REPO_ROOT}/Promela - examples/CH14/version1",
             "line": 35,
             "name": "printf(\"MSC: busytone\\n\")"
           }
@@ -280,7 +280,7 @@
           "to": 4,
           "text": "printf(\"MSC: notone\\n\")",
           "origin": {
-            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "file": "${REPO_ROOT}/Promela - examples/CH14/version1",
             "line": 36,
             "name": "printf(\"MSC: notone\\n\")"
           }
@@ -301,7 +301,7 @@
           },
           "text": "tpc?onhook",
           "origin": {
-            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "file": "${REPO_ROOT}/Promela - examples/CH14/version1",
             "line": 39,
             "name": "tpc?onhook"
           }
@@ -311,14 +311,14 @@
           "to": 0,
           "text": "printf(\"MSC: notone\\n\")",
           "origin": {
-            "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+            "file": "${REPO_ROOT}/Promela - examples/CH14/version1",
             "line": 39,
             "name": "printf(\"MSC: notone\\n\")"
           }
         }
       ],
       "origin": {
-        "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+        "file": "${REPO_ROOT}/Promela - examples/CH14/version1",
         "line": 17,
         "name": "switch"
       }
@@ -332,7 +332,7 @@
     }
   ],
   "origin": {
-    "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH14/version1",
+    "file": "${REPO_ROOT}/Promela - examples/CH14/version1",
     "name": "version1"
   }
 }

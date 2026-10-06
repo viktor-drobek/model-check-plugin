@@ -122,7 +122,7 @@ sha256 `acdfcacad083c29ff47cba18de2fb84ec784e9e064e0b64c435497e07121ec3b`.
 предположено:
 
 ```
-/tmp/mcd check --no-timing --promela "Promela - examples/CH14/version1" \
+${TMP_DIR}/mcd check --no-timing --promela "Promela - examples/CH14/version1" \
       --ltl '[] (switch@Busy -> <> !switch@Busy)'
 exit 2
 {"error":{"kind":"ltl","status":"not-executed",
@@ -368,7 +368,7 @@ P5 `verified` (49), P6 `verified` (34), P7 `verified` (31); P1 и P4 остаю�
 нет вовсе:
 
 ```
-/tmp/mcd check --no-timing --promela "Promela - examples/CH14/version1" --progress
+${TMP_DIR}/mcd check --no-timing --promela "Promela - examples/CH14/version1" --progress
 ```
 
 движок возвращает `progress` = `violated`, evidence `exhaustive`, лассо

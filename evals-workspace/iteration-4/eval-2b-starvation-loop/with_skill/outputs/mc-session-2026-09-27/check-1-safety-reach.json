@@ -8,7 +8,7 @@
   "inputs": [
     {
       "kind": "ir",
-      "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-4/eval-2b-starvation-loop/with_skill/outputs/mc-session-2026-09-27/ir-2-with-reach.json",
+      "path": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-4/eval-2b-starvation-loop/with_skill/outputs/mc-session-2026-09-27/ir-2-with-reach.json",
       "sha256": "2267e00aea09ae07b4f0aae035b26b35351be9db4f41d893708c38294690cf7a"
     }
   ],
@@ -73,7 +73,7 @@
               }
             ],
             "origin": {
-              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/engine/testdata/promela/starvation.pml",
+              "file": "${REPO_ROOT}/model-check-plugin/engine/testdata/promela/starvation.pml",
               "line": 11,
               "name": "t = 1 - t"
             }
@@ -90,7 +90,7 @@
               }
             ],
             "origin": {
-              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/engine/testdata/promela/starvation.pml",
+              "file": "${REPO_ROOT}/model-check-plugin/engine/testdata/promela/starvation.pml",
               "line": 17,
               "name": "done = 1"
             }

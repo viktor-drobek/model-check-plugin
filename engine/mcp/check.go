@@ -48,6 +48,7 @@ type CheckIn struct {
 	Fairness   string       `json:"fairness,omitempty" jsonschema:"none | weak | strong (default none); applies to ltl and progress: weak = every continuously enabled process eventually moves (pan -f, n+2 copies); strong is not executed and makes those properties not-executed with a reason (FR-008)"`
 	Budget     *Budget      `json:"budget,omitempty" jsonschema:"limits; an absent or 0 field takes the server default (the same reading as mcd check); fields above the server ceiling are clamped"`
 	Search     string       `json:"search,omitempty" jsonschema:"dfs | bfs (default dfs; bfs gives shortest counterexamples)"`
+	POR        bool         `json:"por,omitempty" jsonschema:"partial-order reduction of the safety search (default false): far fewer states, the same verdicts for deadlock, assert, invariant and reach, but the counts are those of the reduced graph and the first counterexample may differ. Depth-first only, no ltl/progress/ctl property in the call, no atomic, rendezvous, run, timeout or provided in the model: otherwise the run is unreduced and search.reduction says why"`
 	NoTiming   bool         `json:"no_timing,omitempty" jsonschema:"omit time_ms from the report so that reports are byte-for-byte reproducible"`
 	Aggregate  bool         `json:"aggregate,omitempty" jsonschema:"also return one aggregate status by the fixed priority invalid-model > not-executed > violated > inconclusive > unknown > verified"`
 }
@@ -60,6 +61,8 @@ type SearchOut struct {
 	BudgetNotes     []string `json:"budget_notes" jsonschema:"one note per clamped field; empty when nothing was clamped"`
 	Stop            string   `json:"stop" jsonschema:"why the search ended"`
 	Complete        bool     `json:"complete" jsonschema:"true only when the whole reachable graph was expanded"`
+	// Reduction is present only when por was requested.
+	Reduction *explore.Reduction `json:"reduction,omitempty" jsonschema:"present only when por was requested: whether the reduction was applied, why not when it was not, and how many stored states were expanded through one process alone"`
 }
 
 // TraceRef points at a stored run.
@@ -251,7 +254,7 @@ func (s *Server) check(ctx context.Context, req *sdk.CallToolRequest, in CheckIn
 		requested = *in.Budget
 	}
 	applied, notes := Clamp(requested, s.cfg.Default, s.cfg.Ceiling)
-	params = &Params{Search: string(mode), Fairness: fairness, BudgetApplied: &applied}
+	params = &Params{Search: string(mode), Fairness: fairness, BudgetApplied: &applied, POR: in.POR}
 
 	release, err := s.acquire(ctx)
 	if err != nil {
@@ -266,7 +269,7 @@ func (s *Server) check(ctx context.Context, req *sdk.CallToolRequest, in CheckIn
 	}
 	res, runErr := explore.Run(runCtx, m, explore.Options{Mode: mode, Budget: explore.Budget{
 		MaxStates: applied.States, MaxDepth: applied.Depth, MaxMemBytes: applied.MemoryMB << 20,
-	}, Fairness: fairness, Defines: defines})
+	}, POR: in.POR, Fairness: fairness, Defines: defines})
 	if runErr != nil {
 		// Validated IR that does not compile (an undeclared variable in a
 		// property expression, a malformed or unresolvable LTL formula): the
@@ -310,7 +313,7 @@ func (s *Server) check(ctx context.Context, req *sdk.CallToolRequest, in CheckIn
 
 	out.Outcome = "report"
 	out.Warnings = append(out.Warnings, rep.Warnings...)
-	out.Search = &SearchOut{Mode: string(mode), BudgetRequested: requested, BudgetApplied: applied, BudgetNotes: notes, Stop: res.Stop, Complete: res.Complete}
+	out.Search = &SearchOut{Mode: string(mode), BudgetRequested: requested, BudgetApplied: applied, BudgetNotes: notes, Stop: res.Stop, Complete: res.Complete, Reduction: res.Reduction}
 	for _, p := range rep.Properties {
 		po := PropertyOut{ID: p.ID, Kind: p.Kind, Text: p.Text, Status: p.Status, Evidence: p.Evidence, Complete: p.Complete, Reason: p.Reason, Counters: p.Counters, Temporal: p.Temporal, Warnings: p.Warnings}
 		if p.Counterexample != nil {

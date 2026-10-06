@@ -5,6 +5,7 @@
 #   mcd-<goos>-<goarch>[.exe]  one static binary per platform of PLATFORMS
 #   mcd                        POSIX wrapper choosing the binary by uname
 #                              (this is the command mcp/servers.json names)
+#   mcd.exe                    Windows binary alias for portable MCP declarations
 #   mcd.cmd                    Windows wrapper (shipped, NOT exercised by this repo's tests)
 #   SHA256SUMS                 sha256 of every binary and wrapper, sorted by name
 #   BUILD-INFO.json            version, toolchain, flags and per-platform sizes
@@ -22,7 +23,8 @@
 # becomes a var upstream, the overlay is skipped automatically (see stamp_overlay).
 #
 # Usage:
-#   build.sh [--version V] [--platforms "goos/goarch ..."] [--host-only]
+#   build.sh [--version V] [--source-commit HASH]
+#            [--platforms "goos/goarch ..."] [--host-only]
 #            [--out DIR] [--verify-repro] [--no-verify]
 # Environment: MCD_VERSION acts as the default for --version.
 # Exit codes: 0 ok, 1 build or verification failure, 2 bad usage.
@@ -36,6 +38,7 @@ OUT_DIR="$ENGINE_DIR/bin"
 PLATFORMS_DEFAULT="linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64"
 PLATFORMS="$PLATFORMS_DEFAULT"
 VERSION="${MCD_VERSION:-}"
+SOURCE_COMMIT="${MCD_SOURCE_COMMIT:-}"
 HOST_ONLY=0
 VERIFY=1
 VERIFY_REPRO=0
@@ -46,6 +49,7 @@ usage() { sed -n '2,25p' "${BASH_SOURCE[0]}" >&2; exit 2; }
 while [ $# -gt 0 ]; do
   case "$1" in
     --version)   [ $# -ge 2 ] || usage; VERSION="$2"; shift 2 ;;
+    --source-commit) [ $# -ge 2 ] || usage; SOURCE_COMMIT="$2"; shift 2 ;;
     --platforms) [ $# -ge 2 ] || usage; PLATFORMS="$2"; shift 2 ;;
     --out)       [ $# -ge 2 ] || usage; OUT_DIR="$2"; shift 2 ;;
     --host-only) HOST_ONLY=1; shift ;;
@@ -60,18 +64,26 @@ command -v go >/dev/null 2>&1 || die "no Go toolchain on PATH (build.sh is a bui
 command -v python3 >/dev/null 2>&1 || die "python3 is required (BUILD-INFO.json, plugin.json version)"
 
 # ---------------------------------------------------------------- version
-if [ -z "$VERSION" ]; then
-  VERSION="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' \
-             "$PLUGIN_DIR/.claude-plugin/plugin.json")"
-fi
+PLUGIN_VERSION="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' \
+                   "$PLUGIN_DIR/plugin.json")"
+CLAUDE_VERSION="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' \
+                   "$PLUGIN_DIR/.claude-plugin/plugin.json")"
+[ "$PLUGIN_VERSION" = "$CLAUDE_VERSION" ] || die "plugin versions differ: plugin.json=$PLUGIN_VERSION .claude-plugin/plugin.json=$CLAUDE_VERSION"
+[ -n "$VERSION" ] || VERSION="$PLUGIN_VERSION"
 case "$VERSION" in
   ''|*[![:print:]]*|*' '*) die "bad version string: '$VERSION'" ;;
 esac
 
 GO_VERSION="$(cd "$ENGINE_DIR" && go env GOVERSION)"
+REQUIRED_GO_VERSION="${MCD_GO_VERSION:-go1.26.1}"
+[ "$GO_VERSION" = "$REQUIRED_GO_VERSION" ] || die "Go $REQUIRED_GO_VERSION is required for reproducible release builds (found $GO_VERSION)"
 HOST_GOOS="$(go env GOHOSTOS)"
 HOST_GOARCH="$(go env GOHOSTARCH)"
-SOURCE_COMMIT="$(git -C "$PLUGIN_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+[ -n "$SOURCE_COMMIT" ] || SOURCE_COMMIT="$(git -C "$PLUGIN_DIR" rev-parse HEAD 2>/dev/null || echo unknown)"
+
+case "$SOURCE_COMMIT" in
+  ''|*[![:alnum:]._-]*) die "bad source commit: '$SOURCE_COMMIT'" ;;
+esac
 
 [ "$HOST_ONLY" -eq 1 ] && PLATFORMS="$HOST_GOOS/$HOST_GOARCH"
 
@@ -120,6 +132,10 @@ OVERLAY="$(stamp_overlay)"
 
 # --------------------------------------------------------------- building
 mkdir -p "$OUT_DIR"
+# Remove only files owned by this script. This makes a host-only build produce a
+# self-contained output directory instead of retaining stale cross-built files.
+rm -f "$OUT_DIR"/mcd-* "$OUT_DIR"/mcd "$OUT_DIR"/mcd.exe "$OUT_DIR"/mcd.cmd \
+      "$OUT_DIR"/SHA256SUMS "$OUT_DIR"/BUILD-INFO.json
 LDFLAGS="-s -w -X modelcheck/report.EngineVersion=$VERSION"
 
 build_one() {
@@ -127,7 +143,7 @@ build_one() {
   local -a flags=(-trimpath -buildvcs=false -ldflags "$LDFLAGS" -o "$out")
   [ -n "$OVERLAY" ] && flags+=(-overlay "$OVERLAY")
   ( cd "$ENGINE_DIR" \
-    && env CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" GOFLAGS=-mod=mod GOTOOLCHAIN=local \
+    && env CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" GOFLAGS=-mod=readonly GOTOOLCHAIN=local \
        go build "${flags[@]}" ./cmd/mcd )
 }
 
@@ -183,6 +199,15 @@ rem Wrapper for Windows shells. Shipped for completeness; not exercised by this 
 "%~dp0mcd-windows-amd64.exe" %*
 CMD
 
+# Windows resolves a command without an extension through PATHEXT. Keep an
+# executable alias next to the POSIX wrapper so the portable mcp.json command
+# works on both families of hosts. mcd.cmd remains available for hosts that
+# explicitly require a batch command. A host-only build may not include the
+# Windows target, so only create the alias when that target was requested.
+case " $built " in
+  *" mcd-windows-amd64.exe "*) cp "$OUT_DIR/mcd-windows-amd64.exe" "$OUT_DIR/mcd.exe" ;;
+esac
+
 # ------------------------------------------------------------ SHA256SUMS
 ( cd "$OUT_DIR" && ls -1 | grep -v -e '^SHA256SUMS$' -e '^BUILD-INFO.json$' | LC_ALL=C sort \
   | xargs sha256sum > SHA256SUMS )
@@ -231,14 +256,22 @@ fi
 
 if [ "$VERIFY_REPRO" -eq 1 ]; then
   tmp="$(mktemp -d)"
-  "$0" --version "$VERSION" --platforms "$PLATFORMS" --out "$tmp" --no-verify >/dev/null
-  for f in $built; do
-    a="$(sha256sum < "$OUT_DIR/$f" | cut -d' ' -f1)"
-    b="$(sha256sum < "$tmp/$f" | cut -d' ' -f1)"
-    [ "$a" = "$b" ] || { rm -rf "$tmp"; die "not reproducible: $f differs between two builds"; }
-  done
+  "$0" --version "$VERSION" --source-commit "$SOURCE_COMMIT" --platforms "$PLATFORMS" --out "$tmp" --no-verify >/dev/null
+  python3 - "$OUT_DIR" "$tmp" <<'PY'
+import os, sys
+
+left, right = sys.argv[1:]
+left_files = sorted(name for name in os.listdir(left) if os.path.isfile(os.path.join(left, name)))
+right_files = sorted(name for name in os.listdir(right) if os.path.isfile(os.path.join(right, name)))
+if left_files != right_files:
+    raise SystemExit(f"not reproducible: generated file sets differ: {left_files!r} != {right_files!r}")
+for name in left_files:
+    with open(os.path.join(left, name), "rb") as a, open(os.path.join(right, name), "rb") as b:
+        if a.read() != b.read():
+            raise SystemExit(f"not reproducible: {name} differs between two builds")
+PY
   rm -rf "$tmp"
-  printf 'build.sh: reproducible (two builds agree on every binary)\n' >&2
+  printf 'build.sh: reproducible (two builds agree on every generated artifact)\n' >&2
 fi
 
 printf 'build.sh: wrote %s\n' "$OUT_DIR" >&2

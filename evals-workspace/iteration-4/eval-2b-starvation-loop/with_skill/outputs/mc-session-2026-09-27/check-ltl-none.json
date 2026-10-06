@@ -8,7 +8,7 @@
   "inputs": [
     {
       "kind": "promela",
-      "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/engine/testdata/promela/starvation.pml",
+      "path": "${REPO_ROOT}/model-check-plugin/engine/testdata/promela/starvation.pml",
       "sha256": "43092539c371572b0314278ddd7ba4bddd7c8af66a6f5362fb37ca62f4397c0b"
     }
   ],
@@ -82,7 +82,7 @@
               }
             ],
             "origin": {
-              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/engine/testdata/promela/starvation.pml",
+              "file": "${REPO_ROOT}/model-check-plugin/engine/testdata/promela/starvation.pml",
               "line": 11,
               "name": "t = 1 - t"
             }
@@ -108,7 +108,7 @@
               }
             ],
             "origin": {
-              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/engine/testdata/promela/starvation.pml",
+              "file": "${REPO_ROOT}/model-check-plugin/engine/testdata/promela/starvation.pml",
               "line": 11,
               "name": "t = 1 - t"
             }
@@ -134,7 +134,7 @@
               }
             ],
             "origin": {
-              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/engine/testdata/promela/starvation.pml",
+              "file": "${REPO_ROOT}/model-check-plugin/engine/testdata/promela/starvation.pml",
               "line": 11,
               "name": "t = 1 - t"
             }

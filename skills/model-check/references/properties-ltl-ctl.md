@@ -163,7 +163,7 @@ accepts both (eval E6 in plan §8.2 checks exactly this).
 |---|---|---|
 | atoms | the atomic expressions with their definedness in the IR | an undefined atom → fix the `#define` or the label; do not run |
 | class | safety / liveness (syntactic classification) | liveness → fairness question (FR-008) |
-| x_free | whether the formula contains `X` | `X` present → the result depends on the atomic step; POR (vNext) will be disabled |
+| x_free | whether the formula contains `X` | `X` present → the result depends on the atomic step; the engine's `--por` does not apply to a temporal property at all (every `ltl`, `progress` or `ctl` property makes it report `applied: false`, with or without `X`) |
 | vacuity candidates | **syntactic only**: the antecedent of an implication, and an expression the engine can fold to a constant. `mc_lint_property` explores nothing, so it cannot know which atoms are reachable — its note says "check it with a reach property" | add that reachability property and run it; the *reachable*-state vacuity hint comes later, from `mc_check`'s per-property `warnings`. If the antecedent is unreachable, report the main property as vacuous and do not call it a guarantee (AC-13) |
 | — (no polarity note) | `mc_lint_property` takes `invariant`, `reach`, `ltl` and `ctl`, and a claim is not one of them: nothing in the engine reads a hand-written `never { }` and tells you whether it encodes the property or its negation | do it by hand — paraphrase the claim, say which of the two it is, and confirm with the user before quoting a verdict from it |
 

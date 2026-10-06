@@ -31,6 +31,7 @@ type g2World struct {
 	errText  string         // text of the last isError result
 	session  string
 	reports  []string // report paths of the "twice" scenario
+	states   int      // the state count a scenario asked to remember
 	sims     []map[string]any
 	writeErr error
 }
@@ -295,6 +296,19 @@ func registerG2Steps(sc *godog.ScenarioContext) {
 	})
 	sc.Step(`^I call "mc_check" in that session with the model's own properties and only budget states (\d+)$`, func(states int) error {
 		return call("mc_check", inSession(map[string]any{"budget": map[string]any{"states": states}}))
+	})
+	sc.Step(`^I call "mc_check" in that session with the model's own properties and por requested$`, func() error {
+		return call("mc_check", inSession(map[string]any{"por": true}))
+	})
+	sc.Step(`^I call "mc_check" in that session with the model's own properties, search "([^"]*)" and por requested$`, func(search string) error {
+		return call("mc_check", inSession(map[string]any{"search": search, "por": true}))
+	})
+	sc.Step(`^I call "mc_check" in that session with por requested and properties:$`, func(t *godog.Table) error {
+		props, err := propsFromTable(t)
+		if err != nil {
+			return err
+		}
+		return call("mc_check", inSession(map[string]any{"properties": props, "por": true}))
 	})
 	sc.Step(`^I call "mc_check" in that session with properties:$`, func(t *godog.Table) error {
 		props, err := propsFromTable(t)
@@ -571,6 +585,85 @@ func registerG2Steps(sc *godog.ScenarioContext) {
 			}
 		}
 		return fmt.Errorf("report has no property %s", id)
+	})
+	// --- Then: the partial-order reduction -------------------------------------------
+	reductionOf := func(m map[string]any) (map[string]any, bool) {
+		search, _ := m["search"].(map[string]any)
+		red, ok := search["reduction"].(map[string]any)
+		return red, ok
+	}
+	statesOfAnswer := func() (int, error) {
+		props, _ := w.out["properties"].([]any)
+		if len(props) == 0 {
+			return 0, fmt.Errorf("the answer has no properties: %v", w.out)
+		}
+		c, _ := props[0].(map[string]any)["counters"].(map[string]any)
+		return num(c, "states"), nil
+	}
+	sc.Step(`^I remember the number of states of the answer$`, func() (err error) {
+		w.states, err = statesOfAnswer()
+		return err
+	})
+	sc.Step(`^the number of states of the answer is below the remembered one$`, func() error {
+		n, err := statesOfAnswer()
+		if err != nil {
+			return err
+		}
+		if w.states == 0 || n >= w.states {
+			return fmt.Errorf("the answer has %d states, the remembered answer %d", n, w.states)
+		}
+		return nil
+	})
+	sc.Step(`^the answer reports a partial-order reduction that was applied$`, func() error {
+		red, ok := reductionOf(w.out)
+		if !ok {
+			return fmt.Errorf("search has no reduction: %v", w.out["search"])
+		}
+		if red["kind"] != "partial-order" || red["applied"] != true {
+			return fmt.Errorf("reduction %v", red)
+		}
+		if num(red, "reduced_states") < 1 || str(red, "note") == "" {
+			return fmt.Errorf("reduction %v reduced no state or carries no note", red)
+		}
+		return nil
+	})
+	sc.Step(`^the answer reports a partial-order reduction that was not applied for a reason that mentions "([^"]*)"$`, func(s string) error {
+		red, ok := reductionOf(w.out)
+		if !ok {
+			return fmt.Errorf("search has no reduction: %v", w.out["search"])
+		}
+		if red["applied"] != false || !strings.Contains(str(red, "reason"), s) {
+			return fmt.Errorf("reduction %v", red)
+		}
+		return nil
+	})
+	sc.Step(`^the answer has no reduction$`, func() error {
+		if red, ok := reductionOf(w.out); ok {
+			return fmt.Errorf("the answer carries a reduction: %v", red)
+		}
+		return nil
+	})
+	sc.Step(`^that report file carries the same reduction as the answer$`, func() error {
+		rep, err := loadJSON(str(w.out, "report_path"))
+		if err != nil {
+			return err
+		}
+		a, okA := reductionOf(w.out)
+		b, okB := reductionOf(rep)
+		if !okA || !okB || fmt.Sprint(a) != fmt.Sprint(b) {
+			return fmt.Errorf("answer reduction %v, report reduction %v", a, b)
+		}
+		return nil
+	})
+	sc.Step(`^that report file has no reduction$`, func() error {
+		rep, err := loadJSON(str(w.out, "report_path"))
+		if err != nil {
+			return err
+		}
+		if red, ok := reductionOf(rep); ok {
+			return fmt.Errorf("the report carries a reduction: %v", red)
+		}
+		return nil
 	})
 	sc.Step(`^the reason of "([^"]*)" names the exhausted resource "([^"]*)"$`, func(id, resource string) error {
 		p, err := property(id)

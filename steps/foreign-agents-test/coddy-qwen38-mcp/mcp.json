@@ -17,7 +17,7 @@
         "2"
       ],
       "env": {
-        "MCD_SESSION_DIR": "/tmp/claude-1000/-home-user-Desktop-VirtualBuddyShared-Yandex-Disk-localized-drobek-model-check/c5ac50eb-c0b5-4038-8df3-395ea9a1cee0/scratchpad/test-mcp/mcd-sessions"
+        "MCD_SESSION_DIR": "${TMPDIR:-/tmp}/model-check-test-mcp/mcd-sessions"
       }
     }
   }

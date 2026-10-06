@@ -50,7 +50,7 @@ report in `engine/testdata/golden/petrinet2.report.json` since G0.
 ## E1 — exact command line and what it returns (mcd 0.1.0-g0, 2026-09-25)
 
 Run from the repository root; `mcd` is the binary built with
-`go build -o /tmp/mcd ./cmd/mcd` in `model-check-plugin/engine`:
+`go build -o ${TMP_DIR}/mcd ./cmd/mcd` in `model-check-plugin/engine`:
 
 ```
 mcd check --no-timing --promela "Promela - examples/CH2/mutex_flaw.pml"

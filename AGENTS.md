@@ -11,7 +11,7 @@ plugin root layout: `.claude-plugin/`, `engine/`, `mcp/`, `skills/`, `features/`
 2. Use `engine/bin/mcd` from this checkout, or the `model-check` MCP server. Do not
    look for SPIN, NuSMV, or another checker as a runtime replacement.
 3. Run `engine/bin/mcd version` before a smoke test. If the host binary is absent,
-   build it with `./build.sh --host-only --version 0.1.0` rather than substituting a
+   build it with `./build.sh --host-only --version 0.2.0` rather than substituting a
    binary from another checkout.
 4. Keep `verified`, `violated`, `inconclusive`, `unknown`, `not-executed`, and
    `invalid-model` distinct, and report the evidence level and assumptions.
@@ -90,6 +90,7 @@ registration: keep one `model-check` server to avoid duplicate sessions.
 
 Use `go test ./...`, `go vet ./...`, formatting checks, and SPIN-dependent checks
 only when validating the source checkout. A shipped binary needs neither Go nor SPIN
-for ordinary runtime use. Use `./build.sh --version 0.1.0 --verify-repro` for a
-release build and verify `engine/bin/SHA256SUMS` and `BUILD-INFO.json` before
-publishing.
+for ordinary runtime use. Use `./build.sh --version 0.2.0 --source-commit
+<SOURCE-COMMIT> --verify-repro` for a release build (`<SOURCE-COMMIT>` is the
+commit just before the one that commits the built files under `engine/bin/`) and verify
+`engine/bin/SHA256SUMS` and `BUILD-INFO.json` before publishing.

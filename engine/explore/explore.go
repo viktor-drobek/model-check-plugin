@@ -131,6 +131,12 @@ type Options struct {
 	// state count is that of the whole reachable graph (pan -c0). The
 	// verdicts do not change: the first one stands.
 	Sweep bool
+	// POR asks for partial-order reduction of the safety search (por.go).
+	// Off by default; the result's Reduction says whether it was applied.
+	POR bool
+	// porNoProviso switches the cycle proviso off. Tests only: it shows what
+	// the proviso is for.
+	porNoProviso bool
 	// Fairness applies to ltl and progress properties: "" or "none",
 	// "weak" (pan -f, see cycle.go), "strong" (not executed, FR-008). A ctl
 	// property asked with any fairness is not executed (ctlcheck.go).
@@ -209,7 +215,9 @@ type Result struct {
 	AtomicSteps int
 	// MaxDepth is the greatest depth of an expanded state (never above
 	// Budget.MaxDepth when that is set).
-	MaxDepth   int
+	MaxDepth int
+	// Reduction is present when partial-order reduction was asked for.
+	Reduction  *Reduction
 	MemBytes   int64
 	Elapsed    time.Duration
 	StateBytes int
@@ -294,7 +302,7 @@ func Run(ctx context.Context, m *ir.Model, opt Options) (*Result, error) {
 	}
 	newVisited := opt.NewVisited
 	if newVisited == nil {
-		newVisited = func(n int) Visited { return NewCompact(n, 1024) }
+		newVisited = defaultVisited
 	}
 	s := &search{
 		c:       c,
@@ -304,6 +312,21 @@ func Run(ctx context.Context, m *ir.Model, opt Options) (*Result, error) {
 		res:     &Result{StateBytes: c.layout.Size},
 	}
 	s.initOutcomes()
+	if opt.POR {
+		s.res.Reduction = &Reduction{Kind: porKind}
+		switch plan := analyzePOR(c); {
+		case opt.Mode == BFS:
+			s.res.Reduction.Reason = "the breadth-first search is not reduced (it looks for shortest counterexamples); the depth-first search is"
+		case len(opt.Watch) > 0:
+			s.res.Reduction.Reason = "a vacuity watch counts the states of the whole graph"
+		case plan.reason != "":
+			s.res.Reduction.Reason = plan.reason
+		default:
+			s.res.Reduction.Applied = true
+			s.res.Reduction.Note = porNote
+			s.por = &porRun{plan: plan, noProviso: opt.porNoProviso}
+		}
+	}
 	var temporal, ctls []int
 	for i, p := range c.props {
 		switch p.Kind {
@@ -659,6 +682,9 @@ type frame struct {
 	pend     *cEdge // the rendezvous send whose receivers are enumerated
 	phase    int8   // 0: timeout = false; 1: timeout = true (see package doc)
 	exclOnly bool
+	// ample, when not 0, restricts the iterator to the moves of process
+	// ample-1: the state is expanded through an ample set (por.go).
+	ample uint8
 	// Product search (cycle.go): the claim edge taken to reach this state
 	// (-1 none), a null fairness step (0 none, else target copy + 1), the
 	// claim iterator (cpos: -1 not started, -2 no claim step here; cedge:
@@ -682,6 +708,9 @@ type search struct {
 
 	cur, next []byte
 	stack     []frame
+	// por is the partial-order reduction of this search, nil when it is not
+	// applied (por.go).
+	por *porRun
 	// tmp holds the intermediate atomic states of the DFS stack (frames
 	// with idx < 0 refer to tmp[-idx-1]); it grows and shrinks with the
 	// stack.
@@ -991,7 +1020,7 @@ func (s *search) nextEnabled(f *frame, state []byte) (move, bool, error) {
 			return move{}, false, nil
 		}
 		p := int(f.proc)
-		if s.c.procs[p].claim {
+		if s.c.procs[p].claim || (f.ample != 0 && p != int(f.ample)-1) {
 			f.proc++
 			f.pos = 0
 			continue
@@ -1077,10 +1106,8 @@ func (s *search) fire(m move) (failed *cEdge, err error) {
 		p := last.proc
 		loc := s.c.layout.ReadPC(s.next, p)
 		var chosen *cEdge
-		var texts []string
 		for _, oi := range s.c.procs[p].out[loc] {
 			o := &s.c.procs[p].edge[oi]
-			texts = append(texts, cex.CommandText(o.e))
 			if o.rv {
 				return failed, fmt.Errorf("rendezvous inside d_step (%q) is not executable in this engine version", cex.CommandText(o.e))
 			}
@@ -1094,6 +1121,13 @@ func (s *search) fire(m move) (failed *cEdge, err error) {
 			}
 		}
 		if chosen == nil {
+			// Every edge out of the location was tried and none is enabled;
+			// only now are their texts needed, and rendering an expression
+			// is costly enough to show in a profile of a d_step model.
+			var texts []string
+			for _, oi := range s.c.procs[p].out[loc] {
+				texts = append(texts, cex.CommandText(s.c.procs[p].edge[oi].e))
+			}
 			return failed, fmt.Errorf("block in d_step seq: %s is not executable inside the d_step starting at %q", strings.Join(texts, " | "), cex.CommandText(e.e))
 		}
 		if chosen.assert != nil && failed == nil {
@@ -1401,7 +1435,22 @@ func (s *search) ref(proc, edge, part int32) cex.Ref {
 
 // ---- DFS --------------------------------------------------------------------
 
-const frameBytes = 64
+const frameBytes = 72 // unsafe.Sizeof(frame{}); TestFrameBytesIsTheFrame keeps it so
+
+// pushFrame appends f to a search stack. When the stack is full it doubles
+// the capacity: append enlarges a large slice by only about a quarter, so a
+// deep search (a depth-first stack runs as deep as the longest path, up to
+// the state count) was copied around five times over, which was the largest
+// single cost of growth in a depth-first run. Like append, it may move the
+// frames, so a pointer taken into the stack is dead after a push.
+func pushFrame(stack []frame, f frame) []frame {
+	if len(stack) == cap(stack) {
+		grown := make([]frame, len(stack), max(64, 2*cap(stack)))
+		copy(grown, stack)
+		stack = grown
+	}
+	return append(stack, f)
+}
 
 // intermediate reports whether state is inside an atomic sequence whose
 // holder can move (pan does not store such states).
@@ -1427,7 +1476,10 @@ func (s *search) dfs() {
 	s.cur = make([]byte, l.Size)
 	s.next = make([]byte, l.Size)
 	idx0, _ := s.visited.Add(init)
-	s.stack = append(s.stack, frame{idx: int32(idx0), proc: -1, viaProc: -1, viaEdge: -1, viaPart: -1, rv: -1})
+	s.stack = pushFrame(s.stack, frame{idx: int32(idx0), proc: -1, viaProc: -1, viaEdge: -1, viaPart: -1, rv: -1})
+	if s.por != nil {
+		s.por.mark(idx0, true)
+	}
 	copy(s.cur, init)
 	curIdx := int32(idx0)
 	s.res.MaxDepth = 0
@@ -1443,6 +1495,11 @@ func (s *search) dfs() {
 			copy(s.cur, s.stateOf(top))
 			curIdx = top.idx
 		}
+		if s.por != nil && top.proc < 0 && top.idx >= 0 {
+			// First visit of a stored state (an atomic sequence, the only
+			// source of intermediate states, is refused by the analysis).
+			top.ample = s.por.pick(s)
+		}
 		m, ok, err := s.nextEnabled(top, s.cur)
 		if err != nil {
 			s.handleErr(err, pathToTop)
@@ -1454,6 +1511,8 @@ func (s *search) dfs() {
 			}
 			if top.idx < 0 {
 				s.tmp = s.tmp[:len(s.tmp)-1]
+			} else if s.por != nil {
+				s.por.mark(int(top.idx), false)
 			}
 			s.stack = s.stack[:len(s.stack)-1]
 			continue
@@ -1495,7 +1554,7 @@ func (s *search) dfs() {
 				s.res.MaxDepth = depth
 			}
 			s.tmp = append(s.tmp, append([]byte(nil), s.next...))
-			s.stack = append(s.stack, frame{idx: -int32(len(s.tmp)), proc: -1, viaProc: int32(m.e.proc), viaEdge: int32(m.e.idx), viaPart: partnerCode(m), rv: -1})
+			s.stack = pushFrame(s.stack, frame{idx: -int32(len(s.tmp)), proc: -1, viaProc: int32(m.e.proc), viaEdge: int32(m.e.idx), viaPart: partnerCode(m), rv: -1})
 			continue
 		}
 		idx, isNew, allowed := s.store()
@@ -1524,9 +1583,15 @@ func (s *search) dfs() {
 		if depth > s.res.MaxDepth {
 			s.res.MaxDepth = depth
 		}
-		s.stack = append(s.stack, frame{idx: int32(idx), proc: -1, viaProc: int32(m.e.proc), viaEdge: int32(m.e.idx), viaPart: partnerCode(m), rv: -1})
+		s.stack = pushFrame(s.stack, frame{idx: int32(idx), proc: -1, viaProc: int32(m.e.proc), viaEdge: int32(m.e.idx), viaPart: partnerCode(m), rv: -1})
+		if s.por != nil {
+			s.por.mark(idx, true)
+		}
 	}
 	s.res.States = s.visited.Len()
+	if s.por != nil {
+		s.res.Reduction.ReducedStates, s.res.Reduction.FullStates = s.por.reduced, s.por.full
+	}
 	s.res.MemBytes = s.visited.Bytes() + int64(cap(s.stack))*frameBytes + int64(len(s.tmp))*int64(l.Size)
 	if s.stop == "" && len(s.stack) == 0 {
 		s.stop = "complete"

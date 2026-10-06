@@ -105,3 +105,79 @@ func counters(k, n int) *ir.Model {
 	}
 	return m
 }
+
+// porVisible is the model of testdata/ir/por-visible.json (the G7 feature):
+// A writes the global x twice (x = 1, then x = 2) while B and C each count a
+// private byte to 3. The invariant x != 2 is violated by A's second write; the
+// reach property x == 1 holds. x is read by both properties, so A's writes
+// are visible and must never be postponed behind B's and C's steps.
+func porVisible() *ir.Model {
+	counter := func(name string) ir.Process {
+		return ir.Process{
+			Name:      name,
+			Locals:    []ir.Var{{Name: "c", Type: ir.Byte}},
+			Locations: []ir.Location{{Name: "count"}, {Name: "done"}},
+			Edges: []ir.Edge{
+				{From: 0, To: 0, Guard: ir.Binary("lt", ir.Ref("c"), ir.Const(3)),
+					Effect: []ir.Assign{{Var: "c", Value: ir.Binary("add", ir.Ref("c"), ir.Const(1))}}, Text: "c < 3 -> c++"},
+				{From: 0, To: 1, Guard: ir.Binary("ge", ir.Ref("c"), ir.Const(3)), Text: "c >= 3"},
+			},
+		}
+	}
+	return &ir.Model{Schema: ir.Schema, Name: "por-visible",
+		Globals: []ir.Var{{Name: "x", Type: ir.Byte}},
+		Processes: []ir.Process{
+			{Name: "A", Locations: []ir.Location{{Name: "a0"}, {Name: "a1"}, {Name: "a2"}}, Edges: []ir.Edge{
+				{From: 0, To: 1, Effect: []ir.Assign{{Var: "x", Value: ir.Const(1)}}, Text: "x = 1"},
+				{From: 1, To: 2, Effect: []ir.Assign{{Var: "x", Value: ir.Const(2)}}, Text: "x = 2"},
+			}},
+			counter("B"), counter("C"),
+		},
+		Properties: []ir.Property{
+			{ID: "deadlock", Kind: ir.KindDeadlock},
+			{ID: "inv", Kind: ir.KindInvariant, Expr: ir.Binary("ne", ir.Ref("x"), ir.Const(2)), Text: "x != 2"},
+			{ID: "can1", Kind: ir.KindReach, Expr: ir.Binary("eq", ir.Ref("x"), ir.Const(1)), Text: "x == 1"},
+		},
+	}
+}
+
+// porEnabling is testdata/ir/por-enabling.json: P at location 0 has a free
+// edge `f` (0 -> 1) and an edge `e` (0 -> 2) guarded by pc(Q) == 1; Q has one
+// step, 0 -> 1. In the full graph Q's step enables `e`, and P then goes on to
+// 2 where it waits for x == 5, which nobody ever writes: a deadlock reached
+// only through `e`. Expanding `f` alone would never reach it. (Found by
+// cross-review of the first version of the pc refinement.)
+func porEnabling() *ir.Model {
+	return &ir.Model{Schema: ir.Schema, Name: "por-enabling",
+		Globals: []ir.Var{byteVar("x")},
+		Processes: []ir.Process{
+			{Name: "P", Locations: locs("l0", "l1", "l2", "l3"), Edges: []ir.Edge{
+				{From: 0, To: 1, Text: "f"},
+				{From: 0, To: 2, Guard: ir.Binary("eq", ir.PC(1), ir.Const(1)), Text: "e: pc(Q) == 1"},
+				{From: 2, To: 3, Guard: ir.Binary("eq", ir.Ref("x"), ir.Const(5)), Text: "x == 5"},
+			}},
+			{Name: "Q", Locations: locs("d", "c"), Edges: []ir.Edge{{From: 0, To: 1, Text: "enter c"}}},
+		},
+		Properties: []ir.Property{{ID: "deadlock", Kind: ir.KindDeadlock}},
+	}
+}
+
+// porDStepGuard is testdata/ir/por-dstep.json: the same trap one step
+// removed. P's first edge is a d_step; the edge it goes on into is chosen
+// when the step is made, and one of the candidates is guarded by pc(Q) == 1,
+// so the result of the step depends on whether Q has entered location 1.
+func porDStepGuard() *ir.Model {
+	return &ir.Model{Schema: ir.Schema, Name: "por-dstep",
+		Globals: []ir.Var{byteVar("x")},
+		Processes: []ir.Process{
+			{Name: "P", Locations: locs("l0", "l1", "l2", "l3", "l4"), Edges: []ir.Edge{
+				{From: 0, To: 1, DStep: true, Text: "d_step start"},
+				{From: 1, To: 2, Guard: ir.Binary("eq", ir.PC(1), ir.Const(1)), Text: "pc(Q) == 1"},
+				{From: 1, To: 3, Text: "otherwise"},
+				{From: 2, To: 4, Guard: ir.Binary("eq", ir.Ref("x"), ir.Const(5)), Text: "x == 5"},
+			}},
+			{Name: "Q", Locations: locs("d", "c"), Edges: []ir.Edge{{From: 0, To: 1, Text: "enter c"}}},
+		},
+		Properties: []ir.Property{{ID: "deadlock", Kind: ir.KindDeadlock}},
+	}
+}

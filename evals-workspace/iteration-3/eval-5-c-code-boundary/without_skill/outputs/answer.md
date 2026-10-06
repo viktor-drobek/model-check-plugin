@@ -1,6 +1,6 @@
 # Проверка модели `Promela - examples/CH17/simple1.pr`
 
-**Файл:** `/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH17/simple1.pr`
+**Файл:** `${REPO_ROOT}/Promela - examples/CH17/simple1.pr`
 **Инструменты:** Spin 6.5.2 (6 December 2019), gcc 15.2.0, Linux.
 **Дата прогона:** 2026‑09‑25.
 

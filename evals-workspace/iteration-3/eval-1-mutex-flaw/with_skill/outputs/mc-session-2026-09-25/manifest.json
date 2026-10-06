@@ -7,7 +7,7 @@
     "version": "0.1.0-g0",
     "ir_schema": "mcd-ir/1",
     "report_schema": "mcd-report/1",
-    "binary": "/tmp/mcd (prebuilt; not rebuilt in this session)",
+    "binary": "${TMP_DIR}/mcd (prebuilt; not rebuilt in this session)",
     "layer": "CLI (mcd parse / mcd check); MCP server not registered"
   },
   "inputs": [
@@ -28,7 +28,7 @@
     {
       "n": 1,
       "tool": "mcd parse",
-      "command": "/tmp/mcd parse --promela 'Promela - examples/CH2/mutex_flaw.pml'",
+      "command": "${TMP_DIR}/mcd parse --promela 'Promela - examples/CH2/mutex_flaw.pml'",
       "outcome": "ok",
       "exit_code": 0,
       "artifacts": ["ir-1.json", "parse-1.stderr (empty: no frontend warnings)"],
@@ -37,7 +37,7 @@
     {
       "n": 2,
       "tool": "mcd check (pilot / mc_estimate stand-in)",
-      "command": "/tmp/mcd check --promela 'Promela - examples/CH2/mutex_flaw.pml' --budget-states 20 --no-timing",
+      "command": "${TMP_DIR}/mcd check --promela 'Promela - examples/CH2/mutex_flaw.pml' --budget-states 20 --no-timing",
       "params": {"search": "dfs", "fairness": "none", "budget_applied": {"states": 20, "depth": 1000000, "time_ms": 60000, "mem_bytes": 1073741824}},
       "outcome": "ok",
       "exit_code": 0,
@@ -48,7 +48,7 @@
     {
       "n": 3,
       "tool": "mcd check (main run)",
-      "command": "/tmp/mcd check --promela 'Promela - examples/CH2/mutex_flaw.pml' --bfs --no-timing",
+      "command": "${TMP_DIR}/mcd check --promela 'Promela - examples/CH2/mutex_flaw.pml' --bfs --no-timing",
       "params": {"search": "bfs", "fairness": "none", "budget_applied": {"states": 1000000, "depth": 1000000, "time_ms": 60000, "mem_bytes": 1073741824}},
       "outcome": "ok",
       "exit_code": 0,
@@ -59,7 +59,7 @@
     {
       "n": 4,
       "tool": "mcd check (LTL run)",
-      "command": "/tmp/mcd check --promela 'Promela - examples/CH2/mutex_flaw.pml' --ltl '[] (cnt <= 1)' --ltl '[] !(cnt == 1)' --fairness none --no-timing",
+      "command": "${TMP_DIR}/mcd check --promela 'Promela - examples/CH2/mutex_flaw.pml' --ltl '[] (cnt <= 1)' --ltl '[] !(cnt == 1)' --fairness none --no-timing",
       "params": {"search": "dfs", "fairness": "none", "budget_applied": {"states": 1000000, "depth": 1000000, "time_ms": 60000, "mem_bytes": 1073741824}},
       "outcome": "ok",
       "exit_code": 0,
@@ -70,7 +70,7 @@
     {
       "n": 5,
       "tool": "mcd check (--sweep, whole-graph state count)",
-      "command": "/tmp/mcd check --promela 'Promela - examples/CH2/mutex_flaw.pml' --bfs --sweep --no-timing",
+      "command": "${TMP_DIR}/mcd check --promela 'Promela - examples/CH2/mutex_flaw.pml' --bfs --sweep --no-timing",
       "params": {"search": "bfs", "fairness": "none"},
       "outcome": "ok",
       "exit_code": 0,
@@ -81,7 +81,7 @@
     {
       "n": 6,
       "tool": "mcd check (timing measurement)",
-      "command": "/usr/bin/time -f 'wall=%es rss=%MkB' /tmp/mcd check --promela 'Promela - examples/CH2/mutex_flaw.pml' --bfs",
+      "command": "/usr/bin/time -f 'wall=%es rss=%MkB' ${TMP_DIR}/mcd check --promela 'Promela - examples/CH2/mutex_flaw.pml' --bfs",
       "outcome": "ok",
       "exit_code": 0,
       "result": "wall 0.07 s, peak RSS 19 384 kB, engine time_ms 0 for both properties",
@@ -91,7 +91,7 @@
     {
       "n": 7,
       "tool": "mcd check (control run, a different model)",
-      "command": "/tmp/mcd check --promela 'Promela - examples/CH2/peterson.pml' --bfs --no-timing --ltl '[] (cnt <= 1)'",
+      "command": "${TMP_DIR}/mcd check --promela 'Promela - examples/CH2/peterson.pml' --bfs --no-timing --ltl '[] (cnt <= 1)'",
       "params": {"search": "bfs", "fairness": "none"},
       "outcome": "ok",
       "exit_code": 0,
@@ -102,7 +102,7 @@
     {
       "n": 8,
       "tool": "mcd check (fairness sensitivity run)",
-      "command": "/tmp/mcd check --promela 'Promela - examples/CH2/mutex_flaw.pml' --ltl '[] (cnt <= 1)' --fairness weak --no-timing",
+      "command": "${TMP_DIR}/mcd check --promela 'Promela - examples/CH2/mutex_flaw.pml' --ltl '[] (cnt <= 1)' --fairness weak --no-timing",
       "params": {"search": "dfs", "fairness": "weak"},
       "outcome": "ok",
       "exit_code": 0,

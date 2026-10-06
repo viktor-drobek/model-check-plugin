@@ -75,6 +75,22 @@ when the requirement says *within five seconds*, uses clocks, or otherwise depen
 elapsed time. The same distinction applies to “rarely”: it is a safety question if it
 means “never”, but a probabilistic question if it asks for a probability.
 
+## Plugin deployment flow
+
+The two plugin declaration families select the same server contract. The portable
+manifest uses `${PLUGIN_ROOT}`; the Claude manifest uses `${CLAUDE_PLUGIN_ROOT}`.
+The shipped `mcd.exe` alias lets Windows resolve the same command name, while the
+POSIX wrapper selects the matching native binary on Unix.
+
+```mermaid
+flowchart LR
+    M[plugin.json or .claude-plugin/plugin.json] --> C[mcp.json or mcp/servers.json]
+    C --> L[platform command resolution]
+    L --> B[engine/bin/mcd or mcd.exe]
+    B --> S[mcd serve]
+    S --> A[session manifest and reports]
+```
+
 ## What should I check?
 
 The input model and the property logic answer different questions. Start with a small
@@ -109,7 +125,7 @@ discarding an unfair counterexample.
 - `mcp/servers.json` — Claude Code stdio MCP server declaration using `${CLAUDE_PLUGIN_ROOT}`.
 - `skills/model-check/` — `SKILL.md`, workflows, property guidance, format references, assets, and report templates.
 - `evals-workspace/` — evaluation fixtures, graders, benchmark runs, and review data when included in the release.
-- `BUILD-PROTOCOL.md` — the six-part BDD/build protocol.
+- `BUILD-PROTOCOL.md` — the six-part step protocol (scenarios first, tests, logic review, confirmation record); the build itself is documented in the build section below and in `build.sh`.
 - `AGENT-COMMON.md` — shared historical build-agent guidance.
 - `build.sh` — reproducible multi-platform build and release verification script.
 
@@ -120,7 +136,7 @@ discarding an unfair counterexample.
 A ready-made release needs an agent/plugin host that supports the plugin manifest and MCP stdio servers. It does not need Go or SPIN at runtime. The selected platform needs the corresponding executable under `engine/bin/`:
 
 - POSIX systems use the `engine/bin/mcd` wrapper, which selects `mcd-<goos>-<goarch>` using `uname`.
-- Windows uses `engine/bin/mcd.cmd` and `mcd-windows-amd64.exe`.
+- Windows uses `engine/bin/mcd.exe` (the file the portable `engine/bin/mcd` command resolves to; a byte copy of `mcd-windows-amd64.exe`), the `engine/bin/mcd.cmd` wrapper where a host needs a batch file, and `mcd-windows-amd64.exe`.
 
 ### Build and test
 
@@ -143,7 +159,7 @@ Use the public `model-check-plugin` project/repository or the complete `model-ch
 From the plugin root:
 
 ```bash
-./build.sh --host-only --version 0.1.1
+./build.sh --host-only --version 0.2.0
 engine/bin/mcd version
 ```
 
@@ -233,28 +249,45 @@ cd ..
 
 The suite includes Go unit tests and the Godog harness. CI additionally runs the race detector and verifies SPIN on the configured self-hosted runner.
 
+Performance work is measured, not asserted. The whole-engine benchmarks run the Promela fixtures `engine/testdata/promela/bench-*.pml` through `cli.Run` and check their state counts, so a faster engine that explores something else fails:
+
+```bash
+cd engine
+go test -run XXX -bench . -benchmem ./explore .
+```
+
+Compare two revisions by running both test binaries alternately on one machine; a single run varies by about 10%.
+
+### Partial-order reduction (`--por`)
+
+`mcd check --por` explores, in a state, the moves of one process alone when the analysis can prove that nothing the other processes do could matter first. It applies to the safety search only (`deadlock`, `assert`, `invariant`, `reach`), depth-first, and it is opt-in. The verdicts are the same as without it; the number of states and transitions in the report are those of the *reduced* graph (so they no longer match `pan -c0`), and the first counterexample can differ. The report's `search.reduction` says whether the reduction was applied and, when it was not, why: atomic sequences, rendezvous or dynamic channels, `run`, a read of the process table (`_nr_pr`), `timeout`, `provided`, `--bfs`, and any `ltl`, `progress` or `ctl` property are refused in this version. A producer and its consumer do not make a conflict: the send end and the receive end of a buffered channel are separate, and a process at a channel operation is expanded alone only while the channel can act (room for a send, a message for a receive), so a pipeline of stages is explored stage after stage. The MCP tool `mc_check` takes the same request as `por: true` and answers with the same `search.reduction`; a request it cannot honour is a result with `applied: false`, not a tool error.
+
+The reduction is checked against the unreduced search by `explore/por_random_test.go` (8000 random models, with and without d_step, dead-end locations and guards on program counters; for the models on which both searches finish, which is most of them, the verdicts, the set of states without an enabled move, and every counterexample replayed as a run of the model, and for all of them whether a model error is reachable; `MCD_POR_MODELS=60000` for a deeper one-off run), by `por_corpus_test.go` at the root of the `engine` module (the Promela models of `testdata/promela`, `testdata/corpus2` and the SPIN corpus that the frontend accepts and both searches finish: the status and evidence of each property, the reachability of a model error, and a state count that is never larger, and equal when the reduction is refused), and by the scenarios of `features/g7-por.feature`. `go test ./explore -run TestPOR` runs the first and the analysis tests in seconds.
+
 ### Reproducible release build
 
 ```bash
-./build.sh --version 0.1.0 --verify-repro
+./build.sh --version 0.2.0 --source-commit <SOURCE-COMMIT> --verify-repro
 ```
+
+`<SOURCE-COMMIT>` is the commit the engine sources are built from. For a release it is the commit just before the one that commits the built files under `engine/bin/` (the artifacts commit), because a commit cannot name itself; `BUILD-INFO.json` records it as `source_commit`. Without `--source-commit` the script records `git rev-parse HEAD` of the plugin checkout (or `unknown` outside a Git checkout), which after the artifacts commit is the artifacts commit, so the committed `BUILD-INFO.json` is not reproduced from that checkout.
 
 The script:
 
 - builds static `mcd` binaries for Linux amd64/arm64, Darwin amd64/arm64, and Windows amd64 by default;
-- writes the POSIX `mcd` wrapper and Windows `mcd.cmd` wrapper;
+- writes the POSIX `mcd` wrapper, the Windows `mcd.cmd` wrapper, and `mcd.exe`, a copy of the Windows binary;
 - writes sorted `engine/bin/SHA256SUMS`;
 - writes `engine/bin/BUILD-INFO.json` with version, Go version, flags, source commit, platforms, and binary sizes;
 - checks the host binary, wrapper, checksums, and version stamp;
-- performs a second build when `--verify-repro` is supplied and compares binary hashes.
+- performs a second build when `--verify-repro` is supplied and compares every generated file (binaries, wrappers, `SHA256SUMS`, `BUILD-INFO.json`) byte for byte.
 
 For a faster local build:
 
 ```bash
-./build.sh --host-only --version 0.1.0
+./build.sh --host-only --version 0.2.0
 ```
 
-Useful options are `--platforms "goos/goarch ..."`, `--out DIR`, `--no-verify`, and `--verify-repro`. Use `--no-verify` only for an intentional intermediate build. Record which platforms were built and which were actually smoke-tested; cross-building is not the same as executing a platform binary.
+Useful options are `--source-commit HASH`, `--platforms "goos/goarch ..."`, `--out DIR`, `--no-verify`, and `--verify-repro`; the options and exit codes are listed at the top of `build.sh`. Use `--no-verify` only for an intentional intermediate build. Record which platforms were built and which were actually smoke-tested; cross-building is not the same as executing a platform binary.
 
 After a release build:
 
@@ -264,7 +297,7 @@ engine/bin/mcd version
 cat engine/bin/BUILD-INFO.json
 ```
 
-The complete build/release protocol is in [`BUILD-PROTOCOL.md`](BUILD-PROTOCOL.md).
+The build and its options are described in this section and at the top of `build.sh`. [`BUILD-PROTOCOL.md`](BUILD-PROTOCOL.md) is the six-part protocol every development step follows (scenarios first, tests, logic review, confirmation record), not a build manual; the record of a release is a `steps/*-confirmation.md` file (for 0.2.0, the addendum at the top of `steps/g6-confirmation.md`).
 
 ## Use the CLI
 
@@ -290,7 +323,7 @@ engine/bin/mcd check --promela /path/to/model.pml --ltl '[] (request -> <> respo
 engine/bin/mcd check --promela /path/to/model.pml --ctl 'AG (count <= 1)'
 
 # Start the MCP server manually when the host is not launching it.
-engine/bin/mcd serve --session-dir /tmp/mcd-sessions
+engine/bin/mcd serve --session-dir ${TMP_DIR}/mcd-sessions
 ```
 
 The accepted Promela subset is documented in [`skills/model-check/references/promela-subset.md`](skills/model-check/references/promela-subset.md). Read it before interpreting an `outside-subset` rejection. The engine is finite and explicit-state: it does not provide timed, probabilistic, symbolic, or unbounded verification.
@@ -379,7 +412,7 @@ Before publishing this plugin:
 - preserve the complete versioned `model-check-plugin/` tree;
 - validate `plugin.json`, `mcp.json`, `.claude-plugin/plugin.json`, and `mcp/servers.json`;
 - run `go test ./...`, `go vet ./...`, formatting, and SPIN checks;
-- run `./build.sh --version <VERSION> --verify-repro`;
+- run `./build.sh --version <VERSION> --source-commit <SOURCE-COMMIT> --verify-repro`;
 - verify `engine/bin/SHA256SUMS`, `BUILD-INFO.json`, the host wrapper, and platform records;
 - check all examples and logs for private paths, secrets, tokens, and host data;
 - update installation, preparation, build, usage, tooling, limitations, troubleshooting, and provenance instructions in the same change;
@@ -387,121 +420,26 @@ Before publishing this plugin:
 
 ## Literature and provenance
 
-This section answers two different questions:
+The public bibliography and the complete source map live in
+[`PROVENANCE.md`](PROVENANCE.md). It distinguishes external publications from
+reading notes that exist only in the full monorepo, so a standalone plugin checkout
+does not contain broken local links.
 
-1. **Which public works explain the ideas?** The links below point to a publisher,
-   author, DOI, or institutional catalogue rather than to an unverified mirror.
-2. **Which local material shaped this plugin?** The repository paths point to the
-   extracted source texts, reading notes, examples, and engineering synthesis used
-   to turn those ideas into tested behavior.
+Key public references are:
 
-The bibliography is background and provenance, not an implementation guarantee. The
-current engine behavior is defined by the Go code, the references under
-`skills/model-check/references/`, the feature scenarios, and the confirmation records.
+- Clarke, Henzinger, Veith, and Bloem (eds.), [*Handbook of Model
+  Checking*](https://link.springer.com/book/10.1007/978-3-319-10575-8), for the
+  modern model-checking taxonomy and algorithms.
+- Clarke, Grumberg, and Peled, [*Model Checking*](https://link.springer.com/book/10.1007/978-3-662-22679-3), for the classic transition-system and temporal
+  model-checking treatment.
+- Baier and Katoen, [*Principles of Model Checking*](https://mitpress.mit.edu/9780262026499/principles-of-model-checking/), for LTL/CTL terminology,
+  safety/liveness, fairness, and state-space reasoning.
+- Holzmann, [*Design and Validation of Computer Protocols*](http://spinroot.com/gerard/popd.html), and [the SPIN project](https://spinroot.com/), for Promela and
+  protocol verification.
+- Karpov, [*Model Checking*](https://books.google.com/books/about/MODEL_%D0%A1HECKING_%D0%92%D0%B5%D1%80%D0%B8%D1%84%D0%B8%D0%BA%D0%B0%D1%86%D0%B8%D1%8F.html?id=xpui56eRsHgC), for Russian-language terminology and examples.
 
-### Foundational model-checking references
-
-- **Clarke, Henzinger, Veith, and Bloem (eds.), [*Handbook of Model
-  Checking*](https://link.springer.com/book/10.1007/978-3-319-10575-8).** A broad
-  research reference covering transition systems, temporal logic, algorithms,
-  abstraction, and applications. It explains the general landscape in which this
-  plugin's finite explicit-state engine sits; it is not a promise that every method
-  in the handbook is implemented here. The earlier Clarke–Grumberg–Peled tradition
-  is part of the same provenance line. Local source and notes:
-  `books-md/1clarke_edmund_handbook_of_model_checking/` and
-  `model-check-skill-notes/01-handbook-of-model-checking.md`.
-
-- **Baier and Katoen, [*Principles of Model Checking*](https://mitpress.mit.edu/9780262026499/principles-of-model-checking/).** The main textbook
-  reference for transition systems, safety and liveness, LTL, CTL/CTL*, fairness,
-  automata, and state-space algorithms. It is the conceptual source for the
-  plugin's property classification and the explanation of why LTL and CTL answer
-  different questions. Local source and notes:
-  `books-md/_principles_of_model_checking/` and
-  `model-check-skill-notes/05-principles-of-model-checking.md`.
-
-- **Karpov, [*Model Checking: Verification of Parallel and Distributed Software
-  Systems*](https://books.google.com/books/about/MODEL_%D0%A1HECKING_%D0%92%D0%B5%D1%80%D0%B8%D1%84%D0%B8%D0%BA%D0%B0%D1%86%D0%B8%D1%8F.html?id=xpui56eRsHgC)** (Russian). A practical
-  Russian-language treatment of parallel programs, temporal properties, and model
-  checking examples. It is especially useful for terminology and for the LTL/CTL
-  distinction used in the Russian notes. Local source and notes:
-  `books-md/Karpov_U._Model_checking/` and
-  `model-check-skill-notes/03-karpov-model-checking.md`.
-
-### Promela, SPIN, and protocol modelling
-
-- **Holzmann, [*Design and Validation of Computer Protocols*](http://spinroot.com/gerard/popd.html).** The book that introduced the protocol-modelling
-  perspective used here: processes, channels, executable Promela statements,
-  interleaving, assertions, progress labels, and counterexample-oriented debugging.
-  Local source and notes:
-  `books-md/Design_and_Validation_of_Computer_Protocols_-_Gerard_Holzmann/` and
-  `model-check-skill-notes/02-design-and-validation-of-computer-protocols.md`.
-
-- **Holzmann, [“The Model Checker SPIN”](https://doi.org/10.1109/32.588521).** A
-  concise primary reference for SPIN's automata-theoretic verification approach and
-  its use for distributed software. The repository's Promela corpus and differential
-  checks use SPIN as an oracle for the accepted subset where the semantics are meant
-  to agree. Local corpus: `Promela - examples/`; local comparison records:
-  `steps/g1-confirmation.md` and `steps/g4-confirmation.md`.
-
-- **[SPIN project and author materials](https://spinroot.com/).** The official
-  project site is useful for the tool, manuals, Promela examples, and historical
-  context. SPIN is a comparison and test dependency in this repository; an already
-  built `mcd` binary does not need SPIN for ordinary runtime checks.
-
-### Petri nets, automata, and supporting material
-
-- **Verification Protocols Web.** This is the repository's captured teaching/service
-  material about verification workflows, finite-state models, Petri nets, coloured
-  and hierarchical nets, and service-oriented verification. It is a local source
-  collection rather than a single canonical publication: `books-md/Verification
-  Protocols Web - tok/`, with the extracted interpretation in
-  `model-check-skill-notes/04-verification-web-services.md`. The plugin uses it to
-  document the Petri-net translation and its explicit loss list; it does not claim to
-  implement timed or coloured-net semantics natively.
-
-- **Automata-program verification material.** These notes describe event/transition
-  automata and the mapping from automata programs to finite verification models. The
-  local source is `books-md/velder_verification_posobie_nauka/`; the plugin's
-  interpretation is `model-check-skill-notes/09-verification-of-automata-programs.md`.
-  Such systems normally enter this engine through an explicit Promela abstraction,
-  with the event-to-step mapping recorded in the report.
-
-- **SPIN graph-encoded tuple-set material.** This is a local technical source about
-  representing tuple sets as graph structures for SPIN-oriented state-space work,
-  not a separate frontend exposed by this plugin. The captured material is in
-  `books-md/graph-encoded-tuple-set-for-spin/` and `books-md/graph encoded tuple set
-  for SPIN/`; the engineering note is
-  `model-check-skill-notes/06-state-space-compression-gets.md`.
-
-### Lectures, `modelchk`, and project synthesis
-
-- **Lecture notes 01–09.** `books-md/lect01-lect09.md` is a local nine-lecture
-  teaching sequence, not the title of one external book or a claim of affiliation
-  with a particular university course. In this project the sequence is used as
-  follows: lectures 1–3 introduce transition systems and concurrent execution;
-  lectures 4–5 explain executable Promela statements, blocking, guards, channels,
-  and program-graph semantics; lecture 6 covers safety/liveness and fairness;
-  lectures 7–8 cover never claims, LTL, and automata-based checking; lecture 9
-  introduces branching-time/CTL ideas. The corresponding checked interpretation is
-  `model-check-skill-notes/07-lectures-01-09.md`.
-
-- **`modelchk` material.** `books-md/modelchk/` is a local reference/tool corpus
-  used for terminology, examples, and comparison of model-checking workflows. It is
-  not the `mcd` implementation and is not an additional runtime dependency. The
-  project-specific synthesis is `model-check-skill-notes/08-modelchk.md`.
-
-- **Cross-book synthesis and requirements.** These are the project's engineering
-  bridge from the reading corpus to observable behavior: the taxonomy of finite,
-  untimed, probabilistic, timed, and concurrent models; the intake questions; the
-  property and status vocabulary; and the staged workflow. Read
-  `model-check-skill-notes/10-cross-book-synthesis.md`,
-  `model-check-skill-notes/11-skill-requirements.md`,
-  `model-check-skill-notes/13-coverage-matrix.md`, and
-  `model-check-skill-notes/14-skill-building-plan.md` together with the executable
-  references in `skills/model-check/references/`.
-
-When adding a new source, update this bibliography, the relevant local notes, and
-the coverage/provenance matrix in the same change. Never use a citation to fill a
-capability gap: if the current engine does not support timed, probabilistic,
-unbounded, or game semantics, the honest outcome is `not-executed` with a route to a
-specialised method.
+These sources provide background and provenance, not an implementation guarantee.
+The current engine behavior is defined by the Go code, feature scenarios, and the
+executable references under `skills/model-check/references/`. Unsupported timed,
+probabilistic, symbolic, unbounded, or game semantics must remain explicitly
+outside this plugin's scope.

@@ -119,6 +119,13 @@ Feature: G6 packaging, install validation and description triggering
       | coddy plugin install       |
     And the Coddy MCP declaration uses the portable workspace command "${CWD}/engine/bin/mcd"
 
+  Scenario: portable and Claude plugin declarations stay synchronized
+    Given the portable plugin manifest "plugin.json"
+    Then its version matches ".claude-plugin/plugin.json"
+    And its MCP declaration "mcp.json" matches "mcp/servers.json" for server "model-check"
+    And the release contains the Windows binary alias "engine/bin/mcd.exe"
+    And the Windows binary "engine/bin/mcd-windows-amd64.exe" exists
+
   # --------------------------------------------------- trigger eval set (§8.2)
   Scenario: the trigger eval set has at least sixteen queries and both classes
     Given the file "evals-workspace/trigger-eval.json"

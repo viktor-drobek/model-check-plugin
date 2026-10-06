@@ -154,7 +154,7 @@
 
 ## 5. Метод и бэкенд
 
-- Движок: `mcd 0.1.0-g0 (ir mcd-ir/1, report mcd-report/1)`, бинарь `/tmp/mcd`,
+- Движок: `mcd 0.1.0-g0 (ir mcd-ir/1, report mcd-report/1)`, бинарь `${TMP_DIR}/mcd`,
   вызывался как CLI. MCP-сервер плагина в этой сессии не зарегистрирован, поэтому
   вместо `mc_parse` / `mc_check` / `mc_explain` / `mc_manifest` использованы
   CLI-эквиваленты `mcd parse` / `mcd check` / чтение `counterexample.steps` в отчёте

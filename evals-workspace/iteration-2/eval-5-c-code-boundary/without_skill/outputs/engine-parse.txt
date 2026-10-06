@@ -2,7 +2,7 @@
   "error": {
     "kind": "outside-subset",
     "status": "not-executed",
-    "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH17/simple1.pr:1:1",
+    "path": "${REPO_ROOT}/Promela - examples/CH17/simple1.pr:1:1",
     "message": "construct outside subset: c_code (embedded C is outside the subset) (simple1.pr, line 1)"
   }
 }

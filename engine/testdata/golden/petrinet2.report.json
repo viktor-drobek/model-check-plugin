@@ -1,7 +1,7 @@
 {
   "engine": {
     "name": "mcd",
-    "version": "0.1.0-g0",
+    "version": "0.2.0",
     "ir_schema": "mcd-ir/1",
     "report_schema": "mcd-report/1"
   },
@@ -40,7 +40,7 @@
         "states": 20,
         "transitions": 32,
         "depth": 10,
-        "memory_bytes_est": 26048
+        "memory_bytes_est": 30232
       },
       "complete": true,
       "counterexample": {
@@ -182,7 +182,7 @@
         "states": 20,
         "transitions": 32,
         "depth": 10,
-        "memory_bytes_est": 26048
+        "memory_bytes_est": 30232
       },
       "complete": true
     }

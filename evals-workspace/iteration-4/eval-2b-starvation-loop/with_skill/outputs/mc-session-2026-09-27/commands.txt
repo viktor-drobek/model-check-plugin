@@ -1,5 +1,5 @@
 # Все команды прогона, в порядке выполнения. Рабочий каталог: корень репозитория
-# /home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check
+# ${REPO_ROOT}
 # MCD  = model-check-plugin/engine/bin/mcd            (mcd 0.1.0, ir mcd-ir/1, report mcd-report/1)
 # MODEL= model-check-plugin/engine/testdata/promela/starvation.pml
 #        sha256 43092539c371572b0314278ddd7ba4bddd7c8af66a6f5362fb37ca62f4397c0b

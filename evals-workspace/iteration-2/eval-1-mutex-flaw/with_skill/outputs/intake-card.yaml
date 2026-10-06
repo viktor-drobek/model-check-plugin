@@ -93,7 +93,7 @@ fairness:
   confirmed_by_user: false
 
 backend:
-  engine: mcd 0.1.0-g0 (CLI /tmp/mcd; MCP-сервер в сессии не зарегистрирован)
+  engine: mcd 0.1.0-g0 (CLI ${TMP_DIR}/mcd; MCP-сервер в сессии не зарегистрирован)
   search_mode: "dfs (основной) и bfs (кратчайший контрпример)"
   reductions: none
 

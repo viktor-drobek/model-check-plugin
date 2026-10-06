@@ -88,7 +88,7 @@ Every row of this table was derived by running `mcd parse` on a minimal model th
 exercises that one construct: the probes are `evals-workspace/subset-probes/*.pml`,
 the driver is `probe.py` beside them, and the run is recorded in
 `steps/g3-evals3-subset-probe.md`. Re-run it rather than trusting the table —
-`python3 probe.py --mcd /tmp/mcd` prints a disagreement for any row that has drifted.
+`python3 probe.py --mcd ${TMP_DIR}/mcd` prints a disagreement for any row that has drifted.
 
 Three outcomes, not two:
 

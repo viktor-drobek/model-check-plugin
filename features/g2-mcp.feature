@@ -221,6 +221,47 @@ Feature: G2 — MCP server with the seven tools, session directory, budgets
     When I call "mc_check" in that session with the model's own properties
     Then the answer has no field "aggregate"
 
+  # --- mc_check with the partial-order reduction (performance plan, step 2) ---
+  # `por` is optional and off by default. A request that cannot be honoured
+  # (breadth-first search, a temporal property, atomic sequences, ...) is a
+  # result, not a tool error: the answer is the unreduced run's, and
+  # search.reduction says it was not applied and why, as `mcd check --por` does.
+  # The counts of a reduced answer are those of the reduced graph.
+
+  Scenario: mc_check with por keeps the verdicts and stores fewer states
+    Given a session in which the IR "testdata/ir/por-visible.json" was parsed
+    When I call "mc_check" in that session with the model's own properties
+    And I remember the number of states of the answer
+    And I call "mc_check" in that session with the model's own properties and por requested
+    Then the call is not an error
+    And the answer property "inv" has status "violated" with evidence "exhaustive"
+    And the answer property "can1" has status "verified" with evidence "exhaustive"
+    And the answer reports a partial-order reduction that was applied
+    And the number of states of the answer is below the remembered one
+    And that report file carries the same reduction as the answer
+
+  Scenario: without por the answer and the report carry no reduction
+    Given a session in which the IR "testdata/ir/por-visible.json" was parsed
+    When I call "mc_check" in that session with the model's own properties
+    Then the call is not an error
+    And the answer has no reduction
+    And that report file has no reduction
+
+  Scenario: por with a breadth-first search is not applied, and the answer says why
+    Given a session in which the IR "testdata/ir/por-visible.json" was parsed
+    When I call "mc_check" in that session with the model's own properties, search "bfs" and por requested
+    Then the call is not an error
+    And the answer reports a partial-order reduction that was not applied for a reason that mentions "breadth-first"
+    And the answer property "inv" has status "violated" with evidence "exhaustive"
+
+  Scenario: por with a temporal property is not applied, and the answer says why
+    Given a session in which the IR "testdata/ir/por-visible.json" was parsed
+    When I call "mc_check" in that session with por requested and properties:
+      | id | kind | formula |
+      | l1 | ltl  | []true  |
+    Then the call is not an error
+    And the answer reports a partial-order reduction that was not applied for a reason that mentions "temporal"
+
   Scenario: mc_check without a session or an IR is a tool error
     When I call "mc_check" with no input
     Then the call is an error whose message mentions "ir"

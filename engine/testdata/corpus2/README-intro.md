@@ -62,7 +62,7 @@ table below carries every listing, including the ones SPIN itself refuses.
 
 **Regenerating.** This file is generated; edit `README-intro.md` and rerun:
 
-    go build -o /tmp/mcd ./cmd/mcd && go build -o /tmp/mutate ./cmd/mutate
-    /tmp/mutate corpus2 -root testdata/corpus2 -mcd /tmp/mcd \
+    go build -o ${TMP_DIR}/mcd ./cmd/mcd && go build -o /tmp/mutate ./cmd/mutate
+    /tmp/mutate corpus2 -root testdata/corpus2 -mcd ${TMP_DIR}/mcd \
         -preamble testdata/corpus2/README-intro.md \
         -md testdata/corpus2/README.md -json /tmp/corpus2.json

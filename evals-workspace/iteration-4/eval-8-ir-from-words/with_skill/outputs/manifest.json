@@ -5,7 +5,7 @@
     "version": "0.1.0",
     "ir_schema": "mcd-ir/1",
     "report_schema": "mcd-report/1",
-    "binary": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/engine/bin/mcd"
+    "binary": "${REPO_ROOT}/model-check-plugin/engine/bin/mcd"
   },
   "inputs_and_outputs": [
     {
@@ -72,32 +72,32 @@
   "commands": [
     {
       "stage": "parse",
-      "command": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/engine/bin/mcd parse --promela model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml > model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/model.ir.json",
+      "command": "${REPO_ROOT}/model-check-plugin/engine/bin/mcd parse --promela model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml > model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/model.ir.json",
       "output": "model.ir.json"
     },
     {
       "stage": "estimate",
-      "command": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/engine/bin/mcd check --promela model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml --estimate --estimate-ms 1000 --target-depth 100 > model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/estimate.json",
+      "command": "${REPO_ROOT}/model-check-plugin/engine/bin/mcd check --promela model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/two_clients.pml --estimate --estimate-ms 1000 --target-depth 100 > model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/estimate.json",
       "output": "estimate.json"
     },
     {
       "stage": "sanity",
-      "command": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/engine/bin/mcd check --ir model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/sanity.ir.json --bfs --budget-states 10000 --budget-depth 10000 --budget-ms 10000 --budget-mem-mb 128 > model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/sanity.report.json",
+      "command": "${REPO_ROOT}/model-check-plugin/engine/bin/mcd check --ir model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/sanity.ir.json --bfs --budget-states 10000 --budget-depth 10000 --budget-ms 10000 --budget-mem-mb 128 > model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/sanity.report.json",
       "output": "sanity.report.json"
     },
     {
       "stage": "safety",
-      "command": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/engine/bin/mcd check --ir model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/safety.ir.json --bfs --budget-states 10000 --budget-depth 10000 --budget-ms 10000 --budget-mem-mb 128 > model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/safety.report.json",
+      "command": "${REPO_ROOT}/model-check-plugin/engine/bin/mcd check --ir model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/safety.ir.json --bfs --budget-states 10000 --budget-depth 10000 --budget-ms 10000 --budget-mem-mb 128 > model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/safety.report.json",
       "output": "safety.report.json"
     },
     {
       "stage": "liveness-none",
-      "command": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/engine/bin/mcd check --ir model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/all.ir.json --ltl '[] (waiting0 -> <> working0)' --ltl '[] (waiting1 -> <> working1)' --ltl '[] (accepted0 -> <> working0)' --ltl '[] (accepted1 -> <> working1)' --fairness none --budget-states 10000 --budget-depth 10000 --budget-ms 10000 --budget-mem-mb 128 > model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/liveness-none.report.json",
+      "command": "${REPO_ROOT}/model-check-plugin/engine/bin/mcd check --ir model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/all.ir.json --ltl '[] (waiting0 -> <> working0)' --ltl '[] (waiting1 -> <> working1)' --ltl '[] (accepted0 -> <> working0)' --ltl '[] (accepted1 -> <> working1)' --fairness none --budget-states 10000 --budget-depth 10000 --budget-ms 10000 --budget-mem-mb 128 > model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/liveness-none.report.json",
       "output": "liveness-none.report.json"
     },
     {
       "stage": "liveness-weak",
-      "command": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/engine/bin/mcd check --ir model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/all.ir.json --ltl '[] (waiting0 -> <> working0)' --ltl '[] (waiting1 -> <> working1)' --ltl '[] (accepted0 -> <> working0)' --ltl '[] (accepted1 -> <> working1)' --fairness weak --budget-states 10000 --budget-depth 10000 --budget-ms 10000 --budget-mem-mb 128 > model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/liveness-weak.report.json",
+      "command": "${REPO_ROOT}/model-check-plugin/engine/bin/mcd check --ir model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/all.ir.json --ltl '[] (waiting0 -> <> working0)' --ltl '[] (waiting1 -> <> working1)' --ltl '[] (accepted0 -> <> working0)' --ltl '[] (accepted1 -> <> working1)' --fairness weak --budget-states 10000 --budget-depth 10000 --budget-ms 10000 --budget-mem-mb 128 > model-check-plugin/evals-workspace/iteration-4/eval-8-ir-from-words/with_skill/outputs/liveness-weak.report.json",
       "output": "liveness-weak.report.json"
     }
   ],

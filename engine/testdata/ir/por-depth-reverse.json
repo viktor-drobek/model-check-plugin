@@ -1,0 +1,425 @@
+{
+ "schema": "mcd-ir/1",
+ "name": "gen2",
+ "globals": [
+  {
+   "name": "x",
+   "type": "byte"
+  },
+  {
+   "name": "y",
+   "type": "byte"
+  },
+  {
+   "name": "z",
+   "type": "byte"
+  },
+  {
+   "name": "f",
+   "type": "byte"
+  },
+  {
+   "name": "a",
+   "type": "byte",
+   "len": 3
+  }
+ ],
+ "channels": [
+  {
+   "name": "c0",
+   "capacity": 2,
+   "fields": [
+    "byte"
+   ]
+  },
+  {
+   "name": "c1",
+   "capacity": 1,
+   "fields": [
+    "byte",
+    "byte"
+   ]
+  }
+ ],
+ "processes": [
+  {
+   "name": "P0",
+   "locals": [
+    {
+     "name": "l",
+     "type": "byte"
+    },
+    {
+     "name": "m",
+     "type": "byte"
+    }
+   ],
+   "locations": [
+    {},
+    {
+     "labels": [
+      "end"
+     ]
+    },
+    {
+     "labels": [
+      "end"
+     ]
+    },
+    {},
+    {},
+    {},
+    {}
+   ],
+   "initial": 0,
+   "edges": [
+    {
+     "from": 6,
+     "to": 4
+    },
+    {
+     "from": 1,
+     "to": 0,
+     "assert": {
+      "op": "ne",
+      "args": [
+       {
+        "op": "index",
+        "var": "a",
+        "args": [
+         {
+          "op": "const"
+         }
+        ]
+       },
+       {
+        "op": "index",
+        "var": "a",
+        "args": [
+         {
+          "op": "const",
+          "value": 1
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "from": 0,
+     "to": 1,
+     "effect": [
+      {
+       "var": "l",
+       "value": {
+        "op": "mod",
+        "args": [
+         {
+          "op": "add",
+          "args": [
+           {
+            "op": "var",
+            "var": "l"
+           },
+           {
+            "op": "const",
+            "value": 1
+           }
+          ]
+         },
+         {
+          "op": "const",
+          "value": 3
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "from": 2,
+     "to": 1,
+     "clear_chans": [
+      0
+     ]
+    }
+   ]
+  },
+  {
+   "name": "P1",
+   "locals": [
+    {
+     "name": "l",
+     "type": "byte"
+    },
+    {
+     "name": "m",
+     "type": "byte"
+    }
+   ],
+   "locations": [
+    {},
+    {},
+    {}
+   ],
+   "initial": 0,
+   "edges": [
+    {
+     "from": 0,
+     "to": 2
+    },
+    {
+     "from": 1,
+     "to": 2,
+     "guard": {
+      "op": "and",
+      "args": [
+       {
+        "op": "and",
+        "args": [
+         {
+          "op": "not",
+          "args": [
+           {
+            "op": "eq",
+            "args": [
+             {
+              "op": "index",
+              "var": "a",
+              "args": [
+               {
+                "op": "const"
+               }
+              ]
+             },
+             {
+              "op": "const",
+              "value": 2
+             }
+            ]
+           }
+          ]
+         },
+         {
+          "op": "eq",
+          "args": [
+           {
+            "op": "index",
+            "var": "a",
+            "args": [
+             {
+              "op": "const",
+              "value": 1
+             }
+            ]
+           },
+           {
+            "op": "const"
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "op": "or",
+        "args": [
+         {
+          "op": "lt",
+          "args": [
+           {
+            "op": "var",
+            "var": "m"
+           },
+           {
+            "op": "const",
+            "value": 1
+           }
+          ]
+         },
+         {
+          "op": "eq",
+          "args": [
+           {
+            "op": "index",
+            "var": "a",
+            "args": [
+             {
+              "op": "const",
+              "value": 1
+             }
+            ]
+           },
+           {
+            "op": "const"
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     "assert": {
+      "op": "ne",
+      "args": [
+       {
+        "op": "var",
+        "var": "x"
+       },
+       {
+        "op": "const",
+        "value": 2
+       }
+      ]
+     },
+     "effect": [
+      {
+       "var": "a",
+       "index": {
+        "op": "const"
+       },
+       "value": {
+        "op": "const",
+        "value": 2
+       }
+      },
+      {
+       "var": "y",
+       "value": {
+        "op": "mod",
+        "args": [
+         {
+          "op": "add",
+          "args": [
+           {
+            "op": "const",
+            "value": 2
+           },
+           {
+            "op": "const",
+            "value": 2
+           }
+          ]
+         },
+         {
+          "op": "const",
+          "value": 3
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "properties": [
+  {
+   "id": "deadlock",
+   "kind": "deadlock"
+  },
+  {
+   "id": "assert",
+   "kind": "assert"
+  },
+  {
+   "id": "inv2",
+   "kind": "invariant",
+   "expr": {
+    "op": "ne",
+    "args": [
+     {
+      "op": "add",
+      "args": [
+       {
+        "op": "var",
+        "var": "x"
+       },
+       {
+        "op": "var",
+        "var": "y"
+       }
+      ]
+     },
+     {
+      "op": "const",
+      "value": 4
+     }
+    ]
+   }
+  },
+  {
+   "id": "inv1",
+   "kind": "invariant",
+   "expr": {
+    "op": "not",
+    "args": [
+     {
+      "op": "and",
+      "args": [
+       {
+        "op": "eq",
+        "args": [
+         {
+          "op": "var",
+          "var": "y"
+         },
+         {
+          "op": "const",
+          "value": 2
+         }
+        ]
+       },
+       {
+        "op": "eq",
+        "args": [
+         {
+          "op": "var",
+          "var": "z"
+         },
+         {
+          "op": "const",
+          "value": 2
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "reach1",
+   "kind": "reach",
+   "expr": {
+    "op": "and",
+    "args": [
+     {
+      "op": "eq",
+      "args": [
+       {
+        "op": "var",
+        "var": "f"
+       },
+       {
+        "op": "const",
+        "value": 2
+       }
+      ]
+     },
+     {
+      "op": "ne",
+      "args": [
+       {
+        "op": "var",
+        "var": "f"
+       },
+       {
+        "op": "const"
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

@@ -8,7 +8,7 @@
   "inputs": [
     {
       "kind": "promela",
-      "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-4/eval-4-telephone-busy/with_skill/outputs/models/version1-progress.pml",
+      "path": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-4/eval-4-telephone-busy/with_skill/outputs/models/version1-progress.pml",
       "sha256": "9ec15da3ba0289fb04e28b8a0d942c130f5b0ce47129b4a3921e942f0c8e2094"
     }
   ],
@@ -89,7 +89,7 @@
             "command": "tpc!offhook",
             "location": "Busy",
             "origin": {
-              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-4/eval-4-telephone-busy/with_skill/outputs/models/version1-progress.pml",
+              "file": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-4/eval-4-telephone-busy/with_skill/outputs/models/version1-progress.pml",
               "line": 24,
               "name": "tpc!offhook"
             },
@@ -97,7 +97,7 @@
               "process": "switch:1",
               "command": "tpc?offhook",
               "origin": {
-                "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-4/eval-4-telephone-busy/with_skill/outputs/models/version1-progress.pml",
+                "file": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-4/eval-4-telephone-busy/with_skill/outputs/models/version1-progress.pml",
                 "line": 36,
                 "name": "tpc?offhook"
               }
@@ -148,7 +148,7 @@
             "command": "tpc!offhook",
             "location": "Busy",
             "origin": {
-              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-4/eval-4-telephone-busy/with_skill/outputs/models/version1-progress.pml",
+              "file": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-4/eval-4-telephone-busy/with_skill/outputs/models/version1-progress.pml",
               "line": 24,
               "name": "tpc!offhook"
             },
@@ -156,7 +156,7 @@
               "process": "switch:1",
               "command": "tpc?offhook",
               "origin": {
-                "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-4/eval-4-telephone-busy/with_skill/outputs/models/version1-progress.pml",
+                "file": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-4/eval-4-telephone-busy/with_skill/outputs/models/version1-progress.pml",
                 "line": 36,
                 "name": "tpc?offhook"
               }
@@ -168,7 +168,7 @@
             "command": "printf(\"MSC: dialtone\\n\")",
             "location": "Dial",
             "origin": {
-              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-4/eval-4-telephone-busy/with_skill/outputs/models/version1-progress.pml",
+              "file": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-4/eval-4-telephone-busy/with_skill/outputs/models/version1-progress.pml",
               "line": 36,
               "name": "printf(\"MSC: dialtone\\n\")"
             }
@@ -179,7 +179,7 @@
             "command": "tpc!digits",
             "location": "Busy",
             "origin": {
-              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-4/eval-4-telephone-busy/with_skill/outputs/models/version1-progress.pml",
+              "file": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-4/eval-4-telephone-busy/with_skill/outputs/models/version1-progress.pml",
               "line": 27,
               "name": "tpc!digits"
             },
@@ -187,7 +187,7 @@
               "process": "switch:1",
               "command": "tpc?digits",
               "origin": {
-                "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-4/eval-4-telephone-busy/with_skill/outputs/models/version1-progress.pml",
+                "file": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-4/eval-4-telephone-busy/with_skill/outputs/models/version1-progress.pml",
                 "line": 40,
                 "name": "tpc?digits"
               }
@@ -199,7 +199,7 @@
             "command": "printf(\"MSC: notone\\n\")",
             "location": "Wait",
             "origin": {
-              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-4/eval-4-telephone-busy/with_skill/outputs/models/version1-progress.pml",
+              "file": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-4/eval-4-telephone-busy/with_skill/outputs/models/version1-progress.pml",
               "line": 40,
               "name": "printf(\"MSC: notone\\n\")"
             }
@@ -210,7 +210,7 @@
             "command": "printf(\"MSC: busytone\\n\")",
             "location": "Busy",
             "origin": {
-              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-4/eval-4-telephone-busy/with_skill/outputs/models/version1-progress.pml",
+              "file": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-4/eval-4-telephone-busy/with_skill/outputs/models/version1-progress.pml",
               "line": 46,
               "name": "printf(\"MSC: busytone\\n\")"
             }

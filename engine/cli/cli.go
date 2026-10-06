@@ -11,8 +11,8 @@
 //	           [--ltl 'formula']… [--ctl 'formula']… [--progress]
 //	           [--fairness none|weak|strong] [--max-procs N]
 //	           [--budget-states N] [--budget-depth N] [--budget-ms N]
-//	           [--budget-mem-mb N] [--unlimited] [--bfs] [--sweep] [--no-timing]
-//	                                                            → report JSON
+//	           [--budget-mem-mb N] [--unlimited] [--bfs] [--sweep] [--por]
+//	           [--no-timing]                                    → report JSON
 //	mcd check  --estimate [--estimate-ms N] [--target-depth N] (input flags)
 //	                                                            → estimate JSON
 //	mcd version                                                → "mcd <version>"
@@ -29,6 +29,11 @@
 // cycle) when the model does not carry one already. `--fairness weak`
 // applies weak fairness to ltl and progress properties; `strong` makes
 // them not-executed with a reason (FR-008).
+//
+// `--por` asks for partial-order reduction of the safety search (package
+// explore, por.go): fewer states, the same verdicts. The report then carries
+// search.reduction, saying whether it was applied (and if not, why) and that
+// the counts are those of the reduced graph. Without the flag nothing changes.
 //
 // Exit codes, one per outcome: 0 — a result document (report or IR) was
 // produced, whatever the verdicts, including invalid-model; 2 — no result:
@@ -289,6 +294,7 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 	memMB := fs.Int64("budget-mem-mb", 0, "memory estimate budget in MiB (absent or 0 = default 1024)")
 	unlimited := fs.Bool("unlimited", false, "lift every budget (for differential tests); the report echoes 0 for the lifted limits")
 	bfs := fs.Bool("bfs", false, "breadth-first search (shortest counterexamples)")
+	por := fs.Bool("por", false, "partial-order reduction of the safety search: fewer states, the same verdicts (depth-first only; the report says whether it was applied)")
 	noTiming := fs.Bool("no-timing", false, "omit time_ms so that reports are byte-for-byte reproducible")
 	if err := fs.Parse(args); err != nil {
 		return ExitTool
@@ -340,7 +346,7 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 		ctx, cancel = context.WithTimeout(ctx, time.Duration(b.TimeMS)*time.Millisecond)
 		defer cancel()
 	}
-	res, err := explore.Run(ctx, m, explore.Options{Mode: mode, Budget: b.Explore(), Sweep: *sweep, Fairness: *fairness, Defines: parsed.Defines})
+	res, err := explore.Run(ctx, m, explore.Options{Mode: mode, Budget: b.Explore(), Sweep: *sweep, POR: *por, Fairness: *fairness, Defines: parsed.Defines})
 	if err != nil {
 		// The IR validated but could not be compiled (an undeclared variable
 		// in a property, a malformed LTL formula): the input is refused,

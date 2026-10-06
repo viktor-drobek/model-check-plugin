@@ -155,7 +155,7 @@ SKILL.md шаг 1 обязательные вопросы задаются по�
 Точные командные строки — в `manifest.json`; основная:
 
 ```
-/tmp/mcd check --promela 'Promela - examples/CH2/mutex_flaw.pml' --bfs --no-timing
+${TMP_DIR}/mcd check --promela 'Promela - examples/CH2/mutex_flaw.pml' --bfs --no-timing
 ```
 
 ## 7. Результат

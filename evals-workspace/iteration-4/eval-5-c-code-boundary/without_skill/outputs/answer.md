@@ -6,7 +6,7 @@
 
 ## 1. Модель
 
-Файл: `/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/Promela - examples/CH17/simple1.pr`
+Файл: `${REPO_ROOT}/Promela - examples/CH17/simple1.pr`
 
 ```promela
 c_code { int x; }

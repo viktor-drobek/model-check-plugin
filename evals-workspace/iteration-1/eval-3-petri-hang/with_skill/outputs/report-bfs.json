@@ -8,7 +8,7 @@
   "inputs": [
     {
       "kind": "petri",
-      "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
+      "path": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
       "sha256": "713a21439586bb68d67a323aa84296558d21cb99a38917123e7c3b3caa9c38c6"
     }
   ],
@@ -64,7 +64,7 @@
             ],
             "location": "do",
             "origin": {
-              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
+              "file": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
               "name": "t1"
             }
           },
@@ -86,7 +86,7 @@
             ],
             "location": "do",
             "origin": {
-              "file": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
+              "file": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-1/eval-3-petri-hang/with_skill/outputs/net.json",
               "name": "t4"
             }
           }

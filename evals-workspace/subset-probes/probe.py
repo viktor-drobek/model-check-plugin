@@ -7,8 +7,8 @@ construct and nothing else, runs `mcd parse` on it, and records what actually
 happened. It is the evidence behind the table: re-run it instead of trusting the
 table.
 
-    python3 probe.py --mcd /tmp/mcd            # write the .pml files, run, report
-    python3 probe.py --mcd /tmp/mcd --json results.json
+    python3 probe.py --mcd ${TMP_DIR}/mcd            # write the .pml files, run, report
+    python3 probe.py --mcd ${TMP_DIR}/mcd --json results.json
 
 Each probe declares `claim`: "inside" (the reference says the engine accepts it),
 "outside" (the reference says it is refused) or "defect" (the engine accepts it, the
@@ -230,7 +230,7 @@ def run(mcd, path):
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--mcd", default="/tmp/mcd")
+    ap.add_argument("--mcd", default="${TMP_DIR}/mcd")
     ap.add_argument("--json", default=os.path.join(HERE, "results.json"))
     ap.add_argument("--keep", action="store_true",
                     help="only (re)write the .pml files, do not run")

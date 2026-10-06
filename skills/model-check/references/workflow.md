@@ -97,7 +97,7 @@ need the user's explicit confirmation, defaults are not enough.
 
 ### Node 8 — reductions
 
-The engine's MVP/v1 has no partial-order reduction, symmetry or abstraction; there is nothing to enable. Record in the report that the search is unreduced. When POR appears (vNext) it applies only to `X`-free properties and never to models with priorities (`provided`).
+The engine has no symmetry or abstraction, and its partial-order reduction (`mcd check --por`, or `por: true` in `mc_check`) is opt-in and covers the safety search only: `deadlock`, `assert`, `invariant`, `reach`, depth-first. It refuses, and says why in `search.reduction`, any model with atomic sequences, rendezvous or dynamic channels, `run`, a read of the process table (`_nr_pr`), `timeout` or `provided`, and any run that checks an `ltl`, `progress` or `ctl` property — so it can never be applied to a formula with `X`, nor to priorities. Use it when a safety check ends `inconclusive` on a state budget and the processes mostly work on their own data or pass messages along buffered channels (a pipeline of producer, filter and consumer is the best case). Report the run as reduced, quote `reduced_states` and `fully_expanded_states`, and do not compare its state count with the unreduced one, with SPIN's `pan -c0`, or with a bound you gave: the count is that of the reduced graph. The verdicts are the ones to carry over. Without `--por`, record that the search is unreduced.
 
 ### Node 9 — size estimate
 

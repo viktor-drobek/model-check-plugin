@@ -8,7 +8,7 @@
   "inputs": [
     {
       "kind": "promela",
-      "path": "/home/user/Desktop/VirtualBuddyShared/Yandex.Disk.localized/drobek/model-check/model-check-plugin/evals-workspace/iteration-4/eval-4-telephone-busy/with_skill/outputs/models/version1-progress.pml",
+      "path": "${REPO_ROOT}/model-check-plugin/evals-workspace/iteration-4/eval-4-telephone-busy/with_skill/outputs/models/version1-progress.pml",
       "sha256": "9ec15da3ba0289fb04e28b8a0d942c130f5b0ce47129b4a3921e942f0c8e2094"
     }
   ],

@@ -135,7 +135,7 @@ p1 **и** p5) обе перестают быть разрешёнными, а и
 ## 5. Метод и бэкенд
 
 - Движок: `mcd` версия `0.1.0-g0` (`ir mcd-ir/1`, `report mcd-report/1`), встроенный
-  explicit-state; вызывался как CLI (`/tmp/mcd`), поскольку MCP-сервер плагина в этой
+  explicit-state; вызывался как CLI (`${TMP_DIR}/mcd`), поскольку MCP-сервер плагина в этой
   сессии не зарегистрирован. Внешние проверяющие (SPIN и т. п.) не использовались и не
   требуются.
 - Поиск: DFS (основной прогон), плюс BFS ради кратчайшего контрпримера и `--sweep`
@@ -302,13 +302,13 @@ p1 **и** p5) обе перестают быть разрешёнными, а и
 Команды, которыми получены результаты (в каталоге сессии):
 
 ```
-/tmp/mcd parse --petri petrinet.json > ir.json
-/tmp/mcd check --no-timing --petri petrinet.json --budget-states 50
-/tmp/mcd check --no-timing --petri petrinet.json
-/tmp/mcd check --no-timing --bfs   --petri petrinet.json
-/tmp/mcd check --no-timing --sweep --petri petrinet.json
-/tmp/mcd check --no-timing --ir ir-props.json
-/tmp/mcd check --no-timing --petri petrinet.json --ltl '<> (p2 > 0 && p5 > 0)'
-/tmp/mcd check --no-timing --petri petrinet.json --ltl '[] !(p2 > 0 && p5 > 0)'
-/tmp/mcd check --no-timing --petri petrinet.json --ltl '<> (p2 > 0 && p5 > 0)' --fairness weak
+${TMP_DIR}/mcd parse --petri petrinet.json > ir.json
+${TMP_DIR}/mcd check --no-timing --petri petrinet.json --budget-states 50
+${TMP_DIR}/mcd check --no-timing --petri petrinet.json
+${TMP_DIR}/mcd check --no-timing --bfs   --petri petrinet.json
+${TMP_DIR}/mcd check --no-timing --sweep --petri petrinet.json
+${TMP_DIR}/mcd check --no-timing --ir ir-props.json
+${TMP_DIR}/mcd check --no-timing --petri petrinet.json --ltl '<> (p2 > 0 && p5 > 0)'
+${TMP_DIR}/mcd check --no-timing --petri petrinet.json --ltl '[] !(p2 > 0 && p5 > 0)'
+${TMP_DIR}/mcd check --no-timing --petri petrinet.json --ltl '<> (p2 > 0 && p5 > 0)' --fairness weak
 ```
