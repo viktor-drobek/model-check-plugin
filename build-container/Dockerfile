@@ -16,13 +16,18 @@ LABEL org.opencontainers.image.title="model-check build container" \
       org.opencontainers.image.version="${VERSION}" \
       org.opencontainers.image.source="${SOURCE}"
 
-# SPIN 6.5.2 is the oracle of the engine's differential tests (spin -a, then gcc builds pan); Python 3 is used by the
-# build script and the release metadata; numactl pins workers to a NUMA node in the speed-up measurements; bc is used by
-# the measurement scripts. gcc, make, git and curl are in the base image: they are checked below, not assumed.
+# SPIN 6.5.2 is the oracle of the engine's differential tests (spin -a, then gcc builds pan): built from the upstream source with -DNXT
+# by install-spin.sh, not taken from the distribution (Ubuntu 24.04's package is built without the temporal operator X, which the tests
+# use). Python 3 is used by the build script and the release metadata; numactl pins workers to a NUMA node in the speed-up measurements;
+# bc is used by the measurement scripts. gcc, make, git and curl are in the base image: they are checked below, not assumed. bison is
+# needed for the SPIN build only and is removed again.
+COPY build-container/install-spin.sh /tmp/install-spin.sh
 RUN set -eu \
     && apt-get update \
-    && apt-get install -y --no-install-recommends spin python3 bc numactl \
-    && rm -rf /var/lib/apt/lists/* \
+    && apt-get install -y --no-install-recommends python3 bc numactl bison \
+    && sh /tmp/install-spin.sh \
+    && apt-get purge -y bison && apt-get autoremove -y \
+    && rm -rf /var/lib/apt/lists/* /tmp/install-spin.sh \
     && for t in gcc make git curl python3 spin numactl bc; do command -v "$t" >/dev/null || { echo "missing: $t" >&2; exit 1; }; done \
     && spin -V
 

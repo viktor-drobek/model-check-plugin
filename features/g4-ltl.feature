@@ -928,3 +928,19 @@ Feature: G4 LTL — Büchi translation, nested DFS, non-progress cycles, weak fa
       | decision:d3_np_flip.pml  |         |             | weak     | l    |
       | decision:to1.pml         |         |             | weak     | a    |
       | decision:to2.pml         |         |             | weak     | a    |
+
+  # ---------------------------------------------------------------- weak fairness: a process blocked at an end label
+  #
+  # Issue 1 of the public repository: a second process blocked at an `end` label made --fairness weak report `violated` for a property that is
+  # `verified` without fairness, with a lasso of null steps only. Weak fairness only removes runs, so the two answers must not contradict each other.
+  Scenario Outline: a process blocked at an end label does not make weak fairness report a violation
+    Given the test model "weakfair-end-blocked.pml"
+    When I invoke "mcd check --promela <model> --ltl '[] (a -> <> b)' --fairness <fairness> --no-timing"
+    Then it exits with 0
+    And the property "ltl1" is "verified" with evidence "exhaustive"
+    And the search for "ltl1" is complete
+
+    Examples:
+      | fairness |
+      | none     |
+      | weak     |

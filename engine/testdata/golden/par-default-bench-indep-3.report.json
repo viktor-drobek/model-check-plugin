@@ -1,7 +1,7 @@
 {
   "engine": {
     "name": "mcd",
-    "version": "0.3.0",
+    "version": "0.3.1",
     "ir_schema": "mcd-ir/1",
     "report_schema": "mcd-report/1"
   },

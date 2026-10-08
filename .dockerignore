@@ -2,3 +2,4 @@
 *
 !engine/go.mod
 !engine/go.sum
+!build-container/install-spin.sh

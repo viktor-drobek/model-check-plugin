@@ -8,7 +8,7 @@ is the preparation of `README.md` ("Requirements", "Prepare and build") done onc
 | Tool | Version | Used for |
 |---|---|---|
 | Go | 1.26.8 (`golang:1.26.8-bookworm`, pinned by digest in the Dockerfile) | `go build`, `go test`, `go vet`, `build.sh` (which refuses any other Go; `GOTOOLCHAIN=local`, so none is downloaded) |
-| SPIN | 6.5.2 (Debian package `spin`) | `spin -a` for the differential tests against `pan` (`tools/pandiff`, the `@spin` scenarios) |
+| SPIN | 6.5.2, built from the upstream source with `-DNXT` by `install-spin.sh` | `spin -a` for the differential tests against `pan` (`tools/pandiff`, the `@spin` scenarios) |
 | gcc, make, git, curl | Debian 12 (bookworm) | build `pan.c`, run the scripts, source-commit identification |
 | Python 3 | 3.11 | `build.sh`, release metadata |
 | numactl, bc | Debian 12 | pinning workers to a NUMA node and timing, in the speed-up measurements |
@@ -20,14 +20,14 @@ security script runs them from their own pinned images).
 
 ## The image in a registry
 
-The image is named `<registry>/model-check/build`, with the tags `<plugin version>` (`0.3.0`) and `<plugin version>-go<Go version>`
-(`0.3.0-go1.26.8`). Build it, or pull it from the registry where your team keeps it; the examples below write the registry as
+The image is named `<registry>/model-check/build`, with the tags `<plugin version>` (`0.3.1`) and `<plugin version>-go<Go version>`
+(`0.3.1-go1.26.8`). Build it, or pull it from the registry where your team keeps it; the examples below write the registry as
 `$REGISTRY` (a host and port, for example `registry.example.org:5000`). A registry that speaks plain HTTP must be listed in the docker
 daemon's `insecure-registries`.
 
 ```bash
 export REGISTRY=registry.example.org:5000
-docker pull $REGISTRY/model-check/build:0.3.0
+docker pull $REGISTRY/model-check/build:0.3.1
 ```
 
 ## Use
@@ -36,7 +36,7 @@ Run it as the user of the checkout, with the checkout mounted:
 
 ```bash
 docker run --rm -it --user "$(id -u):$(id -g)" -v "$PWD:/work" -w /work/model-check-plugin/engine \
-    $REGISTRY/model-check/build:0.3.0 \
+    $REGISTRY/model-check/build:0.3.1 \
     sh -c 'go vet ./... && go test ./...'
 ```
 
@@ -44,8 +44,8 @@ Release build, reproducible, from the plugin root (the Go of the image is the on
 
 ```bash
 docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" -w /work/model-check-plugin \
-    $REGISTRY/model-check/build:0.3.0 \
-    ./build.sh --version 0.3.0 --source-commit "$(git rev-parse HEAD)" --verify-repro
+    $REGISTRY/model-check/build:0.3.1 \
+    ./build.sh --version 0.3.1 --source-commit "$(git rev-parse HEAD)" --verify-repro
 ```
 
 Vulnerability check of the built files: `govulncheck -mode=binary engine/bin/mcd-linux-amd64`.
@@ -76,7 +76,7 @@ and `go.mod` or `build.sh` disagree about the Go version.
 
 The job `Build & Test` of a CI workflow that selects a self-hosted runner needs the toolchain on it. `runner.Dockerfile` makes an image of
 the official GitHub Actions runner (version and digest pinned) with Go in the runner's tool cache (so `actions/setup-go` finds it and
-downloads nothing), SPIN 6.5.2, gcc and libc headers, Python 3, numactl, bc, and the Go modules. The Go toolchain and the modules are
+downloads nothing), SPIN 6.5.2, gcc and libc headers, Python 3, numactl, bc, and the Go modules. SPIN is built from the upstream source (`install-spin.sh`, tarball pinned by sha256) with `-DNXT`, because the Ubuntu 24.04 package lacks the temporal operator `X` that the differential tests use. The Go toolchain and the modules are
 copied from the build container as it is stored in your registry, by digest, not built again.
 
 ```bash

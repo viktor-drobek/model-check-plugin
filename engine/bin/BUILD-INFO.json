@@ -35,13 +35,13 @@
     "-trimpath",
     "-buildvcs=false",
     "-ldflags",
-    "-s -w -X modelcheck/report.EngineVersion=0.3.0"
+    "-s -w -X modelcheck/report.EngineVersion=0.3.1"
   ],
   "cgo_enabled": "0",
   "engine_module": "modelcheck",
   "go_version": "go1.26.8",
   "note": "No wall-clock value is recorded, so BUILD-INFO.json is a function of the source tree and the arguments only. Cross-built binaries are produced and hashed here; only the host binary is executed by the build's own checks.",
-  "source_commit": "4a6fbb11f9350a627b4566900a97b53976655e27",
-  "version": "0.3.0",
+  "source_commit": "03ff666c9fb1c2893793211029cf78e068cef9c9",
+  "version": "0.3.1",
   "version_stamp": "overlay"
 }
