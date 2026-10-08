@@ -37,13 +37,16 @@ ENV GOTOOLCHAIN=local \
 
 # The Go modules of the engine (the MCP SDK, godog and what they need), downloaded once from go.mod and go.sum; the
 # vulnerability checker the security gate runs (the version of scripts/security-scan.sh).
-COPY engine/go.mod engine/go.sum /opt/modules/
+WORKDIR /opt/modules
+COPY engine/go.mod engine/go.sum ./
 RUN set -eu \
-    && cd /opt/modules \
     && go mod download \
     && go install golang.org/x/vuln/cmd/govulncheck@v1.8.0 \
     && chmod -R a+rX /opt/go /usr/local/bin/govulncheck \
     && rm -rf /root/.cache /tmp/go-build
 
+# Not root by default; `--user "$(id -u):$(id -g)"` overrides it for a checkout owned by someone else.
+RUN useradd --uid 1000 --no-create-home --shell /bin/bash builder
+USER builder
 WORKDIR /work
 CMD ["bash"]

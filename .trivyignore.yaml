@@ -1,9 +1,16 @@
-# Accepted findings, each with a statement and an expiry so the list rots
-# instead of silently pardoning new issues. Format:
+# Accepted findings, each with a statement and an expiry so the list rots instead of silently pardoning new issues. Format:
 # https://trivy.dev/latest/docs/configuration/filtering/#trivyignoreyaml
 #
 # Path exclusions live in trivy.yaml (scan.skip-dirs), not here.
 vulnerabilities: []
-misconfigurations: []
+misconfigurations:
+  - id: DS-0026
+    paths:
+      - build-container/Dockerfile
+      - build-container/runner.Dockerfile
+      - model-check-plugin/build-container/Dockerfile
+      - model-check-plugin/build-container/runner.Dockerfile
+    statement: "The images are build and CI tool images, not services: nothing listens, so there is nothing a health check could probe. A HEALTHCHECK would only make docker report an idle container as unhealthy."
+    expired_at: 2027-04-08
 secrets: []
 licenses: []

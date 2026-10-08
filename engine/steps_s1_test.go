@@ -347,6 +347,16 @@ func registerS1Steps(sc *godog.ScenarioContext) {
 		}
 		return nil
 	})
+	sc.Step(`^the workflow "([^"]+)" does not build over the tracked "([^"]+)"$`, func(rel, target string) error {
+		text, err := w.read(rel)
+		if err != nil {
+			return err
+		}
+		if strings.Contains(text, "-o "+target) {
+			return fmt.Errorf("%s builds over %s, the tracked file of the release (go refuses to overwrite a wrapper script)", rel, target)
+		}
+		return nil
+	})
 	sc.Step(`^the workflow "([^"]+)" lets every SARIF upload fail without failing the job$`, func(rel string) error {
 		text, err := w.read(rel)
 		if err != nil {

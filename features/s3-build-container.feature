@@ -74,3 +74,16 @@ Feature: S3 The build container of the plugin
     Then no text file of "model-check-plugin" matches "192\.168\.[0-9]+\.[0-9]+"
     And no text file of "model-check-plugin" matches "relay-hur[o]n"
     And no text file of "model-check-plugin" matches "/home/(muron|huron)/"
+
+  Scenario: CI builds the command to a scratch path, not over the tracked release wrapper
+    Given the repository root
+    Then the workflow ".github/workflows/ci.yml" does not build over the tracked "bin/mcd"
+    And the repository file ".github/workflows/ci.yml" mentions "RUNNER_TEMP"
+
+  Scenario: The build container does not run as root by default and accepts its one scanner finding with a reason
+    Given the repository root
+    Then the repository file "model-check-plugin/build-container/Dockerfile" mentions "USER builder"
+    And the repository file "model-check-plugin/build-container/Dockerfile" mentions "WORKDIR /opt/modules"
+    And the repository file "model-check-plugin/.trivyignore.yaml" mentions "DS-0026"
+    And the repository file "model-check-plugin/.trivyignore.yaml" mentions "expired_at"
+    And the repository file "model-check-plugin/.trivyignore.yaml" mentions "statement"
