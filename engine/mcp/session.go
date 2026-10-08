@@ -36,6 +36,7 @@ type ServerParams struct {
 	DefaultBudget Budget   `json:"default_budget"`
 	Ceiling       Budget   `json:"ceiling"`
 	Concurrency   int      `json:"concurrency"`
+	MaxWorkers    int      `json:"max_workers,omitempty"`
 	AllowRead     []string `json:"allow_read"`
 }
 
@@ -251,6 +252,7 @@ type Params struct {
 	Search        string  `json:"search,omitempty"`
 	Fairness      string  `json:"fairness,omitempty"`
 	POR           bool    `json:"por,omitempty"`
+	Workers       int     `json:"workers,omitempty"`
 	BudgetApplied *Budget `json:"budget_applied,omitempty"`
 	Seed          *int64  `json:"seed,omitempty"`
 	Steps         int     `json:"steps,omitempty"`
@@ -270,6 +272,7 @@ func (s *Session) beginCall(tool string, started time.Time) int {
 // endCall finalises the entry and rewrites manifest.json.
 func (s *Session) endCall(i int, started time.Time, err error, params *Params, artifacts []string) {
 	s.mu.Lock()
+	defer s.mu.Unlock()
 	c := &s.manifest.Calls[i]
 	c.DurationMS = time.Since(started).Milliseconds()
 	if err != nil {
@@ -280,9 +283,63 @@ func (s *Session) endCall(i int, started time.Time, err error, params *Params, a
 	if artifacts != nil {
 		c.Artifacts = append(c.Artifacts, artifacts...)
 	}
-	data, _ := s.manifestJSONLocked()
-	s.mu.Unlock()
-	s.WriteFile("manifest.json", data)
+	s.writeManifestLocked()
+}
+
+// failCall marks an entry as an error after its handler's own deferred
+// endCall ran (or without one having run): a panic unwound the handler, and
+// endCall, which saw no error, left the entry at "ok". Parameters and
+// artifacts the handler recorded are kept. manifest.json is rewritten.
+func (s *Session) failCall(i int, started time.Time, err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	c := &s.manifest.Calls[i]
+	c.DurationMS = time.Since(started).Milliseconds()
+	c.Outcome = "error"
+	c.Error = err.Error()
+	s.writeManifestLocked()
+}
+
+// writeManifestLocked rewrites manifest.json from the manifest in memory. The
+// caller holds s.mu, and the write happens before it is released: the SDK
+// serves tool calls concurrently, and a snapshot written after the lock was
+// released could land over the tail of a longer one (a file that is not JSON)
+// or after a newer one (a call or an error missing on disk). The file is
+// replaced whole by a rename, so a reader that opens it meanwhile sees the
+// previous manifest or the new one, never part of either. A failed write is
+// ignored: the manifest in memory, which mc_manifest returns, stays right, and
+// a call is not failed for a record that could not be kept.
+func (s *Session) writeManifestLocked() {
+	data, err := s.manifestJSONLocked()
+	if err != nil {
+		return
+	}
+	_ = s.writeFileAtomic("manifest.json", data)
+}
+
+// writeFileAtomic is WriteFile for a file that is rewritten while others may
+// read it: the bytes go to rel+".tmp" in the same directory, which replaces
+// rel by a rename. It goes through the same guard. Writers of one file must be
+// serialised by the caller (the manifest's are, by s.mu); a failure leaves no
+// temporary file behind.
+func (s *Session) writeFileAtomic(rel string, data []byte) error {
+	p, err := s.Path(rel)
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		return err
+	}
+	tmp := p + ".tmp"
+	if err := os.WriteFile(tmp, data, 0o644); err != nil {
+		os.Remove(tmp)
+		return err
+	}
+	if err := os.Rename(tmp, p); err != nil {
+		os.Remove(tmp)
+		return err
+	}
+	return nil
 }
 
 func (s *Session) manifestJSONLocked() ([]byte, error) {

@@ -1,0 +1,18 @@
+## stutter_extension=ON states=3 edges=3
+S0: {'b': 0} pcs=(0, 0) claim=A acc=True disabled=[]
+S1: {'b': 0} pcs=(0, 1) claim=A acc=True disabled=['P']
+S2: {'b': 1} pcs=(0, 2) claim=A acc=True disabled=['P']
+  S0 -[P]-> S0
+  S0 -[Q]-> S1
+  S1 -[Q]-> S2
+  accepting SCCs (comp, unfair-procs): [([0], ['Q'])]
+  fair accepting SCC: None
+## stutter_extension=OFF states=3 edges=3
+S0: {'b': 0} pcs=(0, 0) claim=A acc=True disabled=[]
+S1: {'b': 0} pcs=(0, 1) claim=A acc=True disabled=['P']
+S2: {'b': 1} pcs=(0, 2) claim=A acc=True disabled=['P']
+  S0 -[P]-> S0
+  S0 -[Q]-> S1
+  S1 -[Q]-> S2
+  accepting SCCs (comp, unfair-procs): [([0], ['Q'])]
+  fair accepting SCC: None

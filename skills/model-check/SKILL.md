@@ -163,6 +163,18 @@ depth) and the search mode: DFS by default, BFS when a shortest safety counterex
 is worth the memory. Simulation is a sanity check; it is never evidence for a
 property.
 
+**Look at the machine before you launch anything that searches.** A run takes CPU and
+memory in proportion to the state space, and the machine may be shared with other
+sessions. Before `mc_estimate`, every `mc_check` and every rerun with a larger budget run
+`sh assets/wait-for-capacity.sh --need-cores N --need-mem-mb M --dir <session dir>
+--min-disk-mb 500` (N = the `workers` you plan to pass, M = the memory budget). It waits
+while CPU or memory use is above 90% (or the run would push it above) and exits 3 when
+the machine stays busy: then wait, lower `workers` and the budgets, or tell the user that
+the run was not started and why. Never start into a saturated machine: a time budget that
+runs out under load is `unknown`, not a result, and timings taken there are not
+measurements. Where the script cannot measure (exit 4, Windows), read the load, free
+memory and free disk with the host's own tools first.
+
 ### 6. Check with `mc_check`
 
 Pass the IR, the property list, the fairness setting and an explicit budget. Pass it as
@@ -236,7 +248,7 @@ Every property gets one status from the vocabulary of 11 §14 and one evidence l
 | `violated` | the engine found a concrete counterexample — you decode and classify it before reporting; for `reach` it is the opposite: `violated` means a complete search found no such state, and it carries no run |
 | `inconclusive` | a correct but incomplete search: budget exhausted, bounded, approximate |
 | `unknown` | the result cannot be read even as partial coverage |
-| `not-executed` | nothing was run: input rejected by the frontend (a construct outside the subset, an undeclared name in a property), unsupported semantics, `fairness: strong`, no binary, user declined |
+| `not-executed` | nothing was run: input rejected by the frontend (a construct outside the subset, an undeclared name in a property), unsupported semantics, `fairness: strong`, a property that reads `_nr_pr` over a model that keeps no process table, no binary, user declined |
 | `invalid-model` | the run reached a defect of the model itself: a `byte` wrap, a place above its capacity, a division by zero, an out-of-range index. Not the same as a rejected input (that is `not-executed`) and not the same as a send into a full channel, which is an ordinary blocked step, not a defect |
 
 Evidence: `exhaustive`, `bounded`, `approximate`, `unknown`. Only `verified` with

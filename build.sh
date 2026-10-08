@@ -75,7 +75,7 @@ case "$VERSION" in
 esac
 
 GO_VERSION="$(cd "$ENGINE_DIR" && go env GOVERSION)"
-REQUIRED_GO_VERSION="${MCD_GO_VERSION:-go1.26.1}"
+REQUIRED_GO_VERSION="${MCD_GO_VERSION:-go1.26.8}"
 [ "$GO_VERSION" = "$REQUIRED_GO_VERSION" ] || die "Go $REQUIRED_GO_VERSION is required for reproducible release builds (found $GO_VERSION)"
 HOST_GOOS="$(go env GOHOSTOS)"
 HOST_GOARCH="$(go env GOHOSTARCH)"

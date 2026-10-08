@@ -1,0 +1,48 @@
+{
+  "engine": {
+    "name": "mcd",
+    "version": "0.3.0",
+    "ir_schema": "mcd-ir/1",
+    "report_schema": "mcd-report/1"
+  },
+  "inputs": [
+    {
+      "kind": "promela",
+      "path": "testdata/promela/bench-indep.pml",
+      "sha256": "0521a081e94053ffbae65209af0f5ee41065b74e03b23410efbbec8c4a5b9336"
+    }
+  ],
+  "model": {
+    "name": "bench-indep",
+    "state_bytes": 10,
+    "processes": 3,
+    "variables": 4
+  },
+  "search": {
+    "mode": "dfs",
+    "budget": {
+      "states": 1000000,
+      "depth": 1000000,
+      "time_ms": 60000,
+      "mem_bytes": 1073741824
+    },
+    "stop": "complete",
+    "complete": true
+  },
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)",
+      "status": "verified",
+      "evidence": "exhaustive",
+      "counters": {
+        "states": 1464,
+        "transitions": 3993,
+        "depth": 33,
+        "memory_bytes_est": 57904
+      },
+      "complete": true
+    }
+  ]
+}

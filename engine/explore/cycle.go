@@ -1,6 +1,7 @@
 package explore
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -85,13 +86,31 @@ import (
 // states are those of copy 0; from an accepting state of copy 0 the only
 // move is a null step to copy 1; in copy k (1 ≤ k ≤ n) a move of process
 // k-1 leads to copy k+1, and a null step to copy k+1 is possible when
-// process k-1 has no enabled move in the state; from copy n+1 the only
-// move is a null step back to copy 0. A cycle through an accepting state
-// therefore passes through every copy, i.e. every process moved or was
-// blocked somewhere on it — exactly the runs that are weakly fair. Null
-// steps appear in counterexamples as steps of process "-" with a note.
-// Strong fairness is not implemented (plan 14 §4.2): the property is
-// not-executed with a reason (FR-008).
+// process k-1 has no move of its own in the state (no enabled edge, where in
+// a timeout state a `timeout` edge counts); from copy n+1 the next
+// step of the product, whatever it is, leads back to copy 0. A cycle
+// through an accepting state therefore passes through every copy, i.e.
+// every process moved or was blocked somewhere on it — exactly the runs
+// that are weakly fair. Null steps appear in counterexamples as steps of
+// process "-" with a note. Strong fairness is not implemented (plan 14
+// §4.2): the property is not-executed with a reason (FR-008).
+//
+// A null step is bookkeeping, not a step of the product: it leaves the
+// system state and the claim location where they are, and the claim has not
+// moved. Only a step of the product (a claim step followed by a system
+// step, or a stutter step) is a step of a run. So a cycle must contain one,
+// and that is why the copy is left through a step of the product and never
+// through a null step: with a null step back to copy 0, the copies alone
+// closed a cycle on any accepting state in which every process is blocked —
+// a loop of nothing but null steps, accepted whether or not the claim could
+// move there (a claim without an enabled edge ends the path), and under the
+// np_ product whose blocked states have no successor at all. pan has no such
+// step: it counts a process that moves or cannot move inside the steps of
+// the product, and its default move for a blocked system is a step of the
+// product too (the claim moves next) and does not exist under -DNP. The
+// first version of this construction closed the round with a null step; the
+// differential against pan found 16 weak-fairness rows (13 of them fixed here)
+// where it reported a cycle pan did not (steps/fix-weakfairness-confirmation.md).
 //
 // # Verdicts
 //
@@ -180,6 +199,13 @@ func (e *FormulaError) Kind() string {
 
 func (e *FormulaError) Unwrap() error { return e.Err }
 
+// ErrInternal is wrapped by an error that says the engine itself is wrong: a
+// bookkeeping invariant of a search does not hold. It is a defect of mcd, not
+// a statement about the model, so a caller must not report it as a rejected
+// input (as it does a FormulaError or a model that does not compile) but as a
+// tool failure; the CLI ends with exit code 1 and the MCP tools answer isError.
+var ErrInternal = errors.New("internal")
+
 const (
 	KindLTL      = "ltl"
 	KindProgress = "progress"
@@ -225,9 +251,15 @@ func (cs *cycleSearch) claimStepFrom(sys []byte, first int32) (edges []int32, vi
 		if !e.e.Atomic {
 			return edges, "", nil
 		}
-		var next *cEdge
+		var next, els *cEdge
 		for _, oi := range cs.cOut[e.e.To] {
 			o := &procs.edge[oi]
+			if o.e.Else {
+				if els == nil {
+					els = o
+				}
+				continue
+			}
 			ok, err := o.guard.Truth(sys)
 			if err != nil {
 				return edges, "", err
@@ -236,6 +268,9 @@ func (cs *cycleSearch) claimStepFrom(sys []byte, first int32) (edges []int32, vi
 				next = o
 				break
 			}
+		}
+		if next == nil {
+			next = els // `else`: enabled only when no other edge of the location is
 		}
 		if next == nil {
 			return edges, "", nil // the atomic sequence blocks: the claim stays here
@@ -254,6 +289,11 @@ type cycleSearch struct {
 	cEnd   []bool
 	sysAcc [][]bool
 	fair   bool
+	// sys lists the indices of the processes that are not claims, in process
+	// order: under weak fairness copy k (1 <= k <= nproc) stands for process
+	// sys[k-1]. The claim need not be the last process of an IR (the Promela
+	// frontend, the LTL claim and np_ put it last, an IR from --ir does not).
+	sys []int
 	// noStutter turns the stutter extension off for this product. It is set
 	// for the np_ (non-progress) product and for nothing else; see the
 	// "Stutter extension" note above for why the two cases differ.
@@ -342,6 +382,7 @@ func runCycle(ctx0 *search, base *ir.Model, prop ir.Property, propIndex int, opt
 		}
 		if !c.procs[p].claim {
 			cs.nproc++
+			cs.sys = append(cs.sys, p)
 		}
 	}
 	if cs.claim >= 0 {
@@ -393,7 +434,9 @@ func runCycle(ctx0 *search, base *ir.Model, prop ir.Property, propIndex int, opt
 	// The outcome slot: cs.decide writes into s.res.Outcomes[0].
 	s.res.Outcomes = []Outcome{{Property: prop}}
 	s.undecided = 1
-	cs.run()
+	if err := cs.run(); err != nil {
+		return o, err
+	}
 	out := s.res.Outcomes[0]
 	cs.finish(&out)
 	cs.res.Elapsed = time.Since(start)
@@ -459,9 +502,10 @@ func (cs *cycleSearch) acceptingSys(sys []byte) bool {
 	return false
 }
 
-// blocked reports whether process p has no enabled move in sys.
+// blocked reports whether process p has no move of its own in sys: no
+// ordinary enabled edge and, in a timeout state, no enabled timeout edge.
 func (cs *cycleSearch) blocked(p int, sys []byte) (bool, error) {
-	ok, err := cs.s.hasEnabled(p, sys)
+	ok, err := cs.s.executable(p, sys)
 	return !ok, err
 }
 
@@ -479,9 +523,11 @@ func (cs *cycleSearch) nextProduct(f *frame, st []byte) (productMove, error) {
 					return productMove{null: true, toCopy: 1, claim: -1}, nil
 				}
 			case k == cs.nproc+1:
-				return productMove{null: true, toCopy: 0, claim: -1}, nil
+				// Every process has moved or been blocked once. No null step
+				// back to copy 0: the copy is left by the next step of the
+				// product (apply), so that no cycle consists of null steps.
 			default:
-				b, err := cs.blocked(k-1, sys)
+				b, err := cs.blocked(cs.sys[k-1], sys)
 				if err != nil {
 					return productMove{}, err
 				}
@@ -490,7 +536,7 @@ func (cs *cycleSearch) nextProduct(f *frame, st []byte) (productMove, error) {
 				}
 			}
 		}
-		if (k == 0 && cs.acceptingSys(sys)) || k == cs.nproc+1 {
+		if k == 0 && cs.acceptingSys(sys) {
 			return productMove{none: true}, nil
 		}
 	}
@@ -503,27 +549,51 @@ func (cs *cycleSearch) nextProduct(f *frame, st []byte) (productMove, error) {
 					f.cpos = 0
 				}
 				s.c.layout.Timeout = false
-				for int(f.cpos) < len(outs) {
-					e := &s.c.procs[cs.claim].edge[outs[f.cpos]]
+				// Two passes over the claim's edges: the ordinary ones, then the
+				// `else` edges, which are enabled only when no ordinary edge of
+				// the location is (cpos counts through both passes).
+				n := len(outs)
+				for int(f.cpos) < 2*n {
+					pos := int(f.cpos)
 					f.cpos++
-					ok, err := e.guard.Truth(sys)
-					if err != nil {
-						return productMove{}, err
+					second := pos >= n
+					if second {
+						pos -= n
+						if f.cany {
+							break
+						}
+					}
+					e := &s.c.procs[cs.claim].edge[outs[pos]]
+					if e.e.Else != second {
+						continue
+					}
+					ok := true
+					if !second {
+						var err error
+						if ok, err = e.guard.Truth(sys); err != nil {
+							return productMove{}, err
+						}
+						if ok {
+							f.cany = true
+						}
 					}
 					if ok {
 						f.cedge = int32(e.idx)
 						f.proc = -1
+						f.sysMoves = 0
 						return productMove{chosen: true, claim: f.cedge}, nil
 					}
 				}
 				return productMove{none: true}, nil
 			}
+			f.enabled = f.sysMoves
 			m, ok, err := s.nextEnabled(f, sys)
 			if err != nil {
 				return productMove{}, err
 			}
 			if ok {
 				f.sysSeen = true
+				f.sysMoves++
 				return productMove{claim: f.cedge, claimTo: int(f.cto), m: m}, nil
 			}
 			if !f.sysSeen && !f.stut && !cs.noStutter {
@@ -534,12 +604,14 @@ func (cs *cycleSearch) nextProduct(f *frame, st []byte) (productMove, error) {
 			f.cedge, f.stut = -1, false
 			continue
 		}
+		f.enabled = f.sysMoves
 		m, ok, err := s.nextEnabled(f, sys)
 		if err != nil {
 			return productMove{}, err
 		}
 		if ok {
 			f.sysSeen = true
+			f.sysMoves++
 			return productMove{claim: -1, m: m}, nil
 		}
 		if !f.sysSeen && !f.stut && !cs.noStutter {
@@ -563,6 +635,9 @@ func (cs *cycleSearch) apply(pm productMove) error {
 		if pm.claim >= 0 {
 			s.c.layout.WritePC(s.next, cs.claim, pm.claimTo)
 		}
+		if cs.fair && int(cs.pcur[cs.size]) == cs.nproc+1 {
+			cs.pnext[cs.size] = 0 // a step of the product closes the round
+		}
 		return nil
 	}
 	if _, err := s.fire(pm.m); err != nil {
@@ -574,8 +649,11 @@ func (cs *cycleSearch) apply(pm productMove) error {
 	if cs.fair {
 		k := int(cs.pcur[cs.size])
 		cs.pnext[cs.size] = byte(k)
-		if k >= 1 && k <= cs.nproc && pm.m.e != nil {
-			moved := pm.m.e.proc == k-1 || (pm.m.partner != nil && pm.m.partner.proc == k-1)
+		switch {
+		case k == cs.nproc+1:
+			cs.pnext[cs.size] = 0 // a step of the product closes the round
+		case k >= 1 && pm.m.e != nil:
+			moved := pm.m.e.proc == cs.sys[k-1] || (pm.m.partner != nil && pm.m.partner.proc == cs.sys[k-1])
 			if moved {
 				cs.pnext[cs.size] = byte(k + 1)
 			}
@@ -596,7 +674,7 @@ func newFrame(idx int32, pm productMove) frame {
 	f := frame{idx: idx, proc: -1, rv: -1, viaProc: -1, viaEdge: -1, viaPart: -1, viaClaim: -1, cpos: -1, cedge: -1}
 	switch {
 	case pm.null:
-		f.viaNull = int8(pm.toCopy + 1)
+		f.viaNull = int16(pm.toCopy + 1)
 	case pm.stutter:
 		f.viaNull, f.viaClaim = -1, pm.claim
 	case pm.m.e != nil:
@@ -653,8 +731,27 @@ func (cs *cycleSearch) memExtra() int64 {
 	return int64(len(s.stack))*frameBytes + int64(len(s.tmp))*int64(cs.pl) + int64(len(cs.inner))*2
 }
 
-// run is the outer DFS.
-func (cs *cycleSearch) run() {
+// balanced is the end-of-search check of the s.tmp discipline: every frame of
+// an intermediate atomic state pushes its state on s.tmp and pops it with the
+// frame, and the inner search's entries are released once its lasso is drawn,
+// so a search that has emptied the outer stack holds nothing in s.tmp. A
+// stale entry changes no verdict (a stale top entry is popped in its owner's
+// place), which is why nothing else would notice it; it would only grow the
+// stack and the memory estimate with every cycle found under --sweep. It is
+// an error of the engine (ErrInternal), not an outcome. A search that stopped
+// on a budget or a decision still has a stack, and its entries are the stack's.
+func (cs *cycleSearch) balanced() error {
+	s := cs.s
+	if len(s.stack) == 0 && len(s.tmp) != 0 {
+		return fmt.Errorf("%w: the cycle search ended with an empty stack but still holds %d intermediate atomic state(s) (a defect of mcd, not a verdict on the model)", ErrInternal, len(s.tmp))
+	}
+	return nil
+}
+
+// run is the outer DFS. It returns an error only for a defect of the engine
+// itself (ErrInternal: see balanced, and the closing-state lookup of
+// innerDFS); everything a model can do ends in a result.
+func (cs *cycleSearch) run() error {
 	s := cs.s
 	l := s.c.layout
 	init := make([]byte, cs.pl)
@@ -687,13 +784,22 @@ func (cs *cycleSearch) run() {
 		if pm.none {
 			if top.idx >= 0 {
 				if cs.accepting(cs.pcur) && s.stop == "" {
+					tmpBase := len(s.tmp)
 					closing, closeMove, ok, err := cs.innerDFS(int(top.idx), &istack)
+					if errors.Is(err, ErrInternal) {
+						// A defect of the engine, not a step the model
+						// cannot take: no verdict exists for the call.
+						return err
+					}
 					if err != nil {
 						s.fail(err.Error(), cs.path(nil, nil, -1))
 						break
 					}
 					if ok {
 						cs.foundCycle(closing, istack, closeMove)
+						// The lasso is drawn: release the intermediate
+						// states of the inner stack (see innerDFS).
+						s.tmp = s.tmp[:tmpBase]
 					}
 					if s.stop != "" {
 						break
@@ -759,19 +865,31 @@ func (cs *cycleSearch) run() {
 	if s.stop == "" && len(s.stack) == 0 {
 		s.stop = "complete"
 	}
+	return cs.balanced()
 }
 
 // innerDFS searches from the seed (the outer top, a stored accepting
 // state) for a path back to a state on the outer stack. It returns the
 // outer stack position the cycle closes at and the closing move; the
 // inner stack is left in istack for the trace.
+//
+// An intermediate atomic state is not stored: its frame addresses the state
+// in s.tmp by a negative index. A found cycle is rendered from istack after
+// this function has returned, and the frames of istack need those states
+// until then, so a found cycle leaves them in s.tmp and the caller truncates
+// s.tmp back to its length before the call when the trace is built. A search
+// that finds nothing, or fails, returns s.tmp as it found it.
 func (cs *cycleSearch) innerDFS(seed int, istack *[]frame) (closing int, closeMove productMove, found bool, err error) {
 	s := cs.s
 	*istack = (*istack)[:0]
 	*istack = pushFrame(*istack, newFrame(int32(seed), productMove{claim: -1}))
 	cs.inner[seed] = true
 	tmpBase := len(s.tmp)
-	defer func() { s.tmp = s.tmp[:tmpBase] }()
+	defer func() {
+		if !found {
+			s.tmp = s.tmp[:tmpBase]
+		}
+	}()
 	for len(*istack) > 0 && s.stop == "" {
 		top := &(*istack)[len(*istack)-1]
 		cs.load(top)
@@ -839,7 +957,7 @@ func (cs *cycleSearch) innerDFS(seed int, istack *[]frame) (closing int, closeMo
 					return i, pm, true, nil
 				}
 			}
-			return 0, pm, false, fmt.Errorf("internal: closing state %d not on the outer stack", idx)
+			return 0, pm, false, fmt.Errorf("%w: closing state %d not on the outer stack (a defect of mcd, not a verdict on the model)", ErrInternal, idx)
 		}
 		if cs.inner[idx] {
 			continue
@@ -911,7 +1029,7 @@ func (cs *cycleSearch) unfairNote(tr *cex.Trace) string {
 		}
 		always := true
 		for _, st := range cs.loopStates {
-			ok, err := cs.s.hasEnabled(p, st)
+			ok, err := cs.s.executable(p, st)
 			if err != nil || !ok {
 				always = false
 				break
@@ -1025,10 +1143,8 @@ func (cs *cycleSearch) renderMove(states *[][]byte, refs *[]cex.Ref, prev []byte
 		switch {
 		case pm.toCopy == 1:
 			note += ", leaving an accepting state)"
-		case pm.toCopy == 0:
-			note += ", every process has moved or been blocked once)"
 		default:
-			note += fmt.Sprintf(", process %s is blocked)", cs.s.c.m.Processes[pm.toCopy-2].Name)
+			note += fmt.Sprintf(", process %s is blocked)", cs.s.c.m.Processes[cs.sys[pm.toCopy-2]].Name)
 		}
 		*refs = append(*refs, cex.Ref{Null: true, Note: note})
 		*states = append(*states, append([]byte(nil), next...))

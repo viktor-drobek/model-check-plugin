@@ -336,6 +336,188 @@ Feature: G5 CTL labelling, vacuity hints, mc_estimate growth model, Promela v1
     When I check it with the CTL formula "EF (_nr_pr == 3)"
     Then the G5 property "ctl1" is "verified" with evidence "exhaustive"
 
+  # A model without `run` that reads `_nr_pr` carries the live-process table
+  # too, and its processes leave it when they end (steps/fix-nrpr-confirmation.md).
+  Scenario Outline: _nr_pr falls as processes end, also in a model without run (CTL over nrpr-order.pml)
+    Given the model "nrpr-order.pml" of the engine testdata
+    When I check it with the CTL formula "<formula>"
+    Then the G5 property "ctl1" is "<status>" with evidence "exhaustive"
+
+    Examples:
+      | formula          | status   |
+      | EF (_nr_pr == 3) | verified |
+      | EF (_nr_pr == 2) | verified |
+      | EF (_nr_pr == 1) | verified |
+      | EF (_nr_pr == 0) | verified |
+      | AG (_nr_pr == 3) | violated |
+
+  # The formula is read after the model has been lowered, so it cannot ask the
+  # frontend for the table. Over a model that keeps none, `_nr_pr` would be a
+  # count that never falls; the engine says so instead of answering with it.
+  Scenario: a CTL formula that reads _nr_pr over a model without a process table is refused
+    Given the model "nrpr-unread.pml" of the engine testdata
+    When I check it with the CTL formula "EF (_nr_pr == 0)"
+    Then the G5 property "ctl1" is "not-executed" with evidence "unknown"
+    And the reason of the G5 property "ctl1" mentions "process table"
+    And the reason of the G5 property "ctl1" mentions "_nr_pr"
+
+  # The refusal belongs to each property that reads the table, and whether the
+  # model keeps a table is decided by the model's own processes. A property an
+  # MCP client sends as IR (`{"op":"nrpr"}`) is read after the model was
+  # lowered too; it must not be answered with a count that never falls, and a
+  # sibling property that reads `_nr_pr` must not give the model a table that
+  # switches the refusal of the others off (steps/fix-nrpr-confirmation.md).
+  Scenario: an invariant and a reach property that read _nr_pr over a model without a process table are refused through MCP
+    Given a G5 session with the engine testdata model "nrpr-unread.pml" parsed
+    When I call mc_check in the G5 session with properties:
+      | id   | kind      | expr                                                                      |
+      | none | reach     | {"op":"eq","args":[{"op":"nrpr"},{"op":"const","value":0}]}              |
+      | two  | invariant | {"op":"eq","args":[{"op":"nrpr"},{"op":"const","value":2}]}              |
+      | sane | invariant | {"op":"le","args":[{"op":"var","var":"x"},{"op":"const","value":2}]}     |
+    Then the G5 call is not an error
+    And the G5 answer property "none" is "not-executed" with evidence "unknown"
+    And the G5 answer reason of "none" mentions "process table"
+    And the G5 answer reason of "none" mentions "_nr_pr"
+    And the G5 answer property "two" is "not-executed" with evidence "unknown"
+    And the G5 answer reason of "two" mentions "process table"
+    And the G5 answer reason of "two" mentions "_nr_pr"
+    And the G5 answer property "sane" is "verified" with evidence "exhaustive"
+    And the G5 answer property "sane" counts 10 states
+
+  Scenario: a sibling invariant that reads _nr_pr does not switch off the refusal of a CTL formula through MCP
+    Given a G5 session with the engine testdata model "nrpr-unread.pml" parsed
+    When I call mc_check in the G5 session with properties:
+      | id   | kind      | expr                                                                      | formula          |
+      | ef0  | ctl       |                                                                           | EF (_nr_pr == 0) |
+      | ge0  | invariant | {"op":"ge","args":[{"op":"nrpr"},{"op":"const","value":0}]}              |                  |
+    Then the G5 call is not an error
+    And the G5 answer property "ef0" is "not-executed" with evidence "unknown"
+    And the G5 answer reason of "ef0" mentions "_nr_pr"
+    And the G5 answer property "ge0" is "not-executed" with evidence "unknown"
+
+  Scenario: a sibling property that reads _nr_pr does not change what the others report
+    Given a G5 session with the engine testdata model "nrpr-unread.pml" parsed
+    When I call mc_check in the G5 session with properties:
+      | id   | kind      | expr                                                                      |
+      | sane | invariant | {"op":"le","args":[{"op":"var","var":"x"},{"op":"const","value":2}]}     |
+    Then the G5 answer property "sane" is "verified" with evidence "exhaustive"
+    And the G5 report has a state vector of 4 bytes
+    When I call mc_check in the G5 session with properties:
+      | id   | kind      | expr                                                                      |
+      | none | reach     | {"op":"eq","args":[{"op":"nrpr"},{"op":"const","value":0}]}              |
+      | sane | invariant | {"op":"le","args":[{"op":"var","var":"x"},{"op":"const","value":2}]}     |
+    Then the G5 answer property "sane" is "verified" with evidence "exhaustive"
+    And the G5 report has a state vector of 4 bytes
+
+  Scenario: the same properties are answered when the model's own processes read _nr_pr
+    Given a G5 session with the engine testdata model "nrpr-order.pml" parsed
+    When I call mc_check in the G5 session with properties:
+      | id    | kind      | expr                                                                      |
+      | none  | reach     | {"op":"eq","args":[{"op":"nrpr"},{"op":"const","value":0}]}              |
+      | three | invariant | {"op":"eq","args":[{"op":"nrpr"},{"op":"const","value":3}]}              |
+    Then the G5 answer property "none" is "verified" with evidence "exhaustive"
+    And the G5 answer property "three" is "violated" with evidence "exhaustive"
+
+  # mc_lint_property reads the same property the check will, so it has to say
+  # what the check will do with it. `_nr_pr` is a read of the state (the table
+  # in the vector), not a constant: the lint must not call the expression a
+  # vacuity candidate, and over a model that keeps no table it names the
+  # refusal that mc_check then returns (steps/fix-nrpr-confirmation.md).
+  Scenario: the lint of an expression that reads _nr_pr says it is not constant and names the refusal that mc_check returns
+    Given a G5 session with the engine testdata model "nrpr-unread.pml" parsed
+    When I call mc_lint_property in the G5 session with kind "invariant" and expr {"op":"eq","args":[{"op":"nrpr"},{"op":"const","value":2}]}
+    Then the G5 call is not an error
+    And the G5 lint says the expression is not constant
+    And the G5 lint notes do not mention "vacuity"
+    And the G5 lint notes mention "process table"
+    And the G5 lint notes mention "_nr_pr"
+    When I call mc_check in the G5 session with properties:
+      | id  | kind      | expr                                                          |
+      | two | invariant | {"op":"eq","args":[{"op":"nrpr"},{"op":"const","value":2}]} |
+    Then the G5 answer property "two" is "not-executed" with evidence "unknown"
+
+  Scenario: the lint of an expression that reads _nr_pr over a model whose processes keep the table has nothing to refuse
+    Given a G5 session with the engine testdata model "nrpr-order.pml" parsed
+    When I call mc_lint_property in the G5 session with kind "reach" and expr {"op":"eq","args":[{"op":"nrpr"},{"op":"const","value":2}]}
+    Then the G5 call is not an error
+    And the G5 lint says the expression is not constant
+    And the G5 lint notes do not mention "vacuity"
+    And the G5 lint notes do not mention "process table"
+
+  Scenario Outline: the lint calls an expression that reads a program counter, the timeout or a channel length not constant
+    Given a G5 session with the engine testdata model "nrpr-order.pml" parsed
+    When I call mc_lint_property in the G5 session with kind "reach" and expr <expr>
+    Then the G5 call is not an error
+    And the G5 lint says the expression is not constant
+    And the G5 lint notes do not mention "vacuity"
+
+    Examples:
+      | expr                                                                                           |
+      | {"op":"eq","args":[{"op":"pc","value":0},{"op":"const","value":0}]}                           |
+      | {"op":"timeout"}                                                                               |
+      | {"op":"eq","args":[{"op":"clen","args":[{"op":"const","value":0}]},{"op":"const","value":0}]} |
+
+  Scenario: the lint of a CTL formula that reads _nr_pr names the refusal only over a model without a process table
+    Given a G5 session with the engine testdata model "nrpr-unread.pml" parsed
+    When I call mc_lint_property in the G5 session with kind "ctl" and formula "EF (_nr_pr == 0)"
+    Then the G5 lint notes mention "process table"
+    Given a G5 session with the engine testdata model "nrpr-order.pml" parsed
+    When I call mc_lint_property in the G5 session with kind "ctl" and formula "EF (_nr_pr == 0)"
+    Then the G5 lint notes do not mention "process table"
+
+  Scenario: a property of an IR that reads _nr_pr while its processes keep no process table is refused on the command line too
+    Given the IR "testdata/ir/nrpr-property.json" of the engine testdata
+    When I check it sweeping the whole graph
+    Then the run exits with 0
+    And the G5 property "none" is "not-executed" with evidence "unknown"
+    And the reason of the G5 property "none" mentions "_nr_pr"
+    And the G5 property "two" is "not-executed" with evidence "unknown"
+    And the G5 property "deadlock" is "verified" with evidence "exhaustive"
+    And the G5 property "sane" is "verified" with evidence "exhaustive"
+    And the G5 state count is 5
+
+  # An LTL formula cannot read `_nr_pr` at all (it is not a variable of the
+  # model), so no temporal property can bypass the refusal.
+  Scenario: an LTL formula that reads _nr_pr is rejected, through MCP as on the command line
+    Given a G5 session with the engine testdata model "nrpr-unread.pml" parsed
+    When I call mc_check in the G5 session with properties:
+      | id | kind | formula             |
+      | l1 | ltl  | [] (_nr_pr >= 0)    |
+    Then the G5 answer is rejected with a reason that mentions "_nr_pr"
+
+  # A documented divergence, pinned (steps/fix-nrpr-confirmation.md): pan
+  # counts the never claim in `_nr_pr`, and an `ltl` formula checked with -a is
+  # a claim too; this engine counts only the model's own processes. A verdict
+  # that reads `_nr_pr` and is checked under a claim can therefore differ from
+  # pan's, while the same model without a claim agrees (the nrpr-* rows of
+  # g1-promela.feature). These scenarios assert the difference itself, so that
+  # they fail, and the documentation has to move with them, if the engine ever
+  # counts the claim.
+  @spin
+  Scenario Outline: a never claim over a model that reads _nr_pr — pan counts the claim, the engine does not (documented divergence)
+    Given spin and gcc are on PATH
+    And the model "spin-divergence/<model>" of the engine testdata for the G5 differential check
+    When I compare it with pan
+    Then the comparison reports the verdict "<pan>" for pan and "<engine>" for the engine
+
+    Examples:
+      | model                  | pan         | engine      |
+      | nrpr-claim-zero.pml    | no error    | error found |
+      | nrpr-claim-three.pml   | error found | no error    |
+      | nrpr-claim-assert.pml  | no error    | error found |
+
+  @spin
+  Scenario Outline: an LTL formula over a model that reads _nr_pr — pan counts the formula's claim, the engine does not (documented divergence)
+    Given spin and gcc are on PATH
+    And the model "spin-divergence/nrpr-ltl.pml" of the engine testdata for the G5 differential check
+    When I compare the engine, the SPIN claim and pan for "<formula>" under fairness "none"
+    Then for the formula the engine says "<engine>" and pan says "<pan>"
+
+    Examples:
+      | formula      | engine   | pan      |
+      | <> (x == 1)  | verified | violated |
+      | [] (x == 0)  | violated | verified |
+
   Scenario: run beyond the engine's process pool is a declared bound, not a wrong answer
     Given the model "CH3/splurge.pml" of the corpus
     When I check it sweeping the whole graph with max-procs 4

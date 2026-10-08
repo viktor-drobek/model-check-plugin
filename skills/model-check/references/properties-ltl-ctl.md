@@ -145,6 +145,19 @@ logics are incomparable (05 гл. 6; 03 гл. 2; 09 гл. 2).
   `not-executed` with that reason, never as a quietly unfair answer. So a CTL result is
   always a fairness-free result — say so, and put a liveness question that needs a
   fairness assumption in LTL.
+- **`_nr_pr`.** A CTL atom may read `_nr_pr`, the number of live processes (an `--ltl`
+  formula cannot: it rejects `_nr_pr` as an undeclared variable, through MCP as well).
+  The count falls when a process ends only if the model keeps the process table, which
+  the frontend does when the model creates processes with `run` or reads `_nr_pr`
+  itself; the table is decided by the model's own processes and by nothing a property
+  says. A property that reads `_nr_pr` over a model with no table comes back
+  `not-executed` with that reason, because the count would never fall: this holds for
+  a CTL formula and equally for an `invariant` or `reach` expression sent to `mc_check`
+  as IR (`{"op":"nrpr"}`), and it holds property by property, so a sibling property
+  that reads `_nr_pr` does not make another one answerable; `mc_lint_property` names the
+  refusal in a note before the check. Put a read of `_nr_pr` into the model (for
+  instance `assert(_nr_pr >= 0)` in one process) and ask again. SPIN has
+  no CTL; for what `_nr_pr` means under a claim see §6, item 6.
 - **Witness shape** (what the engine builds, not what the logic allows). LTL violation:
   usually a lasso, sometimes a bad prefix with no loop — read `counterexample.loop`. CTL: a path for
   `EF`/`EG` witnesses and for `AG p` violations; a tree for violations of nested
@@ -171,10 +184,10 @@ accepts both (eval E6 in plan §8.2 checks exactly this).
 
 A `never { }` claim in the model becomes a property `never` (kind `ltl`) that the
 frontend adds by itself; a `--ltl 'φ'` formula is compiled into exactly the same
-kind of claim process, named `never:ltl1`, for the automaton of **`!φ`**. Five
-details of how the engine runs a claim decide what a counterexample means; all five
-match `pan`, and the differential oracle of `steps/g4-confirmation.md` §3.1 is what
-says so.
+kind of claim process, named `never:ltl1`, for the automaton of **`!φ`**. Six
+details of how the engine runs a claim decide what a counterexample means; the first
+four match `pan` (the differential oracle of `steps/g4-confirmation.md` §3.1 is what
+says so), the last two are the places where it deliberately differs.
 
 1. **The claim moves first.** At every step the claim takes its transition and then
    the system takes one. A claim step is therefore interleaved into the trace before
@@ -209,7 +222,19 @@ says so.
    not a disagreement about the model; it is a different question being answered. If
    a user is comparing your output with SPIN's, say this before they find it — and
    note the symmetric fact that the *claim* verdicts and the product state counts do
-   agree (43 differential triples, G4 §3.1).
+   agree (43 differential triples, G4 §3.1), on models that do not read `_nr_pr` (item 6).
+6. **`_nr_pr` — the second place where the engine differs from `pan`.** `pan` counts the
+   claim, a `never { }` claim or the one `spin -f` makes for an `ltl` formula, as a
+   process in `_nr_pr`; the engine counts the model's own processes only. A model whose
+   processes read `_nr_pr` can therefore get a different verdict under a claim than under
+   `pan -a`, in either direction. Measured on SPIN 6.5.2 with two processes that end at
+   once: `never { do :: (_nr_pr == 0) -> break :: else od }` is violated by the engine
+   and clean in `pan`; the same claim on `_nr_pr == 3` ends at once in `pan` and never
+   fires in the engine; with `(_nr_pr == 1)` in front of `x = 1`, `<> (x == 1)` is
+   verified by the engine and violated by `pan`, and `[] (x == 0)` the reverse. The same
+   models without a claim agree with `pan -c0`. Do not carry a `_nr_pr`-dependent claim
+   verdict from one tool to the other, and say so before the user compares them. The
+   models are `testdata/spin-divergence/`; the record is `steps/fix-nrpr-confirmation.md`.
 
 When you hand-write a claim, state in the report which language it accepts: the
 corpus file `CH4/prop.pml` carries both `[]p` and `![]p` as never claims under

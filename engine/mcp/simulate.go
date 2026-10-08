@@ -98,7 +98,7 @@ func (s *Server) simulate(ctx context.Context, req *sdk.CallToolRequest, in Simu
 	if err != nil {
 		return nil, nil, err
 	}
-	timer := begin(sess, "mc_simulate")
+	timer := s.begin(ctx, sess, "mc_simulate")
 	seed := in.Seed
 	params := &Params{Mode: in.Mode, Steps: steps}
 	if in.Mode == "random" {

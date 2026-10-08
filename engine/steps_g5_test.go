@@ -143,6 +143,14 @@ func registerG5Steps(sc *godog.ScenarioContext) {
 		w.diffModel = p
 		return nil
 	})
+	sc.Step(`^the model "([^"]*)" of the engine testdata for the G5 differential check$`, func(name string) error {
+		p := filepath.Join("testdata", name)
+		if _, err := os.Stat(p); err != nil {
+			return err
+		}
+		w.diffModel = p
+		return nil
+	})
 	// The corpus file writes `#define N 7` outright, so a -D on the command
 	// line is overridden by the file itself. Cutting the ring to three nodes
 	// means rewriting that one line; nothing else of the model is touched.
@@ -227,6 +235,13 @@ func registerG5Steps(sc *godog.ScenarioContext) {
 
 	sc.Step(`^a G5 session with the corpus model "([^"]*)" parsed$`, func(name string) error {
 		src, err := os.ReadFile(filepath.Join(corpusDir, name))
+		if err != nil {
+			return err
+		}
+		return call("mc_parse", map[string]any{"promela": string(src)})
+	})
+	sc.Step(`^a G5 session with the engine testdata model "([^"]*)" parsed$`, func(name string) error {
+		src, err := os.ReadFile(filepath.Join("testdata/promela", name))
 		if err != nil {
 			return err
 		}
@@ -321,6 +336,13 @@ func registerG5Steps(sc *godog.ScenarioContext) {
 	})
 	sc.Step(`^I call mc_lint_property in the G5 session with kind "([^"]*)" and formula "([^"]*)"$`, func(kind, f string) error {
 		return call("mc_lint_property", map[string]any{"session_id": w.sess, "kind": kind, "formula": f})
+	})
+	sc.Step(`^I call mc_lint_property in the G5 session with kind "([^"]*)" and expr (.*)$`, func(kind, expr string) error {
+		var e any
+		if err := json.Unmarshal([]byte(expr), &e); err != nil {
+			return fmt.Errorf("the expr is not JSON: %w", err)
+		}
+		return call("mc_lint_property", map[string]any{"session_id": w.sess, "kind": kind, "expr": e})
 	})
 	sc.Step(`^I call mc_estimate in the G5 session with (\d+) ms and target depth (\d+)$`, func(ms, depth int) error {
 		return call("mc_estimate", map[string]any{"session_id": w.sess, "ms": ms, "target_depth": depth})
@@ -723,6 +745,60 @@ func registerG5Steps(sc *godog.ScenarioContext) {
 		}
 		return nil
 	})
+	sc.Step(`^the G5 answer reason of "([^"]*)" mentions "([^"]*)"$`, func(id, text string) error {
+		p, err := answerProp(id)
+		if err != nil {
+			return err
+		}
+		reason, _ := p["reason"].(string)
+		if !strings.Contains(reason, text) {
+			return fmt.Errorf("answer property %s: reason %q does not mention %q", id, reason, text)
+		}
+		return nil
+	})
+	sc.Step(`^the G5 answer property "([^"]*)" counts (\d+) states$`, func(id string, n int) error {
+		p, err := answerProp(id)
+		if err != nil {
+			return err
+		}
+		c, _ := p["counters"].(map[string]any)
+		if got := g5Int(c["states"]); got != n {
+			return fmt.Errorf("answer property %s counts %d states, want %d", id, got, n)
+		}
+		return nil
+	})
+	sc.Step(`^the G5 report has a state vector of (\d+) bytes$`, func(n int) error {
+		path, _ := w.out["report_path"].(string)
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		var rep struct {
+			Model struct {
+				StateBytes int `json:"state_bytes"`
+			} `json:"model"`
+		}
+		if err := json.Unmarshal(data, &rep); err != nil {
+			return err
+		}
+		if rep.Model.StateBytes != n {
+			return fmt.Errorf("the report has a state vector of %d bytes, want %d", rep.Model.StateBytes, n)
+		}
+		return nil
+	})
+	sc.Step(`^the G5 answer is rejected with a reason that mentions "([^"]*)"$`, func(text string) error {
+		if w.out == nil {
+			return fmt.Errorf("no answer (error: %s)", w.errTxt)
+		}
+		if w.out["outcome"] != "rejected" {
+			return fmt.Errorf("the answer is not a rejection: %v", w.out["outcome"])
+		}
+		rej, _ := w.out["rejection"].(map[string]any)
+		if reason, _ := rej["reason"].(string); !strings.Contains(reason, text) {
+			return fmt.Errorf("rejection reason %q does not mention %q", reason, text)
+		}
+		return nil
+	})
 	sc.Step(`^the G5 answer property "([^"]*)" has no witness$`, func(id string) error {
 		p, err := answerProp(id)
 		if err != nil {
@@ -772,6 +848,25 @@ func registerG5Steps(sc *godog.ScenarioContext) {
 			}
 		}
 		return fmt.Errorf("lint notes %v do not mention %q", notes, text)
+	})
+	sc.Step(`^the G5 lint says the expression is (constant|not constant)$`, func(which string) error {
+		got, ok := w.out["constant"].(bool)
+		if !ok {
+			return fmt.Errorf("the lint has no constant field: %v", w.out)
+		}
+		if got != (which == "constant") {
+			return fmt.Errorf("lint constant = %v, want %s (notes %v)", got, which, w.out["notes"])
+		}
+		return nil
+	})
+	sc.Step(`^the G5 lint notes do not mention "([^"]*)"$`, func(text string) error {
+		notes, _ := w.out["notes"].([]any)
+		for _, n := range notes {
+			if strings.Contains(fmt.Sprint(n), text) {
+				return fmt.Errorf("lint note %q mentions %q", n, text)
+			}
+		}
+		return nil
 	})
 	sc.Step(`^the G5 lint reports a type error mentioning "([^"]*)"$`, func(text string) error {
 		msg, _ := w.out["type_error"].(string)
@@ -917,6 +1012,30 @@ func registerG5Steps(sc *godog.ScenarioContext) {
 		}
 		return nil
 	})
+	sc.Step(`^the comparison reports the verdict "([^"]*)" for pan and "([^"]*)" for the engine$`, func(pan, engine string) error {
+		if w.cmp == nil {
+			return fmt.Errorf("no comparison was run")
+		}
+		for _, r := range w.cmp.Rows {
+			if r.Name != "verdict" {
+				continue
+			}
+			if r.Pan != pan || r.Engine != engine {
+				return fmt.Errorf("verdict: pan %q, engine %q, want pan %q, engine %q\n%s", r.Pan, r.Engine, pan, engine, w.cmp.Table(w.diffModel))
+			}
+			return nil
+		}
+		return fmt.Errorf("the comparison has no verdict row")
+	})
+	sc.Step(`^for the formula the engine says "([^"]*)" and pan says "([^"]*)"$`, func(engine, pan string) error {
+		if w.triple == nil {
+			return fmt.Errorf("no triple was run")
+		}
+		if w.triple.Engine != engine || w.triple.Pan != pan {
+			return fmt.Errorf("engine %q, pan %q, want engine %q, pan %q: %s", w.triple.Engine, w.triple.Pan, engine, pan, w.triple.Row())
+		}
+		return nil
+	})
 	sc.Step(`^the three G5 verdicts agree$`, func() error {
 		if w.triple == nil {
 			return fmt.Errorf("no triple was run")
@@ -957,6 +1076,14 @@ func g5Props(t *godog.Table) ([]map[string]any, error) {
 		for i, c := range r.Cells {
 			v := strings.TrimSpace(c.Value)
 			if v == "" {
+				continue
+			}
+			if head[i] == "expr" && strings.HasPrefix(v, "{") {
+				var e any
+				if err := json.Unmarshal([]byte(v), &e); err != nil {
+					return nil, fmt.Errorf("the expr cell %s is not JSON: %w", v, err)
+				}
+				p["expr"] = e
 				continue
 			}
 			p[head[i]] = v

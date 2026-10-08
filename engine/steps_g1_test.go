@@ -449,6 +449,47 @@ func registerG1Steps(sc *godog.ScenarioContext) {
 		}
 		return nil
 	})
+	sc.Step(`^the output is byte-identical to the file "([^"]*)"$`, func(path string) error {
+		want, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		if !bytes.Equal(want, w.stdout.Bytes()) {
+			return fmt.Errorf("output differs from %s:\n%s", path, w.stdout.String())
+		}
+		return nil
+	})
+	// The golden report was produced by the engine before the change it pins;
+	// only the engine version is allowed to move, so that a version bump does
+	// not invalidate it.
+	sc.Step(`^the report equals the file "([^"]*)" apart from the engine version$`, func(path string) error {
+		strip := func(raw []byte) ([]byte, error) {
+			var m map[string]any
+			if err := json.Unmarshal(raw, &m); err != nil {
+				return nil, err
+			}
+			if eng, ok := m["engine"].(map[string]any); ok {
+				delete(eng, "version")
+			}
+			return json.Marshal(m)
+		}
+		want, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		jw, err := strip(want)
+		if err != nil {
+			return fmt.Errorf("%s: %w", path, err)
+		}
+		jg, err := strip(w.stdout.Bytes())
+		if err != nil {
+			return fmt.Errorf("stdout is not JSON (exit %d): %w\n%s", w.exit, err, w.stdout.String())
+		}
+		if !bytes.Equal(jw, jg) {
+			return fmt.Errorf("report differs from %s beyond the engine version:\n%s\n---\n%s", path, jw, jg)
+		}
+		return nil
+	})
 	sc.Step(`^the IR names the processes "([^"]*)"$`, func(names string) error {
 		m, err := w.irDoc()
 		if err != nil {

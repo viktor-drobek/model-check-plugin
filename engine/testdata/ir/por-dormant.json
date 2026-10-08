@@ -1,0 +1,53 @@
+{
+  "schema": "mcd-ir/1",
+  "name": "por-test",
+  "processes": [
+    {
+      "name": "S",
+      "locations": [
+        {},
+        {}
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 1,
+          "run": {
+            "proc": 1,
+            "entry": 1
+          },
+          "text": "run D()"
+        }
+      ]
+    },
+    {
+      "name": "D",
+      "locations": [
+        {},
+        {},
+        {}
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 1,
+          "to": 2,
+          "text": "work"
+        },
+        {
+          "from": 2,
+          "to": 0,
+          "text": "back to dormant, still in the table"
+        }
+      ],
+      "dynamic": true
+    }
+  ],
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock"
+    }
+  ]
+}

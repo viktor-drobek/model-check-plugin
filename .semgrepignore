@@ -1,0 +1,4 @@
+# Paths semgrep must not scan beyond what .gitignore already excludes. Only entries a local tree can hold but CI never sees belong here.
+.venv/
+venv/
+dist/

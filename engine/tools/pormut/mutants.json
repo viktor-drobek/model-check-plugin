@@ -1,0 +1,442 @@
+[
+  {
+    "id": "b1-pc-refinement-own",
+    "rule": "base",
+    "old": "own[p][ei] = a.edge(p, e, true, dirOK)",
+    "new": "own[p][ei] = a.edge(p, e, whole[e.From], dirOK)",
+    "gens": "base",
+    "note": "Resurrected 0.2.0 bug, first review of step 2: the refinement 'pc(j) == c is a read of j at c' applied to the edges expanded alone. A step of j into c then enables an alternative of the process expanded alone."
+  },
+  {
+    "id": "b2-channel-requirement-off",
+    "rule": "base",
+    "old": "\tl := s.c.layout\n\tfor _, q := range reqs {",
+    "new": "\treturn true\n\tl := s.c.layout\n\tfor _, q := range reqs {",
+    "gens": "base",
+    "note": "Resurrected 0.2.0 requirement of step 4 removed: a process with a channel operation among its alternatives is expanded alone even where the other end can enable one of them."
+  },
+  {
+    "id": "b3-visibility-off",
+    "rule": "base",
+    "old": "if vis.hits(x) {",
+    "new": "if false && vis.hits(x) {",
+    "gens": "base",
+    "note": "Resurrected 0.2.0 C2 removed: a write that an invariant or reach expression reads may be postponed behind other processes' steps. Step 2 recorded that the verdict oracle did not see this."
+  },
+  {
+    "id": "b4-proviso-off",
+    "rule": "proviso",
+    "old": "if r.noProviso || r.leavesStack(s, moves, &budget) {",
+    "new": "if true || r.leavesStack(s, moves, &budget) {",
+    "gens": "base",
+    "note": "The cycle proviso removed: a loop of one process's local steps hides every other process."
+  },
+  {
+    "id": "a1-closure-no-atomic",
+    "rule": "A",
+    "old": "if e := cp.edge[ei].e; !e.DStep && !e.Atomic {",
+    "new": "if e := cp.edge[ei].e; !e.DStep {",
+    "gens": "atomic,loop,run-atomic,base",
+    "note": "The closure does not follow an Atomic edge: the footprint of a sequence is its first edge's."
+  },
+  {
+    "id": "a2-closure-atomic-one-hop",
+    "rule": "A",
+    "old": "\tfor _, oi := range cp.out[cp.edge[ei].e.To] {\n\t\ta.closure(p, oi, foot, seen, into)\n\t}",
+    "new": "\tfor _, oi := range cp.out[cp.edge[ei].e.To] {\n\t\tif cp.edge[ei].e.Atomic && cp.edge[oi].e.Atomic {\n\t\t\tinto.merge(foot[p][oi])\n\t\t\tcontinue\n\t\t}\n\t\ta.closure(p, oi, foot, seen, into)\n\t}",
+    "gens": "atomic,loop,run-atomic,base",
+    "note": "After an Atomic edge the next Atomic edge's footprint is merged but its own continuation is not followed: a sequence of three or more edges loses its tail."
+  },
+  {
+    "id": "a3-whole-not-set-for-atomic",
+    "rule": "A",
+    "old": "if e.DStep || e.Atomic {",
+    "new": "if e.DStep {",
+    "gens": "atomic,loop,run-atomic,base",
+    "note": "A location an atomic edge enters is not read whole: its program-counter guards are refined to 'at c' and its channel operations are the directed ends."
+  },
+  {
+    "id": "a4-dirok-for-atomic-edge",
+    "rule": "A",
+    "old": "dirOK := !whole[e.From] && !e.DStep && !e.Atomic",
+    "new": "dirOK := !whole[e.From] && !e.DStep",
+    "gens": "atomic,loop,run-atomic,base,atomic-reads",
+    "expect": "equivalent",
+    "note": "The atomic edge's own channel operation keeps the directed rule. Expected equivalent: only the first edge's own operation is concerned, and its continuations are whole by the location rule; the plan clears it only to have one argument fewer. If a model kills it the rule is not equivalent and the plan's text must change."
+  },
+  {
+    "id": "a5-continuation-writes-dropped",
+    "rule": "A",
+    "old": "\tfor _, oi := range cp.out[cp.edge[ei].e.To] {\n\t\ta.closure(p, oi, foot, seen, into)\n\t}",
+    "new": "\tfor _, oi := range cp.out[cp.edge[ei].e.To] {\n\t\tvar sub porFoot\n\t\ta.closure(p, oi, foot, seen, &sub)\n\t\tsub.writes = nil\n\t\tinto.merge(&sub)\n\t}",
+    "gens": "atomic,loop,run-atomic,base",
+    "note": "The writes of the edges a sequence goes on into are not part of its footprint (reads are)."
+  },
+  {
+    "id": "a6-proviso-intermediate-is-off-the-stack",
+    "rule": "A",
+    "old": "\tif !inter {\n\t\tidx, ok := s.visited.Has(s.next)",
+    "new": "\tif !inter || true {\n\t\tidx, ok := s.visited.Has(s.next)",
+    "gens": "atomic,loop,run-atomic,base",
+    "note": "The proviso treats the state after the first micro-step of a sequence as the stored successor: it is never on the stack, so a cycle through a sequence is not seen."
+  },
+  {
+    "id": "a7-proviso-first-branch-only",
+    "rule": "A",
+    "old": "\t\tif !r.chainLeaves(s, here, m2, depth+1, budget) {\n\t\t\treturn false\n\t\t}",
+    "new": "\t\treturn r.chainLeaves(s, here, m2, depth+1, budget)",
+    "gens": "atomic,loop,run-atomic,base",
+    "note": "The proviso follows the first branch of a chain only. On a depth-first search this gives no wrong verdict that could be built (the search reaches a fully expanded state elsewhere); it is a violation of C3 as a property of the graph, and only the acyclicity audit sees it."
+  },
+  {
+    "id": "a7b-proviso-first-move-only",
+    "rule": "A",
+    "old": "\tfor _, m := range moves {\n\t\tif !r.chainLeaves(s, s.cur, m, 0, budget) {\n\t\t\treturn false\n\t\t}\n\t}\n\treturn true",
+    "new": "\treturn r.chainLeaves(s, s.cur, moves[0], 0, budget)",
+    "gens": "atomic,loop,run-atomic,base",
+    "note": "The proviso looks at the first ample move only (the perf2 mutant, kept after the rewrite of leavesStack)."
+  },
+  {
+    "id": "a8-closure-atomic-not-after-dstep",
+    "rule": "A",
+    "old": "\tfor _, oi := range cp.out[cp.edge[ei].e.To] {\n\t\ta.closure(p, oi, foot, seen, into)\n\t}",
+    "new": "\tfor _, oi := range cp.out[cp.edge[ei].e.To] {\n\t\tif cp.edge[ei].e.DStep && !cp.edge[ei].e.Atomic && cp.edge[oi].e.Atomic && !cp.edge[oi].e.DStep {\n\t\t\tinto.merge(foot[p][oi])\n\t\t\tcontinue\n\t\t}\n\t\ta.closure(p, oi, foot, seen, into)\n\t}",
+    "gens": "atomic,loop,run-atomic,base",
+    "note": "An Atomic edge reached from a d_step edge is merged but not followed: the closure does not cross from the d_step mechanism to the atomic one (trap 11)."
+  },
+  {
+    "id": "a9-visibility-first-edges-only",
+    "rule": "A",
+    "old": "\t\t\tfor _, x := range u.writes {\n\t\t\t\tif vis.hits(x) {\n\t\t\t\t\tok = false\n\t\t\t\t}\n\t\t\t}",
+    "new": "\t\t\tfor _, ei := range cp.out[l] {\n\t\t\t\tfor _, x := range own[p][ei].writes {\n\t\t\t\t\tif vis.hits(x) {\n\t\t\t\t\t\tok = false\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}",
+    "gens": "atomic,loop,run-atomic,base",
+    "note": "Visibility is judged on the first edges' writes, not on those of the whole macro-step."
+  },
+  {
+    "id": "a10-chain-limit-answers-leaves",
+    "rule": "A",
+    "old": "\tif *budget--; *budget < 0 || depth > r.chainMax() {\n\t\treturn false\n\t}",
+    "new": "\tif *budget--; *budget < 0 {\n\t\treturn false\n\t}\n\tif depth > r.chainMax() {\n\t\treturn true\n\t}",
+    "gens": "atomic,loop,run-atomic,base",
+    "note": "A chain longer than the limit counts as leaving the stack instead of not leaving."
+  },
+  {
+    "id": "a11-pick-budget-answers-leaves",
+    "rule": "A",
+    "old": "\tif *budget--; *budget < 0 || depth > r.chainMax() {\n\t\treturn false\n\t}",
+    "new": "\tif *budget--; *budget < 0 {\n\t\treturn true\n\t}\n\tif depth > r.chainMax() {\n\t\treturn false\n\t}",
+    "gens": "atomic,loop,run-atomic,base",
+    "note": "Exhausting the budget of one pick counts as leaving the stack instead of not leaving."
+  },
+  {
+    "id": "a12-error-in-chain-leaves",
+    "rule": "A",
+    "old": "\tif err != nil || failed != nil {\n\t\treturn false\n\t}\n\tinter, err := s.intermediate(s.next)",
+    "new": "\tif err != nil || failed != nil {\n\t\treturn true\n\t}\n\tinter, err := s.intermediate(s.next)",
+    "gens": "atomic,loop,run-atomic,base,atomic-reads",
+    "expect": "pinned",
+    "note": "An error or a failing assert inside a chain counts as leaving the stack. Pinned: no oracle sees it and a directed test does. In production the clause is out of reach for a failing assert, because a location whose closure has an assert is never eligible (`!u.assert`, the mutant x10), so no failing assert gets to the proviso's walk; and O3 skips the steps that fail (por_acyclic_test.go), so a cycle through a failing step is invisible to every oracle. It is harmless only while the clause of x10 stands: with both removed the reduced search answers `verified` for an invariant the full search violates (the combination x10a12-assert-guards-both-removed, a false verified on hand-written IR). Pinned by the directed test TestPORAFailingAssertInAChainIsNotALeavingStepWhateverTheAnalysisSays, which makes the process eligible by hand (forcedPlan) and wants the full expansion. An evaluation error in a chain ends the search at that error in both searches; the clause is not what protects a verdict there."
+  },
+  {
+    "id": "r1-run-writes-no-table",
+    "rule": "R",
+    "old": "\tf.writes = append(f.writes, porTable)\n\tfor _, q := range r.Targets() {",
+    "new": "\tfor _, q := range r.Targets() {",
+    "gens": "run,run-atomic,base",
+    "note": "A run does not write the table: it no longer conflicts with the ends of processes or with a reader of the table."
+  },
+  {
+    "id": "r2-leave-writes-no-table",
+    "rule": "R",
+    "old": "\tif e.Leave {\n\t\tf.writes = append(f.writes, porTable)\n\t}",
+    "new": "\tif e.Leave {\n\t}",
+    "gens": "run,run-atomic,base",
+    "note": "An edge that leaves the table does not write it: two ends, or an end and a run, are independent."
+  },
+  {
+    "id": "r3-table-reads-dropped",
+    "rule": "R",
+    "old": "\tcase \"nrpr\", \"pid\", \"youngest\":\n\t\tf.reads = append(f.reads, porTable)",
+    "new": "\tcase \"nrpr\", \"pid\", \"youngest\":",
+    "gens": "run,run-atomic,base",
+    "note": "nrpr, pid and youngest read nothing: a guard on the table is not enabled or disabled by a run or an end."
+  },
+  {
+    "id": "r3n-nrpr-read-dropped",
+    "rule": "R",
+    "old": "\tcase \"nrpr\", \"pid\", \"youngest\":\n\t\tf.reads = append(f.reads, porTable)",
+    "new": "\tcase \"nrpr\", \"pid\", \"youngest\":\n\t\tif e.Op != \"nrpr\" {\n\t\t\tf.reads = append(f.reads, porTable)\n\t\t}",
+    "gens": "run,run-atomic,base",
+    "note": "nrpr reads nothing."
+  },
+  {
+    "id": "r3y-youngest-read-dropped",
+    "rule": "R",
+    "old": "\tcase \"nrpr\", \"pid\", \"youngest\":\n\t\tf.reads = append(f.reads, porTable)",
+    "new": "\tcase \"nrpr\", \"pid\", \"youngest\":\n\t\tif e.Op != \"youngest\" {\n\t\t\tf.reads = append(f.reads, porTable)\n\t\t}",
+    "gens": "run,run-atomic,base",
+    "note": "youngest reads nothing: a guard on `youngest` in an edge that is not an end edge is not enabled or disabled by a run or an end. (I expected this one to be equivalent, because the end edges that carry the guard also write the table; the generator's guards on `youngest` in ordinary edges kill it.)"
+  },
+  {
+    "id": "r3p-pid-read-dropped",
+    "rule": "R",
+    "old": "\tcase \"nrpr\", \"pid\", \"youngest\":\n\t\tf.reads = append(f.reads, porTable)",
+    "new": "\tcase \"nrpr\", \"pid\", \"youngest\":\n\t\tif e.Op != \"pid\" {\n\t\t\tf.reads = append(f.reads, porTable)\n\t\t}",
+    "gens": "run,run-atomic,base",
+    "note": "pid reads nothing (the frontend folds _pid to a constant; the operator appears in direct IR only)."
+  },
+  {
+    "id": "r7-run-first-target-only",
+    "rule": "R",
+    "old": "\tfor _, q := range r.Targets() {\n\t\tdormant :=",
+    "new": "\tfor _, q := range r.Targets()[:1] {\n\t\tdormant :=",
+    "gens": "run,run-atomic,base",
+    "note": "The footprint of a run covers the first slot of its pool only."
+  },
+  {
+    "id": "r8-dormant-counter-not-written",
+    "rule": "R",
+    "old": "\t\tf.reads = append(f.reads, dormant)\n\t\tf.writes = append(f.writes, dormant)",
+    "new": "\t\tf.reads = append(f.reads, dormant)",
+    "gens": "run,run-atomic,base",
+    "note": "The run does not write the program counter of its target at the dormant location: a guard on the counter of a process with no edge of its own is enabled by nothing the analysis sees (the false verified of the plan, section 4.4, trap 3)."
+  },
+  {
+    "id": "r13-dormancy-read-dropped",
+    "rule": "R",
+    "old": "\t\tf.reads = append(f.reads, dormant)\n\t\tf.writes = append(f.writes, dormant)",
+    "new": "\t\tf.writes = append(f.writes, dormant)",
+    "gens": "run,run-atomic,base",
+    "expect": "equivalent",
+    "note": "The run does not read the dormancy of its slots. Expected equivalent, like the pool-slot cell of the first prototype: every writer of the counter at the dormant location is a run (which writes it as well) or an edge that leaves the table (check c1, which writes the table), so the write already orders the run against all of them."
+  },
+  {
+    "id": "r9-args-reads-dropped",
+    "rule": "R",
+    "old": "\tfor _, x := range r.Args {\n\t\ta.reads(x, p, f)\n\t}",
+    "new": "",
+    "gens": "run,run-atomic,base",
+    "note": "The arguments of a run are not read: the new process gets the value at the moment of the run, which another process's write changes."
+  },
+  {
+    "id": "r10-init-reads-dropped",
+    "rule": "R",
+    "old": "\t\t\ta.reads(as.Index, q, f)\n\t\t\ta.reads(as.Value, q, f)\n",
+    "new": "",
+    "gens": "run,run-atomic,base",
+    "note": "The initialisers of the new process are not read."
+  },
+  {
+    "id": "r11-check-c1-removed",
+    "rule": "R",
+    "old": "if e := &pr.Edges[ei]; e.To == pr.Initial && !e.Leave {",
+    "new": "if e := &pr.Edges[ei]; e.To == pr.Initial && !e.Leave && false {",
+    "gens": "run,run-atomic,base",
+    "note": "Check c1 removed: a dynamic process goes back to its dormant location without leaving the table, and the slot becomes free with no write the run is ordered against."
+  },
+  {
+    "id": "r12-check-c2-removed",
+    "rule": "R",
+    "old": "if e.Run.Entry == m.Processes[q].Initial {",
+    "new": "if false && e.Run.Entry == m.Processes[q].Initial {",
+    "gens": "run,run-atomic,base",
+    "expect": "pinned",
+    "note": "Check c2 removed: a run enters its target at the dormant location. No verdict can tell: the target keeps looking dormant, so a second run takes the same slot and overwrites its locals, but the target has no edge to observe them from (an edge out of the dormant location would write the same counter cell the run reads and writes, and conflicts with it). The refusal is kept as a belt-and-braces check the plan asked for, and a directed test pins its reason."
+  },
+  {
+    "id": "r14-run-effect-reads-dropped",
+    "rule": "R",
+    "old": "\t\ta.reads(as.Value, p, f)\n",
+    "new": "\t\tif e.Run == nil {\n\t\t\ta.reads(as.Value, p, f)\n\t\t}\n",
+    "gens": "run,run-atomic,base",
+    "note": "The effect of a run edge (`pid p = run P()`) reads nothing."
+  },
+  {
+    "id": "r15-table-property-not-visible",
+    "rule": "R",
+    "old": "\t\tfor _, r := range f.reads {\n\t\t\tvis.add(r)\n\t\t}",
+    "new": "\t\tfor _, r := range f.reads {\n\t\t\tif r.kind != cellTable {\n\t\t\t\tvis.add(r)\n\t\t\t}\n\t\t}",
+    "gens": "run,run-atomic,base",
+    "note": "What a property reads of the table is not visible: a run and an end are expanded alone although the property sees them."
+  },
+  {
+    "id": "r16-init-global-write-dropped",
+    "rule": "R",
+    "old": "\t\t\ta.writeVar(as.Var, as.Index, q, f) // a local is not a cell; a global is\n",
+    "new": "",
+    "gens": "run,run-atomic,base",
+    "expect": "pinned",
+    "note": "An initialiser that assigns a global is not a write. NOT equivalent: on IR written by hand (mcd check --ir, mc_check with an inline ir) it is a false `verified`, and a directed test pins it (TestPORAnInitialiserThatAssignsAGlobalIsAWriteOfIt: W waits for g == 1 beside a free edge, the initialiser of S's run is the only writer of g; with W before S the reduced search answers `assert` verified, the full one violated). The oracles stay green because every initialiser the frontend and the generators make assigns a local of the new process, which is not a cell."
+  },
+  {
+    "id": "r17-init-scope-of-first-target-only",
+    "rule": "R",
+    "old": "\t\t\ta.writeVar(as.Var, as.Index, q, f) // a local is not a cell; a global is\n",
+    "new": "\t\t\ta.writeVar(as.Var, as.Index, r.Targets()[0], f)\n",
+    "gens": "run,run-atomic,base",
+    "expect": "pinned",
+    "note": "The write of an initialiser is resolved in the scope of the first target of the pool, not of each target. Only a heterogeneous pool can tell (an initialiser that assigns a local of one instance and a global for another): the frontend's pools are copies of one proctype and no generator makes one, so the oracles stay green, and TestPORAHeterogeneousPoolIsTheUnionOverItsTargets pins it. The reads of the initialisers are not mutated here."
+  },
+  {
+    "id": "c1-closure-no-dstep",
+    "rule": "base",
+    "old": "if e := cp.edge[ei].e; !e.DStep && !e.Atomic {",
+    "new": "if e := cp.edge[ei].e; !e.Atomic {",
+    "gens": "base,atomic,run,loop",
+    "note": "The closure does not follow a d_step edge (the mutant of perf2, kept after the closure was rewritten for atomic sequences)."
+  },
+  {
+    "id": "c2-whole-not-set-for-dstep",
+    "rule": "base",
+    "old": "if e.DStep || e.Atomic {",
+    "new": "if e.Atomic {",
+    "gens": "base,atomic,run,loop",
+    "note": "A location a d_step edge enters is not read whole (the d_step trap of the first review of step 2)."
+  },
+  {
+    "id": "c3-dirok-ignores-whole",
+    "rule": "base",
+    "old": "dirOK := !whole[e.From] && !e.DStep && !e.Atomic",
+    "new": "dirOK := !e.DStep && !e.Atomic",
+    "gens": "base,atomic,run,loop",
+    "note": "The ends of a directed channel are separate cells even in a location with an else or one a d_step or atomic edge enters."
+  },
+  {
+    "id": "c4-else-siblings-not-whole",
+    "rule": "base",
+    "old": "\t\t\t\twhole[e.From] = true // the siblings of an else\n",
+    "new": "",
+    "gens": "base,atomic,run,loop",
+    "note": "The siblings of an else edge are read with the refinement 'pc(j) at c', although a step of j into c disables the else."
+  },
+  {
+    "id": "p1-send-room-not-required",
+    "rule": "channels",
+    "old": "if q.send && n >= l.Chans[q.ch].Chan.Capacity {",
+    "new": "if false && q.send && n >= l.Chans[q.ch].Chan.Capacity {",
+    "gens": "base",
+    "note": "A process with a send among its alternatives is expanded alone although the channel is full (the mutant of perf4, kept so that the tests of step 4 stay honest)."
+  },
+  {
+    "id": "p2-recv-message-not-required",
+    "rule": "channels",
+    "old": "if !q.send && n == 0 {",
+    "new": "if false && !q.send && n == 0 {",
+    "gens": "base",
+    "note": "A process with a receive among its alternatives is expanded alone although the channel is empty (perf4)."
+  },
+  {
+    "id": "p3-requirement-reads-channel-0",
+    "rule": "channels",
+    "old": "n := l.ChanLen(s.cur, q.ch)",
+    "new": "n := l.ChanLen(s.cur, 0)",
+    "gens": "base",
+    "note": "The requirement always reads the first channel (perf4: found by the third review of step 4)."
+  },
+  {
+    "id": "x1-assert-reads-dropped",
+    "rule": "F",
+    "old": "\t\tf.assert = true\n\t\ta.reads(e.Assert, p, f)\n",
+    "new": "\t\tf.assert = true\n",
+    "gens": "reads,atomic-reads",
+    "note": "The reads of an assert's expression are not part of the footprint. The asserting edge is never expanded alone anyway; what the reads do is order the writers of what it reads against it: a writer of t that is otherwise isolated is then expanded alone past the moment when the assert would see the old value."
+  },
+  {
+    "id": "x2-clearchans-write-dropped",
+    "rule": "F",
+    "old": "\tfor _, ci := range e.ClearChans {\n\t\tf.writes = append(f.writes, porCell{cellChan, m.Channels[ci].Name, -1})\n\t}\n",
+    "new": "\t_ = m\n",
+    "gens": "base,atomic,reads,atomic-reads",
+    "note": "The clear of a channel (the ClearChans of an edge) is not a write of the channel."
+  },
+  {
+    "id": "x3-recv-match-reads-dropped",
+    "rule": "F",
+    "old": "\t\t\ta.reads(ra.Match, p, f)\n",
+    "new": "",
+    "gens": "reads,atomic-reads",
+    "note": "The match expression of a receive argument is not read: whether the receive is enabled depends on a global that another process writes."
+  },
+  {
+    "id": "x4-send-args-reads-dropped",
+    "rule": "F",
+    "old": "\t\tfor _, x := range e.Send.Args {\n\t\t\ta.reads(x, p, f)\n\t\t}\n",
+    "new": "",
+    "gens": "reads,atomic-reads",
+    "note": "The arguments of a send are not read: the message sent depends on a global that another process writes."
+  },
+  {
+    "id": "x5-effect-index-reads-dropped",
+    "rule": "F",
+    "old": "\tfor _, as := range e.Effect {\n\t\ta.reads(as.Index, p, f)\n",
+    "new": "\tfor _, as := range e.Effect {\n",
+    "gens": "reads,atomic-reads",
+    "note": "The index expression of an effect's target is not read: which element is written depends on a global that another process writes."
+  },
+  {
+    "id": "x7-dynamic-index-is-element-0",
+    "rule": "F",
+    "old": "\t\treturn int(e.Value)\n\t}\n\treturn -1\n",
+    "new": "\t\treturn int(e.Value)\n\t}\n\treturn 0\n",
+    "gens": "base,atomic,reads,atomic-reads",
+    "note": "An array element chosen by a value that is not a constant is treated as element 0 instead of the whole array."
+  },
+  {
+    "id": "x10-assert-does-not-block-eligibility",
+    "rule": "F",
+    "old": "ok := !u.assert && len(cp.out[l]) > 0",
+    "new": "ok := len(cp.out[l]) > 0",
+    "expect": "pinned",
+    "note": "`!u.assert` removed from the eligibility of a location: a location with an assert edge may be expanded alone. Harmless only while the clause of a12 stands (a failing step in the proviso's walk counts as not leaving the stack): with both removed the reduced search is wrong (x10a12-assert-guards-both-removed). Alone it is not a verdict: the assert's reads are footprint reads (so nobody that writes what it reads is expanded around it, and it is isolated from every writer), and an assert that would fail in the state is a failing micro-step in the proviso's walk, which counts as not leaving the stack, so the state is expanded in full and the ordinary search finds it; an assert that passes here passes in every state the others can reach first, because the cells it reads are not written by anybody else. The clause is kept as the textbook rule ('asserts are visible', C2) and pinned by the directed test TestPORAssertEdgeIsVisible and the tests of the atomic assert trap; no random model distinguishes it."
+  },
+  {
+    "id": "x10a12-assert-guards-both-removed",
+    "rule": "F",
+    "with": [
+      "x10-assert-does-not-block-eligibility",
+      "a12-error-in-chain-leaves"
+    ],
+    "expect": "pinned",
+    "note": "Both clauses that keep a failing assert out of an ample set, removed together: `!u.assert` in the eligibility of a location and the failing-step clause of the proviso's walk. Each alone changes no verdict (x10, a12); together they are a false `verified`: with P's atomic edge into a location whose edge is assert(false) and goes back to the state the step starts from, and Q writing x to 1 under an invariant x != 1, the reduced search expands P alone at the initial state (the failing assert counts as leaving the stack), P's step ends in that same state, the state is closed with one state stored, and Q never moves: `mcd check --ir --sweep --por` answers the invariant verified where the full search finds it violated (the model of TestPORAFailingAssertInAChainDoesNotHideTheInvariant). No oracle sees it: O3 skips the steps that fail, and no generator makes a failing assert on a cycle of a chain. Pinned by both directed tests of the model: the forced plan, and the verdicts in every order of the processes."
+  },
+  {
+    "id": "x11-reads-vs-others-writes-dropped",
+    "rule": "F",
+    "old": "\t\t\t\t\tif ok && w[q].hits(x) {",
+    "new": "\t\t\t\t\tif false && w[q].hits(x) {",
+    "gens": "base,atomic,run,run-atomic,reads,atomic-reads",
+    "note": "What the expanded process reads is not checked against what the other processes write (only its writes are checked against their reads and writes)."
+  },
+  {
+    "id": "x15-len-read-is-send-end",
+    "rule": "F",
+    "old": "\t\tf.reads = append(f.reads, porCell{cellChan, e.Var, -1})\n\tcase \"clen\"",
+    "new": "\t\tf.reads = append(f.reads, porCell{cellChan, e.Var, 0})\n\tcase \"clen\"",
+    "gens": "base,atomic,reads,atomic-reads",
+    "note": "The length of a channel is a read of the send end only, not of the whole channel."
+  },
+  {
+    "id": "x17-reach-not-visible",
+    "rule": "F",
+    "old": "pr.Kind != ir.KindInvariant && pr.Kind != ir.KindReach {",
+    "new": "pr.Kind != ir.KindInvariant {",
+    "gens": "base,atomic,run,run-atomic,reads,atomic-reads",
+    "note": "What a reach property reads is not visible (invariants only)."
+  },
+  {
+    "id": "x20-recv-index-reads-dropped",
+    "rule": "F",
+    "old": "\t\t\ta.reads(ra.Index, p, f)\n",
+    "new": "",
+    "gens": "reads,atomic-reads",
+    "note": "The index expression of a receive argument that binds an array element is not read: which element is bound depends on a global that another process writes."
+  },
+  {
+    "id": "x21-recv-bind-write-dropped",
+    "rule": "F",
+    "old": "\t\t\tif ra.Var != \"\" {\n\t\t\t\ta.writeVar(ra.Var, ra.Index, p, f)\n\t\t\t}\n",
+    "new": "",
+    "expect": "pinned",
+    "note": "The write of the variable (or array element) that a receive binds is not in the footprint: the receive does not conflict with another process that reads or writes it. The review's probe q5. Pinned: no oracle sees it at 3 000 models per generator (O1, O2, O3 green on all eight generators), because the shape, a receive that binds a global another process also touches, is rare in the generators; the audit sees it at 20 000 models (base 1, atomic 3). So the harness at its default size is not sensitive to rare shapes: a mutant of such a clause is killed by a directed test, here TestPORRecvBindIsAWrite and TestPORDirectedChannelsRespectTheVisibleCells."
+  }
+]

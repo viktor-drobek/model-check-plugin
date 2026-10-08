@@ -1,14 +1,10 @@
 package explore
 
 import (
-	"context"
 	"fmt"
 	"math/rand"
-	"os"
-	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	"modelcheck/cex"
 	"modelcheck/ir"
@@ -549,107 +545,14 @@ func sameValuation(st *Stepper, state []byte, final []cex.Value) error {
 	return nil
 }
 
+// TestPORAgreesWithTheFullSearchOnRandomModels is O1 (porDifferential) on the
+// base generator, kept under the name the earlier steps know it by. The other
+// generators are TestPORDifferentialOnTheGenerators.
 func TestPORAgreesWithTheFullSearchOnRandomModels(t *testing.T) {
-	models := 8000
-	if testing.Short() {
-		models = 1000
-	}
-	if v, err := strconv.Atoi(os.Getenv("MCD_POR_MODELS")); err == nil && v > 0 {
-		models = v // a deeper one-off run: MCD_POR_MODELS=100000 go test ./explore -run TestPORAgrees
-	}
-	first := int64(1) // MCD_POR_SEED=500000 moves the run to models nobody has checked yet
-	if v, err := strconv.ParseInt(os.Getenv("MCD_POR_SEED"), 10, 64); err == nil && v > 0 {
-		first = v
-	}
-	var applied, reducedModels, skipped, errored int
-	for seed := first; seed < first+int64(models); seed++ {
-		m := randomPORModel(rand.New(rand.NewSource(seed)))
-		name := fmt.Sprintf("seed %d", seed)
-		opt := Options{Sweep: true, Budget: Budget{MaxStates: 5000}}
-		var fullRec, redRec *recorder
-		opt.NewVisited = func(n int) Visited { fullRec = &recorder{Visited: defaultVisited(n)}; return fullRec }
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		full, err := Run(ctx, m, opt)
-		if err != nil {
-			cancel()
-			t.Fatalf("%s: %v", name, err)
+	for _, g := range porGeneratorsToRun("base") {
+		tl := porForSeeds(t, "O1", g, 8000, func(m *ir.Model, _ *porTally) (porOutcome, error) { return porDifferential(m) })
+		if floor := porFloorOf(tl.models, porReducedShare[g.name], porFloorSigmas); tl.failures == 0 && tl.smaller < floor {
+			t.Fatalf("only %d of %d models were reduced (the floor is %d): the generator no longer exercises the reduction", tl.smaller, tl.models, floor)
 		}
-		opt.POR = true
-		opt.NewVisited = func(n int) Visited { redRec = &recorder{Visited: defaultVisited(n)}; return redRec }
-		red, err := Run(ctx, m, opt)
-		cancel()
-		if err != nil {
-			t.Fatalf("%s: %v", name, err)
-		}
-		// An evaluation error or a domain overflow ends the search ("invalid
-		// model") and leaves it incomplete, so whether an error is reachable
-		// has to be compared before the completeness skip below, not after it,
-		// where the comparison used to sit and never ran. Runs that stopped on
-		// a budget say nothing: the other may have reached the error first.
-		if !hitBudget(full) && !hitBudget(red) {
-			fe, re := full.Stop == "invalid model", red.Stop == "invalid model"
-			if fe != re {
-				t.Fatalf("%s: an error is reachable with the reduction: %v, without: %v (stops %q and %q)", name, re, fe, red.Stop, full.Stop)
-			}
-			if fe {
-				errored++
-				continue
-			}
-		}
-		if !full.Complete || !red.Complete {
-			skipped++
-			continue
-		}
-		if red.Reduction == nil {
-			t.Fatalf("%s: no reduction record", name)
-		}
-		if !red.Reduction.Applied {
-			if red.States != full.States || red.Transitions != full.Transitions {
-				t.Fatalf("%s: refused (%s) but %d/%d states/transitions against %d/%d", name, red.Reduction.Reason, red.States, red.Transitions, full.States, full.Transitions)
-			}
-		} else {
-			applied++
-			if red.States < full.States {
-				reducedModels++
-			}
-		}
-		if red.States > full.States {
-			t.Fatalf("%s: the reduced graph has %d states, the full one %d", name, red.States, full.States)
-		}
-		fullDead, err1 := noMoveStates(m, fullRec.states)
-		redDead, err2 := noMoveStates(m, redRec.states)
-		if err1 != nil || err2 != nil {
-			t.Fatalf("%s: %v %v", name, err1, err2)
-		}
-		for k := range fullDead {
-			if !redDead[k] {
-				t.Fatalf("%s: a state without an enabled move of the full graph is missing from the reduced one (%d such states against %d)", name, len(fullDead), len(redDead))
-			}
-		}
-		fullSet := map[string]bool{}
-		for _, st := range fullRec.states {
-			fullSet[string(st)] = true
-		}
-		for _, st := range redRec.states {
-			if !fullSet[string(st)] {
-				t.Fatalf("%s: the reduced search stored a state the full search never reaches", name)
-			}
-		}
-		for i := range full.Outcomes {
-			a, b := red.Outcomes[i], full.Outcomes[i]
-			if a.Status != b.Status || a.Evidence != b.Evidence {
-				t.Fatalf("%s: property %s is %s/%s with the reduction and %s/%s without\nreduced: %s\nfull: %s\nreduction: %+v",
-					name, a.Property.ID, a.Status, a.Evidence, b.Status, b.Evidence, a.Reason, b.Reason, red.Reduction)
-			}
-			if a.Trace != nil {
-				if err := replay(m, a.Trace); err != nil {
-					t.Fatalf("%s: the %s trace of the reduced run is not a run of the model: %v\n%s", name, a.Property.ID, err, a.Trace.Summary)
-				}
-			}
-		}
-	}
-	t.Logf("%d random models: %d with the reduction applied, %d of them smaller; %d ended on an error of the model in both searches, %d skipped (budget)", models, applied, reducedModels, errored, skipped)
-	if reducedModels < models/25 {
-		t.Fatalf("only %d models were reduced: the generator no longer exercises the reduction", reducedModels)
 	}
 }

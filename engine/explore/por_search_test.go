@@ -122,8 +122,9 @@ func TestPORFallsBackToFullExpansionOnAnEvaluationError(t *testing.T) {
 }
 
 func TestPORRefusedRunIsTheFullRun(t *testing.T) {
-	atomic := independentCounters(3, 2)
-	atomic.Processes[0].Edges[0].Atomic = true
+	rendezvous := model(nil, []ir.Channel{{Name: "r", Capacity: 0, Fields: []ir.Type{ir.Byte}}}, nil,
+		proc("S", nil, 2, ir.Edge{From: 0, To: 1, Send: &ir.ChanOp{Chan: "r", Args: []*ir.Expr{ir.Const(1)}}}),
+		proc("R", nil, 2, ir.Edge{From: 0, To: 1, Recv: &ir.RecvOp{Chan: "r", Args: []ir.RecvArg{{}}}}))
 	ltl := independentCounters(3, 2)
 	ltl.Properties = append(ltl.Properties, ir.Property{ID: "l", Kind: ir.KindLTL, Formula: "[]true"})
 	for _, c := range []struct {
@@ -132,7 +133,7 @@ func TestPORRefusedRunIsTheFullRun(t *testing.T) {
 		mode Mode
 		want string
 	}{
-		{"atomic", atomic, DFS, "atomic"},
+		{"rendezvous", rendezvous, DFS, "rendezvous"},
 		{"temporal", ltl, DFS, "temporal"},
 		{"bfs", independentCounters(3, 2), BFS, "breadth-first"},
 	} {

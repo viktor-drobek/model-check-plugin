@@ -1,0 +1,12 @@
+# Trivy configuration for the repository scan (read automatically when trivy runs from the repository root:
+# local binary, the docker fallback in scripts/security-scan.sh, and CI share it).
+scan:
+  skip-dirs:
+    # `**/name` does not match the root-level name, so keep both forms.
+    - .git
+    - dist
+    - '**/dist'
+    - .venv
+    - '**/.venv'
+    - venv
+    - '**/venv'

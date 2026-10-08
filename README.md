@@ -126,8 +126,11 @@ discarding an unfair counterexample.
 - `skills/model-check/` — `SKILL.md`, workflows, property guidance, format references, assets, and report templates.
 - `evals-workspace/` — evaluation fixtures, graders, benchmark runs, and review data when included in the release.
 - `BUILD-PROTOCOL.md` — the six-part step protocol (scenarios first, tests, logic review, confirmation record); the build itself is documented in the build section below and in `build.sh`.
+- `RELEASE-NOTES-0.3.0.md` — what changed in 0.3.0, the verdicts that differ from 0.2.0, the known limitations.
+- `scripts/security-scan.sh`, `trivy.yaml`, `.trivyignore.yaml`, `.semgrepignore`, `docs/security-scanning.md`, `.github/workflows/security.yml` — the security scan (trivy, semgrep, govulncheck) and its guide.
 - `AGENT-COMMON.md` — shared historical build-agent guidance.
 - `build.sh` — reproducible multi-platform build and release verification script.
+- `build-container/` — the build container (Go 1.26.8, SPIN, gcc, Python 3, the Go modules of the engine): `Dockerfile`, `build-image.sh`, the runner image, its README.
 
 ## Requirements
 
@@ -140,7 +143,7 @@ A ready-made release needs an agent/plugin host that supports the plugin manifes
 
 ### Build and test
 
-- Go 1.26, declared in `engine/go.mod`.
+- Go 1.26.8, declared in `engine/go.mod`; `build.sh` refuses any other Go, because the release binaries carry the standard library of the Go that built them.
 - Python 3, required by `build.sh` and release metadata generation.
 - A POSIX shell for `build.sh`.
 - SPIN 6.5.2 or a compatible installation for SPIN-dependent tests and comparisons.
@@ -159,7 +162,7 @@ Use the public `model-check-plugin` project/repository or the complete `model-ch
 From the plugin root:
 
 ```bash
-./build.sh --host-only --version 0.2.0
+./build.sh --host-only --version 0.3.0
 engine/bin/mcd version
 ```
 
@@ -236,6 +239,14 @@ The second command assumes the plugin is inside the monorepo. In a standalone pl
 
 Run the checks from a clean, reviewed checkout. Do not include credentials, private absolute paths, Python bytecode, temporary SPIN output, or accidental host data in a release.
 
+### Build container
+
+Instead of installing the toolchain on the host, build and test in the container `<registry>/model-check/build:0.3.0` (Go 1.26.8, SPIN 6.5.2, gcc, make, git, Python 3, govulncheck, and the Go modules of the engine already downloaded; stored in the docker registry your team uses). Its definition, use and how it is built and stored are in [`build-container/README.md`](build-container/README.md).
+
+### Security scanning
+
+`scripts/security-scan.sh` runs trivy (dependencies, secrets, misconfiguration), semgrep and govulncheck over the checkout, with pinned docker images when the tools are not installed; `.github/workflows/security.yml` runs it on pull requests, on pushes to `main` and weekly, and uploads the SARIF to GitHub code scanning. Settings, exit codes and triage: [`docs/security-scanning.md`](docs/security-scanning.md). It needs docker (or the three tools) and, for the container scans, network access to the Go module proxy.
+
 ### Test and lint
 
 ```bash
@@ -247,7 +258,7 @@ spin --version
 cd ..
 ```
 
-The suite includes Go unit tests and the Godog harness. CI additionally runs the race detector and verifies SPIN on the configured self-hosted runner.
+The suite includes Go unit tests and the Godog harness. CI additionally runs the race detector and verifies SPIN on the configured self-hosted runner. The CI `Security scan` workflow (trivy, semgrep, govulncheck) is a monorepo-root pipeline and is not shipped inside this plugin tree; its guide is `docs/security-scanning.md` in the monorepo. CI test steps use a 60-minute `go test` timeout because the `explore` package takes about 27 minutes under `-race`.
 
 Performance work is measured, not asserted. The whole-engine benchmarks run the Promela fixtures `engine/testdata/promela/bench-*.pml` through `cli.Run` and check their state counts, so a faster engine that explores something else fails:
 
@@ -256,18 +267,32 @@ cd engine
 go test -run XXX -bench . -benchmem ./explore .
 ```
 
-Compare two revisions by running both test binaries alternately on one machine; a single run varies by about 10%.
+Compare two revisions by running both test binaries alternately on one machine; a single run varies by about 10%. The parallel search has its own benchmarks, one per shape of state graph and per worker count (`go test -run XXX -bench Parallel -benchtime 3x .` from `engine/`; `MCD_BENCH_BIG=1` adds the 8-million-state model): a speedup is only meaningful on a quiet machine, so read `uptime` first.
 
 ### Partial-order reduction (`--por`)
 
-`mcd check --por` explores, in a state, the moves of one process alone when the analysis can prove that nothing the other processes do could matter first. It applies to the safety search only (`deadlock`, `assert`, `invariant`, `reach`), depth-first, and it is opt-in. The verdicts are the same as without it; the number of states and transitions in the report are those of the *reduced* graph (so they no longer match `pan -c0`), and the first counterexample can differ. The report's `search.reduction` says whether the reduction was applied and, when it was not, why: atomic sequences, rendezvous or dynamic channels, `run`, a read of the process table (`_nr_pr`), `timeout`, `provided`, `--bfs`, and any `ltl`, `progress` or `ctl` property are refused in this version. A producer and its consumer do not make a conflict: the send end and the receive end of a buffered channel are separate, and a process at a channel operation is expanded alone only while the channel can act (room for a send, a message for a receive), so a pipeline of stages is explored stage after stage. The MCP tool `mc_check` takes the same request as `por: true` and answers with the same `search.reduction`; a request it cannot honour is a result with `applied: false`, not a tool error.
+`mcd check --por` explores, in a state, the moves of one process alone when the analysis can prove that nothing the other processes do could matter first. It applies to the safety search only (`deadlock`, `assert`, `invariant`, `reach`), depth-first, and it is opt-in. The verdicts are the same as without it; the number of states and transitions in the report are those of the *reduced* graph (so they no longer match `pan -c0`), and the first counterexample can differ. The report's `search.reduction` says whether the reduction was applied and, when it was not, why. Refused in this version, each with its reason in the report: rendezvous channels (a handshake is one step of two processes; no model measured had two independent handshakes, so a rule for it would cost a proof and gain nothing), channels named by a value, `timeout` and `provided` (postponed and not needed by anything measured: `steps/perf6-plan.md` §5 and §6), `--bfs`, any `ltl`, `progress` or `ctl` property, and two shapes of process creation that the Promela frontend never emits (a dynamic process that returns to its dormant location without leaving the process table, a `run` that enters its target at the dormant location).
 
-The reduction is checked against the unreduced search by `explore/por_random_test.go` (8000 random models, with and without d_step, dead-end locations and guards on program counters; for the models on which both searches finish, which is most of them, the verdicts, the set of states without an enabled move, and every counterexample replayed as a run of the model, and for all of them whether a model error is reachable; `MCD_POR_MODELS=60000` for a deeper one-off run), by `por_corpus_test.go` at the root of the `engine` module (the Promela models of `testdata/promela`, `testdata/corpus2` and the SPIN corpus that the frontend accepts and both searches finish: the status and evidence of each property, the reachability of a model error, and a state count that is never larger, and equal when the reduction is refused), and by the scenarios of `features/g7-por.feature`. `go test ./explore -run TestPOR` runs the first and the analysis tests in seconds.
+What is reduced. A producer and its consumer do not make a conflict: the send end and the receive end of a buffered channel are separate, and a process at a channel operation is expanded alone only while the channel can act (room for a send, a message for a receive), so a pipeline of stages is explored stage after stage. **Atomic sequences** are reduced: what is commuted is the whole sequence up to the next state the search stores (a *macro-step*), its footprint is every edge it can be made of, and the cycle proviso follows each sequence to the states it ends in; a process that blocks inside its sequence loses exclusive control and is stored with the exclusive byte set, and two such states that differ only in that byte are the same state for the purposes of the comparison with the full search. **`run` and the process table** are reduced: the live-process table (`_nr_pr`, `_pid` of a process created at run time, which process is the youngest and may end) is one cell that every `run` and every end of a process writes, so in a model that creates processes the creating step is itself expanded in full and the gain comes from the other processes (the ring of `testdata/promela/leader3.pml`, started by `init { atomic { run ... } }`, shrinks from 679 states to 76, and the same ring with five nodes from 41 692 to 108). Everything that needs the table or a `run` is covered by the same rule: a `run` whose arguments read a shared variable, a guard on `_nr_pr`, a property that mentions `_nr_pr`. A model that reads `_nr_pr` is therefore reduced like any other where these rules allow it, not refused: `testdata/promela/nrpr.pml` (two workers started by a `run` in a loop, each asserting `_nr_pr > 1`) stores 31 states in full and 21 with `--por`; what stays unreduced is the step that creates a process and the end of every process, which write the table the guard reads. Where the search cannot finish (a budget, an error of the model such as an exhausted process pool) the two searches stop in different places, and their counts are not comparable.
+
+The MCP tool `mc_check` takes the same request as `por: true` and answers with the same `search.reduction`; a request it cannot honour is a result with `applied: false`, not a tool error.
+
+The reduction is checked against the unreduced search by four oracles that share random generators of atomic sequences, loops through atomic chains, process creation with the table, the table model the frontend gives a model that reads `_nr_pr` and has no `run` (every process leaves the table when it ends), `provided`, and reads of globals that another process writes (send arguments, receive matches and indexes, array indexes of effects, asserts: `explore/por_gen_test.go`): the verdict differential (`por_oracle_test.go`, `por_random_test.go`: the status and evidence of every property, the set of states without an enabled move compared up to the exclusive byte, the reduced states a subset of the full ones, every counterexample replayed as a run of the model, whether a model error is reachable, and the counts equal when the reduction is refused), a semantic audit of every eligible process at every stored state of the full graph that does not read the footprints (`por_audit_test.go`), an acyclicity audit of the cycle proviso (`por_acyclic_test.go`), and the models of the `Promela - examples` corpus and the fixtures (`por_corpus_test.go` at the root of the `engine` module: the status and evidence of each property, the reachability of a model error, a state count that is never larger and equal when the reduction is refused, and a floor under the number of models it applies to). `tools/pandiff` runs fuzzers of Promela models in the shapes the frontend emits (`atomic`, `d_step`, `run` from `init`, `_nr_pr` guards with `active` processes, loops inside atomic and d_step blocks, a buffered channel) through the engine in full and reduced and against `pan -DNOREDUCE`, and sets the corpus verdicts against `pan`. A mutation harness (`go run ./cmd/pormut -scratch DIR`, mutants in `tools/pormut/mutants.json`) applies each mutant of the analysis to a scratch copy and runs the oracles on it, after a baseline run that must be green. `go test ./explore -run TestPOR` runs the analysis tests and the oracles at their default sizes (about a minute and a half; the sizes are set by `MCD_POR_MODELS`, `MCD_POR_SEED`, `MCD_POR_GEN`, `MCD_POR_WORKERS`, `MCD_POR_ALL`, `MCD_POR_AUDIT_K`; the release bar is 300 000 models per generator). The oracles see a hole in the footprints only in the shapes the generators make: hand-built shapes that no generator makes (a `run` initialiser that assigns a global, a heterogeneous pool, an atomic edge into a sink, the length of a channel named by a value, a failing assert inside a chain) are pinned by directed tests only, and the harness at its default size is not sensitive to rare shapes (see "What the oracles can and cannot see" in `steps/perf6-confirmation.md`). What was measured and what was not is in `steps/perf6-confirmation.md`.
+
+### Parallel search (`--workers`)
+
+`mcd check --workers N` searches the safety properties (`deadlock`, `assert`, `invariant`, `reach`) with N workers: a level-synchronous breadth-first search over a visited set split into 256 partitions by a fixed hash, in which each partition is written by exactly one worker at a time. It is opt-in; without the flag nothing changes, byte for byte (the report has no `parallel` object and `search.mode` is what it was). The MCP tool `mc_check` takes the same request as `workers` (clamped to the server's `mcd serve --max-workers`, which is `GOMAXPROCS` unless set; the clamp is a note in `budget_notes`).
+
+What a parallel run promises, and what it changes. For a run that completes, every property has the verdict, evidence and reason of the sequential search, and `states` and `transitions` are the sequential ones exactly (checked against the sequential searches, with and without `--sweep`, on random models from three generators and on the 106 fixture and corpus models that finish within the test budget (137 accepted by the frontend, 25 of them refused for a temporal property) at 1 and 8 workers, and against SPIN's `pan -c0` on 22 models at 1 and 4 workers where the SPIN tests run; the first 200 000 random models, all from the author's own seed ranges and with the sweep on, missed a wrong exhaustive verdict that the review of the diff found with a range of its own and that is fixed, see `steps/perf5-confirmation.md`). `depth` is the number of breadth-first layers, and the report says `search.mode: "bfs"`; a layer counts hops between stored states, so an atomic sequence that runs through is **one unit of `depth` and of `--budget-depth`**, and one that blocks part-way counts one unit per uninterrupted run (the state where its holder blocks is stored, and the continuation starts with the step of whichever process unblocks it), where `--bfs` and the default search count every step of it (a `d_step` block is one move in every search): the depth equals `--bfs`'s on a model without atomic sequences and can differ on one with them (the verdicts, states and transitions of a complete run still agree, but a `--budget-depth` run can stop at a different layer than `--bfs`, or complete where `--bfs` is cut). A counterexample is a shortest one in layers and the same for every worker count, but generally not the depth-first one. A property expression that fails to evaluate (an index out of range) can end one search `invalid-model` where another completes, because the parallel frontier is in partition order, not FIFO order (the depth-first search differs from `--bfs` the same way); complete runs never disagree. The report is the same for every N, byte for byte, apart from the three worker-count fields of `search.parallel`, and so are the reports of runs cut by a budget: `--budget-states` is exact (the run stores that many states and no more, and claims no verdict that lies after its stop point), `--budget-depth` cuts at a layer (counted as above), `--budget-mem-mb` is checked on an estimate that does not depend on N; only `--budget-ms` is not reproducible. The memory estimate is an estimate, not the resident memory: it counts the stored set, the records of the largest group of states and the largest frontier, and a parallel run can overshoot the budget by up to about one group of records (measured once: an estimate of 949 MB for a budget of 800 MB, a resident size of about 1.1 to 1.2 GB against 864 MB for the sequential run, on a model with 3 KB states). `search.parallel` carries the number of breadth-first layers and the width of the widest, which says whether the graph was wide enough to pay.
+
+When it pays and when it does not. It pays on **wide** graphs, with thousands of states in an average layer: independent or loosely coupled processes, symmetric workers, buffered pipelines with data in the messages. It does not pay on narrow or deep ones (a single counter, a chain of states: one state per layer, and a run costs the same as the sequential one at best), nor on models of under about 10^5 states, and it is a tool for **proofs**, not for finding bugs fast: a breadth-first search completes every layer above a violation before it finds it, so a user hunting a bug keeps the default depth-first search or `--por`. See `steps/perf5-confirmation.md` for the measured speedups, with the load of the machine they were taken under, and for what was not measured.
+
+What it refuses, with the reason in `search.parallel.reason` and the run executed sequentially and unchanged (so its `search.mode` is the requested one, and its `depth` and `--budget-depth` count transitions, not layers of stored states): any `ltl`, `progress` or `ctl` property in the run (a mixed run is not split), and `--por` where the reduction applies (it is depth-first; where it refuses, the parallel search runs and `search.reduction` keeps its own reason). `--workers` with `--estimate`, below 0 or above 256 is a usage error. The memory estimate counts the stored set, the records of the largest group of states and the largest frontier; the compiled copies of the model that each worker keeps are in `search.parallel.worker_bytes_est`.
 
 ### Reproducible release build
 
 ```bash
-./build.sh --version 0.2.0 --source-commit <SOURCE-COMMIT> --verify-repro
+./build.sh --version 0.3.0 --source-commit <SOURCE-COMMIT> --verify-repro
 ```
 
 `<SOURCE-COMMIT>` is the commit the engine sources are built from. For a release it is the commit just before the one that commits the built files under `engine/bin/` (the artifacts commit), because a commit cannot name itself; `BUILD-INFO.json` records it as `source_commit`. Without `--source-commit` the script records `git rev-parse HEAD` of the plugin checkout (or `unknown` outside a Git checkout), which after the artifacts commit is the artifacts commit, so the committed `BUILD-INFO.json` is not reproduced from that checkout.
@@ -284,7 +309,7 @@ The script:
 For a faster local build:
 
 ```bash
-./build.sh --host-only --version 0.2.0
+./build.sh --host-only --version 0.3.0
 ```
 
 Useful options are `--source-commit HASH`, `--platforms "goos/goarch ..."`, `--out DIR`, `--no-verify`, and `--verify-repro`; the options and exit codes are listed at the top of `build.sh`. Use `--no-verify` only for an intentional intermediate build. Record which platforms were built and which were actually smoke-tested; cross-building is not the same as executing a platform binary.
@@ -297,7 +322,7 @@ engine/bin/mcd version
 cat engine/bin/BUILD-INFO.json
 ```
 
-The build and its options are described in this section and at the top of `build.sh`. [`BUILD-PROTOCOL.md`](BUILD-PROTOCOL.md) is the six-part protocol every development step follows (scenarios first, tests, logic review, confirmation record), not a build manual; the record of a release is a `steps/*-confirmation.md` file (for 0.2.0, the addendum at the top of `steps/g6-confirmation.md`).
+The build and its options are described in this section and at the top of `build.sh`. [`BUILD-PROTOCOL.md`](BUILD-PROTOCOL.md) is the six-part protocol every development step follows (scenarios first, tests, logic review, confirmation record), not a build manual; the record of a release is a `steps/*-confirmation.md` file (for 0.2.0, the addendum at the top of `steps/g6-confirmation.md`; for 0.3.0, `steps/release-0.3.0-confirmation.md`).
 
 ## Use the CLI
 
@@ -313,6 +338,10 @@ engine/bin/mcd check \
   --bfs \
   --budget-states 100000 \
   --no-timing
+
+# Search the safety properties with several workers (a wide state graph that
+# ends `inconclusive` on a budget or takes long; see "Parallel search" below).
+engine/bin/mcd check --promela /path/to/model.pml --workers 8
 
 # Parse Petri-net JSON or IR JSON.
 engine/bin/mcd parse --petri /path/to/net.json
@@ -373,6 +402,17 @@ The recommended workflow is:
 
 The agent skill in [`skills/model-check/SKILL.md`](skills/model-check/SKILL.md) defines the complete intake, staged execution, interpretation, and reporting procedure. It is the source of operational guidance; this README is an installation and orientation summary.
 
+## Running on a shared machine
+
+A run uses CPU and memory in proportion to the state space, and the machine is often shared with other sessions, builds, and test campaigns. Look at the machine before you launch a run, and wait while it is busy. The script `skills/model-check/assets/wait-for-capacity.sh` does the looking:
+
+```bash
+sh skills/model-check/assets/wait-for-capacity.sh --need-cores 4 --need-mem-mb 2048 \
+   --dir "$SESSION_DIR" --min-disk-mb 500 --timeout 900
+```
+
+It returns when CPU use and memory use, including what the run would add (`--need-cores`, `--need-mem-mb`), are within 90% (`--max-cpu`, `--max-mem`) and the session directory has the free space asked for. Exit codes: `0` there is room, `3` the machine was still busy when the timeout ended, `2` usage error, `4` this platform cannot be measured (Linux and macOS are; on Windows read the load, free memory and free disk by hand). On exit `3` do not start the run: wait and look again, lower `--workers` and the budgets, or tell the user why it was not started. Do not take timing or speed-up measurements on a busy machine, and do not run several heavy runs at once on a machine that cannot hold them: queue them. The agent skill carries the same instruction (`SKILL.md` step 5).
+
 ## Files, sessions, and safety
 
 MCP sessions write IR, check, simulation, counterexample, and manifest artifacts under the configured session directory. The server applies path guards and an optional read allow-list. Do not pass arbitrary host paths, interpolate model text into shell commands, or copy models and traces containing sensitive data into public examples.
@@ -392,6 +432,10 @@ Remove the extra project-level MCP registration. Keep the plugin declaration in 
 ### The model is rejected
 
 Read the `kind`, source location, and reason in the rejection. Check the accepted Promela subset and Petri-net schema. A rejected input is not a verification verdict; rewrite the model or property and run `mc_parse` again.
+
+### `mcd` reports an internal error
+
+The CLI ends with exit code 1, nothing on stdout, and `mcd: internal error: ...` (a failure of the engine that it caught, followed by the Go stack) or `mcd check: internal: ...` (a consistency check of the search failed, or a worker of the parallel search `--workers` panicked: `internal error in the parallel search`) on stderr. An MCP tool answers with `isError` and a message that starts with `internal error in <tool>:` (or, from `mc_check`, `internal:`; one line either way), the stack of a caught panic goes to the server's standard error and not into the answer or the manifest, the server stays up and serves the next call, and `mc_manifest` records the call with outcome `error`. This is a defect of `mcd`, not a verdict on the model: no verdict exists for that call, and rerunning with other budgets does not produce one. Keep the model, the exact command line or tool call, the output of `mcd version`, and the stderr text, and report them. Do not confuse it with exit code 2, which means the input was rejected by a frontend and is fixed in the model, and with exit code 1 for a bad flag or an unreadable file, whose message names the flag or the file. The stack of a release binary carries no source paths (it is built with `-trimpath`); check the stack of a developer build for private paths before posting it.
 
 ### The result is inconclusive
 

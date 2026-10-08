@@ -1,0 +1,133 @@
+{
+  "schema": "mcd-ir/1",
+  "name": "nrpr-property",
+  "globals": [
+    {
+      "name": "x",
+      "type": "byte"
+    }
+  ],
+  "processes": [
+    {
+      "name": "A",
+      "locations": [
+        {
+          "name": "a0"
+        },
+        {
+          "name": "a1",
+          "labels": [
+            "end"
+          ]
+        }
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 1,
+          "effect": [
+            {
+              "var": "x",
+              "value": {
+                "op": "const",
+                "value": 1
+              }
+            }
+          ],
+          "text": "x = 1"
+        }
+      ]
+    },
+    {
+      "name": "B",
+      "locations": [
+        {
+          "name": "b0"
+        },
+        {
+          "name": "b1",
+          "labels": [
+            "end"
+          ]
+        }
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 1,
+          "effect": [
+            {
+              "var": "x",
+              "value": {
+                "op": "const",
+                "value": 2
+              }
+            }
+          ],
+          "text": "x = 2"
+        }
+      ]
+    }
+  ],
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state"
+    },
+    {
+      "id": "none",
+      "kind": "reach",
+      "text": "_nr_pr == 0 is reachable",
+      "expr": {
+        "op": "eq",
+        "args": [
+          {
+            "op": "nrpr"
+          },
+          {
+            "op": "const",
+            "value": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "two",
+      "kind": "invariant",
+      "text": "_nr_pr == 2 always",
+      "expr": {
+        "op": "eq",
+        "args": [
+          {
+            "op": "nrpr"
+          },
+          {
+            "op": "const",
+            "value": 2
+          }
+        ]
+      }
+    },
+    {
+      "id": "sane",
+      "kind": "invariant",
+      "text": "x <= 2 always",
+      "expr": {
+        "op": "le",
+        "args": [
+          {
+            "op": "var",
+            "var": "x"
+          },
+          {
+            "op": "const",
+            "value": 2
+          }
+        ]
+      }
+    }
+  ]
+}

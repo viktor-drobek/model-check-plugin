@@ -173,3 +173,36 @@ Feature: G3 skill package — documentation half
     And "evals/fixtures/README.md" exists
     And "evals/fixtures/README.md" explains that fixtures reference corpus paths and hashes instead of copying files
     And no file under "evals/fixtures" is a copy of a file under "Promela - examples"
+
+  # ---------------------------------------------------------------- resources before a run
+  #
+  # A model-checking run uses CPU and memory in proportion to the state space,
+  # and the machine is often shared (other sessions, builds, test campaigns).
+  # The skill tells the agent to look at the machine before it launches a run and
+  # to wait while it is busy, and ships a small script that does the looking.
+  # The scenarios fix that the instruction exists and that the script keeps its
+  # contract; they do not measure the machine they run on.
+  Scenario: The skill tells the agent to look at the machine before a run and to wait while it is busy
+    Then "SKILL.md" mentions each of:
+      | assets/wait-for-capacity.sh |
+      | 90%                         |
+      | wait                        |
+    And "references/workflow.md" mentions each of:
+      | wait-for-capacity.sh |
+      | 90%                  |
+      | --max-memory-mb      |
+    And "references/engine-tools.md" mentions each of:
+      | wait-for-capacity.sh |
+      | --concurrency        |
+
+  Scenario Outline: The capacity script answers by its exit code
+    When I run the capacity script with "<args>"
+    Then the capacity script exits with <code>
+
+    Examples:
+      | args                                   | code |
+      | --timeout 0 --max-cpu 100 --max-mem 100 | 0    |
+      | --timeout 0 --max-mem 0                 | 3    |
+      | --timeout 2 --interval 1 --max-mem 0    | 3    |
+      | --timeout 0 --no-such-option            | 2    |
+      | --timeout 0 --max-cpu 100 --max-mem 100 --dir /nonexistent-dir-for-test --min-disk-mb 1 | 4 |

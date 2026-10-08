@@ -45,7 +45,8 @@
 # Exit codes of `mcd`, one per outcome: 0 — a result document (report or IR)
 # was produced, whatever the verdicts; 2 — no result: the input was rejected
 # by a frontend, and stdout carries a JSON error document instead; 1 — no
-# result: tool error (unreadable file, bad flags), message on stderr.
+# result: tool error (unreadable file, bad flags) or internal failure (a caught
+# panic, a failed consistency check of the engine), message on stderr.
 #
 # Timing (`time_ms`) is the only report field that is not a function of the
 # input; `--no-timing` omits it so that runs can be compared byte for byte.
@@ -218,6 +219,17 @@ Feature: G0 engine — Petri nets through IR to a JSON verdict via the mcd CLI
   Scenario: a missing input file is a tool error
     When I run "mcd check --petri testdata/petri/does-not-exist.json"
     Then the exit code is 1
+
+  Scenario: an internal failure is a tool error with its message on stderr, not a crash with the exit code of a rejection
+    # A Go panic ends the process with exit code 2 and a stack trace. Exit 2
+    # means "the input was rejected and stdout carries an error document",
+    # and neither is true of a crash. The cause is not hidden: the panic
+    # value and the stack are on stderr.
+    Given the standard output of the command fails with a panic
+    When I run "mcd version"
+    Then the exit code is 1
+    And the error output mentions "internal error"
+    And the error output mentions "injected failure of stdout"
 
   Scenario: the report names the engine version and hashes its inputs
     Given the Petri net file "testdata/petri/petrinet1.json"

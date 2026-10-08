@@ -1,0 +1,4 @@
+# The build context of build-container/Dockerfile is model-check-plugin/; the image needs the module files of the engine only.
+*
+!engine/go.mod
+!engine/go.sum

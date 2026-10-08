@@ -7,12 +7,17 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
+	"sort"
 	"strings"
 
 	"github.com/cucumber/godog"
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"modelcheck/cex"
 	"modelcheck/cli"
+	"modelcheck/explore"
+	"modelcheck/ir"
 	"modelcheck/mcp"
 	"modelcheck/tools/pandiff"
 )
@@ -90,6 +95,22 @@ func registerG4Steps(sc *godog.ScenarioContext) {
 		w.model = p
 		return nil
 	})
+	sc.Step(`^the generated weak-fairness model "([^"]*)"$`, func(name string) error {
+		p := filepath.Join("testdata", "weakfair", name)
+		if _, err := os.Stat(p); err != nil {
+			return err
+		}
+		w.model = p
+		return nil
+	})
+	sc.Step(`^the decision model "([^"]*)"$`, func(name string) error {
+		p := filepath.Join("testdata", "weakdecision", "models", name)
+		if _, err := os.Stat(p); err != nil {
+			return err
+		}
+		w.model = p
+		return nil
+	})
 	sc.Step(`^the test model "([^"]*)" with the corpus claim "([^"]*)" appended$`, func(name, claim string) error {
 		a, err := os.ReadFile(filepath.Join(testdataPromela, name))
 		if err != nil {
@@ -116,6 +137,12 @@ func registerG4Steps(sc *godog.ScenarioContext) {
 		p := filepath.Join(corpusDir, name)
 		if strings.HasPrefix(name, "testdata:") {
 			p = filepath.Join(testdataPromela, strings.TrimPrefix(name, "testdata:"))
+		}
+		if strings.HasPrefix(name, "decision:") {
+			p = filepath.Join("testdata", "weakdecision", "models", strings.TrimPrefix(name, "decision:"))
+		}
+		if strings.HasPrefix(name, "weakfair:") {
+			p = filepath.Join("testdata", "weakfair", strings.TrimPrefix(name, "weakfair:"))
 		}
 		if _, err := os.Stat(p); err != nil {
 			return err
@@ -227,6 +254,20 @@ func registerG4Steps(sc *godog.ScenarioContext) {
 	})
 	sc.Step(`^I call mc_check with budget states (\d+) and properties:$`, func(states int, props *godog.DocString) error {
 		return mcCheck(props, map[string]any{"budget": map[string]any{"states": states}})
+	})
+	sc.Step(`^I call mc_simulate guided by the edges "([^"]*)"$`, func(list string) error {
+		return call("mc_simulate", map[string]any{"session_id": w.sess, "mode": "guided", "edges": strings.Split(list, ", ")})
+	})
+	sc.Step(`^the MCP simulation names the enabled edges at the stop as "([^"]*)"$`, func(list string) error {
+		got, _ := w.out["enabled_at_stop"].([]any)
+		var gs []string
+		for _, g := range got {
+			gs = append(gs, fmt.Sprint(g))
+		}
+		if strings.Join(gs, ", ") != list {
+			return fmt.Errorf("enabled_at_stop %v, want %q", gs, list)
+		}
+		return nil
 	})
 	sc.Step(`^I call mc_explain for the counterexample of "([^"]*)"$`, func(id string) error {
 		p, err := w.mcpProperty(id)
@@ -357,6 +398,18 @@ func registerG4Steps(sc *godog.ScenarioContext) {
 		}
 		return fmt.Errorf("no loop step of %s is by %s", id, proc)
 	})
+	sc.Step(`^the loop of "([^"]*)" contains a step that is not a weak-fairness null step$`, func(id string) error {
+		_, loop, err := w.loop(id)
+		if err != nil {
+			return err
+		}
+		for _, st := range loop {
+			if !strings.HasPrefix(fmt.Sprint(st["command"]), "(weak fairness:") {
+				return nil
+			}
+		}
+		return fmt.Errorf("every loop step of %s is a weak-fairness null step: the loop stands still on one state of the product", id)
+	})
 	sc.Step(`^the prefix of "([^"]*)" contains a step "([^"]*)"$`, func(id, cmd string) error {
 		prefix, _, err := w.loop(id)
 		if err != nil {
@@ -368,6 +421,18 @@ func registerG4Steps(sc *godog.ScenarioContext) {
 			}
 		}
 		return fmt.Errorf("no prefix step of %s is %q", id, cmd)
+	})
+	sc.Step(`^a step of the counterexample of "([^"]*)" has the command containing "([^"]*)"$`, func(id, text string) error {
+		prefix, loop, err := w.loop(id)
+		if err != nil {
+			return err
+		}
+		for _, st := range append(append([]map[string]any(nil), prefix...), loop...) {
+			if strings.Contains(fmt.Sprint(st["command"]), text) {
+				return nil
+			}
+		}
+		return fmt.Errorf("no step of the counterexample of %s has a command containing %q", id, text)
 	})
 	sc.Step(`^the loop of "([^"]*)" is closed: the state after the last step equals the state before the loop$`, func(id string) error {
 		_, loop, err := w.loop(id)
@@ -392,6 +457,37 @@ func registerG4Steps(sc *godog.ScenarioContext) {
 			if fmt.Sprint(first[v]) != fmt.Sprint(last[v]) {
 				return fmt.Errorf("%s: %v before the loop, %v after it", v, first[v], last[v])
 			}
+		}
+		return nil
+	})
+	sc.Step(`^the counterexample of "([^"]*)" replays as a run of the model with the claim's accept location in the loop$`, func(id string) error {
+		ce, err := w.trace(id)
+		if err != nil {
+			return err
+		}
+		return replayLasso(w.model, ce)
+	})
+	sc.Step(`^the counterexample of "([^"]*)" is the one that "([^"]*)" reports$`, func(id, cmd string) error {
+		want, err := w.trace(id)
+		if err != nil {
+			return err
+		}
+		args, err := w.args(cmd)
+		if err != nil {
+			return err
+		}
+		var out, errOut bytes.Buffer
+		if code := cli.Run(args, &out, &errOut); code != 0 {
+			return fmt.Errorf("%q exits with %d\n%s%s", cmd, code, out.String(), errOut.String())
+		}
+		other := &g4World{}
+		other.stdout = out
+		got, err := other.trace(id)
+		if err != nil {
+			return err
+		}
+		if !reflect.DeepEqual(want, got) {
+			return fmt.Errorf("the counterexamples of %s differ:\n%v\n%v", id, want, got)
 		}
 		return nil
 	})
@@ -620,6 +716,15 @@ func registerG4Steps(sc *godog.ScenarioContext) {
 	})
 
 	// --- Then: differential ------------------------------------------------------
+	sc.Step(`^the engine says "([^"]*)" and pan says "([^"]*)"$`, func(engine, pan string) error {
+		if w.triple == nil {
+			return fmt.Errorf("no comparison was run")
+		}
+		if got := strings.SplitN(w.triple.Engine, " ", 2)[0]; got != engine || w.triple.Pan != pan {
+			return fmt.Errorf("want engine %s and pan %s, got: %s", engine, pan, w.triple.Row())
+		}
+		return nil
+	})
 	sc.Step(`^the three verdicts agree$`, func() error {
 		if w.triple == nil {
 			return fmt.Errorf("no comparison was run")
@@ -768,4 +873,151 @@ func (w *g4World) mcpProperty(id string) (map[string]any, error) {
 		}
 	}
 	return nil, fmt.Errorf("no property %q in the answer (outcome %v, rejection %v)", id, w.out["outcome"], w.out["rejection"])
+}
+
+// replayLasso checks a lasso of the JSON report against the Promela model at
+// path, independently of the search that produced it: every step of the
+// system is an enabled move of the model, in order, from the initial state;
+// the state after the last step is the state before the loop; every step of
+// the claim is an edge of the claim out of the location the previous claim
+// step reached, and the loop takes the claim to a location with the accept
+// label. The claim's guards are not evaluated here (the explorer's stepper
+// has no claim API); pan's verdict on the same model (the differential rows
+// of this feature) covers them.
+func replayLasso(path string, ce map[string]any) error {
+	src, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	parsed, rej := cli.ParsePromela(src, path, nil, 0)
+	if rej != nil {
+		return fmt.Errorf("the model is rejected: %s", rej.MessageOf())
+	}
+	m := parsed.Model
+	claim := -1
+	for i := range m.Processes {
+		if m.Processes[i].Claim {
+			claim = i
+		}
+	}
+	if claim < 0 {
+		return fmt.Errorf("the model has no never claim")
+	}
+	lp, ok := ce["loop"].(map[string]any)
+	if !ok {
+		return fmt.Errorf("the counterexample has no loop")
+	}
+	start := int(lp["start"].(float64))
+	steps := asAny(ce["steps"])
+	if start < 1 || start > len(steps) {
+		return fmt.Errorf("loop start %d outside the %d steps", start, len(steps))
+	}
+	stepper, err := explore.NewStepper(m)
+	if err != nil {
+		return err
+	}
+
+	// The claim: the possible locations after each claim step (a set,
+	// because two edges of a location may carry the same text).
+	cp := &m.Processes[claim]
+	locs := map[int]bool{cp.Initial: true}
+	var atLoopStart map[int]bool
+	acceptInLoop := false
+	var sys []map[string]any // steps of the system, in order
+	sysBeforeLoop := 0       // how many of them precede the loop
+	for i, raw := range steps {
+		st := raw.(map[string]any)
+		if i+1 == start {
+			atLoopStart = locs
+			sysBeforeLoop = len(sys)
+		}
+		if fmt.Sprint(st["process"]) != cp.Name {
+			sys = append(sys, st)
+			continue
+		}
+		next := map[int]bool{}
+		for j := range cp.Edges {
+			e := &cp.Edges[j]
+			if locs[e.From] && cex.CommandText(e) == fmt.Sprint(st["command"]) {
+				next[e.To] = true
+			}
+		}
+		if len(next) == 0 {
+			return fmt.Errorf("step %d (claim: %v) is not an edge of the claim out of locations %v", i+1, st["command"], keys(locs))
+		}
+		locs = next
+		if i+1 >= start {
+			for l := range next {
+				if hasLabel(cp.Locations[l], ir.Accept) {
+					acceptInLoop = true
+				}
+			}
+		}
+	}
+	if !acceptInLoop {
+		return fmt.Errorf("no claim step of the loop leads to a location with the accept label")
+	}
+	if !reflect.DeepEqual(atLoopStart, locs) {
+		return fmt.Errorf("the claim is at %v before the loop and at %v after it", keys(atLoopStart), keys(locs))
+	}
+
+	// The system: every step must be an enabled move, in order.
+	dead := map[string]bool{}
+	var walk func(i int, state, atLoop []byte) error
+	walk = func(i int, state, atLoop []byte) error {
+		if i == sysBeforeLoop {
+			atLoop = state
+		}
+		if i == len(sys) {
+			if !bytes.Equal(atLoop, state) {
+				return fmt.Errorf("the loop is not closed: the system state after the last step differs from the state before the loop")
+			}
+			return nil
+		}
+		key := fmt.Sprintf("%d|%x|%x", i, state, atLoop)
+		if dead[key] {
+			return fmt.Errorf("no continuation")
+		}
+		moves, err := stepper.Enabled(state)
+		if err != nil {
+			return err
+		}
+		last := fmt.Errorf("step %v (%v: %v) is not an enabled move of the model", sys[i]["index"], sys[i]["process"], sys[i]["command"])
+		for _, mv := range moves {
+			e := stepper.Edge(mv.Edge)
+			if m.Processes[mv.Edge.Proc].Name != fmt.Sprint(sys[i]["process"]) || cex.CommandText(e) != fmt.Sprint(sys[i]["command"]) {
+				continue
+			}
+			next, _, err := stepper.Apply(state, mv)
+			if err != nil {
+				continue
+			}
+			if err := walk(i+1, next, atLoop); err != nil {
+				last = err
+				continue
+			}
+			return nil
+		}
+		dead[key] = true
+		return last
+	}
+	return walk(0, stepper.Initial(), nil)
+}
+
+func hasLabel(l ir.Location, want ir.Label) bool {
+	for _, lb := range l.Labels {
+		if lb == want {
+			return true
+		}
+	}
+	return false
+}
+
+func keys(set map[int]bool) []int {
+	var out []int
+	for k := range set {
+		out = append(out, k)
+	}
+	sort.Ints(out)
+	return out
 }

@@ -1,0 +1,38 @@
+## stutter_extension=ON states=6 edges=10
+S0: {'x': 0, 'y': 0, 'b': 0} pcs=(0, 0) claim=None acc=False disabled=[]
+S1: {'x': 0, 'y': 0, 'b': 0} pcs=(1, 0) claim=None acc=False disabled=[]
+S2: {'x': 0, 'y': 0, 'b': 1} pcs=(0, 1) claim=None acc=True disabled=['P0']
+S3: {'x': 0, 'y': 0, 'b': 1} pcs=(1, 1) claim=None acc=True disabled=[]
+S4: {'x': 0, 'y': 1, 'b': 1} pcs=(0, 1) claim=None acc=True disabled=['P0']
+S5: {'x': 0, 'y': 1, 'b': 1} pcs=(1, 1) claim=None acc=True disabled=[]
+  S0 -[P0]-> S1
+  S0 -[P1]-> S2
+  S1 -[P0]-> S0
+  S1 -[P1]-> S3
+  S2 -[P1]-> S4
+  S3 -[P0]-> S2
+  S3 -[P1]-> S5
+  S4 -[P1]-> S2
+  S5 -[P0]-> S4
+  S5 -[P1]-> S3
+  accepting SCCs (comp, unfair-procs): [([2, 4], []), ([3, 5], ['P0'])]
+  fair accepting SCC: [2, 4]
+## stutter_extension=OFF states=6 edges=10
+S0: {'x': 0, 'y': 0, 'b': 0} pcs=(0, 0) claim=None acc=False disabled=[]
+S1: {'x': 0, 'y': 0, 'b': 0} pcs=(1, 0) claim=None acc=False disabled=[]
+S2: {'x': 0, 'y': 0, 'b': 1} pcs=(0, 1) claim=None acc=True disabled=['P0']
+S3: {'x': 0, 'y': 0, 'b': 1} pcs=(1, 1) claim=None acc=True disabled=[]
+S4: {'x': 0, 'y': 1, 'b': 1} pcs=(0, 1) claim=None acc=True disabled=['P0']
+S5: {'x': 0, 'y': 1, 'b': 1} pcs=(1, 1) claim=None acc=True disabled=[]
+  S0 -[P0]-> S1
+  S0 -[P1]-> S2
+  S1 -[P0]-> S0
+  S1 -[P1]-> S3
+  S2 -[P1]-> S4
+  S3 -[P0]-> S2
+  S3 -[P1]-> S5
+  S4 -[P1]-> S2
+  S5 -[P0]-> S4
+  S5 -[P1]-> S3
+  accepting SCCs (comp, unfair-procs): [([2, 4], []), ([3, 5], ['P0'])]
+  fair accepting SCC: [2, 4]

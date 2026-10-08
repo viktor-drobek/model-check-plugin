@@ -77,33 +77,130 @@ in the Handbook of Model Checking (chapter 6;
 `model-check-skill-notes/01-handbook-of-model-checking.md`) and in Baier–Katoen
 (chapter 8; `model-check-skill-notes/05-principles-of-model-checking.md`).
 `engine/explore/por.go` also cites Clarke–Grumberg–Peled (chapter 10); that
-book has no note in the monorepo. The
-independence of a send and a receive on a buffered channel, the treatment of the
-program counters that Promela's termination order reads, and the state-dependent
-condition for channel operations are this project's own arguments, not taken from
-those books; each is stated in `engine/explore/por.go`.
+book has no note in the monorepo. The arguments that apply those conditions to
+this engine are this project's own, not taken from those books, and each is
+stated in `engine/explore/por.go` and in `steps/perf6-plan.md`: the independence
+of a send and a receive on a buffered channel, the treatment of the program
+counters that Promela's termination order reads, the state-dependent condition
+for channel operations; and, from the step that widened the reduction, the
+*macro-step* (an atomic sequence, an edge with its d_step continuation, or one
+edge) as the unit that is commuted, with the footprint of every edge it can be
+made of and a cycle proviso that follows each sequence to the stored states it
+ends in; the equivalence of two stored states that differ only in the exclusive
+byte of an atomic sequence (the byte is read in two places, and a stored state
+has no holder that can move), which the proof carries a path through and the
+oracles compare up to; and the live-process table as one cell that every `run`
+and every end of a process writes, with the program counter of a pool member at
+its dormant location as the cell a `run` writes and reads. These are checked
+against the engine, not cited from a source: nothing here is taken from SPIN's
+sources, and SPIN's own reduction is not what the engine reproduces (it is run
+without reduction, `-DNOREDUCE`, as a witness).
 
 The sources do not guarantee this implementation. What the release asserts is what
-its tests confirm. On random models (`engine/explore/por_random_test.go`) the
-reduced search is compared with the full one for the reachability of a model error
-and, for the models on which both searches finish (most of them; a model whose
-error is reachable is compared only on that error), for the status and evidence of
-every property, the set of states without an enabled move, and the replay of every
-counterexample as a run of the model. On the Promela models of
-`engine/testdata/promela`, `engine/testdata/corpus2` and the SPIN corpus
-(`Promela - examples/`) that the frontend accepts and that both searches finish
-(`engine/por_corpus_test.go`) it is compared for the status and evidence of every
-property and for the reachability of a model error, and it must never store more
-states than the full search, and exactly as many when the reduction is refused;
-that test does not compare the states without a move or replay counterexamples.
-The analysis was also mutation-tested: the mutants (chosen by hand) and the
-survivors that exposed gaps in the tests are recorded in
-`steps/perf2-confirmation.md` and `steps/perf4-confirmation.md`; the scratch
-harness that ran them is not part of the release. The reduction preserves the
-safety properties only; it is refused, with the reason in the report, for atomic
-sequences, rendezvous and dynamic channels, process creation, a model that reads
-the process table (`_nr_pr`; the frontend folds `_pid` to a constant, so it does
-not count), `timeout`, `provided`, breadth-first search and temporal properties.
+its tests confirm. Random models of nine shapes (a base generator, atomic
+sequences, loops through atomic chains, process creation with the table, atomic
+sequences around process creation, `provided`, two that read globals another
+process writes in the places the others fill with constants or locals, and one that
+makes the table model the frontend gives a model that reads `_nr_pr` and has no `run`;
+`engine/explore/por_gen_test.go`)
+are run through four oracles. The verdict differential (`por_oracle_test.go`,
+`por_random_test.go`) compares the reduced search with the full one for the
+reachability of a model error (an evaluation error, a domain overflow, an
+exhausted process pool) and, for the models on which both searches finish, for
+the status and evidence of every property, the set of states without an enabled
+move (up to the exclusive byte), the stored states of the reduced search being
+states of the full one, the equality of the counts when the reduction is
+refused, and the replay of every counterexample as a run of the model. The audit
+of the ample sets (`por_audit_test.go`) runs, at every stored state of the full
+graph and for every process the analysis calls eligible there, the model itself:
+the macro-steps of the process must be the same after any sequence of up to two
+macro-steps of the others, must commute with it, and must not change a property;
+it reads nothing of the analysis but the eligibility tables, so, on the shapes the
+generators make, it sees a hole in the footprints in states the reduced search never
+visits (hand-built shapes that no generator makes are pinned by directed tests only:
+`steps/perf6-confirmation.md`, "What the oracles can and cannot see"). The acyclicity
+audit (`por_acyclic_test.go`) records the choices of the reduced search and
+checks that the states not expanded in full contain no cycle. On the Promela
+models of `engine/testdata/promela`, `engine/testdata/corpus2` and the SPIN
+corpus (`Promela - examples/`) that the frontend accepts and that both searches
+finish (`engine/por_corpus_test.go`) the reduction is compared for the status and
+evidence of every property and for the reachability of a model error, and it must
+never store more states than the full search, and exactly as many when the
+reduction is refused; that test does not compare the states without a move or
+replay counterexamples. `engine/tools/pandiff` sets a fuzzer of Promela models
+(`atomic`, `d_step`, `run` from `init`, `_nr_pr`, a buffered channel) and the
+verdicts of the corpus against `pan -DNOREDUCE`. The analysis is mutation-tested
+by a harness that is part of the repository (`engine/cmd/pormut`, mutants in
+`engine/tools/pormut/mutants.json`) and whose results, with the survivors and
+what each shows, are in `steps/perf6-confirmation.md`; the earlier mutants of
+steps 2 and 4 are recorded in `steps/perf2-confirmation.md` and
+`steps/perf4-confirmation.md`. The reduction preserves the safety properties
+only; it is refused, with the reason in the report, for rendezvous channels,
+channels named by a value, `timeout`, `provided`, breadth-first search and
+temporal properties, and for two shapes of process creation that the frontend
+never emits (see `steps/perf6-plan.md`); a model that reads `_nr_pr` is not
+refused but reduced where the table rules allow (`nrpr.pml`: 31 states, 21 with
+the reduction). The engine and SPIN agree on `_nr_pr` in a model that reads it and
+creates no process by `run` (the `_nr_pr` fix, `steps/fix-nrpr-confirmation.md`: such a
+model gets the live-process table too, and a process that ends leaves it); step 6
+recorded a difference there that no longer exists. Under a never claim or an `ltl`
+formula `pan` counts the claim in `_nr_pr` and the engine does not, a documented
+divergence (`skills/model-check/references/promela-subset.md`,
+`engine/testdata/spin-divergence/`). The integration of the branches added
+generators for models that read `_nr_pr` with `active` processes and for loops
+inside atomic and d_step blocks to the oracles and the fuzzers
+(`steps/integration-0.3.0-notes.md`).
+
+## What `--fairness weak` rests on
+
+Weak fairness is the definition of Baier–Katoen (chapter 3, "process fairness":
+an action or process that is continuously enabled from some point on occurs
+infinitely often; `model-check-skill-notes/05-principles-of-model-checking.md`),
+decided on the synchronous product of the model and the claim by the n + 2 copies
+of Holzmann's fairness rules as `pan -f` implements them (SPIN book, "fairness";
+`model-check-skill-notes/14-skill-building-plan.md` §4.2). A system that has no move
+is extended by a state that repeats for ever (Baier–Katoen §3.1, the stop state with a
+self-loop), which is what `fairness.md` §6b calls the stutter extension. Where
+`pan -f` and the definition differ, the engine follows the definition (`fairness.md`
+§6b); the cases are documented, and the scenarios of `features/g4-ltl.feature` pass
+only while both tools answer exactly as documented.
+
+The sources do not guarantee this implementation. What the release asserts is what
+its tests confirm: an independent decision procedure by strongly connected components
+(`engine/explore/weakfair_oracle_test.go`, on random models and on generated Promela
+models), hand-encoded graphs checked by a separate Python program that uses no engine
+code (`engine/testdata/weakdecision/`), the differential against `pan`, and a mutation
+test of the rules (`steps/fix-weakfairness-mutants.py`). The records, with what was
+and was not checked, are `steps/fix-weakfairness-confirmation.md`.
+
+## What the parallel search (`--workers`) rests on
+
+`mcd check --workers N` and the `workers` parameter of `mc_check` search the safety
+properties breadth-first, level by level, over a visited set split into partitions
+by a fixed hash, each partition written by one worker at a time. The design, the
+rule that makes every result independent of the worker count, and the argument for
+a deterministic partitioned set instead of a shared lock-free table are this
+project's own and are written down in `steps/perf5-plan.md` and
+`steps/perf5-confirmation.md`; they do not rest on a published algorithm.
+
+The multi-core literature the work is related to is named in the reference list of
+the Handbook of Model Checking, chapter 5 (Holzmann), which the monorepo holds as
+`books-md/1clarke_edmund_handbook_of_model_checking/` (entries 3, 16-18 and 20:
+the DiVinE multi-core LTL checker; the multi-core extension of SPIN; parallelising
+SPIN; swarm verification). Only that reference list is in the monorepo: **the papers
+themselves are not, and nothing in the engine or its documentation was taken from
+them**. The partitioning of states by the owner of their hash is the classic
+distributed-memory idea and a shared lock-free table is the usual multi-core one;
+both are named here from memory, are not in the monorepo, and are not cited as a
+source of this implementation.
+
+The sources do not guarantee this implementation. What the release asserts is what
+its tests confirm: a differential oracle against the sequential searches (random
+models of two generators, every Promela model of the fixtures and the SPIN corpus
+that the frontend accepts, and `pan -c0` through `tools/pandiff`), the same report
+for every worker count, the race detector, and a mutation campaign of the rules
+that make the result deterministic; the scratch harness that ran the mutants is not
+part of the release. See `steps/perf5-confirmation.md`.
 
 ## Updating the index
 

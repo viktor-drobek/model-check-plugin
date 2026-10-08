@@ -1,0 +1,88 @@
+# AppSec gate: trivy, semgrep and govulncheck over the checkout.
+#
+# One implementation runs everywhere: this workflow calls
+# scripts/security-scan.sh, the same pinned versions, flags and gate a
+# developer gets locally, so a failure here reproduces with one command.
+# A separate workflow on purpose: it also runs weekly (a clean dependency
+# gains a CVE without any commit), which the push/PR-only ci.yml cannot cover.
+#
+# Runs on a GitHub-hosted runner because the script falls back to pinned docker
+# images when the scanners are not installed. This is the workflow of the public plugin
+# repository: code scanning is free there, so the SARIF uploads are not optional.
+
+name: Security scan
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 4 * * 1"   # Mondays 04:17 UTC
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+permissions:
+  contents: read
+
+jobs:
+  security-scan:
+    name: AppSec scanners
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read          # upload-sarif reads the workflow run it belongs to
+      security-events: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run trivy, semgrep and govulncheck
+        env:
+          # Optional: raises semgrep registry limits; never required.
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+        run: scripts/security-scan.sh
+
+      # SARIF goes to code scanning from trusted events only: a fork pull request's token cannot write
+      # security-events, and a fork must not inject findings.
+      - name: Upload trivy SARIF
+        if: >-
+          always() &&
+          !(github.event_name == 'pull_request' &&
+            github.event.pull_request.head.repo.full_name != github.repository)
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: dist/security/trivy.sarif
+          category: trivy
+
+      - name: Upload semgrep SARIF
+        if: >-
+          always() &&
+          !(github.event_name == 'pull_request' &&
+            github.event.pull_request.head.repo.full_name != github.repository)
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: dist/security/semgrep.sarif
+          category: semgrep
+
+      - name: Upload scan reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-reports
+          path: dist/security/
+          include-hidden-files: false
+          retention-days: 30
+
+      - name: Job summary
+        if: always()
+        run: cat dist/security/summary.md >> "$GITHUB_STEP_SUMMARY" || true

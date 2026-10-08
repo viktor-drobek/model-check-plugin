@@ -1,0 +1,143 @@
+{
+  "schema": "mcd-ir/1",
+  "name": "nrpr-unread",
+  "globals": [
+    {
+      "name": "x",
+      "type": "byte",
+      "origin": {
+        "file": "testdata/promela/nrpr-unread.pml",
+        "line": 6,
+        "name": "x"
+      }
+    }
+  ],
+  "processes": [
+    {
+      "name": "A:0",
+      "locations": [
+        {},
+        {
+          "labels": [
+            "end"
+          ]
+        },
+        {
+          "name": "-dead-"
+        }
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 1,
+          "effect": [
+            {
+              "var": "x",
+              "value": {
+                "op": "const",
+                "value": 1
+              }
+            }
+          ],
+          "text": "x = 1",
+          "origin": {
+            "file": "testdata/promela/nrpr-unread.pml",
+            "line": 7,
+            "name": "x = 1"
+          }
+        },
+        {
+          "from": 1,
+          "to": 2,
+          "guard": {
+            "op": "eq",
+            "args": [
+              {
+                "op": "pc",
+                "value": 1
+              },
+              {
+                "op": "const",
+                "value": 2
+              }
+            ]
+          },
+          "text": "-end-",
+          "origin": {
+            "file": "testdata/promela/nrpr-unread.pml",
+            "line": 7,
+            "name": "-end-"
+          }
+        }
+      ],
+      "origin": {
+        "file": "testdata/promela/nrpr-unread.pml",
+        "line": 7,
+        "name": "A"
+      }
+    },
+    {
+      "name": "B:1",
+      "locations": [
+        {},
+        {
+          "labels": [
+            "end"
+          ]
+        },
+        {
+          "name": "-dead-"
+        }
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 1,
+          "effect": [
+            {
+              "var": "x",
+              "value": {
+                "op": "const",
+                "value": 2
+              }
+            }
+          ],
+          "text": "x = 2",
+          "origin": {
+            "file": "testdata/promela/nrpr-unread.pml",
+            "line": 8,
+            "name": "x = 2"
+          }
+        },
+        {
+          "from": 1,
+          "to": 2,
+          "text": "-end-",
+          "origin": {
+            "file": "testdata/promela/nrpr-unread.pml",
+            "line": 8,
+            "name": "-end-"
+          }
+        }
+      ],
+      "origin": {
+        "file": "testdata/promela/nrpr-unread.pml",
+        "line": 8,
+        "name": "B"
+      }
+    }
+  ],
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)"
+    }
+  ],
+  "origin": {
+    "file": "testdata/promela/nrpr-unread.pml",
+    "name": "nrpr-unread"
+  }
+}

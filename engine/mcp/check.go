@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -28,7 +29,8 @@ var checkKinds = map[string]bool{"invariant": true, "deadlock": true, "reach": t
 // progress in G4, ctl here), so the table is empty: a `not-executed` now
 // comes from the engine itself, with the engine's own reason (strong
 // fairness for ltl, any fairness for ctl, a kind the IR carries that this
-// version does not know).
+// version does not know, a property that reads the process table over a model
+// that keeps none).
 var notExecutedReason = map[string]string{}
 
 // PropertyIn is one property to check.
@@ -48,7 +50,8 @@ type CheckIn struct {
 	Fairness   string       `json:"fairness,omitempty" jsonschema:"none | weak | strong (default none); applies to ltl and progress: weak = every continuously enabled process eventually moves (pan -f, n+2 copies); strong is not executed and makes those properties not-executed with a reason (FR-008)"`
 	Budget     *Budget      `json:"budget,omitempty" jsonschema:"limits; an absent or 0 field takes the server default (the same reading as mcd check); fields above the server ceiling are clamped"`
 	Search     string       `json:"search,omitempty" jsonschema:"dfs | bfs (default dfs; bfs gives shortest counterexamples)"`
-	POR        bool         `json:"por,omitempty" jsonschema:"partial-order reduction of the safety search (default false): far fewer states, the same verdicts for deadlock, assert, invariant and reach, but the counts are those of the reduced graph and the first counterexample may differ. Depth-first only, no ltl/progress/ctl property in the call, no atomic, rendezvous, run, timeout or provided in the model: otherwise the run is unreduced and search.reduction says why"`
+	POR        bool         `json:"por,omitempty" jsonschema:"partial-order reduction of the safety search (default false): far fewer states, the same verdicts for deadlock, assert, invariant and reach, but the counts are those of the reduced graph and the first counterexample may differ. Depth-first only, no ltl/progress/ctl property in the call, no rendezvous channel, channel named by a value, timeout or provided in the model (atomic sequences, run and the process table are reduced): otherwise the run is unreduced and search.reduction says why"`
+	Workers    int          `json:"workers,omitempty" jsonschema:"parallel search of the safety properties by this many workers (default 0 = sequential; clamped to the server ceiling, which is GOMAXPROCS unless configured). When it is applied it is a level-synchronous breadth-first search: for a run that completes, the verdicts and the states and transitions are the sequential search's, counterexamples are shortest ones, and search.mode is bfs; depth counts layers of stored states, so an atomic sequence that runs through is one unit of depth and of the depth budget and one that blocks part-way is one unit per uninterrupted run (the sequential searches count each of its steps); the report is the same for every worker count. It pays on wide state graphs (search.parallel.layers and max_layer_states say how wide) and not on narrow or deep ones, and it is not for finding bugs fast. Refused, with the reason in search.parallel, when the call has an ltl, progress or ctl property, or when por applies: the run is then the sequential one, with its own search mode, and depth and the depth budget count transitions"`
 	NoTiming   bool         `json:"no_timing,omitempty" jsonschema:"omit time_ms from the report so that reports are byte-for-byte reproducible"`
 	Aggregate  bool         `json:"aggregate,omitempty" jsonschema:"also return one aggregate status by the fixed priority invalid-model > not-executed > violated > inconclusive > unknown > verified"`
 }
@@ -63,6 +66,8 @@ type SearchOut struct {
 	Complete        bool     `json:"complete" jsonschema:"true only when the whole reachable graph was expanded"`
 	// Reduction is present only when por was requested.
 	Reduction *explore.Reduction `json:"reduction,omitempty" jsonschema:"present only when por was requested: whether the reduction was applied, why not when it was not, and how many stored states were expanded through one process alone"`
+	// Parallel is present only when workers was given.
+	Parallel *explore.Parallel `json:"parallel,omitempty" jsonschema:"present only when workers was given: whether the parallel search was applied (and with how many workers), why not when it was not, the number of breadth-first layers and the size of the widest, and what changes in the report"`
 }
 
 // TraceRef points at a stored run.
@@ -200,7 +205,7 @@ func (s *Server) check(ctx context.Context, req *sdk.CallToolRequest, in CheckIn
 	if err != nil {
 		return nil, nil, err
 	}
-	timer := begin(sess, "mc_check")
+	timer := s.begin(ctx, sess, "mc_check")
 	out := &CheckOut{SessionID: sess.ID, Warnings: []string{}}
 	var params *Params
 	var artifacts []string
@@ -254,7 +259,16 @@ func (s *Server) check(ctx context.Context, req *sdk.CallToolRequest, in CheckIn
 		requested = *in.Budget
 	}
 	applied, notes := Clamp(requested, s.cfg.Default, s.cfg.Ceiling)
-	params = &Params{Search: string(mode), Fairness: fairness, BudgetApplied: &applied, POR: in.POR}
+	workers := in.Workers
+	if workers < 0 {
+		err = fmt.Errorf("workers must be 0 (sequential) or the number of workers, got %d", workers)
+		return nil, nil, err
+	}
+	if workers > s.cfg.MaxWorkers {
+		notes = append(notes, fmt.Sprintf("workers: requested %d exceeds the server ceiling %d; clamped to %d", workers, s.cfg.MaxWorkers, s.cfg.MaxWorkers))
+		workers = s.cfg.MaxWorkers
+	}
+	params = &Params{Search: string(mode), Fairness: fairness, BudgetApplied: &applied, POR: in.POR, Workers: workers}
 
 	release, err := s.acquire(ctx)
 	if err != nil {
@@ -269,8 +283,18 @@ func (s *Server) check(ctx context.Context, req *sdk.CallToolRequest, in CheckIn
 	}
 	res, runErr := explore.Run(runCtx, m, explore.Options{Mode: mode, Budget: explore.Budget{
 		MaxStates: applied.States, MaxDepth: applied.Depth, MaxMemBytes: applied.MemoryMB << 20,
-	}, POR: in.POR, Fairness: fairness, Defines: defines})
+	}, POR: in.POR, Workers: workers, Fairness: fairness, Defines: defines})
+	if errors.Is(runErr, explore.ErrInternal) {
+		// The engine's own bookkeeping failed: a tool failure (a defect of
+		// mcd, nothing is claimed about the model), not a rejected input.
+		err = runErr
+		return nil, nil, err
+	}
 	if runErr != nil {
+		if toolErr := s.internalToolError(runErr); toolErr != nil {
+			err = toolErr
+			return nil, nil, err
+		}
 		// Validated IR that does not compile (an undeclared variable in a
 		// property expression, a malformed or unresolvable LTL formula): the
 		// input is refused, nothing is claimed.
@@ -286,6 +310,10 @@ func (s *Server) check(ctx context.Context, req *sdk.CallToolRequest, in CheckIn
 	sess.mu.Lock()
 	inputs := []report.Input{{Kind: sess.modelInput.Kind, Path: sess.modelInput.Source, SHA256: sess.modelInput.SHA256}}
 	sess.mu.Unlock()
+	// The mode the run had: a run in which the parallel search was applied is a
+	// breadth-first run, whatever search was asked for.
+	mode = cli.ReportedMode(mode, res)
+	params.Search = string(mode)
 	rep, err := report.Build(m, res, report.Meta{
 		Inputs: inputs, Mode: mode, NoTiming: in.NoTiming,
 		Budget: report.Budget{States: applied.States, Depth: applied.Depth, TimeMS: applied.MS, MemBytes: applied.MemoryMB << 20},
@@ -313,7 +341,7 @@ func (s *Server) check(ctx context.Context, req *sdk.CallToolRequest, in CheckIn
 
 	out.Outcome = "report"
 	out.Warnings = append(out.Warnings, rep.Warnings...)
-	out.Search = &SearchOut{Mode: string(mode), BudgetRequested: requested, BudgetApplied: applied, BudgetNotes: notes, Stop: res.Stop, Complete: res.Complete, Reduction: res.Reduction}
+	out.Search = &SearchOut{Mode: string(mode), BudgetRequested: requested, BudgetApplied: applied, BudgetNotes: notes, Stop: res.Stop, Complete: res.Complete, Reduction: res.Reduction, Parallel: res.Parallel}
 	for _, p := range rep.Properties {
 		po := PropertyOut{ID: p.ID, Kind: p.Kind, Text: p.Text, Status: p.Status, Evidence: p.Evidence, Complete: p.Complete, Reason: p.Reason, Counters: p.Counters, Temporal: p.Temporal, Warnings: p.Warnings}
 		if p.Counterexample != nil {
@@ -343,6 +371,28 @@ func (s *Server) check(ctx context.Context, req *sdk.CallToolRequest, in CheckIn
 		out.Aggregate = aggregate(out.Properties)
 	}
 	return nil, out, nil
+}
+
+// internalToolError is the tool error for a defect of the engine found while
+// running a check (a recovered panic of a parallel worker): not a refusal of the
+// input, so not a rejection, and no verdict. It is nil for any other error.
+//
+// It tells the same story as recoverTool, which handles a panic of a tool
+// handler: the answer and the manifest entry of the call carry the cause on one
+// line, the stack (the InternalError's message carries it after the first line)
+// goes to the server's standard error, once.
+func (s *Server) internalToolError(runErr error) error {
+	var ie *explore.InternalError
+	if !errors.As(runErr, &ie) {
+		return nil
+	}
+	head, _, _ := strings.Cut(ie.Msg, "\n")
+	w := s.errw
+	if w == nil {
+		w = os.Stderr
+	}
+	fmt.Fprintf(w, "mcd serve: mc_check: %s\n", ie.Error())
+	return fmt.Errorf("internal: %w (a defect of mcd, not a verdict on the model; the stack is on the server's standard error)", &explore.InternalError{Msg: head})
 }
 
 // storeTrace writes a run as cex/<id>.json and registers the id. It returns
@@ -437,7 +487,7 @@ func (s *Server) explain(ctx context.Context, req *sdk.CallToolRequest, in Expla
 	if err != nil {
 		return nil, nil, err
 	}
-	timer := begin(sess, "mc_explain")
+	timer := s.begin(ctx, sess, "mc_explain")
 	defer func() { timer.end(err, nil, nil) }()
 	if in.CounterexampleID == "" {
 		err = errors.New("counterexample_id is required")
@@ -518,7 +568,7 @@ func (s *Server) manifest(ctx context.Context, req *sdk.CallToolRequest, in Mani
 	if err != nil {
 		return nil, nil, err
 	}
-	timer := begin(sess, "mc_manifest")
+	timer := s.begin(ctx, sess, "mc_manifest")
 	defer func() { timer.end(err, nil, nil) }()
 	m, _ := sess.snapshot()
 	return nil, &ManifestOut{SessionID: sess.ID, Path: filepath.Join(sess.Dir, "manifest.json"), Manifest: m}, nil

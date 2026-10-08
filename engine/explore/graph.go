@@ -118,7 +118,7 @@ func (g *Graph) build() {
 			copy(s.cur, n.state)
 			m, ok, err := s.nextEnabled(&n.f, s.cur)
 			if err != nil {
-				g.fail(err, func() *cex.Trace { return s.bfsPath(head, n.chain, nil) })
+				g.fail(err, func() *cex.Trace { return s.bfsPath(head, n.chain.refs(), nil) })
 				break
 			}
 			if !ok {
@@ -127,10 +127,10 @@ func (g *Graph) build() {
 			}
 			n.f.enabled++
 			g.Stats.Transitions++
-			chain := append(append([]cex.Ref(nil), n.chain...), s.ref(int32(m.e.proc), int32(m.e.idx), partnerCode(m)))
+			chain := n.chain.push(s.ref(int32(m.e.proc), int32(m.e.idx), partnerCode(m)))
 			failed, err := s.fire(m)
 			if err != nil {
-				g.fail(err, func() *cex.Trace { return s.bfsPath(head, chain, s.next) })
+				g.fail(err, func() *cex.Trace { return s.bfsPath(head, chain.refs(), s.next) })
 				break
 			}
 			if failed != nil {
@@ -140,7 +140,7 @@ func (g *Graph) build() {
 			}
 			inter, err := s.intermediate(s.next)
 			if err != nil {
-				g.fail(err, func() *cex.Trace { return s.bfsPath(head, chain, s.next) })
+				g.fail(err, func() *cex.Trace { return s.bfsPath(head, chain.refs(), s.next) })
 				break
 			}
 			if inter {
@@ -157,19 +157,20 @@ func (g *Graph) build() {
 				break
 			}
 			moved = true
+			stored := chain.refs() // the chain of a stored state is a slice, kept by the graph
 			if isNew {
 				g.Succ = append(g.Succ, nil)
 				g.Chain = append(g.Chain, nil)
 				g.Stuttered = append(g.Stuttered, false)
 				s.parent = append(s.parent, int32(head))
-				s.chains = append(s.chains, chain)
-				s.depth = append(s.depth, int32(d+len(chain)))
+				s.chains = append(s.chains, stored)
+				s.depth = append(s.depth, int32(d+len(stored)))
 				g.Stats.States = s.visited.Len()
 				if !s.checkBudgets(int64(s.visited.Len()) * bfsBytesPerState) {
 					break
 				}
 			}
-			g.addSucc(head, idx, chain)
+			g.addSucc(head, idx, stored)
 		}
 		if !moved && len(g.Succ[head]) == 0 && s.stop == "" {
 			// Totality: a state with no move stutters (see the package note).

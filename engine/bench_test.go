@@ -52,9 +52,10 @@ func BenchmarkEngineSymN6(b *testing.B) {
 	benchCheck(b, "testdata/promela/bench-sym.pml", []string{"N=6"}, 543076)
 }
 
-// The same models with --por (performance plan, step 2). The independent
-// processes collapse to one chain; the lock model has atomic sequences, is
-// refused, and shows what a refused request costs (nothing measurable).
+// The same models with --por (performance plan, steps 2 and 6). The independent
+// processes collapse to one chain; the lock model has atomic sequences, which
+// the reduction treats as one macro-step since step 6 (before it, the model was
+// refused and the count was the full 543 076), so N=6 is 19 914 states.
 func BenchmarkEngineIndepN5POR(b *testing.B) {
 	benchCheck(b, "testdata/promela/bench-indep.pml", []string{"N=5", "K=4"}, 71, "--por")
 }
@@ -65,7 +66,7 @@ func BenchmarkEngineIndepN12POR(b *testing.B) {
 }
 
 func BenchmarkEngineSymN6POR(b *testing.B) {
-	benchCheck(b, "testdata/promela/bench-sym.pml", []string{"N=6"}, 543076, "--por")
+	benchCheck(b, "testdata/promela/bench-sym.pml", []string{"N=6"}, 19914, "--por")
 }
 
 // A pipeline over buffered channels (performance plan, step 4): the stages are

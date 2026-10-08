@@ -33,8 +33,10 @@
 #      resource named (resource error); a model that misbehaves is
 #      `invalid-model` (model error). Every property kind of plan 14 §6 is
 #      executed since G5; what is still `not-executed` is an assumption the
-#      engine cannot honour (fairness for ctl, strong fairness for ltl), and
-#      its reason names that assumption; the server never fabricates a verdict.
+#      engine cannot honour (fairness for ctl, strong fairness for ltl), or a
+#      property that reads the live-process table (`_nr_pr`) over a model whose
+#      processes keep none (features/g5-ctl-v1.feature), and its reason names
+#      that assumption or that read; the server never fabricates a verdict.
 #
 # Aggregation: statuses are not aggregated unless the caller asks
 # (`aggregate: true`); then the priority is
@@ -107,6 +109,31 @@ Feature: G2 — MCP server with the seven tools, session directory, budgets
   Scenario: mc_parse with no input at all is a tool error, not a rejection
     When I call "mc_parse" with no input
     Then the call is an error whose message mentions "exactly one of"
+
+  Scenario: a crash inside a tool is a tool error, and the server keeps answering
+    # The SDK does not recover a panic of a tool handler: it would end the
+    # whole stdio server (exit code 2, no answer) and with it the agent's
+    # session. An internal failure is a tool failure (class 1 above): the
+    # result carries isError = true and the cause, and the next call is served.
+    Given the server's Promela frontend panics
+    When I call "mc_parse" with the Promela source "active proctype P() { skip }"
+    Then the call is an error whose message mentions "internal error"
+    And the tool error message also mentions "injected failure of the frontend"
+    When I call "mc_parse" with the Petri net "testdata/petri/petrinet1.json" inline
+    Then the call is not an error
+    And the answer field "outcome" is "ir"
+    # The manifest says what happened, as it does for an ordinary tool error:
+    # a call that panicked is an error in it, with the cause and without the
+    # stack (the stack is on the server's standard error), not an "ok".
+    When I call "mc_parse" in that session with the Promela source "active proctype P() { skip }"
+    Then the call is an error whose message mentions "internal error in mc_parse"
+    When I call "mc_manifest" in that session
+    Then the manifest lists the calls "mc_parse, mc_parse, mc_manifest" in this order
+    And the manifest call 2 has the outcome "error"
+    And the error of manifest call 2 mentions "internal error in mc_parse"
+    And the error of manifest call 2 mentions "injected failure of the frontend"
+    And the error of manifest call 2 does not mention "goroutine"
+    And the manifest file in the session directory records call 2 as "error"
 
   # --- mc_check --------------------------------------------------------------
 
@@ -223,7 +250,7 @@ Feature: G2 — MCP server with the seven tools, session directory, budgets
 
   # --- mc_check with the partial-order reduction (performance plan, step 2) ---
   # `por` is optional and off by default. A request that cannot be honoured
-  # (breadth-first search, a temporal property, atomic sequences, ...) is a
+  # (breadth-first search, a temporal property, a rendezvous channel, ...) is a
   # result, not a tool error: the answer is the unreduced run's, and
   # search.reduction says it was not applied and why, as `mcd check --por` does.
   # The counts of a reduced answer are those of the reduced graph.
@@ -261,6 +288,70 @@ Feature: G2 — MCP server with the seven tools, session directory, budgets
       | l1 | ltl  | []true  |
     Then the call is not an error
     And the answer reports a partial-order reduction that was not applied for a reason that mentions "temporal"
+
+  # --- mc_check with the parallel search (performance plan 5) ---
+  # `workers` is optional and off by default: the MCP twin of `mcd check
+  # --workers N`. A request above the server's ceiling is clamped and says so in
+  # budget_notes. A run the parallel search cannot take on (a temporal property,
+  # a reduction that applies) is a result, not a tool error: the answer is the
+  # sequential run's and search.parallel says it was not applied and why. A
+  # parallel run is a breadth-first run: search.mode says "bfs".
+
+  # The scenarios that ask for workers need at least two CPUs: the server clamps a request to
+  # GOMAXPROCS, and with one CPU a request for two workers is answered with one.
+  Scenario: mc_check with workers runs the parallel search and says so
+    Given a session in which the IR "testdata/ir/por-visible.json" was parsed
+    When I call "mc_check" in that session with the model's own properties and 2 workers requested
+    Then the call is not an error
+    And the answer reports a parallel search that was applied with 2 workers
+    And the answer reports the search mode "bfs"
+    And the answer property "inv" has status "violated" with evidence "exhaustive"
+    And the answer property "can1" has status "verified" with evidence "exhaustive"
+    And that report file carries the same parallel record as the answer
+
+  Scenario: without workers the answer and the report carry no parallel record
+    Given a session in which the IR "testdata/ir/por-visible.json" was parsed
+    When I call "mc_check" in that session with the model's own properties
+    Then the call is not an error
+    And the answer has no parallel record
+    And that report file has no parallel record
+    And the answer reports the search mode "dfs"
+
+  Scenario: workers above the server ceiling are clamped and the answer says so
+    Given an MCP server with a fresh session base directory and a worker ceiling of 2
+    And a session in which the IR "testdata/ir/por-visible.json" was parsed
+    When I call "mc_check" in that session with the model's own properties and 8 workers requested
+    Then the call is not an error
+    And the answer reports a parallel search that was applied with 2 workers
+    And the budget notes mention "workers" clamped to 2
+
+  Scenario: workers with a temporal property is refused as a result, not as a tool error
+    Given a session in which the IR "testdata/ir/por-visible.json" was parsed
+    When I call "mc_check" in that session with 4 workers requested and properties:
+      | id | kind | formula |
+      | l1 | ltl  | []true  |
+    Then the call is not an error
+    And the answer reports a parallel search that was not applied for a reason that mentions "ltl"
+    And the answer reports the search mode "dfs"
+
+  Scenario: por and workers together are the reduced run where the reduction applies
+    Given a session in which the IR "testdata/ir/por-visible.json" was parsed
+    When I call "mc_check" in that session with por requested and 4 workers requested
+    Then the call is not an error
+    And the answer reports a partial-order reduction that was applied
+    And the answer reports a parallel search that was not applied for a reason that mentions "depth-first"
+    And the answer reports the search mode "dfs"
+
+  Scenario: search bfs with workers is the parallel search, and the reduction says it is not applied
+    Given a session in which the IR "testdata/ir/por-visible.json" was parsed
+    # Two workers, not four: the server clamps a request to GOMAXPROCS, so a run
+    # on a machine with fewer than four CPUs (a small CI runner) could not ask
+    # for more than it has.
+    When I call "mc_check" in that session with por requested, search "bfs" and 2 workers requested
+    Then the call is not an error
+    And the answer reports a partial-order reduction that was not applied for a reason that mentions "breadth-first"
+    And the answer reports a parallel search that was applied with 2 workers
+    And the answer reports the search mode "bfs"
 
   Scenario: mc_check without a session or an IR is a tool error
     When I call "mc_check" with no input
@@ -337,6 +428,17 @@ Feature: G2 — MCP server with the seven tools, session directory, budgets
     And the simulation stopped because of one of "deadlock"
     And the simulation names the enabled edges at the stop as ""
 
+  # `timeout` is true only when no statement of any process is executable, so a
+  # simulation offers the timeout moves of a state only when it has no other move.
+  # Both timeouts are offered at the start; after P1 has taken its timeout its
+  # assignment is executable and P2's timeout is not. The simulation used to list
+  # the timeout moves of every state, so a run could take a timeout while another
+  # process could move.
+  Scenario: a simulation offers a timeout only in a state where nothing else can move
+    Given an MCP session with the test model "timeout-gate.pml" parsed
+    When I call mc_simulate guided by the edges "P1:0/0"
+    Then the MCP simulation names the enabled edges at the stop as "P1:0/1"
+
   # --- mc_lint_property ---------------------------------------------------------
 
   Scenario: mc_lint_property lists atoms, undefined atoms and the property class
@@ -382,3 +484,21 @@ Feature: G2 — MCP server with the seven tools, session directory, budgets
   Scenario: mc_manifest of an unknown session is a tool error
     When I call "mc_manifest" for the session id "no-such-session"
     Then the call is an error whose message mentions "unknown session"
+
+  Scenario: the manifest file stays whole when calls end at the same time, some of them in a crash
+    # The SDK serves tool calls concurrently, and every call rewrites
+    # manifest.json. A write that happens after the session's lock is released
+    # lets one call's snapshot land over another's: a file that is not JSON, or
+    # one that lacks a call or an error the manifest has. Right after the calls
+    # the file must be valid JSON and say, call by call, what the manifest says,
+    # whatever the order in which the calls ended and whether one of them
+    # crashed. (Any later call rewrites the whole file, so the file is read
+    # before the manifest is asked for.)
+    Given the server's Promela frontend panics
+    And a session in which the Petri net "testdata/petri/petrinet1.json" was parsed
+    When 300 calls of "mc_lint_property" and 300 crashing calls of "mc_parse" run at the same time in that session
+    Then the manifest file in the session directory is valid JSON with 601 calls
+    When I call "mc_manifest" in that session
+    Then the call is not an error
+    And the manifest file read before agrees with the manifest on the tool, outcome and error of each of its calls
+    And 300 manifest calls of "mc_parse" are errors that mention "internal error in mc_parse"
