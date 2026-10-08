@@ -1,0 +1,108 @@
+{
+  "schema": "mcd-ir/1",
+  "name": "par-skip-reach",
+  "globals": [
+    {
+      "name": "i",
+      "type": "byte"
+    },
+    {
+      "name": "a",
+      "type": "byte",
+      "len": 2
+    }
+  ],
+  "processes": [
+    {
+      "name": "P",
+      "locations": [
+        {
+          "name": "l0"
+        },
+        {
+          "name": "l1"
+        },
+        {
+          "name": "l2"
+        }
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 1,
+          "effect": [
+            {
+              "var": "a",
+              "index": {
+                "op": "const"
+              },
+              "value": {
+                "op": "const",
+                "value": 1
+              }
+            }
+          ],
+          "text": "a[0] = 1"
+        },
+        {
+          "from": 0,
+          "to": 2,
+          "effect": [
+            {
+              "var": "i",
+              "value": {
+                "op": "const",
+                "value": 5
+              }
+            }
+          ],
+          "text": "i = 5"
+        }
+      ]
+    }
+  ],
+  "properties": [
+    {
+      "id": "inv",
+      "kind": "invariant",
+      "expr": {
+        "op": "eq",
+        "args": [
+          {
+            "op": "index",
+            "var": "a",
+            "args": [
+              {
+                "op": "var",
+                "var": "i"
+              }
+            ]
+          },
+          {
+            "op": "const"
+          }
+        ]
+      },
+      "text": "a[i] == 0"
+    },
+    {
+      "id": "reach5",
+      "kind": "reach",
+      "expr": {
+        "op": "eq",
+        "args": [
+          {
+            "op": "var",
+            "var": "i"
+          },
+          {
+            "op": "const",
+            "value": 5
+          }
+        ]
+      },
+      "text": "i == 5"
+    }
+  ]
+}

@@ -1,0 +1,221 @@
+{
+  "schema": "mcd-ir/1",
+  "name": "par",
+  "globals": [
+    {
+      "name": "x",
+      "type": "byte",
+      "origin": {
+        "file": "par.pml",
+        "line": 1,
+        "name": "x"
+      }
+    }
+  ],
+  "processes": [
+    {
+      "name": "P:0",
+      "locations": [
+        {},
+        {
+          "labels": [
+            "end"
+          ]
+        },
+        {
+          "name": "-dead-"
+        },
+        {}
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 3,
+          "effect": [
+            {
+              "var": "x",
+              "value": {
+                "op": "const",
+                "value": 1
+              }
+            }
+          ],
+          "text": "x = 1",
+          "origin": {
+            "file": "par.pml",
+            "line": 2,
+            "name": "x = 1"
+          }
+        },
+        {
+          "from": 3,
+          "to": 1,
+          "effect": [
+            {
+              "var": "x",
+              "value": {
+                "op": "const",
+                "value": 2
+              }
+            }
+          ],
+          "text": "x = 2",
+          "origin": {
+            "file": "par.pml",
+            "line": 2,
+            "name": "x = 2"
+          }
+        },
+        {
+          "from": 1,
+          "to": 2,
+          "guard": {
+            "op": "eq",
+            "args": [
+              {
+                "op": "pc",
+                "value": 1
+              },
+              {
+                "op": "const",
+                "value": 2
+              }
+            ]
+          },
+          "text": "-end-",
+          "origin": {
+            "file": "par.pml",
+            "line": 2,
+            "name": "-end-"
+          }
+        }
+      ],
+      "origin": {
+        "file": "par.pml",
+        "line": 2,
+        "name": "P"
+      }
+    },
+    {
+      "name": "Q:1",
+      "locations": [
+        {},
+        {
+          "labels": [
+            "end"
+          ]
+        },
+        {
+          "name": "-dead-"
+        }
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 1,
+          "effect": [
+            {
+              "var": "x",
+              "value": {
+                "op": "const",
+                "value": 3
+              }
+            }
+          ],
+          "text": "x = 3",
+          "origin": {
+            "file": "par.pml",
+            "line": 3,
+            "name": "x = 3"
+          }
+        },
+        {
+          "from": 1,
+          "to": 2,
+          "text": "-end-",
+          "origin": {
+            "file": "par.pml",
+            "line": 3,
+            "name": "-end-"
+          }
+        }
+      ],
+      "origin": {
+        "file": "par.pml",
+        "line": 3,
+        "name": "Q"
+      }
+    },
+    {
+      "name": "never",
+      "locations": [
+        {},
+        {
+          "name": "-end-",
+          "labels": [
+            "end"
+          ]
+        }
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 1,
+          "guard": {
+            "op": "gt",
+            "args": [
+              {
+                "op": "var",
+                "var": "x"
+              },
+              {
+                "op": "const",
+                "value": 1
+              }
+            ]
+          },
+          "text": "x > 1",
+          "origin": {
+            "file": "par.pml",
+            "line": 4,
+            "name": "x > 1"
+          }
+        },
+        {
+          "from": 0,
+          "to": 0,
+          "else": true,
+          "text": "else",
+          "origin": {
+            "file": "par.pml",
+            "line": 4,
+            "name": "else"
+          }
+        }
+      ],
+      "claim": true,
+      "origin": {
+        "file": "par.pml",
+        "line": 4,
+        "name": "never"
+      }
+    }
+  ],
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock"
+    },
+    {
+      "id": "assert",
+      "kind": "assert"
+    }
+  ],
+  "origin": {
+    "file": "par.pml",
+    "name": "par"
+  }
+}

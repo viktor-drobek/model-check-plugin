@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -28,7 +29,16 @@ type g0World struct {
 	// allocated is the bytes the last measured run allocated in total
 	// (runtime.MemStats.TotalAlloc), garbage included.
 	allocated uint64
+	// faultyStdout makes the next commands write to a standard output whose
+	// Write panics: an internal failure the CLI contract has to survive.
+	faultyStdout bool
 }
+
+// panicWriter is a standard output that fails with a panic, the one way to
+// make cli.Run panic without a defect in the engine.
+type panicWriter struct{}
+
+func (panicWriter) Write([]byte) (int, error) { panic("injected failure of stdout") }
 
 func init() {
 	stepRegistrars = append(stepRegistrars, registerG0Steps)
@@ -60,13 +70,21 @@ func registerG0Steps(sc *godog.ScenarioContext) {
 		return nil
 	}
 	sc.Step(`^the Petri net file "([^"]*)"$`, given)
+	sc.Step(`^the standard output of the command fails with a panic$`, func() error {
+		w.faultyStdout = true
+		return nil
+	})
 	sc.Step(`^the IR file "([^"]*)"$`, given)
 
 	// --- When ----------------------------------------------------------------
 	run := func(cmd string) {
 		w.stdout.Reset()
 		w.stderr.Reset()
-		w.exit = cli.Run(w.args(cmd), &w.stdout, &w.stderr)
+		var out io.Writer = &w.stdout
+		if w.faultyStdout {
+			out = panicWriter{}
+		}
+		w.exit = cli.Run(w.args(cmd), out, &w.stderr)
 	}
 	sc.Step(`^I run "mcd ([^"]*)"$`, func(cmd string) error {
 		run(cmd)
@@ -101,6 +119,12 @@ func registerG0Steps(sc *godog.ScenarioContext) {
 	sc.Step(`^the exit code is (\d+)$`, func(code int) error {
 		if w.exit != code {
 			return fmt.Errorf("exit code %d, want %d\nstdout: %s\nstderr: %s", w.exit, code, w.stdout.String(), w.stderr.String())
+		}
+		return nil
+	})
+	sc.Step(`^the error output mentions "([^"]*)"$`, func(s string) error {
+		if !strings.Contains(w.stderr.String(), s) {
+			return fmt.Errorf("error output %q does not mention %q", w.stderr.String(), s)
 		}
 		return nil
 	})

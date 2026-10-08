@@ -8,6 +8,7 @@ import (
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"modelcheck/ctl"
+	"modelcheck/explore"
 	"modelcheck/ir"
 	"modelcheck/ltl"
 )
@@ -42,7 +43,7 @@ type LintOut struct {
 	Temporal   bool     `json:"temporal" jsonschema:"true for an ltl formula, false for a state expression"`
 	NNF        string   `json:"nnf,omitempty" jsonschema:"ltl: the formula in negation normal form as the engine reads it"`
 	Normalised string   `json:"normalised,omitempty" jsonschema:"ctl: the formula in the EX/EU/EG basis, as it will be labelled"`
-	Constant   bool     `json:"constant" jsonschema:"true when the expression reads no variable: it is vacuously true or false everywhere"`
+	Constant   bool     `json:"constant" jsonschema:"true when the expression reads nothing of the state (no variable, program counter, channel, timeout or process table): it is vacuously true or false everywhere"`
 	Notes      []string `json:"notes"`
 }
 
@@ -86,7 +87,7 @@ func (s *Server) lint(ctx context.Context, req *sdk.CallToolRequest, in LintIn) 
 	if err != nil {
 		return nil, nil, err
 	}
-	timer := begin(sess, "mc_lint_property")
+	timer := s.begin(ctx, sess, "mc_lint_property")
 	defer func() { timer.end(err, nil, nil) }()
 	m, rej, err := s.modelFor(sess, in.IR)
 	if err != nil {
@@ -134,7 +135,10 @@ func (s *Server) lint(ctx context.Context, req *sdk.CallToolRequest, in LintIn) 
 		}
 	}
 	walk(e)
-	out.Constant = len(out.Atoms) == 0
+	// Atoms lists variables only; a program counter, a channel, the timeout and
+	// the live-process table (_nr_pr, pid, youngest) are reads of the state too,
+	// so an expression is a vacuity candidate only when it reads none of them.
+	out.Constant = len(out.Atoms) == 0 && !e.ReadsState()
 	if k, cerr := ir.Check(e, scope); cerr != nil {
 		out.TypeError = cerr.Error()
 	} else {
@@ -153,6 +157,10 @@ func (s *Server) lint(ctx context.Context, req *sdk.CallToolRequest, in LintIn) 
 	}
 	if out.Constant {
 		out.Notes = append(out.Notes, "the expression is constant (it reads no variable): it is vacuously true or false in every state — a vacuity candidate")
+	}
+	// What mc_check will do with the property, from the same decision.
+	if reason := explore.TableReadRefusal(l, &ir.Property{ID: "lint", Kind: kind, Expr: e}); reason != "" {
+		out.Notes = append(out.Notes, "mc_check will not execute this property: "+reason)
 	}
 	for _, u := range out.Undefined {
 		out.Notes = append(out.Notes, fmt.Sprintf("%q is not a global variable of the model; process locals are not visible to properties", u))
@@ -182,6 +190,9 @@ func lintCTL(session, formula string, defines map[string]string, l *ir.Layout) *
 		return out
 	}
 	out.Normalised = ctl.Normalise(f).String()
+	if reason := explore.TableReadRefusalCTL(l, f); reason != "" {
+		out.Notes = append(out.Notes, "mc_check will not execute this property: "+reason)
+	}
 	for _, a := range f.Atoms() {
 		out.Atoms = append(out.Atoms, a.Text)
 	}

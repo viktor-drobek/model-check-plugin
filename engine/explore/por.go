@@ -96,12 +96,68 @@ import (
 //	    depth-first search stack; otherwise it is expanded in full. Every
 //	    cycle of the reduced graph then contains a fully expanded state.
 //
+// Atomic sequences (performance plan, step 6). The unit that is commuted is
+// the macro-step: what a process does from a stored state to the next stored
+// state, which is one edge, or an edge with its d_step continuation, or an
+// atomic sequence (the process keeps exclusive control after an Atomic edge and
+// goes on with an edge of its own; the states inside the sequence are not
+// stored). Which edges a macro-step is made of is decided when it is made, by
+// guards, channel conditions and else siblings, so
+//
+//   - the footprint of a macro-step is the union over every edge out of every
+//     location the sequence can pass, enabled or not (closure): after an Atomic
+//     edge as after a DStep one;
+//   - a location that an atomic edge enters is read whole, like one a d_step
+//     enters (a guard on a program counter there is a read of the whole
+//     counter), and the channel operations of the edge and of those locations
+//     are whole-channel cells, not the separate ends of a directed channel: a
+//     continuation `c!x` is enabled by the receiver's pop and blocked by its
+//     absence, which changes where the sequence ends;
+//   - the cycle proviso follows each move through the sequence, along every
+//     branch, to the stored states it can end in, and compares them exactly with
+//     the stack (leavesStack). A chain longer than a limit, or more micro-steps
+//     in one pick than a budget, counts as not leaving: full expansion.
+//
+// The exclusive byte is what makes two orders of commuting macro-steps differ:
+// the step that comes last decides it. The byte is read in two places only, to
+// restrict the moves to a holder that can move and to decide that a state is
+// inside a sequence; a stored state has no holder that can move, so two stored
+// states that differ only in the byte have the same moves, effects, property
+// values and successors up to the byte (an equivalence the oracles use: the
+// states without a move are compared up to it). The proof that the reduction is
+// sound runs on exact states, with that equivalence to carry a path past a
+// commutation; the cycle proviso is a property of the exact reduced graph.
+//
+// Process creation and the process table (performance plan, step 6). The table
+// of live processes (`_nr_pr`, a runtime pid, which process is the youngest and
+// may leave) is one cell, T: the processes are entered and left in an order that
+// is part of the state, so any two writers conflict and every reader is enabled
+// or disabled by any of them. Every `run` and every edge that leaves the table
+// write T; `nrpr`, `pid` and `youngest` read it, wherever they stand (a guard,
+// an effect, the arguments of a `run`, a property: a property that reads it makes
+// every `run` and every end visible). A `run` also reads and writes the program
+// counter of each target of its pool at the dormant location (it takes the first
+// dormant slot, and it is what enables a guard on the counter of a process that
+// has no edge of its own), reads the cells of its arguments (in the creator's
+// scope) and of its initialisers (in the target's), and writes nothing at the
+// entry location: a guard there is enabled by the run and never together with
+// it. The locals of the target are not cells. Two checks refuse what the
+// Promela frontend never emits: a dynamic process that goes back to its dormant
+// location without leaving the table (the slot would become free with no write
+// that the `run` is ordered against), and a `run` that enters its target at
+// the dormant location. The consequence for frontend output: when a model
+// creates processes every process's end edge leaves the table, so the creating
+// step is itself expanded in full and the gain comes from the other processes.
+//
 // Out of this version, refused with a reason that goes into the report:
-// atomic sequences (exclusive control disables other processes' moves),
-// rendezvous and dynamic channels (a step with a partner), process creation
-// and the process table, `timeout`, `provided`, breadth-first search, and
-// every temporal property (the reduction preserves the safety properties
-// only, and a vacuity watch counts states).
+// rendezvous channels (a handshake is one step of two processes: measured, no
+// model has two independent pairs, so a rule would have a proof and no gain),
+// channels named by a value (a dynamic channel: the dependence relation would
+// depend on the state; postponed), `timeout` (postponed), `provided` (a guard
+// of every edge of the process; refused although the argument is short, because
+// it gained nothing), breadth-first search, and every temporal property (the
+// reduction preserves the safety properties only, and a vacuity watch counts
+// states).
 
 // Reduction is what a reduced run records in the report.
 type Reduction struct {
@@ -128,9 +184,10 @@ const (
 type porCellKind uint8
 
 const (
-	cellVar  porCellKind = iota // a global variable (or one element of an array)
-	cellChan                    // a channel, by name; "*" is any channel
-	cellPC                      // the program counter of a process, by index
+	cellVar   porCellKind = iota // a global variable (or one element of an array)
+	cellChan                     // a channel, by name; "*" is any channel
+	cellPC                       // the program counter of a process, by index
+	cellTable                    // the live-process table: its count and its order
 )
 
 // porCell is something an edge can read or write. elem is the element of an
@@ -140,6 +197,12 @@ type porCell struct {
 	name string
 	elem int
 }
+
+// porTable is the live-process table, one cell: a `run` enters it and the end
+// of a process leaves it, both in an order that is part of the state, so any
+// two writers conflict, and `_nr_pr`, a pid, and "is this the youngest process"
+// read all of it.
+var porTable = porCell{cellTable, "T", -1}
 
 type porKey struct {
 	kind porCellKind
@@ -292,7 +355,7 @@ func (a *porAnalysis) reads(e *ir.Expr, proc int, f *porFoot) {
 	case "timeout":
 		a.refuse("the model uses timeout, which reads whether any other process can move")
 	case "nrpr", "pid", "youngest":
-		a.refuse("the model reads the process table (%s)", e.Op)
+		f.reads = append(f.reads, porTable)
 	}
 	for _, x := range e.Args {
 		a.reads(x, proc, f)
@@ -349,14 +412,11 @@ func (a *porAnalysis) edge(p int, e *ir.Edge, whole, dirOK bool) *porFoot {
 		f.assert = true
 		a.reads(e.Assert, p, f)
 	}
-	if e.Atomic {
-		a.refuse("the model has atomic sequences, which give a process exclusive control and disable the others")
-	}
 	if e.Leave {
-		a.refuse("the model reads the process table (a process leaves it)")
+		f.writes = append(f.writes, porTable)
 	}
 	if e.Run != nil {
-		a.refuse("process creation: the model runs processes")
+		a.run(p, e.Run, f)
 	}
 	for _, ci := range e.ClearChans {
 		f.writes = append(f.writes, porCell{cellChan, m.Channels[ci].Name, -1})
@@ -386,6 +446,36 @@ func (a *porAnalysis) edge(p int, e *ir.Edge, whole, dirOK bool) *porFoot {
 	return f
 }
 
+// run adds what the `run` of process p reads and writes. It pushes the new
+// process on the table, takes the first dormant slot of its pool (so it reads
+// whether each slot is dormant, which is the program counter at the dormant
+// location), moves that counter to the entry (a write of the same cell: a guard
+// of another process on the counter is enabled or disabled by it, and for a
+// process with no edge of its own that is the only write there is), and
+// evaluates its arguments in the creator's scope and its initialisers in the
+// target's. Nothing is written at the entry location: a guard on it is enabled
+// by the run and is never enabled together with it. The locals of the target
+// are not cells. An initialiser may nevertheless assign a GLOBAL (the frontend
+// never emits one, but IR written by hand may, and so may a heterogeneous pool,
+// whose targets resolve the same name in different scopes): that is a write of
+// the global, resolved in each target's own scope, and two directed tests pin it.
+func (a *porAnalysis) run(p int, r *ir.RunOp, f *porFoot) {
+	f.writes = append(f.writes, porTable)
+	for _, q := range r.Targets() {
+		dormant := porCell{cellPC, strconv.Itoa(q), a.c.m.Processes[q].Initial}
+		f.reads = append(f.reads, dormant)
+		f.writes = append(f.writes, dormant)
+		for _, as := range r.Init {
+			a.reads(as.Index, q, f)
+			a.reads(as.Value, q, f)
+			a.writeVar(as.Var, as.Index, q, f) // a local is not a cell; a global is
+		}
+	}
+	for _, x := range r.Args {
+		a.reads(x, p, f)
+	}
+}
+
 func (a *porAnalysis) channelOp(sel *ir.Expr, name string, send, dirOK bool, f *porFoot) {
 	if sel != nil {
 		a.refuse("the model names a channel by a value (a dynamic channel)")
@@ -408,8 +498,14 @@ func (a *porAnalysis) channelOp(sel *ir.Expr, name string, send, dirOK bool, f *
 }
 
 // closure is the footprint of taking edge ei of process p as one step: the
-// edge, and while the edge taken carries DStep, any edge out of its target
-// location (which of them is taken depends on the state).
+// edge, and while the edge taken carries DStep or Atomic, any edge out of its
+// target location (which of them is taken depends on the state). It is the
+// footprint of a macro-step, the unit the reduction commutes: after an atomic
+// edge the process keeps exclusive control and goes on with an edge of its own,
+// so the sequence up to the next state the search stores is one step, and the
+// edges it can be made of are all the edges out of the locations it passes. Every
+// one of them counts, enabled or not: whether it is enabled decides where the
+// sequence ends.
 func (a *porAnalysis) closure(p, ei int, foot [][]*porFoot, seen map[[2]int]bool, into *porFoot) {
 	key := [2]int{p, ei}
 	if seen[key] {
@@ -418,7 +514,7 @@ func (a *porAnalysis) closure(p, ei int, foot [][]*porFoot, seen map[[2]int]bool
 	seen[key] = true
 	into.merge(foot[p][ei])
 	cp := &a.c.procs[p]
-	if !cp.edge[ei].e.DStep {
+	if e := cp.edge[ei].e; !e.DStep && !e.Atomic {
 		return
 	}
 	for _, oi := range cp.out[cp.edge[ei].e.To] {
@@ -469,11 +565,31 @@ func analyzePOR(c *compiled) *porPlan {
 		}
 	}
 	for p := range m.Processes {
-		if m.Processes[p].Dynamic {
-			return &porPlan{reason: fmt.Sprintf("process creation: %s is created by run", m.Processes[p].Name)}
+		pr := &m.Processes[p]
+		if pr.Provided != nil {
+			return &porPlan{reason: fmt.Sprintf("the process %s has a provided clause, which guards every step of the process and which this version of the reduction does not model", pr.Name)}
 		}
-		if m.Processes[p].Provided != nil {
-			return &porPlan{reason: fmt.Sprintf("the process %s has a provided clause (a priority), which the reduction does not model", m.Processes[p].Name)}
+		// Two checks on process creation. The first: a dynamic process becomes
+		// dormant again, and so a free slot of its pool, only through an edge
+		// that leaves the table, which writes the table and so is ordered
+		// against a `run`; the Promela frontend always does this. The second: a
+		// `run` that enters its target at the dormant location would leave a
+		// live process that looks dormant, and a second `run` would take it.
+		if pr.Dynamic {
+			for ei := range pr.Edges {
+				if e := &pr.Edges[ei]; e.To == pr.Initial && !e.Leave {
+					return &porPlan{reason: fmt.Sprintf("the dynamic process %s re-enters its dormant location without leaving the process table", pr.Name)}
+				}
+			}
+		}
+		for ei := range pr.Edges {
+			if e := &pr.Edges[ei]; e.Run != nil {
+				for _, q := range e.Run.Targets() {
+					if e.Run.Entry == m.Processes[q].Initial {
+						return &porPlan{reason: fmt.Sprintf("a run of %s enters it at its dormant location", m.Processes[q].Name)}
+					}
+				}
+			}
 		}
 	}
 
@@ -498,25 +614,31 @@ func analyzePOR(c *compiled) *porPlan {
 			if e.Else {
 				whole[e.From] = true // the siblings of an else
 			}
-			if e.DStep {
+			if e.DStep || e.Atomic {
 				whole[e.To] = true // the continuation is chosen when the step is made
 			}
 		}
 		for ei := range m.Processes[p].Edges {
 			e := &m.Processes[p].Edges[ei]
 			// The ends of a directed channel are separate cells only for an
-			// edge that is neither a d_step nor in a location with an else or
-			// one a d_step enters (see the header).
-			dirOK := !whole[e.From] && !e.DStep
+			// edge that is neither a d_step nor atomic nor in a location with
+			// an else or one a d_step or an atomic edge enters (see the header).
+			dirOK := !whole[e.From] && !e.DStep && !e.Atomic
 			foot[p][ei] = a.edge(p, e, whole[e.From], dirOK)
 			own[p][ei] = a.edge(p, e, true, dirOK)
 		}
 	}
-	// What a property reads is visible.
+	// What a property reads is visible. A property that was refused (it reads
+	// the process table of a model that keeps none, tableread.go) is not
+	// evaluated and reads nothing: it must not refuse the reduction for the
+	// table, which only a process that reads it does.
 	vis := newPorSet()
 	for i := range m.Properties {
 		pr := &m.Properties[i]
 		if pr.Kind != ir.KindInvariant && pr.Kind != ir.KindReach {
+			continue
+		}
+		if _, refused := c.refused[i]; refused {
 			continue
 		}
 		f := &porFoot{}
@@ -626,8 +748,14 @@ type porRun struct {
 	plan      *porPlan
 	onStack   []uint64 // bit i: the stored state with index i is on the DFS stack
 	noProviso bool
-	reduced   int
-	full      int
+	// trace is nil unless a test sets it (Options.porTrace).
+	trace func(state []byte, ample uint8)
+	// chainLimit and pickBudget override the limits of the chain walk of the
+	// cycle proviso (zero: the defaults). Tests only.
+	chainLimit, pickBudget int
+	bufs                   [][]byte // scratch states of the chain walk, by depth
+	reduced                int
+	full                   int
 }
 
 func (r *porRun) mark(idx int, on bool) {
@@ -653,11 +781,21 @@ func (r *porRun) on(idx int) bool {
 // expansion. The first eligible process
 // with an enabled move whose moves lead off the DFS stack is taken.
 func (r *porRun) pick(s *search) uint8 {
+	p := r.choose(s)
+	if r.trace != nil {
+		r.trace(s.cur, p)
+	}
+	return p
+}
+
+func (r *porRun) choose(s *search) uint8 {
 	if !r.plan.any {
 		r.full++
 		return 0
 	}
 	l := s.c.layout
+	// One budget for the whole pick: every candidate's chain walk spends from it.
+	budget := r.budgetMax()
 	for p := range s.c.procs {
 		if s.c.procs[p].claim {
 			continue
@@ -673,7 +811,7 @@ func (r *porRun) pick(s *search) uint8 {
 		if len(moves) == 0 {
 			continue
 		}
-		if r.noProviso || r.leavesStack(s, moves) {
+		if r.noProviso || r.leavesStack(s, moves, &budget) {
 			r.reduced++
 			return uint8(p + 1)
 		}
@@ -720,20 +858,96 @@ func (r *porRun) movesOf(s *search, p int) ([]move, bool) {
 	}
 }
 
+// The limits of the chain walk of the cycle proviso. A chain longer than
+// porChainLimit micro-steps (the limit of a d_step), or more than porPickBudget
+// micro-steps fired in one pick (a wide `if` inside an atomic block multiplies
+// the chains), is not followed any further: the state is expanded in full, as
+// for an error. Neither limit can lose a verdict, because a full expansion is
+// the ordinary search; the second keeps pick from dominating the search.
+const (
+	porChainLimit = dstepLimit
+	porPickBudget = 10000
+)
+
+func (r *porRun) chainMax() int {
+	if r.chainLimit > 0 {
+		return r.chainLimit
+	}
+	return porChainLimit
+}
+
+func (r *porRun) budgetMax() int {
+	if r.pickBudget > 0 {
+		return r.pickBudget
+	}
+	return porPickBudget
+}
+
 // leavesStack is the cycle proviso (C3): no move leads to a state that is on
-// the DFS stack. A move that cannot be fired cleanly (an error, a failing
-// assert) counts as not leaving it, so the state is expanded in full and the
-// ordinary search reports whatever it is.
-func (r *porRun) leavesStack(s *search, moves []move) bool {
-	l := s.c.layout
+// the DFS stack. A move that starts an atomic sequence is followed through the
+// sequence, along every branch, to the stored states it can end in: those are
+// the successors in the graph the search builds (the states inside a sequence
+// are not stored), and the stored states are compared exactly, byte for byte.
+// A move that cannot be fired cleanly (an error, a failing assert) or a chain
+// that exceeds a limit counts as not leaving the stack, so the state is expanded
+// in full and the ordinary search reports whatever it is. The budget of
+// micro-steps is the pick's, shared by every candidate process it asks about
+// (choose allocates it once).
+func (r *porRun) leavesStack(s *search, moves []move, budget *int) bool {
 	for _, m := range moves {
-		failed, err := s.fire(m)
-		if err != nil || failed != nil || s.next[l.Excl] != 0 {
-			return false
-		}
-		if idx, ok := s.visited.Has(s.next); ok && r.on(idx) {
+		if !r.chainLeaves(s, s.cur, m, 0, budget) {
 			return false
 		}
 	}
 	return true
+}
+
+// chainLeaves fires m from the state from and follows the chain it starts: true
+// when every stored state it can end in is off the stack. s.cur is put aside
+// while a micro-step is fired from a state inside a sequence, because fire
+// reads it.
+func (r *porRun) chainLeaves(s *search, from []byte, m move, depth int, budget *int) bool {
+	if *budget--; *budget < 0 || depth > r.chainMax() {
+		return false
+	}
+	cur := s.cur
+	s.cur = from
+	failed, err := s.fire(m)
+	s.cur = cur
+	if err != nil || failed != nil {
+		return false
+	}
+	inter, err := s.intermediate(s.next)
+	if err != nil {
+		return false
+	}
+	if !inter {
+		idx, ok := s.visited.Has(s.next)
+		return !(ok && r.on(idx))
+	}
+	// Inside a sequence: the holder's moves are the only ones, and each is a
+	// branch of the chain.
+	here := r.buffer(depth, len(s.next))
+	copy(here, s.next)
+	f := frame{proc: -1, rv: -1}
+	for {
+		m2, ok, err := s.nextEnabled(&f, here)
+		if err != nil {
+			return false
+		}
+		if !ok {
+			return true
+		}
+		if !r.chainLeaves(s, here, m2, depth+1, budget) {
+			return false
+		}
+	}
+}
+
+// buffer is the scratch state of the chain walk at a depth, kept between picks.
+func (r *porRun) buffer(depth, size int) []byte {
+	for len(r.bufs) <= depth {
+		r.bufs = append(r.bufs, make([]byte, size))
+	}
+	return r.bufs[depth]
 }

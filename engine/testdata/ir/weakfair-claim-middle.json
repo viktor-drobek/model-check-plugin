@@ -1,0 +1,169 @@
+{
+  "schema": "mcd-ir/1",
+  "name": "weakfair-claim-order",
+  "globals": [
+    {
+      "name": "a",
+      "type": "bit",
+      "origin": {
+        "file": "weakfair-claim-order.pml",
+        "line": 1,
+        "name": "a"
+      }
+    }
+  ],
+  "processes": [
+    {
+      "name": "P0:0",
+      "locations": [
+        {}
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 0,
+          "effect": [
+            {
+              "var": "a",
+              "value": {
+                "op": "sub",
+                "args": [
+                  {
+                    "op": "const",
+                    "value": 1
+                  },
+                  {
+                    "op": "var",
+                    "var": "a"
+                  }
+                ]
+              }
+            }
+          ],
+          "text": "a = 1 - a",
+          "origin": {
+            "file": "weakfair-claim-order.pml",
+            "line": 2,
+            "name": "a = 1 - a"
+          }
+        }
+      ],
+      "origin": {
+        "file": "weakfair-claim-order.pml",
+        "line": 2,
+        "name": "P0"
+      }
+    },
+    {
+      "name": "never",
+      "locations": [
+        {
+          "name": "accept_S0",
+          "labels": [
+            "accept"
+          ],
+          "origin": {
+            "file": "weakfair-claim-order.pml",
+            "line": 4,
+            "name": "accept_S0"
+          }
+        }
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 0,
+          "text": "true",
+          "origin": {
+            "file": "weakfair-claim-order.pml",
+            "line": 4,
+            "name": "true"
+          }
+        }
+      ],
+      "claim": true,
+      "origin": {
+        "file": "weakfair-claim-order.pml",
+        "line": 4,
+        "name": "never"
+      }
+    },
+    {
+      "name": "P1:1",
+      "locations": [
+        {},
+        {
+          "labels": [
+            "end"
+          ]
+        },
+        {
+          "name": "-dead-"
+        }
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 1,
+          "guard": {
+            "op": "eq",
+            "args": [
+              {
+                "op": "const"
+              },
+              {
+                "op": "const",
+                "value": 1
+              }
+            ]
+          },
+          "text": "0 == 1",
+          "origin": {
+            "file": "weakfair-claim-order.pml",
+            "line": 3,
+            "name": "0 == 1"
+          }
+        },
+        {
+          "from": 1,
+          "to": 2,
+          "text": "-end-",
+          "origin": {
+            "file": "weakfair-claim-order.pml",
+            "line": 3,
+            "name": "-end-"
+          }
+        }
+      ],
+      "origin": {
+        "file": "weakfair-claim-order.pml",
+        "line": 3,
+        "name": "P1"
+      }
+    }
+  ],
+  "properties": [
+    {
+      "id": "deadlock",
+      "kind": "deadlock",
+      "text": "no invalid end state: every state without an enabled transition has all processes terminated (SPIN: invalid end states)"
+    },
+    {
+      "id": "never",
+      "kind": "ltl",
+      "text": "the never claim (line 4) accepts no run: no acceptance cycle through its accept labels and no run to its end (SPIN: pan -a)",
+      "origin": {
+        "file": "weakfair-claim-order.pml",
+        "line": 4,
+        "name": "never"
+      }
+    }
+  ],
+  "origin": {
+    "file": "weakfair-claim-order.pml",
+    "name": "ir1"
+  }
+}

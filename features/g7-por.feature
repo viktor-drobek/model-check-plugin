@@ -14,10 +14,15 @@
 #     assert, is never expanded alone (it is "visible");
 #   - a state whose reduced successors close a cycle on the search stack is
 #     expanded fully (the cycle proviso).
-# The first version refuses, with the reason in the report, whatever it cannot
-# prove yet: atomic sequences, rendezvous, dynamic channels, `run`, a read of the
-# process table (`_nr_pr`), `timeout`, `provided`, breadth-first search,
-# ltl/progress/ctl properties.
+# The reduction refuses, with the reason in the report, whatever it cannot
+# prove yet: rendezvous, dynamic channels, `timeout`, `provided`,
+# breadth-first search, ltl/progress/ctl properties, and two shapes of process
+# creation that the Promela frontend never emits (a dynamic process that
+# re-enters its dormant location without leaving the process table, a `run`
+# whose entry is the dormant location). Atomic sequences, `run` and the process
+# table (`_nr_pr`, `pid`) are reduced since step 6: the unit that is commuted is
+# the macro-step, an atomic sequence being one, and the table is one cell that
+# every `run` and every end of a process writes; see steps/perf6-plan.md.
 #
 # Without --por the report has no `reduction` object and nothing changes.
 
@@ -163,13 +168,161 @@ Feature: G7 partial-order reduction — fewer states, the same verdicts
     Then property "assert" is "violated" in the reduced run
     And every property has the same status and evidence in both runs
 
-  Scenario: a model with atomic sequences is not reduced, and says why
+  # --- atomic sequences (performance plan, step 6) --------------------------------
+  # What a process does inside an atomic sequence is one step of the search (the
+  # states inside it are not stored), so the reduction commutes the whole
+  # sequence: it counts every edge the sequence can go on into, reads a program
+  # counter there whole, treats a channel operation there as a use of the whole
+  # channel, and follows each sequence to the states it ends in when it looks for
+  # a cycle on the search stack.
+
+  Scenario: a lock taken in an atomic step is explored far less often
     Given the model under reduction "testdata/promela/bench-sym.pml"
     When I check it with "-D N=3 --sweep --por --no-timing"
     And I check it without reduction with "-D N=3 --sweep --no-timing"
-    Then the reduction was not applied and its reason mentions "atomic"
+    Then the reduction was applied
+    And the reduction reduced at least one state
+    And the baseline run stores 1348 states
+    And the reduced run stores at most 400 states
+    And every property has the same status and evidence in both runs
+    And property "deadlock" is "verified" in the reduced run
+
+  # por-atomic-guard.pml: P's atomic sequence goes on into a branch guarded by x,
+  # which Q writes; the branch for x == 1 blocks for ever. The deadlock exists
+  # only if Q writes first, so P is not expanded alone at the start.
+  Scenario: an atomic sequence whose continuation reads a variable keeps the order that matters
+    Given the model under reduction "testdata/promela/por-atomic-guard.pml"
+    When I check it with "--sweep --por --no-timing"
+    And I check it without reduction with "--sweep --no-timing"
+    Then the reduction was applied
+    And property "deadlock" is "violated" in the baseline run
+    And property "deadlock" is "violated" in the reduced run
+    And the reduced run has a counterexample for "deadlock"
+    And every property has the same status and evidence in both runs
+
+  # por-atomic-blocked.pml: two processes block inside their atomic sequences.
+  # The state stored after the first process has blocked has the exclusive byte
+  # set, and the two stuck states differ only in that byte; the reduction keeps
+  # one of them and the deadlock.
+  Scenario: processes blocked inside atomic sequences are one state up to the exclusive byte
+    Given the model under reduction "testdata/promela/por-atomic-blocked.pml"
+    When I check it with "--sweep --por --no-timing"
+    And I check it without reduction with "--sweep --no-timing"
+    Then the reduction was applied
+    And the baseline run stores 5 states
+    And the reduced run stores at most 3 states
+    And property "deadlock" is "violated" in the reduced run
+    And every property has the same status and evidence in both runs
+
+  # --- process creation and the process table (performance plan, step 6) -----------
+  # leader3.pml is CH12/leader for three nodes, started by
+  # `init { atomic { run ...; run ...; run ... } }` on named buffered channels:
+  # the shape the channel ends of step 4 reduce, which `run` and the atomic
+  # block blocked. The table (`_nr_pr`, `pid`, who is the youngest process) is
+  # one cell that every `run` and every end of a process writes, so the creating
+  # step itself is expanded in full and the gain comes from the nodes.
+
+  Scenario: a ring of processes started by init is explored far less often
+    Given the model under reduction "testdata/promela/leader3.pml"
+    When I check it with "--sweep --por --no-timing"
+    And I check it without reduction with "--sweep --no-timing"
+    Then the reduction was applied
+    And the reduction reduced at least one state
+    And the baseline run stores 679 states
+    And the reduced run stores at most 100 states
+    And every property has the same status and evidence in both runs
+    And property "deadlock" is "verified" in the reduced run
+
+  # leader5.pml is the same ring unrolled to five nodes (41692 states, the count
+  # of CH9/leader.pml, which cannot be reduced because its channels are `chan`
+  # parameters). The reduced graph grows linearly with the number of nodes.
+  Scenario: a ring of five nodes shrinks from tens of thousands of states to a few hundred
+    Given the model under reduction "testdata/promela/leader5.pml"
+    When I check it with "--sweep --por --no-timing"
+    And I check it without reduction with "--sweep --no-timing"
+    Then the reduction was applied
+    And the baseline run stores 41692 states
+    And the reduced run stores at most 300 states
+    And every property has the same status and evidence in both runs
+
+  Scenario: a model that reads _nr_pr is reduced and keeps its verdicts
+    Given the model under reduction "testdata/promela/nrpr.pml"
+    When I check it with "--sweep --por --no-timing"
+    And I check it without reduction with "--sweep --no-timing"
+    Then the reduction was applied
+    And the baseline run stores 31 states
+    And the reduced run stores at most 25 states
+    And every property has the same status and evidence in both runs
+    And property "assert" is "verified" in the reduced run
+
+  # por-run-pool.pml: `run` in a loop. The engine pre-instantiates a bounded
+  # pool of the process; the run that finds the pool empty stops the search,
+  # which answers inconclusive, with or without the reduction.
+  Scenario: a run that exhausts its pool stops both searches the same way
+    Given the model under reduction "testdata/promela/por-run-pool.pml"
+    When I check it with "--sweep --por --no-timing"
+    And I check it without reduction with "--sweep --no-timing"
+    Then the reduction was applied
+    And property "deadlock" is "inconclusive" in the baseline run
+    And property "deadlock" is "inconclusive" in the reduced run
+    And every property has the same status and evidence in both runs
+
+  # por-dormant.json: a dynamic process whose end goes back to its dormant
+  # location without leaving the table. The frontend never emits it; with it a
+  # pool slot becoming free would not be ordered against the run.
+  Scenario: a dynamic process that returns to its dormant location without leaving the table is not reduced
+    Given the model under reduction "testdata/ir/por-dormant.json"
+    When I check it with "--sweep --por --no-timing"
+    And I check it without reduction with "--sweep --no-timing"
+    Then the reduction was not applied and its reason mentions "dormant"
     And the reduced run stores as many states as the baseline run
     And every property has the same status and evidence in both runs
+
+  # A handshake is one step of two processes: not reduced in this version
+  # (steps/perf6-plan.md section 6.1).
+  Scenario: a rendezvous channel is not reduced, and says why
+    Given the model under reduction "testdata/promela/por-rendezvous.pml"
+    When I check it with "--sweep --por --no-timing"
+    And I check it without reduction with "--sweep --no-timing"
+    Then the reduction was not applied and its reason mentions "rendezvous"
+    And the reduced run stores as many states as the baseline run
+    And every property has the same status and evidence in both runs
+
+  # The reasons stay accurate where the other branches changed the semantics
+  # the analysis reads: `provided` now gates both sides of a rendezvous, and
+  # `timeout` is a read of "can anything else move". The refusal says which, and
+  # the run is the full search, with the same verdicts.
+  Scenario Outline: a process with a provided clause or a timeout is not reduced, and says why
+    Given the model under reduction "testdata/promela/<file>"
+    When I check it with "--sweep --por --no-timing"
+    And I check it without reduction with "--sweep --no-timing"
+    Then the reduction was not applied and its reason mentions "<reason>"
+    And the reduced run stores as many states as the baseline run
+    And every property has the same status and evidence in both runs
+
+    Examples:
+      | file                  | reason   |
+      | provided-rv-send.pml  | provided |
+      | provided-rv-recv.pml  | provided |
+      | timeout-gate.pml      | timeout  |
+
+  # The loop at the start of an atomic or d_step block keeps the exclusive control
+  # across its back edge (the frontend, weak-fairness branch): the iterations are
+  # one macro-step for the reduction, whose closure follows an atomic edge back to
+  # the head of the loop.
+  Scenario Outline: a loop at the start of an atomic or d_step block is reduced and answers as the full search
+    Given the model under reduction "testdata/promela/<file>"
+    When I check it with "--sweep --por --no-timing"
+    And I check it without reduction with "--sweep --no-timing"
+    Then the reduction was applied
+    And the baseline run stores 7 states
+    And every property has the same status and evidence in both runs
+    And property "assert" is "verified" in the reduced run
+
+    Examples:
+      | file                   |
+      | atomic-loop-entry.pml  |
+      | dstep-loop-entry.pml   |
 
   Scenario: breadth-first search is not reduced, and says why
     Given the model under reduction "testdata/promela/bench-indep.pml"
@@ -182,6 +335,38 @@ Feature: G7 partial-order reduction — fewer states, the same verdicts
     Given the model under reduction "testdata/promela/bench-indep.pml"
     When I check it with "-D N=3 -D K=2 --ltl []<>true --por --sweep --no-timing"
     Then the reduction was not applied and its reason mentions "temporal"
+
+  # A process that reads `_nr_pr` makes the model keep the process table. Since
+  # step 6 the reduction models the table (cell T), so such a model is reduced
+  # where the rules allow it and answers as the full search does; the models
+  # that the `_nr_pr` fix lowers with end edges that leave the table (`active`
+  # processes, no `run`) are the shape this scenario pins. A property that reads
+  # `_nr_pr` over a model whose processes keep no table is refused by itself
+  # (`not-executed`, see g5-ctl-v1.feature): it is not evaluated and reads
+  # nothing, so it is no reason to refuse the reduction.
+  Scenario Outline: a model whose process reads _nr_pr without run is reduced and answers as the full search
+    Given the model under reduction "testdata/promela/<file>"
+    When I check it with "--sweep --por --no-timing"
+    And I check it without reduction with "--sweep --no-timing"
+    Then the check exits with 0
+    And the reduction was applied
+    And every property has the same status and evidence in both runs
+
+    Examples:
+      | file               |
+      | nrpr-active.pml    |
+      | nrpr-order.pml     |
+      | nrpr-youngest.pml  |
+
+  Scenario: a property that was refused for the process table does not refuse the reduction
+    Given the model under reduction "testdata/ir/nrpr-property.json"
+    When I check it with "--sweep --por --no-timing"
+    And I check it without reduction with "--sweep --no-timing"
+    Then the check exits with 0
+    And the reduction was applied
+    And property "none" is "not-executed" in the reduced run
+    And property "sane" is "verified" in the reduced run
+    And every property has the same status and evidence in both runs
 
   Scenario: without --por the report carries no reduction object
     Given the model under reduction "testdata/promela/bench-indep.pml"

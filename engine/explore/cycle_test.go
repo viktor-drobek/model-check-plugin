@@ -2,11 +2,13 @@ package explore
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"modelcheck/cex"
 	"modelcheck/frontend/promela"
 	"modelcheck/ir"
 )
@@ -403,5 +405,121 @@ func TestStutterExtensionStaysForLTL(t *testing.T) {
 	}
 	if o.Trace == nil || o.Trace.Loop == nil {
 		t.Fatalf("the counterexample of an acceptance cycle is a lasso: %+v", o.Trace)
+	}
+}
+
+// systemSteps keeps the steps of the system among the first n steps of a
+// trace: the claim's steps change no variable and are not moves of the
+// model, so the stepper cannot replay them.
+func systemSteps(m *ir.Model, tr *cex.Trace, n int) *cex.Trace {
+	claim := map[string]bool{}
+	for _, p := range m.Processes {
+		if p.Claim {
+			claim[p.Name] = true
+		}
+	}
+	out := &cex.Trace{Final: tr.Final}
+	for _, st := range tr.Steps[:n] {
+		if !claim[st.Process] {
+			out.Steps = append(out.Steps, st)
+		}
+	}
+	return out
+}
+
+// TestLassoThroughAnAtomicSequence: an acceptance cycle whose loop runs
+// through the unstored intermediate state of an atomic sequence is rendered
+// as an exact run. The inner search of the nested DFS keeps such a state on
+// its own stack and released it when it returned, before the lasso was drawn
+// from that stack: the engine stopped with an index out of range. The second
+// model reaches the cycle through the atomic pair only after the first
+// cycle has decided the property, which is what --sweep (Options.Sweep, pan
+// -c0) goes on to do. pan -a -c0 (SPIN 6.5.2): one state stored for the
+// first model, two for the second.
+func TestLassoThroughAnAtomicSequence(t *testing.T) {
+	cases := []struct {
+		file   string
+		sweep  bool
+		states int // pan -c0 "states, stored" under sweep; 0 = not compared
+	}{
+		{"claim-atomic-loop.pml", false, 1},
+		{"claim-atomic-loop.pml", true, 1},
+		{"claim-atomic-second-cycle.pml", false, 0},
+		{"claim-atomic-second-cycle.pml", true, 2},
+		// A second process starved while the first loops on an atomic pair,
+		// and an atomic sequence that begins with a timeout (pan -a -c0: 2
+		// and 6 states stored).
+		{"claim-atomic-starve.pml", false, 0},
+		{"claim-atomic-starve.pml", true, 2},
+		{"claim-atomic-timeout.pml", false, 0},
+		{"claim-atomic-timeout.pml", true, 6},
+	}
+	for _, c := range cases {
+		name := c.file
+		if c.sweep {
+			name += " sweep"
+		}
+		t.Run(name, func(t *testing.T) {
+			m, defs := parseFile(t, "../testdata/promela/"+c.file)
+			res, err := Run(context.Background(), m, Options{Sweep: c.sweep, Defines: defs})
+			if err != nil {
+				t.Fatal(err)
+			}
+			o := outcomeOf(t, res, "never")
+			if o.Status != Violated || o.Evidence != Exhaustive || !strings.Contains(o.Reason, "acceptance cycle") {
+				t.Fatalf("never: %s/%s %q", o.Status, o.Evidence, o.Reason)
+			}
+			if c.sweep && c.states > 0 && o.Stats.States != c.states {
+				t.Fatalf("never: %d states stored, pan -c0 says %d", o.Stats.States, c.states)
+			}
+			tr := o.Trace
+			if tr == nil || tr.Loop == nil {
+				t.Fatalf("an acceptance cycle is a lasso: %+v", tr)
+			}
+			// The run replays from the initial state, and the loop closes:
+			// the state before the loop is the state after the last step.
+			if err := replay(m, systemSteps(m, tr, len(tr.Steps))); err != nil {
+				t.Fatalf("the lasso is not a run of the model: %v", err)
+			}
+			if err := replay(m, systemSteps(m, tr, tr.Loop.Start-1)); err != nil {
+				t.Fatalf("the loop is not closed: the state before it is not the final state: %v", err)
+			}
+		})
+	}
+}
+
+// TestCycleSearchHandsBackItsTmpStack: the cycle search keeps the intermediate
+// states of atomic sequences in s.tmp, one per frame with a negative index, and
+// must hand the stack back empty when the outer stack is. A leak does not
+// change a verdict (a stack: a stale top entry is popped in its owner's place)
+// but grows the stack and the memory estimate on every cycle found under
+// --sweep, so the end of the search checks it, in constant time, and an
+// imbalance is an internal error (ErrInternal), never a result.
+func TestCycleSearchHandsBackItsTmpStack(t *testing.T) {
+	state := [][]byte{{1}}
+	cases := []struct {
+		name  string
+		stack []frame
+		tmp   [][]byte
+		leak  bool
+	}{
+		{"finished and balanced", nil, nil, false},
+		{"stopped inside an atomic sequence: the entries belong to the stack", []frame{{}}, state, false},
+		{"finished with a stale entry", nil, state, true},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			cs := &cycleSearch{s: &search{stack: c.stack, tmp: c.tmp}}
+			err := cs.balanced()
+			if !c.leak {
+				if err != nil {
+					t.Fatalf("balanced search reported: %v", err)
+				}
+				return
+			}
+			if !errors.Is(err, ErrInternal) || !strings.Contains(err.Error(), "internal: ") || !strings.Contains(err.Error(), "1 intermediate") {
+				t.Fatalf("a stale entry must be an internal error, got: %v", err)
+			}
+		})
 	}
 }

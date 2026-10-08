@@ -231,6 +231,57 @@ Feature: G1 Promela subset — chapter 2–3 models through the Promela frontend
     Then the command exits with 0
     And the IR channel "q" has the hints xs "S" and xr "R"
 
+  # ---------------------------------------------------------------- _nr_pr in a model without run
+
+  # `_nr_pr` is the number of live processes: a process that has reached its
+  # end leaves the process table, and only the youngest live process may leave
+  # (SPIN's rule, the same one `run`-created processes follow). A model without
+  # `run` that read `_nr_pr` used to carry a table that nothing ever updated,
+  # so a guard waiting for the count to fall was never true and the engine
+  # reported a deadlock that pan does not report
+  # (steps/fix-nrpr-confirmation.md).
+  Scenario: _nr_pr falls when the younger process ends, so the older one waiting for it proceeds (no run in the model)
+    Given the Promela file "testdata/promela/nrpr-active.pml"
+    When I execute "mcd check --promela <model> --sweep --no-timing"
+    Then the command exits with 0
+    And property "deadlock" is "verified" with evidence "exhaustive"
+    And the search is complete
+    And the state count is 5
+
+  Scenario: _nr_pr falls one process at a time, because only the youngest live process leaves
+    Given the Promela file "testdata/promela/nrpr-order.pml"
+    When I execute "mcd check --promela <model> --sweep --no-timing"
+    Then the command exits with 0
+    And property "deadlock" is "verified" with evidence "exhaustive"
+    And the search is complete
+    And the state count is 10
+
+  Scenario: an older process cannot leave before the youngest, so a youngest process waiting for _nr_pr == 1 is stuck
+    Given the Promela file "testdata/promela/nrpr-youngest.pml"
+    When I execute "mcd check --promela <model> --sweep --no-timing"
+    Then the command exits with 0
+    And property "deadlock" is "violated" with evidence "exhaustive"
+    And the search is complete
+    And the state count is 4
+
+  Scenario: _nr_pr with active and run together keeps the table current, and the older process leaves after the younger
+    Given the Promela file "testdata/promela/nrpr-mixed.pml"
+    When I execute "mcd check --promela <model> --sweep --no-timing"
+    Then the command exits with 0
+    And property "deadlock" is "verified" with evidence "exhaustive"
+    And the search is complete
+    And the state count is 15
+
+  Scenario: a model that never reads _nr_pr keeps its IR and its report byte for byte
+    Given the Promela file "testdata/promela/nrpr-unread.pml"
+    When I execute "mcd parse --promela <model>"
+    Then the command exits with 0
+    And the output is byte-identical to the file "testdata/golden/nrpr-unread.ir.json"
+    When I execute "mcd check --promela <model> --sweep --no-timing"
+    Then the command exits with 0
+    And the report equals the file "testdata/golden/nrpr-unread.report.json" apart from the engine version
+    And the state count is 10
+
   # ---------------------------------------------------------------- IR round trip and origins
 
   Scenario: the parsed Promela model round-trips through the IR and gives the same report
@@ -266,3 +317,130 @@ Feature: G1 Promela subset — chapter 2–3 models through the Promela frontend
       | CH2/peterson.pml        |
       | CH2/prodcons.pml        |
       | CH3/alternatingbit.pml  |
+
+  # ---------------------------------------------------------------- provided and rendezvous
+  #
+  # `provided (expr)` gates every transition of the process (explore.enabled
+  # says so). A rendezvous is one step of two processes, so it needs both of
+  # them executable: a process whose provided clause is false can neither start
+  # a handshake nor answer one. The engine checked the clause on every other
+  # kind of step and on neither side of a handshake.
+
+  Scenario Outline: a process whose provided clause is false takes part in no rendezvous, on either side, as pan
+    Given the Promela file "testdata/promela/<file>"
+    When I execute "mcd check --promela <model> --sweep --no-timing"
+    Then the command exits with 0
+    And property "deadlock" is "violated" with evidence "exhaustive"
+    And property "assert" is "verified" with evidence "exhaustive"
+    And the state count is 1
+
+    Examples:
+      | file                  |
+      | provided-rv-send.pml  |
+      | provided-rv-recv.pml  |
+
+  @spin
+  Scenario Outline: pandiff agrees with pan on a rendezvous with a process kept from moving by provided
+    Given spin is installed
+    And the Promela file "testdata/promela/<file>"
+    When I run pandiff on the model
+    Then pandiff reports agreement on the verdict, the error class and the state count
+
+    Examples:
+      | file                  |
+      | provided-rv-send.pml  |
+      | provided-rv-recv.pml  |
+
+  # ---------------------------------------------------------------- loops inside atomic and d_step
+  #
+  # `atomic { do ... od }`: the loop is inside the block, so the process keeps
+  # the exclusive control (the engine's Edge.Atomic) after every iteration, and
+  # `d_step { do ... od }` is one step. When the loop is the first statement of
+  # the block its head is the control location in front of the block, which is
+  # outside it, and the frontend, which called an edge atomic when its target
+  # lies inside the block, let go of the control at the back edge. SPIN's
+  # decision is per transition: the back edge of a loop inside the block keeps
+  # the control, the break leaves it.
+
+  Scenario Outline: a loop at the start of an atomic or d_step block keeps the exclusive control until it is left, as pan
+    Given the Promela file "testdata/promela/<file>"
+    When I execute "mcd check --promela <model> --sweep --no-timing"
+    Then the command exits with 0
+    And property "deadlock" is "verified" with evidence "exhaustive"
+    And property "assert" is "verified" with evidence "exhaustive"
+
+    Examples:
+      | file                          |
+      | atomic-loop-entry.pml         |
+      | dstep-loop-entry.pml          |
+      | atomic-loop-merged-break.pml  |
+      | atomic-loop-goto-head.pml     |
+      | dstep-loop-merged-break.pml   |
+      | dstep-loop-first-break.pml    |
+
+  # A break that is the last statement of an option leaves no edge of its own: its node is
+  # merged with the exit of the loop. When the loop is the only statement of an outer
+  # loop's option the exit is the loop's own head, and the edge before the break must not be
+  # taken for a back edge: it leaves the loop, and the control is given up after it.
+  Scenario: an atomic loop that leaves at once gives up the exclusive control, as pan
+    Given the Promela file "testdata/promela/atomic-loop-first-break-leaves.pml"
+    When I execute "mcd check --promela <model> --sweep --no-timing"
+    Then the command exits with 0
+    And property "assert" is "violated" with evidence "exhaustive"
+
+  @spin
+  Scenario Outline: pandiff agrees with pan on a loop at the start of an atomic or d_step block
+    Given spin is installed
+    And the Promela file "testdata/promela/<file>"
+    When I run pandiff on the model
+    Then pandiff reports agreement on the verdict, the error class and the state count
+
+    Examples:
+      | file                    |
+      | atomic-loop-entry.pml   |
+      | dstep-loop-entry.pml    |
+
+  # The head of such a loop is the location in front of the block. When another
+  # alternative starts there too (the block is one option of an outer if/do),
+  # the lock bit alone cannot keep that alternative out of the block, and pan
+  # needs a state of its own for the inside. The frontend refuses the shape by
+  # name; it used to answer for a model in which the alternative was available
+  # in the block (a false assertion violation here, where pan finds none).
+  Scenario: a loop at the start of an atomic block that shares its entry with another option is refused by name
+    Given the Promela file "testdata/promela/atomic-loop-option.pml"
+    When I execute "mcd parse --promela <model>"
+    Then the command exits with 2
+    And the rejection has kind "outside-subset" and status "not-executed"
+    And the rejection mentions "shares its entry with another alternative"
+
+  # An atomic block whose loop never ends is a sequence that never ends. The
+  # breadth-first searches (--bfs, the estimate that mc_estimate runs first) used
+  # to copy the chain of moves at every step of such a sequence and died of
+  # memory in seconds; they answer inconclusive at the bound of an atomic
+  # sequence now, in memory linear in the bound. (Written after the fix: the
+  # unfixed engine would take the test process down.)
+  Scenario: a breadth-first search over an atomic sequence that never ends is bounded
+    Given the Promela file "testdata/unbounded/atomic-never-ends.pml"
+    When I execute "mcd check --promela <model> --bfs --no-timing"
+    Then the command exits with 0
+    And property "deadlock" is "inconclusive" with evidence "bounded"
+
+  Scenario: the estimate of a model with an atomic sequence that never ends comes back
+    Given the Promela file "testdata/unbounded/atomic-never-ends.pml"
+    When I execute "mcd check --promela <model> --estimate --estimate-ms 2000 --no-timing"
+    Then the command exits with 0
+
+  @spin
+  Scenario Outline: pandiff agrees with pan on the models that read _nr_pr without run
+    Given spin is installed
+    And the Promela file "testdata/promela/<file>"
+    When I run pandiff on the model
+    Then pandiff reports agreement on the verdict, the error class and the state count
+
+    Examples:
+      | file               |
+      | nrpr-active.pml    |
+      | nrpr-order.pml     |
+      | nrpr-youngest.pml  |
+      | nrpr-mixed.pml     |
+      | nrpr-unread.pml    |

@@ -46,8 +46,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"runtime"
+	"runtime/debug"
 	"sort"
 	"strings"
 	"time"
@@ -55,6 +58,7 @@ import (
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"modelcheck/cli"
+	"modelcheck/explore"
 	"modelcheck/frontend/promela"
 	"modelcheck/ir"
 	"modelcheck/report"
@@ -130,6 +134,11 @@ type Config struct {
 	Ceiling Budget
 	// Concurrency bounds simultaneous mc_check/mc_estimate runs (default 2).
 	Concurrency int
+	// MaxWorkers is the ceiling of the `workers` field of mc_check, the number
+	// of workers of the parallel search of one call (default GOMAXPROCS). The
+	// concurrency bound counts calls, not workers, so the CPU a server may use is
+	// Concurrency * MaxWorkers.
+	MaxWorkers int
 	// Promela is nil when no Promela frontend is linked in this build.
 	Promela PromelaFrontend
 }
@@ -141,6 +150,12 @@ func (c *Config) normalize() error {
 	c.Default = within(c.Default, c.Ceiling)
 	if c.Concurrency <= 0 {
 		c.Concurrency = 2
+	}
+	if c.MaxWorkers <= 0 {
+		c.MaxWorkers = runtime.GOMAXPROCS(0)
+	}
+	if c.MaxWorkers > explore.MaxWorkers {
+		c.MaxWorkers = explore.MaxWorkers
 	}
 	var allow []string
 	for _, d := range c.AllowRead {
@@ -164,6 +179,13 @@ type Server struct {
 	sessions *Sessions
 	sem      chan struct{}
 	sdk      *sdk.Server
+	// errw receives the stack of a recovered panic: the server's standard
+	// error (a field so that a test can read it).
+	errw io.Writer
+	// fault is a test seam, nil in every real server: begin calls it right
+	// after a tool's call is opened in the manifest, so that a test can make
+	// any of the seven tools panic at the place where a defect would.
+	fault func(tool string)
 }
 
 // New builds a server with the seven tools registered.
@@ -172,12 +194,12 @@ func New(cfg Config) (*Server, error) {
 		return nil, err
 	}
 	ss, err := NewSessions(cfg.SessionBase, cfg.Cleanup, ServerParams{
-		DefaultBudget: cfg.Default, Ceiling: cfg.Ceiling, Concurrency: cfg.Concurrency, AllowRead: cfg.AllowRead,
+		DefaultBudget: cfg.Default, Ceiling: cfg.Ceiling, Concurrency: cfg.Concurrency, MaxWorkers: cfg.MaxWorkers, AllowRead: cfg.AllowRead,
 	})
 	if err != nil {
 		return nil, err
 	}
-	s := &Server{cfg: cfg, sessions: ss, sem: make(chan struct{}, cfg.Concurrency)}
+	s := &Server{cfg: cfg, sessions: ss, sem: make(chan struct{}, cfg.Concurrency), errw: os.Stderr}
 	s.sdk = sdk.NewServer(&sdk.Implementation{Name: report.EngineName, Version: report.EngineVersion}, &sdk.ServerOptions{
 		Instructions: "Model-check engine (plan 14 §6). Typically call mc_parse first; it returns a session id that the other tools take (they also accept an inline `ir`). " +
 			"Statuses per property: verified, violated, inconclusive, unknown, not-executed, invalid-model; evidence: exhaustive, bounded, approximate, unknown.",
@@ -187,13 +209,49 @@ func New(cfg Config) (*Server, error) {
 }
 
 func (s *Server) register() {
-	sdk.AddTool(s.sdk, &sdk.Tool{Name: "mc_parse", Description: "Translate a model (Promela source, Petri-net JSON, or IR JSON; inline, or a file under an --allow-read prefix) into the IR. Answer: outcome ir (with the IR, its session file and the origin table), rejected (structured rejection with construct/file/line/reason), or not-executed (frontend missing in this build). Creates a session unless session_id is given."}, s.parse)
-	sdk.AddTool(s.sdk, &sdk.Tool{Name: "mc_simulate", Description: "Run the model step by step from the initial state: mode random (seeded, reproducible) or guided (a list of edge ids). Returns the trace with per-step variable changes and why it stopped (steps, deadlock, terminated, edge not enabled, edges exhausted, assert failed, invalid-model)."}, s.simulate)
-	sdk.AddTool(s.sdk, &sdk.Tool{Name: "mc_check", Description: "Check invariant, deadlock, reachability, LTL, CTL, and progress properties by DFS or BFS within a budget the server clamps to its ceiling. Per property: status, evidence, counters, complete, counterexample/witness reference, or reason. The full report is a session file."}, s.check)
-	sdk.AddTool(s.sdk, &sdk.Tool{Name: "mc_explain", Description: "Explain a counterexample or witness by id: prefix steps with per-step variable diffs and the user's names for the commands, the loop part (empty in G2), and the final state."}, s.explain)
-	sdk.AddTool(s.sdk, &sdk.Tool{Name: "mc_lint_property", Description: "Lint a boolean state expression against the IR: atoms, undefined atoms, type check, class (safety for invariant, reachability for reach), X-free and temporal flags, vacuity notes (constant expressions)."}, s.lint)
-	sdk.AddTool(s.sdk, &sdk.Tool{Name: "mc_estimate", Description: "Estimate the state space by partial breadth-first exploration within a time limit: states visited, states per second, states per depth level, growth rate and a projection marked approximate. Not a verification result."}, s.estimate)
-	sdk.AddTool(s.sdk, &sdk.Tool{Name: "mc_manifest", Description: "Return the reproducibility manifest of a session: engine and schema versions, server parameters, input hashes, and every tool call with parameters, seed, timing and artefacts."}, s.manifest)
+	sdk.AddTool(s.sdk, &sdk.Tool{Name: "mc_parse", Description: "Translate a model (Promela source, Petri-net JSON, or IR JSON; inline, or a file under an --allow-read prefix) into the IR. Answer: outcome ir (with the IR, its session file and the origin table), rejected (structured rejection with construct/file/line/reason), or not-executed (frontend missing in this build). Creates a session unless session_id is given."}, recoverTool(s, "mc_parse", s.parse))
+	sdk.AddTool(s.sdk, &sdk.Tool{Name: "mc_simulate", Description: "Run the model step by step from the initial state: mode random (seeded, reproducible) or guided (a list of edge ids). Returns the trace with per-step variable changes and why it stopped (steps, deadlock, terminated, edge not enabled, edges exhausted, assert failed, invalid-model)."}, recoverTool(s, "mc_simulate", s.simulate))
+	sdk.AddTool(s.sdk, &sdk.Tool{Name: "mc_check", Description: "Check invariant, deadlock, reachability, LTL, CTL, and progress properties by DFS or BFS within a budget the server clamps to its ceiling. Per property: status, evidence, counters, complete, counterexample/witness reference, or reason. The full report is a session file."}, recoverTool(s, "mc_check", s.check))
+	sdk.AddTool(s.sdk, &sdk.Tool{Name: "mc_explain", Description: "Explain a counterexample or witness by id: prefix steps with per-step variable diffs and the user's names for the commands, the loop part (empty in G2), and the final state."}, recoverTool(s, "mc_explain", s.explain))
+	sdk.AddTool(s.sdk, &sdk.Tool{Name: "mc_lint_property", Description: "Lint a boolean state expression against the IR: atoms, undefined atoms, type check, class (safety for invariant, reachability for reach), X-free and temporal flags, vacuity notes (constant expressions)."}, recoverTool(s, "mc_lint_property", s.lint))
+	sdk.AddTool(s.sdk, &sdk.Tool{Name: "mc_estimate", Description: "Estimate the state space by partial breadth-first exploration within a time limit: states visited, states per second, states per depth level, growth rate and a projection marked approximate. Not a verification result."}, recoverTool(s, "mc_estimate", s.estimate))
+	sdk.AddTool(s.sdk, &sdk.Tool{Name: "mc_manifest", Description: "Return the reproducibility manifest of a session: engine and schema versions, server parameters, input hashes, and every tool call with parameters, seed, timing and artefacts."}, recoverTool(s, "mc_manifest", s.manifest))
+}
+
+// recoverTool turns a panic of a tool handler into a tool failure. The SDK
+// does not recover handler panics: one would end the whole stdio server (exit
+// code 2, no answer) and with it the agent's session. An internal failure is
+// a tool failure (see the package comment): the result carries isError = true
+// and the panic value, the stack goes to the server's standard error, and the
+// next call is served. Like the CLI's guard (cli.Run) it changes how the
+// failure ends and nothing else: the defect that panicked is still a defect
+// to fix. (Not called guard: that name is the session-path guard of
+// guard.go.)
+//
+// The call is also an error in the session manifest, as an ordinary tool
+// error is, and this is the one place that records it: a handler's deferred
+// timer.end runs while the panic unwinds, before the recover below, and sees
+// no error, so the entry it leaves says "ok" (or, for a panic before the
+// handler registered its defer, is not closed at all). begin hands the
+// call's timer to the callSlot this wrapper put into the context, and the
+// recover marks that entry as an error. The cause goes into the manifest, the
+// stack does not (it is on the server's standard error).
+func recoverTool[In, Out any](s *Server, tool string, h sdk.ToolHandlerFor[In, Out]) sdk.ToolHandlerFor[In, Out] {
+	return func(ctx context.Context, req *sdk.CallToolRequest, in In) (res *sdk.CallToolResult, out Out, err error) {
+		slot := &callSlot{}
+		ctx = context.WithValue(ctx, callSlotKey{}, slot)
+		defer func() {
+			if r := recover(); r != nil {
+				var zero Out
+				res, out = nil, zero
+				msg := fmt.Sprintf("internal error in %s: %v", tool, r)
+				fmt.Fprintf(s.errw, "mcd serve: %s\n%s", msg, debug.Stack())
+				slot.fail(errors.New(msg))
+				err = fmt.Errorf("%s (a defect of mcd, not a verdict on the model; the stack is on the server's standard error)", msg)
+			}
+		}()
+		return h(ctx, req, in)
+	}
 }
 
 // SDK exposes the underlying server (tests connect it to an in-memory
@@ -349,9 +407,16 @@ type callTimer struct {
 	started time.Time
 }
 
-func begin(sess *Session, tool string) *callTimer {
+func (s *Server) begin(ctx context.Context, sess *Session, tool string) *callTimer {
 	now := time.Now()
-	return &callTimer{sess: sess, i: sess.beginCall(tool, now), started: now}
+	t := &callTimer{sess: sess, i: sess.beginCall(tool, now), started: now}
+	if slot, ok := ctx.Value(callSlotKey{}).(*callSlot); ok {
+		slot.timer = t
+	}
+	if s.fault != nil {
+		s.fault(tool)
+	}
+	return t
 }
 
 func (c *callTimer) end(err error, params *Params, artifacts []string) {
@@ -359,6 +424,21 @@ func (c *callTimer) end(err error, params *Params, artifacts []string) {
 		return
 	}
 	c.sess.endCall(c.i, c.started, err, params, artifacts)
+}
+
+// callSlot is where begin leaves the timer of the call in flight, for
+// recoverTool, which has no other way to find the manifest entry of the call
+// a panic interrupted. It is created per call and read in the same goroutine.
+type callSlot struct{ timer *callTimer }
+
+type callSlotKey struct{}
+
+// fail marks the call as an error after the fact; a call that never reached
+// begin has no entry to mark.
+func (sl *callSlot) fail(err error) {
+	if sl.timer != nil {
+		sl.timer.sess.failCall(sl.timer.i, sl.timer.started, err)
+	}
 }
 
 // fileExists is a small helper for tests and handlers.

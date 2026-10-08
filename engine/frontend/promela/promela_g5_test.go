@@ -1,6 +1,7 @@
 package promela
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 
@@ -398,6 +399,64 @@ func TestNrPrAndYoungestNeedTheTable(t *testing.T) {
 	nr := lowerSrc(t, "active proctype A() { _nr_pr > 0 }\n")
 	if !ir.NeedsTable(nr) {
 		t.Error("a model that reads _nr_pr needs the table")
+	}
+}
+
+// TestNrPrWithoutRunKeepsTheTableCurrent: a model without `run` that reads
+// `_nr_pr` carries the live-process table, so its processes must leave it
+// when they end — every -end- edge leaves, guarded by the same youngest(k)
+// rule a model with run gets. Otherwise the count stays at the number of
+// processes started and a guard waiting for it to fall is never true. The
+// read may stand in any expression the table answers: a guard, an assert, a
+// provided clause or a never claim.
+func TestNrPrWithoutRunKeepsTheTableCurrent(t *testing.T) {
+	cases := []struct{ name, src string }{
+		{"guard", "active proctype A() { _nr_pr == 1 }\nactive proctype B() { skip }\n"},
+		{"assert", "active proctype A() { skip }\nactive proctype B() { assert(_nr_pr >= 0) }\n"},
+		{"provided", "active proctype A() provided (_nr_pr > 0) { skip }\nactive proctype B() { skip }\n"},
+		{"never", "active proctype A() { skip }\nactive proctype B() { skip }\nnever { do :: (_nr_pr == 7) -> break :: else od }\n"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			m := lowerSrc(t, c.src)
+			if !ir.NeedsTable(m) {
+				t.Fatal("the model reads _nr_pr and must carry the table")
+			}
+			seen := 0
+			for k, p := range m.Processes {
+				if p.Claim {
+					continue
+				}
+				end := p.Edges[len(p.Edges)-1]
+				if end.Text != "-end-" || !end.Leave || end.Guard == nil || end.Guard.String() != "youngest("+strconv.Itoa(k)+")" {
+					t.Fatalf("%s's -end- edge: leave=%v guard=%v; want a leaving edge guarded by youngest(%d)", p.Name, end.Leave, end.Guard, k)
+				}
+				seen++
+			}
+			if seen != 2 {
+				t.Fatalf("checked %d -end- edges, want 2", seen)
+			}
+		})
+	}
+}
+
+// TestNrPrNotReadLeavesTheStaticEncoding: the table is not carried, and the
+// -end- edges keep their conjunction over the younger processes, in every
+// model that never reads `_nr_pr` — also where `_nr_pr` appears only in text
+// the lowering does not keep (the arguments of printf).
+func TestNrPrNotReadLeavesTheStaticEncoding(t *testing.T) {
+	for _, src := range []string{
+		"byte x;\nactive proctype A() { x = 1 }\nactive proctype B() { x = 2 }\n",
+		"byte x;\nactive proctype A() { x = 1; printf(\"%d\", _nr_pr) }\nactive proctype B() { x = 2 }\n",
+	} {
+		m := lowerSrc(t, src)
+		if ir.NeedsTable(m) {
+			t.Fatalf("no expression reads the table, yet the model carries it:\n%s", src)
+		}
+		end := m.Processes[0].Edges[len(m.Processes[0].Edges)-1]
+		if end.Leave || end.Guard == nil || !end.Guard.Uses("pc") || end.Guard.Uses("youngest") {
+			t.Fatalf("A's -end- edge: leave=%v guard=%v; want the pc conjunction\n%s", end.Leave, end.Guard, src)
+		}
 	}
 }
 

@@ -16,7 +16,7 @@ import (
 // bounds it. The names are the JSON names the skill uses.
 type Budget struct {
 	States   int   `json:"states,omitempty" jsonschema:"maximum number of stored states; absent or 0 = server default"`
-	Depth    int   `json:"depth,omitempty" jsonschema:"maximum search depth in transitions; absent or 0 = server default"`
+	Depth    int   `json:"depth,omitempty" jsonschema:"maximum search depth in transitions (when the parallel search of workers is applied: layers of stored states; an atomic sequence that runs through is one unit, one that blocks part-way one unit per uninterrupted run); absent or 0 = server default"`
 	MS       int64 `json:"ms,omitempty" jsonschema:"wall-clock limit in milliseconds; absent or 0 = server default"`
 	MemoryMB int64 `json:"memory_mb,omitempty" jsonschema:"memory estimate limit in MiB; absent or 0 = server default"`
 }

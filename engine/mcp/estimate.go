@@ -69,7 +69,7 @@ func (s *Server) estimate(ctx context.Context, req *sdk.CallToolRequest, in Esti
 	if err != nil {
 		return nil, nil, err
 	}
-	timer := begin(sess, "mc_estimate")
+	timer := s.begin(ctx, sess, "mc_estimate")
 	params := &Params{TimeLimitMS: limit, Search: "bfs"}
 	defer func() { timer.end(err, params, nil) }()
 	m, rej, err := s.modelFor(sess, in.IR)

@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/cucumber/godog"
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
@@ -33,6 +34,7 @@ type g2World struct {
 	reports  []string // report paths of the "twice" scenario
 	states   int      // the state count a scenario asked to remember
 	sims     []map[string]any
+	fileRead map[string]any // manifest.json as a step read it
 	writeErr error
 }
 
@@ -196,6 +198,14 @@ func registerG2Steps(sc *godog.ScenarioContext) {
 		w.cfg = mcp.Config{SessionBase: base, Ceiling: mcp.Budget{States: states, Depth: depth, MS: int64(ms), MemoryMB: int64(mem)}}
 		return nil
 	})
+	sc.Step(`^an MCP server with a fresh session base directory and a worker ceiling of (\d+)$`, func(n int) error {
+		base, err := os.MkdirTemp("", "g2-sessions-")
+		if err != nil {
+			return err
+		}
+		w.cfg = mcp.Config{SessionBase: base, MaxWorkers: n}
+		return nil
+	})
 	sc.Step(`^the server was started with --allow-read "([^"]*)"$`, func(dir string) error {
 		if w.cs != nil {
 			return fmt.Errorf("server already started")
@@ -279,8 +289,17 @@ func registerG2Steps(sc *godog.ScenarioContext) {
 		}
 		return call("mc_parse", map[string]any{"petri": m})
 	})
+	sc.Step(`^the server's Promela frontend panics$`, func() error {
+		w.cfg.Promela = func(string, map[string]string, string, int) (*mcp.PromelaResult, *mcp.Rejection, error) {
+			panic("injected failure of the frontend")
+		}
+		return nil
+	})
 	sc.Step(`^I call "mc_parse" with the Promela source "([^"]*)"$`, func(src string) error {
 		return call("mc_parse", map[string]any{"promela": src})
+	})
+	sc.Step(`^I call "mc_parse" in that session with the Promela source "([^"]*)"$`, func(src string) error {
+		return call("mc_parse", inSession(map[string]any{"promela": src}))
 	})
 	sc.Step(`^I call "mc_parse" with the file path "([^"]*)" of kind "([^"]*)"$`, func(path, kind string) error {
 		return call("mc_parse", map[string]any{"file": map[string]any{"kind": kind, "path": path}})
@@ -302,6 +321,26 @@ func registerG2Steps(sc *godog.ScenarioContext) {
 	})
 	sc.Step(`^I call "mc_check" in that session with the model's own properties, search "([^"]*)" and por requested$`, func(search string) error {
 		return call("mc_check", inSession(map[string]any{"search": search, "por": true}))
+	})
+	sc.Step(`^I call "mc_check" in that session with the model's own properties and (\d+) workers requested$`, func(n int) error {
+		return call("mc_check", inSession(map[string]any{"workers": n}))
+	})
+	sc.Step(`^I call "mc_check" in that session with por requested and (\d+) workers requested$`, func(n int) error {
+		return call("mc_check", inSession(map[string]any{"por": true, "workers": n}))
+	})
+	sc.Step(`^I call "mc_check" in that session with por requested, search "([^"]*)" and (\d+) workers requested$`, func(search string, n int) error {
+		return call("mc_check", inSession(map[string]any{"por": true, "search": search, "workers": n}))
+	})
+	sc.Step(`^I call "mc_check" in that session with (\d+) workers requested and properties:$`, func(n int, t *godog.Table) error {
+		var props []any
+		for _, row := range t.Rows[1:] {
+			p := map[string]any{}
+			for i, c := range row.Cells {
+				p[t.Rows[0].Cells[i].Value] = c.Value
+			}
+			props = append(props, p)
+		}
+		return call("mc_check", inSession(map[string]any{"properties": props, "workers": n}))
 	})
 	sc.Step(`^I call "mc_check" in that session with por requested and properties:$`, func(t *godog.Table) error {
 		props, err := propsFromTable(t)
@@ -392,6 +431,33 @@ func registerG2Steps(sc *godog.ScenarioContext) {
 	})
 	sc.Step(`^I call "mc_estimate" in that session with a time limit of (\d+) ms$`, func(ms int) error {
 		return call("mc_estimate", inSession(map[string]any{"ms": ms}))
+	})
+	sc.Step(`^(\d+) calls of "mc_lint_property" and (\d+) crashing calls of "mc_parse" run at the same time in that session$`, func(lints, parses int) error {
+		if err := ensure(); err != nil {
+			return err
+		}
+		var wg sync.WaitGroup
+		errs := make(chan error, lints+parses)
+		run := func(tool string, args map[string]any, wantErr bool) {
+			defer wg.Done()
+			res, err := w.cs.CallTool(context.Background(), &sdk.CallToolParams{Name: tool, Arguments: args})
+			if err != nil {
+				errs <- fmt.Errorf("protocol error calling %s: %w", tool, err)
+			} else if res.IsError != wantErr {
+				errs <- fmt.Errorf("%s: isError is %v, want %v", tool, res.IsError, wantErr)
+			}
+		}
+		for i := 0; i < lints; i++ {
+			wg.Add(1)
+			go run("mc_lint_property", inSession(map[string]any{"kind": "invariant", "expr": "p0"}), false)
+		}
+		for i := 0; i < parses; i++ {
+			wg.Add(1)
+			go run("mc_parse", inSession(map[string]any{"promela": "active proctype P() { skip }"}), true)
+		}
+		wg.Wait()
+		close(errs)
+		return <-errs
 	})
 	sc.Step(`^I call "mc_manifest" in that session$`, func() error { return call("mc_manifest", inSession(nil)) })
 	sc.Step(`^I call "mc_manifest" for the session id "([^"]*)"$`, func(id string) error {
@@ -662,6 +728,73 @@ func registerG2Steps(sc *godog.ScenarioContext) {
 		}
 		if red, ok := reductionOf(rep); ok {
 			return fmt.Errorf("the report carries a reduction: %v", red)
+		}
+		return nil
+	})
+	parallelOf := func(m map[string]any) (map[string]any, bool) {
+		search, _ := m["search"].(map[string]any)
+		p, ok := search["parallel"].(map[string]any)
+		return p, ok
+	}
+	sc.Step(`^the answer reports a parallel search that was applied with (\d+) workers$`, func(n int) error {
+		p, ok := parallelOf(w.out)
+		if !ok {
+			return fmt.Errorf("search has no parallel record: %v", w.out["search"])
+		}
+		if p["applied"] != true || num(p, "workers") != n || num(p, "layers") < 1 || str(p, "note") == "" {
+			return fmt.Errorf("parallel %v, want applied with %d workers", p, n)
+		}
+		return nil
+	})
+	sc.Step(`^the answer reports a parallel search that was not applied for a reason that mentions "([^"]*)"$`, func(s string) error {
+		p, ok := parallelOf(w.out)
+		if !ok {
+			return fmt.Errorf("search has no parallel record: %v", w.out["search"])
+		}
+		if p["applied"] != false || !strings.Contains(str(p, "reason"), s) {
+			return fmt.Errorf("parallel %v", p)
+		}
+		return nil
+	})
+	sc.Step(`^the answer has no parallel record$`, func() error {
+		if p, ok := parallelOf(w.out); ok {
+			return fmt.Errorf("the answer carries a parallel record: %v", p)
+		}
+		return nil
+	})
+	sc.Step(`^that report file has no parallel record$`, func() error {
+		rep, err := loadJSON(str(w.out, "report_path"))
+		if err != nil {
+			return err
+		}
+		if p, ok := parallelOf(rep); ok {
+			return fmt.Errorf("the report carries a parallel record: %v", p)
+		}
+		return nil
+	})
+	sc.Step(`^that report file carries the same parallel record as the answer$`, func() error {
+		rep, err := loadJSON(str(w.out, "report_path"))
+		if err != nil {
+			return err
+		}
+		a, okA := parallelOf(w.out)
+		b, okB := parallelOf(rep)
+		if !okA || !okB || fmt.Sprint(a) != fmt.Sprint(b) {
+			return fmt.Errorf("answer parallel %v, report parallel %v", a, b)
+		}
+		return nil
+	})
+	sc.Step(`^the answer reports the search mode "([^"]*)"$`, func(mode string) error {
+		search, _ := w.out["search"].(map[string]any)
+		if search["mode"] != mode {
+			return fmt.Errorf("search.mode is %v, want %s", search["mode"], mode)
+		}
+		rep, err := loadJSON(str(w.out, "report_path"))
+		if err != nil {
+			return err
+		}
+		if rs, _ := rep["search"].(map[string]any); rs["mode"] != mode {
+			return fmt.Errorf("the report's search.mode is %v, the answer's %s", rs["mode"], mode)
 		}
 		return nil
 	})
@@ -985,6 +1118,107 @@ func registerG2Steps(sc *godog.ScenarioContext) {
 			if o := str(cm, "outcome"); o != "ok" && o != "error" {
 				return fmt.Errorf("call outcome %q", o)
 			}
+		}
+		return nil
+	})
+	manifestCall := func(calls []any, n int) (map[string]any, error) {
+		if n < 1 || n > len(calls) {
+			return nil, fmt.Errorf("no call %d in the manifest: %v", n, calls)
+		}
+		cm, _ := calls[n-1].(map[string]any)
+		return cm, nil
+	}
+	sc.Step(`^the manifest call (\d+) has the outcome "([^"]*)"$`, func(n int, outcome string) error {
+		calls, _ := manifest()["calls"].([]any)
+		cm, err := manifestCall(calls, n)
+		if err != nil {
+			return err
+		}
+		if got := str(cm, "outcome"); got != outcome {
+			return fmt.Errorf("manifest call %d has the outcome %q, want %q: %v", n, got, outcome, cm)
+		}
+		return nil
+	})
+	sc.Step(`^the error of manifest call (\d+) (mentions|does not mention) "([^"]*)"$`, func(n int, how, s string) error {
+		calls, _ := manifest()["calls"].([]any)
+		cm, err := manifestCall(calls, n)
+		if err != nil {
+			return err
+		}
+		if has := strings.Contains(str(cm, "error"), s); has != (how == "mentions") {
+			return fmt.Errorf("the error of manifest call %d, %q, %s %q", n, str(cm, "error"), map[bool]string{true: "mentions", false: "does not mention"}[has], s)
+		}
+		return nil
+	})
+	sc.Step(`^the manifest file in the session directory records call (\d+) as "([^"]*)"$`, func(n int, outcome string) error {
+		data, err := os.ReadFile(filepath.Join(sessionDir(), "manifest.json"))
+		if err != nil {
+			return err
+		}
+		var m map[string]any
+		if err := json.Unmarshal(data, &m); err != nil {
+			return err
+		}
+		calls, _ := m["calls"].([]any)
+		cm, err := manifestCall(calls, n)
+		if err != nil {
+			return err
+		}
+		if got := str(cm, "outcome"); got != outcome {
+			return fmt.Errorf("manifest.json records call %d as %q, want %q: %v", n, got, outcome, cm)
+		}
+		return nil
+	})
+	sc.Step(`^the manifest file in the session directory is valid JSON with (\d+) calls$`, func(n int) error {
+		data, err := os.ReadFile(filepath.Join(sessionDir(), "manifest.json"))
+		if err != nil {
+			return err
+		}
+		var m map[string]any
+		if err := json.Unmarshal(data, &m); err != nil {
+			return fmt.Errorf("manifest.json is not valid JSON: %v", err)
+		}
+		if calls, _ := m["calls"].([]any); len(calls) != n {
+			return fmt.Errorf("manifest.json lists %d calls, want %d", len(calls), n)
+		}
+		w.fileRead = m
+		return nil
+	})
+	sc.Step(`^the manifest file read before agrees with the manifest on the tool, outcome and error of each of its calls$`, func() error {
+		onDisk, _ := w.fileRead["calls"].([]any)
+		if onDisk == nil {
+			return fmt.Errorf("no manifest file was read before")
+		}
+		answer, _ := manifest()["calls"].([]any)
+		if len(answer) < len(onDisk) {
+			return fmt.Errorf("manifest.json lists %d calls, the manifest only %d", len(onDisk), len(answer))
+		}
+		bad := 0
+		var first string
+		for i := range onDisk {
+			d, a := onDisk[i].(map[string]any), answer[i].(map[string]any)
+			if str(d, "tool") != str(a, "tool") || str(d, "outcome") != str(a, "outcome") || str(d, "error") != str(a, "error") {
+				if bad++; bad == 1 {
+					first = fmt.Sprintf("call %d: manifest.json says %v, the manifest %v", i+1, d, a)
+				}
+			}
+		}
+		if bad > 0 {
+			return fmt.Errorf("%d of %d calls differ; the first: %s", bad, len(onDisk), first)
+		}
+		return nil
+	})
+	sc.Step(`^(\d+) manifest calls of "([^"]*)" are errors that mention "([^"]*)"$`, func(n int, tool, s string) error {
+		calls, _ := manifest()["calls"].([]any)
+		got := 0
+		for _, c := range calls {
+			cm := c.(map[string]any)
+			if str(cm, "tool") == tool && str(cm, "outcome") == "error" && strings.Contains(str(cm, "error"), s) {
+				got++
+			}
+		}
+		if got != n {
+			return fmt.Errorf("%d manifest calls of %s are errors that mention %q, want %d", got, tool, s, n)
 		}
 		return nil
 	})

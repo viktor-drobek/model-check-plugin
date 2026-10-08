@@ -44,7 +44,7 @@ import (
 
 const (
 	EngineName    = "mcd"
-	EngineVersion = "0.2.0"
+	EngineVersion = "0.3.0"
 	ReportSchema  = "mcd-report/1"
 )
 
@@ -95,6 +95,11 @@ type Search struct {
 	// Reduction is present only when a reduction was asked for (mcd check
 	// --por): whether the search applied it, and what its counts then mean.
 	Reduction *explore.Reduction `json:"reduction,omitempty"`
+	// Parallel is present only when the parallel search was asked for (mcd
+	// check --workers N): whether it ran, how many workers, the shape of the
+	// graph, and what changes in this report; or why the run is the sequential
+	// one.
+	Parallel *explore.Parallel `json:"parallel,omitempty"`
 }
 
 // Budget echoes the limits the run was given (0 = no limit, which the CLI
@@ -169,7 +174,10 @@ type Temporal struct {
 
 // Counters describe the whole run (they are the same for every property of
 // one report). Depth is the greatest depth, in transitions from the initial
-// state, of a state that was expanded.
+// state, of a state that was expanded (in a parallel run, that is, when the
+// parallel search was applied, in layers of stored states: an atomic sequence
+// that runs through is one unit, one that blocks part-way one unit per
+// uninterrupted run).
 type Counters struct {
 	States      int `json:"states"`
 	Transitions int `json:"transitions"`
@@ -194,7 +202,7 @@ func Build(m *ir.Model, res *explore.Result, meta Meta) (*Report, error) {
 		Engine:   Engine{Name: EngineName, Version: EngineVersion, IRSchema: ir.Schema, ReportSchema: ReportSchema},
 		Inputs:   meta.Inputs,
 		Model:    ModelInfo{Name: m.Name, StateBytes: res.StateBytes, Processes: len(m.Processes), Variables: countVars(m)},
-		Search:   Search{Mode: string(meta.Mode), Budget: meta.Budget, Stop: res.Stop, Complete: res.Complete, Reduction: res.Reduction},
+		Search:   Search{Mode: string(meta.Mode), Budget: meta.Budget, Stop: res.Stop, Complete: res.Complete, Reduction: res.Reduction, Parallel: res.Parallel},
 		Warnings: meta.Warnings,
 	}
 	if r.Inputs == nil {

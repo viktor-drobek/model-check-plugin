@@ -22,9 +22,14 @@ import (
 // d_steps of the models the engine is actually used on.
 func TestPORAgreesWithTheFullSearchOnTheCorpus(t *testing.T) {
 	var files []string
+	// MCD_CORPUS_ALL_FILES=1 also tries the corpus files without a .pml suffix
+	// (App_A/example, CH15/uts_model, ...; the frontend rejects what is not
+	// Promela, as it does for the .pml files). The default stays the .pml files:
+	// the floors below are the figures of that walk.
+	everyFile := os.Getenv("MCD_CORPUS_ALL_FILES") != ""
 	for _, root := range []string{"testdata/promela", "testdata/corpus2", corpusDir} {
 		filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
-			if err == nil && !d.IsDir() && strings.HasSuffix(path, ".pml") {
+			if err == nil && !d.IsDir() && (strings.HasSuffix(path, ".pml") || (everyFile && root == corpusDir)) {
 				files = append(files, path)
 			}
 			return nil
@@ -36,6 +41,7 @@ func TestPORAgreesWithTheFullSearchOnTheCorpus(t *testing.T) {
 	}
 	var parsed, compared, applied, reduced, refused int
 	reasons := map[string]int{}
+	sizes := map[string][2]int{} // the models the reduction is expected to shrink: reduced, full
 	for _, f := range files {
 		src, err := os.ReadFile(f)
 		if err != nil {
@@ -89,6 +95,7 @@ func TestPORAgreesWithTheFullSearchOnTheCorpus(t *testing.T) {
 				reduced++
 			}
 		}
+		sizes[filepath.ToSlash(f)] = [2]int{red.States, full.States}
 		if red.States > full.States {
 			t.Errorf("%s: the reduced graph has %d states, the full one %d", f, red.States, full.States)
 		}
@@ -111,5 +118,28 @@ func TestPORAgreesWithTheFullSearchOnTheCorpus(t *testing.T) {
 	}
 	if compared < 30 {
 		t.Fatalf("only %d models compared: the corpus is not being read", compared)
+	}
+	// What the reduction must keep covering: these figures are what the walk
+	// gives on the integrated tree, with atomic sequences, `run` and the process
+	// table reduced (performance plan, step 6) and the fixtures of the `_nr_pr`,
+	// weak-fairness, lasso and parallel branches in testdata/promela: 190 files,
+	// 137 accepted, 120 compared, 75 applied, 35 of them smaller, 45 refused (11
+	// rendezvous, 2 channels named by a value, 2 timeout, 5 provided, 25
+	// temporal). They may only go up. (Step 6 alone, on its own tree: 90
+	// compared, 63 applied, 29 smaller, 27 refused.) Adding a fixture to the
+	// corpus changes the counts: raise the floors to the new numbers.
+	// MCD_CORPUS_ALL_FILES=1 adds the corpus files without a .pml suffix: 248
+	// files, 150 accepted, 131 compared, 78 applied, 35 smaller, 53 refused.
+	if applied < 75 || reduced < 35 {
+		t.Errorf("the reduction applies to %d models and shrinks %d: it applied to 75 and shrank 35 when this was last pinned", applied, reduced)
+	}
+	for _, f := range []string{"testdata/promela/bench-sym.pml", "testdata/promela/leader3.pml", "testdata/promela/nrpr.pml"} {
+		got, ok := sizes[f]
+		switch {
+		case !ok:
+			t.Errorf("%s was not compared in full and reduced", f)
+		case got[0] >= got[1]:
+			t.Errorf("%s: %d states reduced against %d in full: the reduction no longer shrinks it", f, got[0], got[1])
+		}
 	}
 }

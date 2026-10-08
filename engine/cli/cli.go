@@ -12,7 +12,7 @@
 //	           [--fairness none|weak|strong] [--max-procs N]
 //	           [--budget-states N] [--budget-depth N] [--budget-ms N]
 //	           [--budget-mem-mb N] [--unlimited] [--bfs] [--sweep] [--por]
-//	           [--no-timing]                                    → report JSON
+//	           [--workers N] [--no-timing]                      → report JSON
 //	mcd check  --estimate [--estimate-ms N] [--target-depth N] (input flags)
 //	                                                            → estimate JSON
 //	mcd version                                                → "mcd <version>"
@@ -34,6 +34,29 @@
 // explore, por.go): fewer states, the same verdicts. The report then carries
 // search.reduction, saying whether it was applied (and if not, why) and that
 // the counts are those of the reduced graph. Without the flag nothing changes.
+//
+// `--workers N` asks for the parallel search of the safety properties
+// (package explore, parallel.go): a level-synchronous breadth-first search by N
+// workers over a partitioned visited set. For a run that completes it has the
+// verdicts and the states and transitions of the sequential search; its depth is
+// the number of breadth-first layers (a layer counts hops between stored
+// states: an atomic sequence that runs through is one unit of `depth` and of
+// `--budget-depth`, and one that blocks part-way counts one unit per
+// uninterrupted run, because the state where its holder blocks is stored and
+// the continuation starts with the step of whichever process unblocks it;
+// `--bfs` and the default search count every step; a d_step block is one move
+// in every search), which on a model without atomic sequences is the depth of
+// `--bfs`, so the report says search.mode "bfs"; its counterexamples are
+// shortest ones in layers, and the report is the same for every N apart from
+// the worker-count fields of search.parallel. `--budget-mem-mb` is checked
+// on an estimate of the stored set, the records of the largest group of states
+// and the largest frontier, which is not the resident memory: a parallel run
+// can overshoot the budget by up to about one group of records.
+// A run it cannot take on (an ltl, progress or ctl property, a reduction that
+// applies) is the sequential run, and search.parallel says why: its mode is the
+// requested one and its depth and `--budget-depth` count transitions, not
+// layers. Without the flag nothing changes, and the report has no `parallel`
+// object.
 //
 // Exit codes, one per outcome: 0 — a result document (report or IR) was
 // produced, whatever the verdicts, including invalid-model; 2 — no result:
@@ -62,6 +85,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -114,7 +138,21 @@ func (d *defineList) String() string     { return strings.Join(*d, " ") }
 func (d *defineList) Set(s string) error { *d = append(*d, s); return nil }
 
 // Run executes args (without the program name) and returns the exit code.
-func Run(args []string, stdout, stderr io.Writer) int {
+//
+// A panic below this point is an internal failure, and the contract above
+// says what that is: a tool error, exit code 1, message on stderr. Left
+// alone, a Go panic ends the process with exit code 2 and a stack trace, which
+// is the code of a rejected input (and says that stdout carries an error
+// document, which it does not). The panic value and the stack go to stderr,
+// so the cause stays visible; the guard changes the exit code and nothing
+// else, and a defect that panics is still a defect to fix.
+func Run(args []string, stdout, stderr io.Writer) (code int) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Fprintf(stderr, "mcd: internal error: %v\n(a defect of mcd, not a verdict on the model; the stack of the failure follows)\n%s", r, debug.Stack())
+			code = ExitTool
+		}
+	}()
 	if len(args) == 0 {
 		fmt.Fprintln(stderr, "usage: mcd (parse|check|version) [flags]")
 		return ExitTool
@@ -289,12 +327,13 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 	fairness := fs.String("fairness", FairnessNone, "none | weak | strong: fairness for ltl and progress properties (strong is not executed, FR-008)")
 	sweep := fs.Bool("sweep", false, "keep searching after every property is decided (state count of the whole graph, as pan -c0)")
 	states := fs.Int("budget-states", 0, "maximum number of stored states (absent or 0 = default 1000000)")
-	depth := fs.Int("budget-depth", 0, "maximum search depth in transitions (absent or 0 = default 1000000)")
+	depth := fs.Int("budget-depth", 0, "maximum search depth in transitions (when the parallel search of --workers is applied: layers of stored states; an atomic sequence that runs through is one unit, one that blocks part-way one unit per uninterrupted run) (absent or 0 = default 1000000)")
 	ms := fs.Int64("budget-ms", 0, "wall-clock budget in milliseconds (absent or 0 = default 60000)")
 	memMB := fs.Int64("budget-mem-mb", 0, "memory estimate budget in MiB (absent or 0 = default 1024)")
 	unlimited := fs.Bool("unlimited", false, "lift every budget (for differential tests); the report echoes 0 for the lifted limits")
 	bfs := fs.Bool("bfs", false, "breadth-first search (shortest counterexamples)")
 	por := fs.Bool("por", false, "partial-order reduction of the safety search: fewer states, the same verdicts (depth-first only; the report says whether it was applied)")
+	workers := fs.Int("workers", 0, "parallel search of the safety properties by this many workers (0 = the sequential search; the report says whether it was applied: a refused run is the sequential one). When applied it is breadth-first, so counterexamples are shortest ones, and depth counts layers of stored states: an atomic sequence that runs through is one unit of depth and of -budget-depth, one that blocks part-way one unit per uninterrupted run")
 	noTiming := fs.Bool("no-timing", false, "omit time_ms so that reports are byte-for-byte reproducible")
 	if err := fs.Parse(args); err != nil {
 		return ExitTool
@@ -303,6 +342,14 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 	case FairnessNone, FairnessWeak, FairnessStrong:
 	default:
 		fmt.Fprintf(stderr, "mcd check: --fairness must be none, weak or strong, got %q\n", *fairness)
+		return ExitTool
+	}
+	if *workers < 0 || *workers > explore.MaxWorkers {
+		fmt.Fprintf(stderr, "mcd check: --workers must be between 0 and %d, got %d\n", explore.MaxWorkers, *workers)
+		return ExitTool
+	}
+	if *workers > 0 && *doEstimate {
+		fmt.Fprintln(stderr, "mcd check: --workers does not apply to --estimate (the estimate is a sequential, time-bounded measurement)")
 		return ExitTool
 	}
 	in, err := loadInput(*petriPath, *irPath, *promelaPath, defines)
@@ -346,22 +393,21 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 		ctx, cancel = context.WithTimeout(ctx, time.Duration(b.TimeMS)*time.Millisecond)
 		defer cancel()
 	}
-	res, err := explore.Run(ctx, m, explore.Options{Mode: mode, Budget: b.Explore(), Sweep: *sweep, POR: *por, Fairness: *fairness, Defines: parsed.Defines})
+	res, err := explore.Run(ctx, m, explore.Options{Mode: mode, Budget: b.Explore(), Sweep: *sweep, POR: *por, Workers: *workers, Fairness: *fairness, Defines: parsed.Defines})
+	if errors.Is(err, explore.ErrInternal) {
+		// The engine's own bookkeeping failed: a defect of mcd, not a
+		// refused input (exit code 2 would say the input was rejected and
+		// print an error document). Same class and exit code as a panic.
+		fmt.Fprintln(stderr, "mcd check:", err)
+		return ExitTool
+	}
 	if err != nil {
-		// The IR validated but could not be compiled (an undeclared variable
-		// in a property, a malformed LTL formula): the input is refused,
-		// with the compiler's explanation.
-		kind := "ir"
-		var fe *explore.FormulaError
-		if errors.As(err, &fe) {
-			kind = fe.Kind()
-		}
-		return reject(stdout, &rejectionBody{Kind: kind, Status: "not-executed", Message: err.Error()})
+		return runFailure(err, stdout, stderr)
 	}
 	sum := sha256.Sum256(in.data)
 	rep, err := report.Build(m, res, report.Meta{
 		Inputs:   []report.Input{{Kind: in.kind, Path: in.path, SHA256: hex.EncodeToString(sum[:])}},
-		Mode:     mode,
+		Mode:     ReportedMode(mode, res),
 		Budget:   b,
 		NoTiming: *noTiming,
 		Warnings: parsed.Warnings,
@@ -377,6 +423,38 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 	}
 	stdout.Write(out)
 	return ExitOK
+}
+
+// runFailure is the answer to an error of explore.Run. A defect of the engine (a
+// recovered panic of a parallel worker) is a tool error, exit 1 with the message
+// on stderr: nothing was rejected and no verdict exists. Anything else is the
+// input being refused: the IR validated but could not be compiled (an undeclared
+// variable in a property, a malformed LTL formula), with the compiler's
+// explanation, exit 2.
+func runFailure(err error, stdout, stderr io.Writer) int {
+	var ie *explore.InternalError
+	if errors.As(err, &ie) {
+		fmt.Fprintln(stderr, "mcd check: internal:", err)
+		return ExitTool
+	}
+	kind := "ir"
+	var fe *explore.FormulaError
+	if errors.As(err, &fe) {
+		kind = fe.Kind()
+	}
+	return reject(stdout, &rejectionBody{Kind: kind, Status: "not-executed", Message: err.Error()})
+}
+
+// ReportedMode is the search mode a report states: the mode that was asked for,
+// except that a run in which the parallel search was applied is a breadth-first
+// run (its counterexamples are shortest ones and its depth counts layers of stored
+// states, see explore.Options.Workers); a refused one is not. The CLI and
+// the MCP server use this one rule.
+func ReportedMode(requested explore.Mode, res *explore.Result) explore.Mode {
+	if res != nil && res.Parallel != nil && res.Parallel.Applied {
+		return explore.BFS
+	}
+	return requested
 }
 
 // runEstimate prints the growth estimate document (plan 14 §6). It is not

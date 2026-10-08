@@ -1,0 +1,85 @@
+{
+  "schema": "mcd-ir/1",
+  "name": "par-initial",
+  "globals": [
+    {
+      "name": "x",
+      "type": "byte",
+      "init": [
+        1
+      ]
+    }
+  ],
+  "processes": [
+    {
+      "name": "P",
+      "locations": [
+        {
+          "name": "l0"
+        },
+        {
+          "name": "l1"
+        }
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 1,
+          "effect": [
+            {
+              "var": "x",
+              "value": {
+                "op": "const",
+                "value": 2
+              }
+            }
+          ],
+          "text": "x = 2"
+        }
+      ]
+    }
+  ],
+  "properties": [
+    {
+      "id": "inv",
+      "kind": "invariant",
+      "expr": {
+        "op": "eq",
+        "args": [
+          {
+            "op": "var",
+            "var": "x"
+          },
+          {
+            "op": "const",
+            "value": 2
+          }
+        ]
+      },
+      "text": "x == 2"
+    },
+    {
+      "id": "can",
+      "kind": "reach",
+      "expr": {
+        "op": "eq",
+        "args": [
+          {
+            "op": "var",
+            "var": "x"
+          },
+          {
+            "op": "const",
+            "value": 1
+          }
+        ]
+      },
+      "text": "x == 1"
+    },
+    {
+      "id": "deadlock",
+      "kind": "deadlock"
+    }
+  ]
+}

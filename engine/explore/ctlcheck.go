@@ -59,6 +59,12 @@ func runCTL(ctx0 *search, base *ir.Model, prop ir.Property, opt Options) (Outcom
 	for _, a := range f.Atoms() {
 		info.Atoms = append(info.Atoms, a.Text)
 	}
+	// An atom that reads the live-process table is refused when the model's
+	// processes keep none (tableread.go); l0 has a table only if they do.
+	if reason := formulaTableRefusal(l0, f); reason != "" {
+		o.Status, o.Evidence, o.Reason = NotExecuted, EvUnknown, reason
+		return o, nil
+	}
 
 	g, err := BuildGraph(ctx0.ctx, base, opt)
 	if err != nil {

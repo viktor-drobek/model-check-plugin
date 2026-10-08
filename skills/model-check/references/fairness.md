@@ -13,6 +13,13 @@ copies method, strong fairness not supported); `model-check-skill-notes/11-skill
 §4 q. 9, §6 step 7, §7.3, FR-008, AC-05. Engine as built: `engine/explore/cycle.go`
 (the copies construction, the null step), `steps/g4-confirmation.md` §1, §3.
 
+## Contents
+
+1 definitions · 2 what the engine supports · 3 protocol for every liveness property ·
+4 reading weak-fairness results when the question is about strong fairness · 5 manual
+check of a lasso against strong fairness · 6 fairness and vacuity (6a two models that show
+both outcomes, 6b where `pan -f` and the engine give different answers) · 7 corpus models.
+
 ## 1. Definitions (05 гл. 3)
 
 For an action or a process `a` on an infinite path:
@@ -55,6 +62,23 @@ A weakly fair counterexample may contain steps of a process written `-`. That is
 **null step** of the copies construction: it advances the fairness bookkeeping
 without any process moving. Drop it when you present the trace, and never describe
 it to the user as an action of the system (`counterexamples.md` §2a).
+
+A process is **blocked** in a state when it has no move of its own there: no enabled
+statement (a `provided` clause that is false disables all of them), and no pending
+`timeout` in a state where `timeout` is true (no process has another executable
+statement). A process that waits at a rendezvous receive has no move of its own either;
+the sender's step counts as a move of both. The copy that stands for a process belongs
+to the k-th process that is not the never claim, wherever the claim stands in an IR.
+
+A null step is bookkeeping and never a step of the run: it changes neither the system
+state nor the claim. So the loop of a weakly fair counterexample always contains at
+least one real step — a move of a process, or the claim moving on a system that has
+stopped (the stutter step) — and the engine closes every round of the copies with
+such a step. Release 0.2.0 did not: a loop made of null steps alone, on a
+state where every process is blocked, was accepted whether or not the claim could move
+there, and `fairness: weak` reported acceptance and non-progress cycles that `pan -f`
+does not (`steps/fix-weakfairness-confirmation.md`). A weak-fairness `violated` whose
+loop is only `-` steps is therefore a defect of the tool, not a finding about the model.
 
 **Strong fairness is not supported by the engine.** There is no search mode for it.
 `fairness: strong` / `--fairness strong` is nevertheless accepted, and the engine
@@ -205,6 +229,105 @@ result needs it. It also does not: the honest sentence is "the result does not
 depend on the fairness setting, because the model is lock-step". Note what that
 model *does not* contain — message loss, retransmission, timeouts — which is where
 the real alternating-bit protocol's liveness question lives; see §7.
+
+## 6b. Where `pan -f` and the engine give different answers
+
+The rule for every row below: **ground truth is the textbook definition of weak
+fairness under the stutter-extension convention** (a state without a move repeats for
+ever, so a stopped system is weakly fair: nothing is enabled, nothing is owed a move);
+`pan -f` conformance is secondary, and a missed violation (a wrong `verified`) is worse
+than a false `violated`. The definition was applied by hand to small models, as graphs,
+and decided by an independent checker (`testdata/weakdecision/`: `wfcheck.py`, the
+graphs, the models; it uses no engine code, no oracle and no pan), and the engine's
+state counts equal the graphs' in every case that can be compared. Where the engine and
+`pan -f` differ, the engine follows the definition. When you compare the two on a model
+with a stopped system, a `provided` clause or a `timeout`, read a disagreement against
+these rules before calling either side wrong. The scenarios of
+`features/g4-ltl.feature` ("the decision study", "documented divergence") pass only
+while the engine and pan answer exactly as documented here.
+
+1. **A stopped system and the stutter extension (kept).** The engine keeps the stutter
+   extension under `weak` as under `none`. The natural example is `<>[]p` ("p holds
+   from some point on for ever") on a system that blocks at once with p false
+   (`bit a; #define p (a == 1); active proctype P() { a == 1 }`): the run stays in the
+   blocked state with p false for ever, it is weakly fair (no process is enabled), and
+   it violates `<>[]p`. The engine says `violated` with and without fairness; `pan -a`
+   finds the error (3), `pan -a -f` finds none (0), because SPIN 6.5.2 switched the
+   claim's own stutter step off under `-f` (`pan.c`: "9/2025 added !fairness") and keeps
+   a default move that exists only while a fairness count is open: a weakly fair
+   counterexample vanishes under the fairness assumption, which contradicts the
+   definition. The same holds for `<>[](X p)` and `<>[](!p -> X p)` (pan: 3, 11, 11
+   errors without `-f`, none with it); `<>p` and `[]<>p` are found by `-f` too, and so is
+   a claim that stays on its accepting location. For the non-progress search the engine
+   and pan agree: a blocked state has no successor (`pan -l`), with or without `-f`.
+   Following pan would turn `<>[]p` on a deadlocked system into `verified` under weak
+   fairness while `none` says `violated`: the worse error. The extension is the one of
+   Baier and Katoen (§3.1: a terminal state gets a stop state with a self-loop).
+2. **A process kept from moving by `provided (…)` is blocked (kept).** A process whose
+   `provided` clause is false has no executable transition, so it is not enabled, and
+   the loop of the others is weakly fair. `pan -f` can **miss** this, and the miss
+   depends on the **order of the processes**: `P0 provided (false) { skip }` with
+   `P1 { do :: accept_p1: y = 1 - y od }` is reported by `pan -a` (2 errors) and not by
+   `pan -a -f` (0), while the same model with the two processes swapped is reported
+   by `-f` (1 error). `pan.c` skips a process whose clause is false before the undo that
+   the restart of the process loop relies on, so whether the decrement reaches the other
+   moves depends on where the process stands. That is a false negative of pan, not
+   "pan is stricter"; following it would give a false `verified` that depends on the
+   order of the declarations. The same model with the blocking written as a guard in the
+   body (`do :: b == 0 -> x = 0 od`) is reported by `pan -a -f`. The engine's moves and
+   its idea of "blocked" agree on `provided` everywhere, on **both sides of a
+   rendezvous**: a process whose clause is false can neither start a handshake nor answer
+   one (before this was fixed the default search itself let such a process send and
+   receive, and the verdicts were wrong in both directions).
+3. **`timeout` is a move (changed).** `timeout` is true exactly when no statement of any
+   process is executable, so a process whose next statement is a bare `timeout` is
+   enabled in every timeout state and owed a move there. Earlier the engine judged
+   enabledness by ordinary statements only, and a loop made of nothing but timeout
+   states, in which a timeout-only process never moved, looked fair: a false `violated`
+   (`bit b; P: do :: timeout od; Q: timeout -> b = 1` with a claim that accepts while
+   b == 0: `verified` by the definition, by `pan -a -f` and by `pan -l -f`, and now by
+   the engine). Nothing here differs from pan any more. The divergence needs every step
+   of the cycle to be a bare `timeout`: `timeout -> a = 1 - a` is two statements, and
+   the state between them is not a timeout state (there Q is not enabled, and the loop
+   is weakly fair, as in every tool).
+4. **pan's "accept stutter" (kept; the opposite direction).** `m31278` and the
+   three-process model reduced from it (`testdata/weakdecision/models/c5_min3.pml`:
+   P0 with a loop, `P1 { skip; accept_1_0: atomic { d = (d + 1) % 3 } }`, P3 with three
+   statements) have 11 deadlocked states, none with a process at an accept label (P1 has
+   left it), so no stuttering run is accepting; every accepting cycle is unfair because
+   P1 stays enabled at its label and never moves. The truth is `verified`, the engine
+   says `verified`, and so does pan with `-DNOSTUTTER`; `pan -a -f` reports "accept
+   stutter" from the frame "fairness default move (all procs block)", which copies the
+   parent's accepting bit while a round opened at P1's accept label is still open (why
+   the parent has the bit set was not traced). With four processes the artifact depends
+   on SPIN's optimisation flags (a plain `spin -a`: 1 error; `-o1 -o2 -o3`: 0). So
+   "engine verified, pan error" is **not** impossible: it was 0 on the 2,000 generated
+   models of the first differential, and the review's larger run found `m31278`.
+
+**What the SCC oracle proves and what it does not.** The engine matches the SCC decision
+procedure of `explore/weakfair_oracle_test.go` on every random model (the default suite,
+and 30,000-model runs on fresh seeds with `MCD_WF_MODELS` and `MCD_WF_SEED`). The oracle
+shares four premises with the engine, so its agreement proves the decision procedure (the
+copies construction), not conformity with pan on them:
+
+- it builds its graph with the engine's own `Stepper.Enabled` and `Apply`, so the move
+  semantics (rendezvous, `provided`, `timeout`, atomic sequences) are the engine's, not
+  independently checked; the independent checks are the hand graphs and checker of
+  `testdata/weakdecision/` and the differential against pan;
+- it always builds the stutter extension (`stutter := c.mode != "prog"`);
+- "enabled" means "has a move of its own": a rendezvous receiver and a process kept
+  out by `provided` count as blocked;
+- it reuses the engine's evaluation of the claim's guards.
+
+Its stated gaps: a never claim with an `assert` or an `atomic` edge (as `spin -f`
+writes it), `run`, a graph above 20,000 states (4,000 in the random runs), an atomic
+sequence that does not end within 200 steps (an infinite atomic loop is `inconclusive`
+in the engine: it stores no state inside an atomic sequence, so no cycle can close
+there; pan cannot answer either). The random generator now also produces `timeout`
+guards, atomic edges and a claim at any position among the processes, which exercises
+`blocked`, the collapsing of atomic sequences and the copy-to-process map against the
+graph; the Promela-level oracle runs the 50 models of `testdata/weakfair` (44, and the six that the lasso panic kept out until the cycle-lasso fix was merged), and
+`MCD_WF_PROMELA_DIR` a whole directory of generated ones.
 
 ## 7. Corpus models to keep in mind
 

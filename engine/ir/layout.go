@@ -10,9 +10,11 @@ import (
 //
 //  1. one byte Excl: 0 = no process holds exclusive control, p+1 = process p
 //     is inside an atomic sequence (see Edge.Atomic);
-//  2. when the model creates processes dynamically (some Process has
-//     Dynamic, or some expression reads `nrpr` / `pid` / `youngest`): the
-//     live-process table — one byte holding the number of live processes
+//  2. when the processes of the model ask for it (NeedsTable): some Process
+//     is Dynamic (created by `run`), some Edge leaves the table
+//     (Edge.Leave), or some expression of a process reads `nrpr` / `pid` /
+//     `youngest`; a property never gives the model a table. The
+//     live-process table is one byte holding the number of live processes
 //     and one byte per process holding, at position k, the index of the
 //     process whose pid is k. Positions from the count on are zero. The
 //     table is what makes the vector a faithful image of pan's process
@@ -27,8 +29,9 @@ import (
 // The layout is a pure function of the Model, so equal models give equal
 // vectors and state counts are comparable across runs and versions.
 //
-// A model without dynamic processes has no table, so its vector — and every
-// count derived from it — is exactly the one G1 fixed against pan.
+// A model whose processes need no table (NeedsTable is false) has none, so its
+// vector — and every count derived from it — is exactly the one G1 fixed
+// against pan.
 type Layout struct {
 	Model  *Model
 	Size   int
@@ -87,7 +90,10 @@ func (l *Layout) HasTable() bool { return l.TabOff >= 0 }
 
 // NrPr is the number of live processes. Without a table every non-claim
 // process is live by construction (nothing is ever created or removed from
-// the table), so the static count is the answer.
+// the table), so the static count is the answer. A claim process is never
+// counted, with a table or without one; pan counts it (BASE 1 in its pan.h),
+// so under a never claim or an ltl formula a verdict that reads `_nr_pr` can
+// differ from pan's (steps/fix-nrpr-confirmation.md).
 func (l *Layout) NrPr(state []byte) int {
 	if l.TabOff < 0 {
 		return l.staticLive
@@ -419,28 +425,41 @@ func (l *Layout) WritePC(state []byte, p, loc int) {
 	binary.LittleEndian.PutUint16(state[l.PC[p]:], uint16(loc))
 }
 
-// NeedsTable reports whether m's vector must carry the live-process table:
-// some instance is created by `run` at runtime, or some expression asks a
-// question the table alone answers (`_nr_pr`, a runtime pid, "is this the
-// youngest process").
+// NeedsTable reports whether m's vector must carry the live-process table.
+// The processes decide, and only they: some instance is created by `run` at
+// runtime, some edge leaves the table when its process ends, or some
+// expression of a process asks a question the table alone answers (`_nr_pr`,
+// a runtime pid, "is this the youngest process").
+//
+// A property is deliberately not asked. It is read after the processes were
+// written, so none of them removes a process from a table made for the
+// property: `_nr_pr` would stay at the number of processes started and the
+// verdict would describe another model. The explorer refuses such a property
+// instead (explore/tableread.go), and a refused property must not enlarge the
+// vector of the ones beside it.
 func NeedsTable(m *Model) bool {
 	for i := range m.Processes {
 		if m.Processes[i].Dynamic {
 			return true
 		}
+		for j := range m.Processes[i].Edges {
+			if m.Processes[i].Edges[j].Leave {
+				return true
+			}
+		}
 	}
 	found := false
-	walkExprs(m, func(e *Expr) {
-		switch e.Op {
-		case "nrpr", "pid", "youngest":
+	walkProcessExprs(m, func(e *Expr) {
+		if isTableOp(e.Op) {
 			found = true
 		}
 	})
 	return found
 }
 
-// walkExprs visits every expression of m.
-func walkExprs(m *Model, f func(*Expr)) {
+// walkProcessExprs visits every expression of m's processes (properties are
+// not processes: see NeedsTable).
+func walkProcessExprs(m *Model, f func(*Expr)) {
 	var walk func(e *Expr)
 	walk = func(e *Expr) {
 		if e == nil {
@@ -450,9 +469,6 @@ func walkExprs(m *Model, f func(*Expr)) {
 		for _, a := range e.Args {
 			walk(a)
 		}
-	}
-	for i := range m.Globals {
-		_ = i
 	}
 	for p := range m.Processes {
 		pr := &m.Processes[p]
@@ -488,9 +504,6 @@ func walkExprs(m *Model, f func(*Expr)) {
 				}
 			}
 		}
-	}
-	for i := range m.Properties {
-		walk(m.Properties[i].Expr)
 	}
 }
 

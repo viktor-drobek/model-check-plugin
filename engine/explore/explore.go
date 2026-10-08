@@ -78,7 +78,9 @@
 //	               index out of range, division by zero, blocking inside
 //	               d_step (evidence unknown; the trace to the offending step
 //	               is attached)
-//	not-executed   the property kind is not executed by this version
+//	not-executed   the property kind is not executed by this version, or the
+//	               property reads the live-process table (_nr_pr) over a model
+//	               whose processes keep none (tableread.go)
 //	unknown        never produced by this package
 //
 // For `reach` the roles of verified and violated follow the property's
@@ -89,6 +91,21 @@
 // step elsewhere — because its witness is an exact run from the initial
 // state that itself contains no invalid step (had it contained one, the run
 // would have ended there as invalid-model).
+//
+// # Parallel search
+//
+// With Options.Workers the safety properties are searched by a level-
+// synchronous breadth-first search over a partitioned visited set (parallel.go,
+// parvisited.go): for a run that completes the verdicts and the counters of the
+// stored states, transitions and atomic steps are those of the sequential
+// search, the depth is the number of breadth-first layers (a layer counts hops
+// between stored states: an atomic sequence that runs through is one unit of
+// depth, and one that blocks part-way counts one unit per uninterrupted run,
+// because the state where its holder blocks is stored; --bfs counts each step
+// of it: on a model without atomic sequences the two are equal; a d_step block
+// is one move, so one unit, in every search), a counterexample is a shortest
+// one in layers, and the result does not depend on the number of workers. A run
+// that is refused is the sequential one, with the sequential depth.
 package explore
 
 import (
@@ -137,6 +154,31 @@ type Options struct {
 	// porNoProviso switches the cycle proviso off. Tests only: it shows what
 	// the proviso is for.
 	porNoProviso bool
+	// porTrace, when set, is called with every stored state the reduced search
+	// picks an ample set for and the choice (por.go pick). Tests only: the
+	// acyclicity audit of the cycle proviso reads the reduced graph from it.
+	porTrace func(state []byte, ample uint8)
+	// porChainLimit and porPickBudget set the limits of the proviso's chain
+	// walk (zero: the defaults). Tests only: they make the limits reachable.
+	porChainLimit, porPickBudget int
+	// Workers, when positive, asks for the parallel search of the safety
+	// properties (parallel.go): a level-synchronous breadth-first search by that
+	// many workers over a partitioned visited set. The verdicts of a complete run
+	// and its states, transitions and atomic steps are the sequential ones; the
+	// depth is the number of breadth-first layers (an atomic sequence that runs
+	// through is one unit of it, and of Budget.MaxDepth, and one that blocks
+	// part-way counts one unit per uninterrupted run, where --bfs counts every
+	// step of it; a d_step block is one move, so one unit, in every search), a
+	// counterexample is a shortest one in layers, and the report of a run is the
+	// same for every worker count. A run it cannot take on (a temporal property,
+	// a reduction that applies) is the sequential run, with its depth in
+	// transitions, and Result.Parallel says why. Zero, the default, changes
+	// nothing.
+	// Mode is not changed by Workers: it stays the requested sequential mode.
+	Workers int
+	// par holds the controls of the parallel search that tests force to
+	// extremes (parallel.go). Nil in production.
+	par *parKnobs
 	// Fairness applies to ltl and progress properties: "" or "none",
 	// "weak" (pan -f, see cycle.go), "strong" (not executed, FR-008). A ctl
 	// property asked with any fairness is not executed (ctlcheck.go).
@@ -237,6 +279,9 @@ type Result struct {
 	// Stop says why the search ended: "complete", "all properties decided",
 	// "invalid model", or the budget reason.
 	Stop string
+	// Parallel is present when Options.Workers asked for the parallel search:
+	// whether it ran and what it saw.
+	Parallel *Parallel
 }
 
 // budgetEvidence maps a stop reason to the evidence of an inconclusive
@@ -295,6 +340,9 @@ func Run(ctx context.Context, m *ir.Model, opt Options) (*Result, error) {
 	if opt.Mode == "" {
 		opt.Mode = DFS
 	}
+	if opt.Workers < 0 || opt.Workers > MaxWorkers {
+		return nil, fmt.Errorf("workers must be between 0 and %d, got %d", MaxWorkers, opt.Workers)
+	}
 	switch opt.Fairness {
 	case "", "none", "weak", "strong":
 	default:
@@ -324,7 +372,8 @@ func Run(ctx context.Context, m *ir.Model, opt Options) (*Result, error) {
 		default:
 			s.res.Reduction.Applied = true
 			s.res.Reduction.Note = porNote
-			s.por = &porRun{plan: plan, noProviso: opt.porNoProviso}
+			s.por = &porRun{plan: plan, noProviso: opt.porNoProviso, trace: opt.porTrace,
+				chainLimit: opt.porChainLimit, pickBudget: opt.porPickBudget}
 		}
 	}
 	var temporal, ctls []int
@@ -351,10 +400,20 @@ func Run(ctx context.Context, m *ir.Model, opt Options) (*Result, error) {
 		s.watched = append(s.watched, ce)
 		s.watch[i] = Coverage{Text: e.String()}
 	}
-	if hasSafety || (len(temporal) == 0 && len(ctls) == 0) {
-		if opt.Mode == BFS {
+	// A search runs when a safety property is open, or when there is no
+	// temporal one and no property was refused (tableread.go: a call whose
+	// properties are all refused searches nothing).
+	searches := hasSafety || (len(temporal) == 0 && len(ctls) == 0 && len(c.refused) == 0)
+	parallel := s.chooseParallel(len(temporal)+len(ctls) > 0, !searches)
+	if searches {
+		switch {
+		case parallel:
+			if err := s.runParallel(opt.Watch); err != nil {
+				return nil, err
+			}
+		case opt.Mode == BFS:
 			s.bfs()
-		} else {
+		default:
 			s.dfs()
 		}
 		s.finish()
@@ -474,6 +533,10 @@ type compiled struct {
 	reaches    []cProp
 	deadlock   []int
 	asserts    []int
+	// refused maps the index of a property to the reason it is not executed:
+	// it reads the live-process table over a model that keeps none
+	// (tableread.go). A refused property is neither compiled nor evaluated.
+	refused map[int]string
 }
 
 func compile(m *ir.Model) (*compiled, error) {
@@ -648,6 +711,13 @@ func compile(m *ir.Model) (*compiled, error) {
 		case ir.KindAssert:
 			c.asserts = append(c.asserts, i)
 		case ir.KindInvariant, ir.KindReach:
+			if reason := tableReadRefusal(l, &c.props[i]); reason != "" {
+				if c.refused == nil {
+					c.refused = map[int]string{}
+				}
+				c.refused[i] = reason
+				continue
+			}
 			ce, err := l.Compile(p.Expr, -1)
 			if err != nil {
 				return nil, fmt.Errorf("property %s: %w", p.ID, err)
@@ -690,13 +760,23 @@ type frame struct {
 	// claim iterator (cpos: -1 not started, -2 no claim step here; cedge:
 	// the chosen claim edge or -1) and whether the null step was offered.
 	viaClaim int32
-	viaNull  int8
+	viaNull  int16
 	cpos     int32
 	cedge    int32
 	cto      int32 // the claim's location after the chosen claim step
 	eps      int8
 	sysSeen  bool // a system move was returned from this frame
 	stut     bool // the stutter move was returned for the current claim edge
+	// cany: an ordinary (non-else) claim edge was enabled in this frame, so the
+	// claim's `else` edges are not (see nextProduct).
+	cany bool
+	// sysMoves counts the system moves found for the current claim edge; the
+	// product search copies it into enabled before it asks for the next one,
+	// because the timeout phase of nextEnabled starts only when the state has
+	// no other move *for that edge's enumeration* (a null step, a stutter step
+	// and the moves of an earlier claim edge are not system moves of it).
+	// (cany and sysMoves fill the padding: a frame stays 72 bytes.)
+	sysMoves uint32
 }
 
 type search struct {
@@ -733,10 +813,16 @@ type search struct {
 }
 
 func (s *search) initOutcomes() {
-	for _, p := range s.c.props {
+	for i, p := range s.c.props {
 		o := Outcome{Property: p}
 		switch p.Kind {
-		case ir.KindDeadlock, ir.KindInvariant, ir.KindReach, ir.KindAssert:
+		case ir.KindInvariant, ir.KindReach:
+			if reason, ok := s.c.refused[i]; ok {
+				o.Status, o.Evidence, o.Reason = NotExecuted, EvUnknown, reason
+				break
+			}
+			s.undecided++
+		case ir.KindDeadlock, ir.KindAssert:
 			s.undecided++
 		case KindLTL, KindProgress:
 			// Placeholder: Run replaces it by the product search's outcome.
@@ -802,13 +888,10 @@ func (s *search) allTerminated(state []byte) bool {
 // enabled reports whether e can be taken in state (timeout as currently set
 // in the layout). For a rendezvous send it asks whether some partner exists.
 func (s *search) enabled(e *cEdge, state []byte) (bool, error) {
-	if pr := s.c.procs[e.proc].provided; pr != nil {
-		// `provided` gates every transition of the process, `else` and the
-		// `-end-` transition included.
-		ok, err := pr.Truth(state)
-		if err != nil || !ok {
-			return false, err
-		}
+	// `provided` gates every transition of the process, `else` and the
+	// `-end-` transition included.
+	if ok, err := s.providedHolds(e.proc, state); err != nil || !ok {
+		return false, err
 	}
 	if e.e.Else {
 		loc := s.c.layout.ReadPC(state, e.proc)
@@ -853,6 +936,18 @@ func (s *search) enabled(e *cEdge, state []byte) (bool, error) {
 		return s.recvMatch(e.recv, ci, state)
 	}
 	return true, nil
+}
+
+// providedHolds reports whether the `provided` clause of process p holds in
+// state; a process without one is always allowed to move. A rendezvous is a
+// step of two processes, so the clause gates both: the initiating send
+// (nextEnabled) and the receive that answers it (rvMatch).
+func (s *search) providedHolds(p int, state []byte) (bool, error) {
+	pr := s.c.procs[p].provided
+	if pr == nil {
+		return true, nil
+	}
+	return pr.Truth(state)
 }
 
 // sendChan resolves the channel of a send in state, checking the id and the
@@ -913,12 +1008,15 @@ func (s *search) recvMatch(r *cRecv, ci int, state []byte) (bool, error) {
 	return true, nil
 }
 
-// rvMatch: receiver r is at the location of its edge, it reads the same
-// channel as e writes, its own guard holds and its Match values equal what
-// e sends.
+// rvMatch: receiver r is at the location of its edge, its process is allowed
+// to move (`provided`), it reads the same channel as e writes, its own guard
+// holds and its Match values equal what e sends.
 func (s *search) rvMatch(e, r *cEdge, state []byte) (bool, error) {
 	if s.c.layout.ReadPC(state, r.proc) != r.e.From {
 		return false, nil
+	}
+	if ok, err := s.providedHolds(r.proc, state); err != nil || !ok {
+		return false, err
 	}
 	ok, err := r.guard.Truth(state)
 	if err != nil || !ok {
@@ -962,6 +1060,41 @@ func (s *search) hasEnabled(p int, state []byte) (bool, error) {
 	for _, ei := range s.c.procs[p].out[loc] {
 		ok, err := s.enabled(&s.c.procs[p].edge[ei], state)
 		if err != nil || ok {
+			return ok, err
+		}
+	}
+	return false, nil
+}
+
+// executable reports whether process p has a move of its own in state, as the
+// searches enumerate moves: an ordinary enabled edge, or, in a timeout state
+// (no process has an ordinary enabled edge), an enabled edge that uses
+// `timeout`. hasEnabled alone leaves the second kind out, which is right for
+// the deadlock rule and the exclusive holder but not for weak fairness: a
+// process waiting for a `timeout` is enabled in every state where timeout is
+// true, and is owed a move there.
+func (s *search) executable(p int, state []byte) (bool, error) {
+	ok, err := s.hasEnabled(p, state)
+	if err != nil || ok || !s.c.hasTimeout {
+		return ok, err
+	}
+	for q := range s.c.procs {
+		if s.c.procs[q].claim {
+			continue
+		}
+		if ok, err := s.hasEnabled(q, state); err != nil || ok {
+			return false, err // not a timeout state: another statement is executable
+		}
+	}
+	s.c.layout.Timeout = true
+	defer func() { s.c.layout.Timeout = false }()
+	loc := s.c.layout.ReadPC(state, p)
+	for _, ei := range s.c.procs[p].out[loc] {
+		e := &s.c.procs[p].edge[ei]
+		if !e.usesTimeout {
+			continue
+		}
+		if ok, err := s.enabled(e, state); err != nil || ok {
 			return ok, err
 		}
 	}
@@ -1041,6 +1174,12 @@ func (s *search) nextEnabled(f *frame, state []byte) (move, bool, error) {
 		}
 		l.Timeout = f.phase == 1
 		if e.rv {
+			if ok, err := s.providedHolds(e.proc, state); err != nil || !ok {
+				if err != nil {
+					return move{}, false, err
+				}
+				continue
+			}
 			ok, err := e.guard.Truth(state)
 			if err != nil {
 				return move{}, false, err
@@ -1496,8 +1635,9 @@ func (s *search) dfs() {
 			curIdx = top.idx
 		}
 		if s.por != nil && top.proc < 0 && top.idx >= 0 {
-			// First visit of a stored state (an atomic sequence, the only
-			// source of intermediate states, is refused by the analysis).
+			// First visit of a stored state (an intermediate state of an
+			// atomic sequence has idx < 0 and is expanded in full: only
+			// the holder can move there).
 			top.ample = s.por.pick(s)
 		}
 		m, ok, err := s.nextEnabled(top, s.cur)
@@ -1626,7 +1766,49 @@ const bfsBytesPerState = 40
 type bfsNode struct {
 	state []byte
 	f     frame
-	chain []cex.Ref
+	chain *chainNode
+}
+
+// chainNode is a persistent list of the moves from a stored state to an
+// intermediate atomic state: the nodes of one descent share their prefixes, so
+// an atomic sequence of n steps costs n nodes and not n copies of a chain of up
+// to n references (quadratic: a sequence that never ends, about 100 000 steps
+// before the bound answers, needed some 100 GB). The list is turned into a
+// []cex.Ref only for a state that is stored, which is where the chain is kept,
+// and for a trace.
+type chainNode struct {
+	ref  cex.Ref
+	prev *chainNode
+	n    int
+}
+
+// push is the chain extended by one move; the receiver may be nil (no moves).
+func (c *chainNode) push(r cex.Ref) *chainNode {
+	n := 1
+	if c != nil {
+		n = c.n + 1
+	}
+	return &chainNode{ref: r, prev: c, n: n}
+}
+
+// len is the number of moves of the chain.
+func (c *chainNode) len() int {
+	if c == nil {
+		return 0
+	}
+	return c.n
+}
+
+// refs is the chain as a slice, oldest move first.
+func (c *chainNode) refs() []cex.Ref {
+	if c == nil {
+		return nil
+	}
+	out := make([]cex.Ref, c.n)
+	for x := c; x != nil; x = x.prev {
+		out[x.n-1] = x.ref
+	}
+	return out
 }
 
 func (s *search) bfs() {
@@ -1663,7 +1845,7 @@ func (s *search) bfs() {
 			copy(s.cur, n.state)
 			m, ok, err := s.nextEnabled(&n.f, s.cur)
 			if err != nil {
-				s.handleErr(err, func() *cex.Trace { return s.bfsPath(head, n.chain, nil) })
+				s.handleErr(err, func() *cex.Trace { return s.bfsPath(head, n.chain.refs(), nil) })
 				break
 			}
 			if !ok {
@@ -1675,21 +1857,21 @@ func (s *search) bfs() {
 			}
 			n.f.enabled++
 			s.res.Transitions++
-			chain := append(append([]cex.Ref(nil), n.chain...), s.ref(int32(m.e.proc), int32(m.e.idx), partnerCode(m)))
+			chain := n.chain.push(s.ref(int32(m.e.proc), int32(m.e.idx), partnerCode(m)))
 			failed, err := s.fire(m)
 			if err != nil {
-				s.handleErr(err, func() *cex.Trace { return s.bfsPath(head, chain, s.next) })
+				s.handleErr(err, func() *cex.Trace { return s.bfsPath(head, chain.refs(), s.next) })
 				break
 			}
 			if failed != nil {
-				s.assertFailed(failed, func() *cex.Trace { return s.bfsPath(head, chain, s.next) })
+				s.assertFailed(failed, func() *cex.Trace { return s.bfsPath(head, chain.refs(), s.next) })
 				if s.stop != "" {
 					break
 				}
 			}
 			inter, err := s.intermediate(s.next)
 			if err != nil {
-				s.handleErr(err, func() *cex.Trace { return s.bfsPath(head, chain, s.next) })
+				s.handleErr(err, func() *cex.Trace { return s.bfsPath(head, chain.refs(), s.next) })
 				break
 			}
 			if inter {
@@ -1709,8 +1891,8 @@ func (s *search) bfs() {
 				continue
 			}
 			s.parent = append(s.parent, int32(head))
-			s.chains = append(s.chains, chain)
-			s.depth = append(s.depth, int32(d+len(chain)))
+			s.chains = append(s.chains, chain.refs())
+			s.depth = append(s.depth, int32(d+chain.len()))
 			s.res.States = s.visited.Len()
 			if err := s.checkState(s.next, pathTo(idx)); err != nil {
 				s.fail(err.Error(), pathTo(idx)())

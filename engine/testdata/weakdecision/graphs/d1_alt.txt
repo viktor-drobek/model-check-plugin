@@ -1,0 +1,11 @@
+## stutter_extension=ON states=2 edges=2
+S0: {'a': 0} pcs=(0,) claim=S0 acc=True disabled=['P']
+S1: {'a': 0} pcs=(0,) claim=S1 acc=False disabled=['P']
+  S0 -[stutter]-> S1
+  S1 -[stutter]-> S0
+  accepting SCCs (comp, unfair-procs): [([0, 1], [])]
+  fair accepting SCC: [0, 1]
+## stutter_extension=OFF states=1 edges=0
+S0: {'a': 0} pcs=(0,) claim=S0 acc=True disabled=['P']
+  accepting SCCs (comp, unfair-procs): []
+  fair accepting SCC: None

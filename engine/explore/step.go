@@ -77,7 +77,9 @@ func toMove(m move) Move {
 
 // Enabled lists the moves enabled in state, in the explorer's order. An
 // evaluation error (division by zero, index out of range in a guard) is
-// returned as the reason the model is invalid.
+// returned as the reason the model is invalid. The moves that use `timeout`
+// are listed only when the state has no other move, as in the searches
+// (frame.enabled counts the moves found; the timeout phase starts at zero).
 func (st *Stepper) Enabled(state []byte) ([]Move, error) {
 	f := frame{proc: -1}
 	var out []Move
@@ -89,6 +91,7 @@ func (st *Stepper) Enabled(state []byte) ([]Move, error) {
 		if !ok {
 			return out, nil
 		}
+		f.enabled++
 		out = append(out, toMove(m))
 	}
 }
@@ -121,6 +124,7 @@ func (st *Stepper) Apply(state []byte, mv Move) (next []byte, failed *ir.Edge, e
 			chosen = &mm
 			break
 		}
+		f.enabled++ // a move was found: the timeout phase is not entered
 	}
 	if chosen == nil {
 		if mv.Edge.Proc < 0 || mv.Edge.Proc >= len(st.s.c.procs) || mv.Edge.Edge < 0 || mv.Edge.Edge >= len(st.s.c.procs[mv.Edge.Proc].edge) {

@@ -119,6 +119,60 @@ func (e *Expr) Uses(op string) bool {
 	return false
 }
 
+// isTableOp reports whether op is one of the three reads that only the
+// live-process table answers.
+func isTableOp(op string) bool { return op == "nrpr" || op == "pid" || op == "youngest" }
+
+// TableRead returns the first sub-expression of e that only the live-process
+// table answers — `_nr_pr` (nrpr), a runtime pid or the "youngest live
+// process" test — or nil when e reads none of them.
+func (e *Expr) TableRead() *Expr {
+	if e == nil {
+		return nil
+	}
+	if isTableOp(e.Op) {
+		return e
+	}
+	for _, a := range e.Args {
+		if r := a.TableRead(); r != nil {
+			return r
+		}
+	}
+	return nil
+}
+
+// isPureOp reports whether op computes only from its arguments: a constant,
+// arithmetic, comparison or a boolean connective. Every other op reads the
+// state, so that an op added later counts as a read until it is classified
+// here.
+func isPureOp(op string) bool {
+	switch op {
+	case "const", "neg", "not", "add", "sub", "mul", "div", "mod",
+		"eq", "ne", "lt", "le", "gt", "ge", "and", "or":
+		return true
+	}
+	return false
+}
+
+// ReadsState reports whether e reads anything of the state: a variable or an
+// array element, a channel (len, clen, cfull), a program counter, timeout, or
+// the live-process table (nrpr, pid, youngest). An expression that reads none
+// of them has the same value in every state.
+func (e *Expr) ReadsState() bool {
+	if e == nil {
+		return false
+	}
+	if !isPureOp(e.Op) {
+		return true
+	}
+	for _, a := range e.Args {
+		if a.ReadsState() {
+			return true
+		}
+	}
+	return false
+}
+
 var arity = map[string]int{
 	"const": 0, "var": 0, "index": 1,
 	"len": 0, "timeout": 0, "pc": 0,

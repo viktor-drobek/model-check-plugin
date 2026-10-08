@@ -41,6 +41,17 @@ Feature: G3 skill package — alignment with the G0 engine
     And "references/engine-tools.md" says that the MCP layer is built in "G2"
     And "references/engine-tools.md" says that the CLI and the MCP layer reach the same engine
 
+  # An internal failure (a panic of the engine that was caught, or a failed
+  # consistency check of the search) ends like a bad command, with exit code 1
+  # or isError, and its message begins `internal error` or `internal:`. An agent
+  # that reads exit code 1 as "fix the command" must be told, wherever the
+  # reference or the workflow says so, that both forms are a defect of mcd with
+  # no verdict, to be kept for a bug report.
+  Scenario: The skill reads both forms of an internal failure as a defect of mcd, not as a bad command
+    Then in "references/engine-tools.md" the 250 characters after "code 1 means fix the command" name both "internal error" and "internal:"
+    And in "references/engine-tools.md" the 250 characters after "1 or a tool error" name both "internal error" and "internal:"
+    And in "references/workflow.md" the 400 characters after "Server or tool error" name both "internal error" and "internal:"
+
   Scenario: The engine-tools reference uses the report's real field names
     Then "references/engine-tools.md" mentions each of:
       | `status`           |

@@ -79,6 +79,9 @@ type EngineResult struct {
 	Order      []string
 	Warnings   []string
 	Model      *ir.Model
+	// Reduction is the partial-order reduction's record, set when the run was
+	// asked for it (RunEngineReduced).
+	Reduction *explore.Reduction
 }
 
 // EngineEdge is one IR edge for the table.
@@ -267,6 +270,25 @@ func ParseD(out string) (map[string][]PanTransition, []string) {
 
 // RunEngine parses model with the Promela frontend and sweeps it.
 func RunEngine(ctx context.Context, model string, defines []string, maxStates int) (*EngineResult, error) {
+	return runEngine(ctx, model, defines, maxStates, false, 0)
+}
+
+// RunEngineReduced is RunEngine with the partial-order reduction (explore's
+// POR option). The state count is then that of the reduced graph, which pan's
+// is not comparable with: compare the verdict and the error class only.
+func RunEngineReduced(ctx context.Context, model string, defines []string, maxStates int) (*EngineResult, error) {
+	return runEngine(ctx, model, defines, maxStates, true, 0)
+}
+
+// RunEngineWorkers is RunEngine with the parallel search (explore.Options.Workers
+// = workers; 0 is the sequential search). A model with a never claim or an
+// accept label is refused by the parallel search and run sequentially, which
+// the result does not hide: its Class is the sequential one.
+func RunEngineWorkers(ctx context.Context, model string, defines []string, maxStates, workers int) (*EngineResult, error) {
+	return runEngine(ctx, model, defines, maxStates, false, workers)
+}
+
+func runEngine(ctx context.Context, model string, defines []string, maxStates int, por bool, workers int) (*EngineResult, error) {
 	src, err := os.ReadFile(model)
 	if err != nil {
 		return nil, err
@@ -278,11 +300,11 @@ func RunEngine(ctx context.Context, model string, defines []string, maxStates in
 	if maxStates <= 0 {
 		maxStates = 5_000_000
 	}
-	r, err := explore.Run(ctx, res.Model, explore.Options{Budget: explore.Budget{MaxStates: maxStates}, Sweep: true})
+	r, err := explore.Run(ctx, res.Model, explore.Options{Budget: explore.Budget{MaxStates: maxStates}, Sweep: true, POR: por, Workers: workers})
 	if err != nil {
 		return nil, err
 	}
-	er := &EngineResult{States: r.States, Complete: r.Complete, Warnings: res.Warnings, Model: res.Model, Statements: map[string][]EngineEdge{}}
+	er := &EngineResult{States: r.States, Complete: r.Complete, Warnings: res.Warnings, Model: res.Model, Statements: map[string][]EngineEdge{}, Reduction: r.Reduction}
 	er.Class = "no error"
 	for _, o := range r.Outcomes {
 		switch o.Status {

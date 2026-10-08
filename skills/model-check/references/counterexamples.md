@@ -124,7 +124,10 @@ situations, and confusing them inverts the diagnosis:
    `progress`; `steps/g5-addendum-confirmation.md` §1–§3.)
 2. **Weak-fairness bookkeeping.** Under `fairness: weak` the copies construction
    inserts null steps to advance the fairness copy. They carry no system meaning at
-   all; drop them silently.
+   all; drop them silently. A loop is never made of them alone: it always contains a
+   real step (a process move, or the claim with the stutter step of §2a point 1), and
+   under `progress` no stutter step exists, so a `progress` loop is always a cycle of
+   the model (`fairness.md` §2).
 
 A process that is *absent* from the loop is the third case and the interesting one
 for fairness: it did not stutter, it was **not scheduled**. Under `fairness: none`

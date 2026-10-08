@@ -2,6 +2,7 @@ package promela
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"modelcheck/ir"
@@ -32,6 +33,11 @@ import (
 //     younger process is alive (pan removes only the last process of the
 //     vector) and it zeroes the locals (the dead process leaves the
 //     vector). Younger = higher pid; alive = not dormant and not dead.
+//     When the vector carries the live-process table (a process is created
+//     by `run`, or an expression reads `_nr_pr`) the same rule is the
+//     `youngest(k)` guard and the edge leaves the table, which is what makes
+//     `_nr_pr` fall; otherwise it is the conjunction over the younger
+//     processes, and no table is carried.
 //   - pids: `active` instances and `init` in textual order, then processes
 //     created by `run` in the textual order of the run statements of init
 //     (the parser admits run only as a straight-line statement of init,
@@ -53,6 +59,13 @@ type node struct {
 	name   string
 	origin *ir.Origin
 	rep    int // alias representative (self if not aliased)
+}
+
+// insideAll reports whether the node was created inside every atomic and
+// d_step block that is open now, i.e. whether the process is already inside
+// them when it stands at the node.
+func (n *node) insideAll(atomic, dstep []int) bool {
+	return len(n.atomic) >= len(atomic) && len(n.dstep) >= len(dstep)
 }
 
 type instance struct {
@@ -99,6 +112,40 @@ type instance struct {
 	proc                              ir.Process
 	runs                              []pendingRun
 	endEdge                           int // index of the -end- edge in edges, -1 for claims
+
+	// keepAtomic and keepDStep hold the raw indices of the edges that close an
+	// iteration of a do loop inside an atomic / d_step block (see the Do case
+	// of lowerStmt); breakOf holds the raw index of a `break` edge with the id
+	// of the loop it leaves; openLoops are the loops inside such a block whose
+	// head is outside it.
+	keepAtomic, keepDStep map[int]bool
+	breakOf               map[int]int
+	openLoops             []openLoop
+	keepLoops             []keepLoop
+	// breakFrom holds, per loop id, the nodes at which a break that is not the
+	// first statement of its option leaves the loop: such a break leaves no edge
+	// of its own, the node is merged with the exit, so an edge into it leaves
+	// the loop even when the exit is the loop's own head (a loop that is the
+	// only statement of an outer loop's option).
+	breakFrom map[int][]int
+}
+
+// openLoop is a do loop inside an atomic or d_step block whose head is the
+// location in front of the block: the range of raw edges lowered for it, the
+// head, and where the loop is written.
+// keepLoop is a loop inside an atomic or d_step block whose back edges keep
+// the exclusive control: the edges lo..hi-1 of the process that belong to it,
+// its head node and its id, resolved in finalise.
+type keepLoop struct {
+	head, lo, hi, id int
+	atomic, dstep    bool
+}
+
+type openLoop struct {
+	head   int
+	lo, hi int
+	pos    Pos
+	dstep  bool
 }
 
 type pendingRun struct {
@@ -139,6 +186,10 @@ type lowerer struct {
 	curAtomic []int
 	curDStep  []int
 	blockID   int
+	// loops is the stack of ids of the do loops being lowered (innermost
+	// last); loopSeq numbers them.
+	loops   []int
+	loopSeq int
 	// declDepth is the nesting of `{ }` blocks inside the process body. A
 	// declaration at depth 0 is not a step (its value is the variable's
 	// initial value); a declaration in a nested scope IS a step that assigns
@@ -393,12 +444,17 @@ func lower(mod *Module, file, name string, maxProcs int) (*ir.Model, []string, m
 	for _, in := range l.insts {
 		l.finalise(in)
 	}
-	hasDynamic := false
-	for _, in := range l.insts {
-		if in.runCreated {
-			hasDynamic = true
-		}
+	// The vector carries the live-process table exactly when ir.NeedsTable
+	// says so: a process is created by `run`, or an expression reads what
+	// only the table answers (`_nr_pr`). Then a process that ends must leave
+	// the table, or the count never falls and a guard waiting for it never
+	// holds. The question is put to the lowered processes themselves, so the
+	// frontend and the layout cannot disagree about whether there is a table.
+	probe := &ir.Model{Processes: make([]ir.Process, len(l.insts))}
+	for k, in := range l.insts {
+		probe.Processes[k] = in.proc
 	}
+	hasTable := ir.NeedsTable(probe)
 	for k, in := range l.insts {
 		for _, pr := range in.runs {
 			e := &in.proc.Edges[in.edgeMap[pr.edge]]
@@ -407,7 +463,7 @@ func lower(mod *Module, file, name string, maxProcs int) (*ir.Model, []string, m
 		}
 		if in.endEdge >= 0 && in.edgeMap[in.endEdge] >= 0 {
 			edge := &in.proc.Edges[in.edgeMap[in.endEdge]]
-			if hasDynamic {
+			if hasTable {
 				// With a live-process table the rule is pan's own, stated
 				// once: only the youngest live process may leave the vector.
 				edge.Guard = ir.Youngest(k)
@@ -785,7 +841,9 @@ func (l *lowerer) labelNode(name string) int {
 
 func (l *lowerer) lowerInstance(in *instance) *Error {
 	l.cur = in
-	l.curAtomic, l.curDStep = nil, nil
+	l.curAtomic, l.curDStep, l.loops = nil, nil, nil
+	in.keepAtomic, in.keepDStep, in.breakOf = map[int]bool{}, map[int]bool{}, map[int]int{}
+	in.breakFrom = map[int][]int{}
 	in.labels = map[string]int{}
 	in.defined = map[string]bool{}
 	in.declared = map[string]bool{}
@@ -830,6 +888,27 @@ func (l *lowerer) lowerInstance(in *instance) *Error {
 		if !in.defined[g.label] {
 			return semanticErr(l.file, g.pos.Line, g.pos.Col,
 				"undefined label %s: %s has no statement labelled %s, so the goto has no target (SPIN reports the same)", g.label, pt.Name, g.label)
+		}
+	}
+	// A loop that opens an atomic or d_step block has the location in front of
+	// the block as its head, and the lock bit alone tells "inside" from
+	// "outside" there. That is exact when the loop is the only thing the
+	// process can do at the head; when the head is also the start of another
+	// alternative (the loop is one option of an outer if/do, say) the
+	// alternative would be available inside the block, which pan does not
+	// allow (it keeps a separate state for the inside). Refuse, rather than
+	// answer for a different model.
+	for _, ol := range in.openLoops {
+		h := in.find(ol.head)
+		for i := range in.edges {
+			if (i < ol.lo || i >= ol.hi) && in.find(in.edges[i].From) == h {
+				kind := "atomic"
+				if ol.dstep {
+					kind = "d_step"
+				}
+				return outside(l.file, ol.pos.Line, ol.pos.Col, "loop at the start of an "+kind+" block that shares its entry with another alternative",
+					"the process could take the other alternative while it is inside the block, and this engine version keeps no separate location for the inside of the loop; give the loop a statement of its own in front, or move it out of the option")
+			}
 		}
 	}
 	if !in.claim {
@@ -1143,10 +1222,35 @@ func (l *lowerer) lowerStmt(it Item, from, to int, ctx seqCtx, first bool) *Erro
 		}
 		return nil
 	case *Do:
+		l.loopSeq++
+		id := l.loopSeq
+		l.loops = append(l.loops, id)
+		lo := len(in.edges)
 		for _, opt := range s.Options {
 			if err := l.lowerSeq(opt, from, from, seqCtx{breakTo: to, isOption: true, optLine: s.Options[0][0].Pos.Line}); err != nil {
 				return err
 			}
+		}
+		l.loops = l.loops[:len(l.loops)-1]
+		// A loop inside an atomic (d_step) block stays inside it: the process
+		// keeps the exclusive control from one iteration to the next, and the
+		// loop head is part of the block. finalise calls an edge atomic when
+		// its target lies inside the block, which holds for the head only
+		// when it was created inside the block; a loop that is the first
+		// statement of the block has the location in front of the block as
+		// its head, so the edges that close an iteration (those that lead back
+		// to the head and are no `break` of this loop) are marked here. As
+		// pan: control is given up by the edge that leaves the loop, not by
+		// the one that goes round it.
+		if len(l.curAtomic) > 0 || len(l.curDStep) > 0 {
+			if h := in.find(from); !in.nodes[h].insideAll(l.curAtomic, l.curDStep) {
+				in.openLoops = append(in.openLoops, openLoop{head: from, lo: lo, hi: len(in.edges), pos: it.Pos, dstep: len(l.curDStep) > 0})
+			}
+			// The marking waits for finalise: a node that closes the loop may be
+			// merged with the head later (a non-first break or a goto aliases
+			// nodes), and only the merged ids tell which edges go round the loop.
+			in.keepLoops = append(in.keepLoops, keepLoop{head: from, lo: lo, hi: len(in.edges), id: id,
+				atomic: len(l.curAtomic) > 0, dstep: len(l.curDStep) > 0})
 		}
 		return nil
 	case *Goto:
@@ -1162,8 +1266,14 @@ func (l *lowerer) lowerStmt(it Item, from, to int, ctx seqCtx, first bool) *Erro
 			return semanticErr(l.file, it.Pos.Line, it.Pos.Col, "break outside a do loop")
 		}
 		if first {
+			if n := len(l.loops); n > 0 {
+				in.breakOf[len(in.edges)] = l.loops[n-1]
+			}
 			l.addEdge(it, ir.Edge{From: from, To: ctx.breakTo}, panLine)
 			return nil
+		}
+		if n := len(l.loops); n > 0 {
+			in.breakFrom[l.loops[n-1]] = append(in.breakFrom[l.loops[n-1]], from)
 		}
 		return l.alias(from, ctx.breakTo, it.Pos)
 	case *Else:
@@ -1663,6 +1773,30 @@ func (l *lowerer) finalise(in *instance) {
 	if in.runCreated {
 		in.proc.Initial = in.final[in.find(in.dormant)]
 	}
+	// The edges that close an iteration of a loop inside an atomic / d_step
+	// block keep the control (see the Do case of lowerStmt); the nodes are
+	// merged by now, so an edge goes back to the head when its resolved target
+	// is the head's, whatever route (a goto, a non-first break) led there.
+	for _, kl := range in.keepLoops {
+		h := in.find(kl.head)
+		for i := kl.lo; i < kl.hi; i++ {
+			if in.find(in.edges[i].To) != h {
+				continue
+			}
+			if b, ok := in.breakOf[i]; ok && b == kl.id {
+				continue
+			}
+			if leaves := slices.Contains(in.breakFrom[kl.id], in.edges[i].To); leaves {
+				continue
+			}
+			if kl.atomic {
+				in.keepAtomic[i] = true
+			}
+			if kl.dstep {
+				in.keepDStep[i] = true
+			}
+		}
+	}
 	in.edgeMap = make([]int, len(in.edges))
 	for i := range in.edges {
 		e := in.edges[i]
@@ -1673,8 +1807,8 @@ func (l *lowerer) finalise(in *instance) {
 		}
 		e.From, e.To = in.final[from], in.final[to]
 		tgt := &in.nodes[to]
-		e.Atomic = len(tgt.atomic) > 0
-		e.DStep = len(tgt.dstep) > 0
+		e.Atomic = len(tgt.atomic) > 0 || in.keepAtomic[i]
+		e.DStep = len(tgt.dstep) > 0 || in.keepDStep[i]
 		in.edgeMap[i] = len(in.proc.Edges)
 		in.proc.Edges = append(in.proc.Edges, e)
 		in.finalPanLines = append(in.finalPanLines, in.panLines[i])

@@ -1,0 +1,53 @@
+{
+  "schema": "mcd-ir/1",
+  "name": "par-assert-overflow",
+  "globals": [
+    {
+      "name": "x",
+      "type": "byte"
+    }
+  ],
+  "processes": [
+    {
+      "name": "P",
+      "locations": [
+        {
+          "name": "l0"
+        },
+        {
+          "name": "l1"
+        }
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 1,
+          "assert": {
+            "op": "const"
+          },
+          "effect": [
+            {
+              "var": "x",
+              "value": {
+                "op": "const",
+                "value": 300
+              }
+            }
+          ],
+          "text": "assert(0); x = 300"
+        }
+      ]
+    }
+  ],
+  "properties": [
+    {
+      "id": "assert",
+      "kind": "assert"
+    },
+    {
+      "id": "deadlock",
+      "kind": "deadlock"
+    }
+  ]
+}

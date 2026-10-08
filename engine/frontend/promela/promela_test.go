@@ -236,6 +236,80 @@ func TestAtomicDStepElseTimeoutFlags(t *testing.T) {
 	}
 }
 
+// A loop inside an atomic / d_step block stays inside it: the edge that goes
+// round the loop keeps the exclusive control (is atomic / part of the d_step),
+// the edge that leaves it by `break` does not. When the loop is the first
+// statement of the block its head is the location in front of the block, which
+// is outside it, so the flags come from the loop and not from the target.
+func TestLoopAtTheStartOfAnAtomicBlockKeepsControl(t *testing.T) {
+	for _, kind := range []string{"atomic", "d_step"} {
+		src := "byte n;\nactive proctype A() {\n\t" + kind + " { do :: n < 3 -> n++ :: else -> break od };\n\tn = 9\n}\n"
+		m, _, err := parseSrc(t, src)
+		if err != nil {
+			t.Fatalf("%s: %v", kind, err)
+		}
+		type flags struct{ a, d bool }
+		want := map[string]flags{
+			"n < 3": {kind == "atomic", kind == "d_step"}, // enters the block
+			"n++":   {kind == "atomic", kind == "d_step"}, // goes round the loop: keeps control
+			"else":  {false, false},                       // leaves the loop: gives it up
+			"n = 9": {false, false},
+		}
+		for _, e := range m.Processes[0].Edges {
+			w, ok := want[e.Text]
+			if !ok {
+				continue
+			}
+			if got := (flags{e.Atomic, e.DStep}); got != w {
+				t.Errorf("%s: edge %q has atomic=%v d_step=%v, want atomic=%v d_step=%v", kind, e.Text, got.a, got.d, w.a, w.d)
+			}
+			delete(want, e.Text)
+		}
+		if len(want) > 0 {
+			t.Errorf("%s: edges not found: %v", kind, want)
+		}
+	}
+}
+
+// A `break` that is the whole of an option leaves the loop: its edge goes to the
+// location after the loop, which is the head of the outer loop here (the inner
+// loop is the only option of the outer one, so the two heads are one location).
+// The edge that goes round the inner loop keeps the control, the one that
+// leaves it must not, although both end at that location.
+func TestBreakOfALoopAtTheStartOfAnAtomicBlockGivesUpControl(t *testing.T) {
+	src := "byte n;\nactive proctype A() {\n\tdo :: atomic { do :: n < 3 -> n++ :: break od } od\n}\n"
+	m, _, err := parseSrc(t, src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range m.Processes[0].Edges {
+		want := e.Text != "break" && e.Text != "-end-"
+		if e.Atomic != want {
+			t.Errorf("edge %q: atomic=%v, want %v", e.Text, e.Atomic, want)
+		}
+	}
+}
+
+// The loop that opens an atomic block is only exact when nothing else can be
+// done at its head: the lock bit separates "inside" from "outside" but cannot
+// keep a sibling alternative out of the block. The shape is refused by name;
+// with a statement in front of the loop, or with the loop alone in its option,
+// it is accepted.
+func TestLoopAtTheStartOfAnAtomicBlockSharedWithAnAlternative(t *testing.T) {
+	shared := "byte n;\nactive proctype A() {\n\tdo :: atomic { do :: n < 3 -> n++ :: else -> break od } :: skip -> n = 0 od\n}\n"
+	if _, _, err := parseSrc(t, shared); err == nil || !strings.Contains(err.Error(), "shares its entry with another alternative") {
+		t.Fatalf("an atomic loop that shares its entry with another option: error %v, want a refusal by name", err)
+	}
+	for name, src := range map[string]string{
+		"statement in front":  "byte n;\nactive proctype A() {\n\tdo :: atomic { n = 0; do :: n < 3 -> n++ :: else -> break od } :: skip -> n = 0 od\n}\n",
+		"alone in its option": "byte n;\nactive proctype A() {\n\tdo :: atomic { do :: n < 3 -> n++ :: else -> break od } od\n}\n",
+	} {
+		if _, _, err := parseSrc(t, src); err != nil {
+			t.Errorf("%s: %v", name, err)
+		}
+	}
+}
+
 func TestRunInstancesAndEndGuards(t *testing.T) {
 	src := "proctype E(int x, y) { x = y }\nactive proctype A() { skip }\ninit { run E(3, 4); run E(5, 6) }\n"
 	m, _, err := parseSrc(t, src)

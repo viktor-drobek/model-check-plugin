@@ -118,7 +118,16 @@ proctype P() provided (cond) { ... }
 - **else**: Inside `if` — taken when no other option is enabled.
 - **atomic / d_step**: `atomic { ... }` and `d_step { ... }` — atomic
   blocks. `d_step` that blocks (no transition enabled inside) produces
-  `invalid-model` with reason "block in d_step".
+  `invalid-model` with reason "block in d_step". A `do` loop inside the
+  block stays inside it: the process keeps the exclusive control from one
+  iteration to the next and gives it up when it leaves the loop. A loop that
+  is the first statement of the block, and that shares its entry with another
+  alternative (the block is one option of an outer `if`/`do`), is refused
+  (`outside-subset`, "shares its entry with another alternative"): pan keeps a
+  separate state for the inside of the block, and this engine's one location
+  per point between statements cannot tell the two apart. Earlier versions
+  gave the control up at the back edge of such a loop and could report an
+  assertion violation pan does not find.
 
 ### 1.6 Assertions
 
@@ -182,6 +191,20 @@ Arithmetic and boolean expressions are supported:
 - **Variables**: `x`, `x[i]`, `x.f` (struct fields)
 - **Constants**: integer literals
 - **Function calls**: `f(args)` — but only in non-restricted contexts
+- **`_nr_pr`**: the number of live processes of the model itself; a never
+  claim, and the claim an `ltl` formula is checked with, are not counted. It
+  falls when a process ends, in a model with `run` and in one without: the
+  ending process leaves the process table, and only the youngest live process
+  may. The table is carried only when a process is created by `run` or some
+  expression of a process reads `_nr_pr`; a model that does neither keeps the
+  vector G1 fixed against pan. **Divergence from SPIN:** pan counts the claim
+  as a process, so under a `never` claim or an `ltl` formula its `_nr_pr` is
+  one larger, and a verdict that reads `_nr_pr` and is checked under a claim
+  can differ from pan's. Without a claim the two agree
+  (`testdata/spin-divergence/`, `steps/fix-nrpr-confirmation.md`). A property
+  that reads `_nr_pr` (a CTL atom, or an `invariant` / `reach` expression sent
+  through MCP as IR) over a model whose own processes do not read it is
+  `not-executed`: the table is decided by the model's processes alone.
 
 **Byte arithmetic**: Operations on `byte` variables wrap silently in
 SPIN. The engine detects overflow and reports `invalid-model`.
@@ -229,12 +252,17 @@ The following constructs are **rejected** with a structured error
 The engine supports:
 - **Safety** (default): checks for assertion violations and invalid end
   states.
-- **LTL**: via `never` claims (converted to properties of kind "ltl").
+- **LTL**: via `never` claims (converted to properties of kind "ltl"), `ltl`
+  blocks and `--ltl` formulas, with the nested depth-first search of G4.
+- **Progress**: non-progress cycles (`--progress`, `progress` labels).
+- **Weak fairness** (`--fairness weak`, `pan -f`) for LTL and progress
+  properties (G4; `references/fairness.md`).
+- **CTL** (`--ctl`, G5), by graph labelling.
 
 The following are **not-executed** (status `not-executed` with a reason):
-- **CTL**: `AG`, `EF`, etc. — plan 14 §4.2 not yet implemented.
 - **Strong fairness**: FR-008 not yet implemented.
-- **Weak fairness**: Not yet implemented.
+- A property that reads `_nr_pr` over a model whose processes keep no process
+  table (§1.12).
 
 ---
 
@@ -258,7 +286,11 @@ behaviour catches bugs that SPIN would silently miss.
 ### 3.3 State counts
 
 The engine's state counts match SPIN's `pan -c0` (no optimisation) for
-models inside the subset. The pandiff tool (`tools/pandiff`) verifies
+models inside the subset, except where this document or `references/promela-subset.md`
+says otherwise: a process that blocks inside an `atomic` sequence (the engine
+stores the state with its exclusive-control byte set, pan does not), `_nr_pr`
+under a never claim or an `ltl` formula (§1.12), a run with `--por` (the
+count is that of the reduced graph) and a run with `--workers` that stops early. The pandiff tool (`tools/pandiff`) verifies
 this at statement granularity by comparing the engine's statement table
 against `pan -d` output.
 
@@ -274,8 +306,7 @@ Locals are qualified as `<proctype>:<pid>.<name>`.
 
 ### 4.1 Not yet implemented
 
-- **CTL properties**: No support for `AG`, `EF`, `AX`, `EU` etc.
-- **Strong/weak fairness**: No fairness constraints.
+- **Strong fairness**: only weak fairness is executed (§2.1).
 - **`eval()`**: Cannot evaluate expressions at runtime in receive
   arguments.
 - **`enabled()`**: Cannot query enabledness of guards.

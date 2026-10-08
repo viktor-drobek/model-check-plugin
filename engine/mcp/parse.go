@@ -86,7 +86,7 @@ func (s *Server) parse(ctx context.Context, req *sdk.CallToolRequest, in ParseIn
 	if err != nil {
 		return nil, nil, err
 	}
-	timer := begin(sess, "mc_parse")
+	timer := s.begin(ctx, sess, "mc_parse")
 	out := &ParseOut{SessionID: sess.ID, Warnings: []string{}}
 	var artifacts []string
 	defer func() { timer.end(err, nil, artifacts) }()

@@ -18,7 +18,7 @@ import (
 //
 //	mcd serve [--session-dir D] [--allow-read DIR]...
 //	          [--max-states N] [--max-depth N] [--max-ms N] [--max-memory-mb N]
-//	          [--concurrency K] [--cleanup]
+//	          [--concurrency K] [--max-workers N] [--cleanup]
 //
 // --session-dir defaults to $MCD_SESSION_DIR, then to a fresh temporary
 // directory. The --max-* flags are ceilings a client budget cannot exceed
@@ -38,6 +38,7 @@ func serve(args []string) int {
 	maxMS := fs.Int64("max-ms", 0, "ceiling for the time budget in ms (0 = none)")
 	maxMem := fs.Int64("max-memory-mb", 0, "ceiling for the memory budget in MiB (0 = none)")
 	concurrency := fs.Int("concurrency", 2, "maximum simultaneous mc_check/mc_estimate runs")
+	maxWorkers := fs.Int("max-workers", 0, "ceiling for the workers of one mc_check call (0 = GOMAXPROCS); the CPU the server may use is concurrency times this")
 	cleanup := fs.Bool("cleanup", false, "remove session directories at shutdown")
 	if err := fs.Parse(args); err != nil {
 		return 1
@@ -52,6 +53,7 @@ func serve(args []string) int {
 		AllowRead:   allow,
 		Ceiling:     mcp.Budget{States: *maxStates, Depth: *maxDepth, MS: *maxMS, MemoryMB: *maxMem},
 		Concurrency: *concurrency,
+		MaxWorkers:  *maxWorkers,
 		Promela:     mcp.PromelaViaCLI,
 	})
 	if err != nil {

@@ -6,9 +6,11 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -33,6 +35,7 @@ type g3World struct {
 	statuses  []string // list captured by "lists exactly these statuses"
 	report    map[string]any
 	property  map[string]any
+	capExit   int // exit code of the last run of the capacity script
 }
 
 func init() {
@@ -297,6 +300,27 @@ func registerG3Steps(sc *godog.ScenarioContext) {
 		}
 		if len(missing) > 0 {
 			return fmt.Errorf("%s references missing files: %v", rel, missing)
+		}
+		return nil
+	})
+	sc.Step(`^I run the capacity script with "([^"]*)"$`, func(args string) error {
+		script := filepath.Join(w.skillDir, "assets", "wait-for-capacity.sh")
+		cmd := exec.Command("sh", append([]string{script}, strings.Fields(args)...)...)
+		out, err := cmd.CombinedOutput()
+		var ee *exec.ExitError
+		switch {
+		case err == nil:
+			w.capExit = 0
+		case errors.As(err, &ee):
+			w.capExit = ee.ExitCode()
+		default:
+			return fmt.Errorf("run %s: %w (%s)", script, err, out)
+		}
+		return nil
+	})
+	sc.Step(`^the capacity script exits with (\d+)$`, func(want int) error {
+		if w.capExit != want {
+			return fmt.Errorf("the capacity script exited with %d, want %d", w.capExit, want)
 		}
 		return nil
 	})
@@ -730,6 +754,27 @@ func registerG3Steps(sc *godog.ScenarioContext) {
 	})
 	sc.Step(`^"([^"]+)" says that the CLI and the MCP layer reach the same engine$`, func(rel string) error {
 		return statesRule(rel, phrase(`(?i)CLI and the MCP layer reach the same engine`), "the CLI and the MCP layer reach the same engine")
+	})
+	sc.Step(`^in "([^"]+)" the (\d+) characters after "([^"]+)" name both "([^"]+)" and "([^"]+)"$`, func(rel string, n int, after, a, b string) error {
+		s, err := read(rel)
+		if err != nil {
+			return err
+		}
+		loc := phrase(regexp.QuoteMeta(after)).FindStringIndex(s)
+		if loc == nil {
+			return fmt.Errorf("%s has no passage that starts %q", rel, after)
+		}
+		end := loc[1] + n
+		if end > len(s) {
+			end = len(s)
+		}
+		window := s[loc[0]:end]
+		for _, want := range []string{a, b} {
+			if !strings.Contains(window, want) {
+				return fmt.Errorf("%s: the %d characters after %q do not name %q: %q", rel, n, after, want, window)
+			}
+		}
+		return nil
 	})
 	sc.Step(`^"([^"]+)" does not call the report fields illustrative$`, func(rel string) error {
 		s, err := read(rel)

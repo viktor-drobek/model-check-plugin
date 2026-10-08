@@ -267,7 +267,14 @@ func TestPORRefusals(t *testing.T) {
 	dynamic := plain()
 	dynamic.Processes[1].Dynamic = true
 
-	needsTable := model(nil, nil,
+	// A process that reads _nr_pr makes the model keep the live-process table,
+	// which the reduction does not model. A property that reads it over a
+	// model whose processes do not is refused by itself (tableread.go) and is
+	// not a reason to refuse the reduction: that is the "refused property" case.
+	needsTable := model(nil, nil, nil,
+		proc("P", nil, 2, ir.Edge{From: 0, To: 1, Assert: ir.Binary("ge", ir.NrPr(), ir.Const(0))}), q())
+
+	refusedProperty := model(nil, nil,
 		[]ir.Property{{ID: "r", Kind: ir.KindReach, Expr: ir.Binary("gt", ir.NrPr(), ir.Const(1))}},
 		proc("P", nil, 2, ir.Edge{From: 0, To: 1}), q())
 
@@ -282,13 +289,14 @@ func TestPORRefusals(t *testing.T) {
 		m    *ir.Model
 		want string
 	}{
-		{"atomic", atomic, "atomic"},
+		{"atomic (reduced since step 6)", atomic, ""},
 		{"timeout", timeout, "timeout"},
 		{"provided", provided, "provided"},
 		{"rendezvous", rendezvous, "rendezvous"},
 		{"dynamic channel", dynChan, "dynamic channel"},
-		{"dynamic process", dynamic, "process creation"},
-		{"process table", needsTable, "process table"},
+		{"dynamic process (reduced since step 6)", dynamic, ""},
+		{"process table (reduced since step 6)", needsTable, ""},
+		{"property refused for the process table", refusedProperty, ""},
 		{"ltl", ltl, "temporal"},
 		{"ctl", ctl, "temporal"},
 		{"fine", plain(), ""},

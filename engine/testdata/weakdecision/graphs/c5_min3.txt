@@ -1,0 +1,783 @@
+## stutter_extension=ON states=122 edges=272
+S0: {'a': 0, 'b': 0, 'd': 0} pcs=(0, 0, 0) claim=None acc=False disabled=[]
+S1: {'a': 1, 'b': 0, 'd': 0} pcs=(1, 0, 0) claim=None acc=False disabled=['P0']
+S2: {'a': 0, 'b': 0, 'd': 1} pcs=(0, 0, 0) claim=None acc=False disabled=[]
+S3: {'a': 0, 'b': 0, 'd': 0} pcs=(0, 1, 0) claim=None acc=True disabled=[]
+S4: {'a': 0, 'b': 0, 'd': 1} pcs=(0, 0, 1) claim=None acc=False disabled=[]
+S5: {'a': 1, 'b': 0, 'd': 0} pcs=(1, 1, 0) claim=None acc=True disabled=['P0']
+S6: {'a': 1, 'b': 0, 'd': 1} pcs=(1, 0, 1) claim=None acc=False disabled=['P0']
+S7: {'a': 1, 'b': 0, 'd': 1} pcs=(1, 0, 0) claim=None acc=False disabled=['P0']
+S8: {'a': 0, 'b': 0, 'd': 2} pcs=(0, 0, 0) claim=None acc=False disabled=[]
+S9: {'a': 0, 'b': 0, 'd': 1} pcs=(0, 1, 0) claim=None acc=True disabled=[]
+S10: {'a': 0, 'b': 0, 'd': 2} pcs=(0, 0, 1) claim=None acc=False disabled=[]
+S11: {'a': 0, 'b': 0, 'd': 1} pcs=(0, 2, 0) claim=None acc=False disabled=['P1']
+S12: {'a': 0, 'b': 0, 'd': 1} pcs=(0, 1, 1) claim=None acc=True disabled=[]
+S13: {'a': 0, 'b': 0, 'd': 1} pcs=(0, 0, 2) claim=None acc=False disabled=[]
+S14: {'a': 1, 'b': 0, 'd': 1} pcs=(1, 2, 0) claim=None acc=False disabled=['P0', 'P1']
+S15: {'a': 1, 'b': 0, 'd': 1} pcs=(1, 1, 1) claim=None acc=True disabled=['P0']
+S16: {'a': 1, 'b': 0, 'd': 1} pcs=(1, 0, 2) claim=None acc=False disabled=['P0', 'P3']
+S17: {'a': 1, 'b': 0, 'd': 1} pcs=(1, 1, 0) claim=None acc=True disabled=['P0']
+S18: {'a': 1, 'b': 0, 'd': 2} pcs=(1, 0, 1) claim=None acc=False disabled=[]
+S19: {'a': 1, 'b': 0, 'd': 2} pcs=(1, 0, 0) claim=None acc=False disabled=[]
+S20: {'a': 0, 'b': 0, 'd': 2} pcs=(0, 1, 0) claim=None acc=True disabled=[]
+S21: {'a': 0, 'b': 0, 'd': 0} pcs=(0, 0, 1) claim=None acc=False disabled=['P3']
+S22: {'a': 0, 'b': 0, 'd': 2} pcs=(0, 2, 0) claim=None acc=False disabled=['P1']
+S23: {'a': 0, 'b': 0, 'd': 2} pcs=(0, 1, 1) claim=None acc=True disabled=[]
+S24: {'a': 0, 'b': 0, 'd': 2} pcs=(0, 0, 2) claim=None acc=False disabled=[]
+S25: {'a': 0, 'b': 0, 'd': 2} pcs=(0, 2, 1) claim=None acc=False disabled=['P1']
+S26: {'a': 0, 'b': 0, 'd': 1} pcs=(0, 1, 2) claim=None acc=True disabled=[]
+S27: {'a': 0, 'b': 0, 'd': 1} pcs=(0, 0, 3) claim=None acc=False disabled=[]
+S28: {'a': 1, 'b': 0, 'd': 2} pcs=(1, 2, 1) claim=None acc=False disabled=['P1']
+S29: {'a': 1, 'b': 0, 'd': 1} pcs=(1, 1, 2) claim=None acc=True disabled=['P0', 'P3']
+S30: {'a': 1, 'b': 0, 'd': 2} pcs=(1, 2, 0) claim=None acc=False disabled=['P1']
+S31: {'a': 1, 'b': 0, 'd': 2} pcs=(1, 1, 1) claim=None acc=True disabled=[]
+S32: {'a': 1, 'b': 0, 'd': 2} pcs=(2, 0, 1) claim=None acc=False disabled=['P0']
+S33: {'a': 1, 'b': 0, 'd': 2} pcs=(1, 0, 2) claim=None acc=False disabled=['P3']
+S34: {'a': 1, 'b': 0, 'd': 2} pcs=(2, 0, 0) claim=None acc=False disabled=['P0']
+S35: {'a': 1, 'b': 0, 'd': 2} pcs=(1, 1, 0) claim=None acc=True disabled=[]
+S36: {'a': 1, 'b': 0, 'd': 0} pcs=(1, 0, 1) claim=None acc=False disabled=['P0', 'P3']
+S37: {'a': 0, 'b': 0, 'd': 0} pcs=(0, 2, 0) claim=None acc=False disabled=['P1']
+S38: {'a': 0, 'b': 0, 'd': 0} pcs=(0, 1, 1) claim=None acc=True disabled=['P3']
+S39: {'a': 0, 'b': 0, 'd': 0} pcs=(0, 2, 1) claim=None acc=False disabled=['P1', 'P3']
+S40: {'a': 0, 'b': 0, 'd': 2} pcs=(0, 1, 2) claim=None acc=True disabled=[]
+S41: {'a': 0, 'b': 0, 'd': 0} pcs=(0, 0, 2) claim=None acc=False disabled=[]
+S42: {'a': 0, 'b': 0, 'd': 2} pcs=(0, 0, 3) claim=None acc=False disabled=[]
+S43: {'a': 0, 'b': 0, 'd': 2} pcs=(0, 2, 2) claim=None acc=False disabled=['P1']
+S44: {'a': 0, 'b': 0, 'd': 1} pcs=(0, 1, 3) claim=None acc=True disabled=[]
+S45: {'a': 1, 'b': 0, 'd': 1} pcs=(1, 0, 3) claim=None acc=False disabled=['P0']
+S46: {'a': 0, 'b': 0, 'd': 1} pcs=(0, 0, -1) claim=None acc=False disabled=['P3']
+S47: {'a': 1, 'b': 0, 'd': 2} pcs=(2, 2, 1) claim=None acc=False disabled=['P0', 'P1']
+S48: {'a': 1, 'b': 0, 'd': 2} pcs=(1, 2, 2) claim=None acc=False disabled=['P1', 'P3']
+S49: {'a': 1, 'b': 0, 'd': 2} pcs=(2, 2, 0) claim=None acc=False disabled=['P0', 'P1']
+S50: {'a': 1, 'b': 0, 'd': 0} pcs=(1, 2, 1) claim=None acc=False disabled=['P0', 'P1', 'P3']
+S51: {'a': 1, 'b': 0, 'd': 2} pcs=(2, 1, 1) claim=None acc=True disabled=['P0']
+S52: {'a': 1, 'b': 0, 'd': 2} pcs=(1, 1, 2) claim=None acc=True disabled=['P3']
+S53: {'a': 1, 'b': 0, 'd': 2} pcs=(2, 0, 2) claim=None acc=False disabled=['P0', 'P3']
+S54: {'a': 1, 'b': 0, 'd': 2} pcs=(2, 1, 0) claim=None acc=True disabled=['P0']
+S55: {'a': 1, 'b': 0, 'd': 0} pcs=(2, 0, 1) claim=None acc=False disabled=['P0', 'P3']
+S56: {'a': 1, 'b': 0, 'd': 0} pcs=(1, 2, 0) claim=None acc=False disabled=['P0', 'P1']
+S57: {'a': 1, 'b': 0, 'd': 0} pcs=(1, 1, 1) claim=None acc=True disabled=['P0', 'P3']
+S58: {'a': 0, 'b': 0, 'd': 1} pcs=(0, 2, 1) claim=None acc=False disabled=['P1']
+S59: {'a': 0, 'b': 0, 'd': 0} pcs=(0, 1, 2) claim=None acc=True disabled=[]
+S60: {'a': 0, 'b': 0, 'd': 0} pcs=(0, 2, 2) claim=None acc=False disabled=['P1']
+S61: {'a': 0, 'b': 0, 'd': 2} pcs=(0, 1, 3) claim=None acc=True disabled=[]
+S62: {'a': 1, 'b': 0, 'd': 0} pcs=(1, 0, 2) claim=None acc=False disabled=['P0', 'P3']
+S63: {'a': 0, 'b': 0, 'd': 0} pcs=(0, 0, 3) claim=None acc=False disabled=[]
+S64: {'a': 1, 'b': 0, 'd': 2} pcs=(1, 0, 3) claim=None acc=False disabled=[]
+S65: {'a': 0, 'b': 0, 'd': 2} pcs=(0, 0, -1) claim=None acc=False disabled=['P3']
+S66: {'a': 0, 'b': 0, 'd': 2} pcs=(0, 2, 3) claim=None acc=False disabled=['P1']
+S67: {'a': 1, 'b': 0, 'd': 1} pcs=(1, 1, 3) claim=None acc=True disabled=['P0']
+S68: {'a': 0, 'b': 0, 'd': 1} pcs=(0, 1, -1) claim=None acc=True disabled=['P3']
+S69: {'a': 1, 'b': 0, 'd': 1} pcs=(1, 0, -1) claim=None acc=False disabled=['P0', 'P3']
+S70: {'a': 1, 'b': 0, 'd': 2} pcs=(2, 2, 2) claim=None acc=False disabled=['P0', 'P1', 'P3']
+S71: {'a': 1, 'b': 0, 'd': 0} pcs=(2, 2, 1) claim=None acc=False disabled=['P0', 'P1', 'P3']
+S72: {'a': 1, 'b': 0, 'd': 2} pcs=(2, 1, 2) claim=None acc=True disabled=['P0', 'P3']
+S73: {'a': 1, 'b': 0, 'd': 0} pcs=(1, 2, 2) claim=None acc=False disabled=['P0', 'P1', 'P3']
+S74: {'a': 1, 'b': 0, 'd': 0} pcs=(2, 2, 0) claim=None acc=False disabled=['P0', 'P1']
+S75: {'a': 1, 'b': 0, 'd': 0} pcs=(2, 1, 1) claim=None acc=True disabled=['P0', 'P3']
+S76: {'a': 1, 'b': 0, 'd': 1} pcs=(1, 2, 1) claim=None acc=False disabled=['P0', 'P1']
+S77: {'a': 0, 'b': 0, 'd': 1} pcs=(0, 2, 2) claim=None acc=False disabled=['P1']
+S78: {'a': 1, 'b': 0, 'd': 0} pcs=(1, 1, 2) claim=None acc=True disabled=['P0', 'P3']
+S79: {'a': 0, 'b': 0, 'd': 0} pcs=(0, 1, 3) claim=None acc=True disabled=[]
+S80: {'a': 0, 'b': 0, 'd': 0} pcs=(0, 2, 3) claim=None acc=False disabled=['P1']
+S81: {'a': 1, 'b': 0, 'd': 2} pcs=(1, 1, 3) claim=None acc=True disabled=[]
+S82: {'a': 0, 'b': 0, 'd': 2} pcs=(0, 1, -1) claim=None acc=True disabled=['P3']
+S83: {'a': 1, 'b': 0, 'd': 0} pcs=(1, 0, 3) claim=None acc=False disabled=['P0']
+S84: {'a': 0, 'b': 0, 'd': 0} pcs=(0, 0, -1) claim=None acc=False disabled=['P3']
+S85: {'a': 1, 'b': 0, 'd': 2} pcs=(2, 0, 3) claim=None acc=False disabled=['P0']
+S86: {'a': 1, 'b': 0, 'd': 2} pcs=(1, 0, -1) claim=None acc=False disabled=['P3']
+S87: {'a': 1, 'b': 0, 'd': 2} pcs=(1, 2, 3) claim=None acc=False disabled=['P1']
+S88: {'a': 0, 'b': 0, 'd': 2} pcs=(0, 2, -1) claim=None acc=False disabled=['P3']
+S89: {'a': 1, 'b': 0, 'd': 1} pcs=(1, 1, -1) claim=None acc=True disabled=['P0', 'P3']
+S90: {'a': 1, 'b': 0, 'd': 0} pcs=(2, 2, 2) claim=None acc=False disabled=['P0', 'P1', 'P3']
+S91: {'a': 1, 'b': 0, 'd': 1} pcs=(2, 2, 1) claim=None acc=False disabled=['P0', 'P1']
+S92: {'a': 1, 'b': 0, 'd': 1} pcs=(1, 2, 2) claim=None acc=False disabled=['P0', 'P1', 'P3']
+S93: {'a': 0, 'b': 0, 'd': 1} pcs=(0, 2, 3) claim=None acc=False disabled=['P1']
+S94: {'a': 1, 'b': 0, 'd': 0} pcs=(1, 1, 3) claim=None acc=True disabled=['P0']
+S95: {'a': 0, 'b': 0, 'd': 0} pcs=(0, 1, -1) claim=None acc=True disabled=['P3']
+S96: {'a': 1, 'b': 0, 'd': 0} pcs=(1, 2, 3) claim=None acc=False disabled=['P0', 'P1']
+S97: {'a': 0, 'b': 0, 'd': 0} pcs=(0, 2, -1) claim=None acc=False disabled=['P3']
+S98: {'a': 1, 'b': 0, 'd': 2} pcs=(2, 1, 3) claim=None acc=True disabled=['P0']
+S99: {'a': 1, 'b': 0, 'd': 2} pcs=(1, 1, -1) claim=None acc=True disabled=['P3']
+S100: {'a': 1, 'b': 0, 'd': 0} pcs=(1, 0, -1) claim=None acc=False disabled=['P0', 'P3']
+S101: {'a': 1, 'b': 0, 'd': 2} pcs=(2, 0, -1) claim=None acc=False disabled=['P0', 'P3']
+S102: {'a': 1, 'b': 0, 'd': 2} pcs=(2, 2, 3) claim=None acc=False disabled=['P0', 'P1']
+S103: {'a': 1, 'b': 0, 'd': 2} pcs=(1, 2, -1) claim=None acc=False disabled=['P3']
+S104: {'a': 0, 'b': 0, 'd': 2} pcs=(0, -1, -1) claim=None acc=False disabled=['P1', 'P3']
+S105: {'a': 1, 'b': 0, 'd': 1} pcs=(2, 2, 2) claim=None acc=False disabled=['P0', 'P1', 'P3']
+S106: {'a': 1, 'b': 0, 'd': 1} pcs=(1, 2, 3) claim=None acc=False disabled=['P0', 'P1']
+S107: {'a': 0, 'b': 0, 'd': 1} pcs=(0, 2, -1) claim=None acc=False disabled=['P3']
+S108: {'a': 1, 'b': 0, 'd': 0} pcs=(1, 1, -1) claim=None acc=True disabled=['P0', 'P3']
+S109: {'a': 1, 'b': 0, 'd': 0} pcs=(1, 2, -1) claim=None acc=False disabled=['P0', 'P3']
+S110: {'a': 0, 'b': 0, 'd': 0} pcs=(0, -1, -1) claim=None acc=False disabled=['P1', 'P3']
+S111: {'a': 1, 'b': 0, 'd': 0} pcs=(2, 2, 3) claim=None acc=False disabled=['P0', 'P1']
+S112: {'a': 1, 'b': 0, 'd': 2} pcs=(2, 1, -1) claim=None acc=True disabled=['P0', 'P3']
+S113: {'a': 1, 'b': 0, 'd': 2} pcs=(2, 2, -1) claim=None acc=False disabled=['P0', 'P3']
+S114: {'a': 1, 'b': 0, 'd': 2} pcs=(1, -1, -1) claim=None acc=False disabled=['P1', 'P3']
+S115: {'a': 1, 'b': 0, 'd': 1} pcs=(1, 2, -1) claim=None acc=False disabled=['P0', 'P3']
+S116: {'a': 0, 'b': 0, 'd': 1} pcs=(0, -1, -1) claim=None acc=False disabled=['P1', 'P3']
+S117: {'a': 1, 'b': 0, 'd': 0} pcs=(1, -1, -1) claim=None acc=False disabled=['P0', 'P1', 'P3']
+S118: {'a': 1, 'b': 0, 'd': 0} pcs=(2, 2, -1) claim=None acc=False disabled=['P0', 'P3']
+S119: {'a': 1, 'b': 0, 'd': 2} pcs=(2, -1, -1) claim=None acc=False disabled=['P0', 'P1', 'P3']
+S120: {'a': 1, 'b': 0, 'd': 1} pcs=(1, -1, -1) claim=None acc=False disabled=['P0', 'P1', 'P3']
+S121: {'a': 1, 'b': 0, 'd': 0} pcs=(2, -1, -1) claim=None acc=False disabled=['P0', 'P1', 'P3']
+  S0 -[P0]-> S1
+  S0 -[P0]-> S2
+  S0 -[P1]-> S3
+  S0 -[P3]-> S4
+  S1 -[P1]-> S5
+  S1 -[P3]-> S6
+  S2 -[P0]-> S7
+  S2 -[P0]-> S8
+  S2 -[P1]-> S9
+  S2 -[P3]-> S10
+  S3 -[P0]-> S5
+  S3 -[P0]-> S9
+  S3 -[P1]-> S11
+  S3 -[P3]-> S12
+  S4 -[P0]-> S6
+  S4 -[P0]-> S10
+  S4 -[P1]-> S12
+  S4 -[P3]-> S13
+  S5 -[P1]-> S14
+  S5 -[P3]-> S15
+  S6 -[P1]-> S15
+  S6 -[P3]-> S16
+  S7 -[P1]-> S17
+  S7 -[P3]-> S18
+  S8 -[P0]-> S19
+  S8 -[P0]-> S0
+  S8 -[P1]-> S20
+  S8 -[P3]-> S21
+  S9 -[P0]-> S17
+  S9 -[P0]-> S20
+  S9 -[P1]-> S22
+  S9 -[P3]-> S23
+  S10 -[P0]-> S18
+  S10 -[P0]-> S21
+  S10 -[P1]-> S23
+  S10 -[P3]-> S24
+  S11 -[P0]-> S14
+  S11 -[P0]-> S22
+  S11 -[P3]-> S25
+  S12 -[P0]-> S15
+  S12 -[P0]-> S23
+  S12 -[P1]-> S25
+  S12 -[P3]-> S26
+  S13 -[P0]-> S16
+  S13 -[P0]-> S24
+  S13 -[P1]-> S26
+  S13 -[P3]-> S27
+  S14 -[P3]-> S28
+  S15 -[P1]-> S28
+  S15 -[P3]-> S29
+  S16 -[P1]-> S29
+  S17 -[P1]-> S30
+  S17 -[P3]-> S31
+  S18 -[P0]-> S32
+  S18 -[P1]-> S31
+  S18 -[P3]-> S33
+  S19 -[P0]-> S34
+  S19 -[P1]-> S35
+  S19 -[P3]-> S36
+  S20 -[P0]-> S35
+  S20 -[P0]-> S3
+  S20 -[P1]-> S37
+  S20 -[P3]-> S38
+  S21 -[P0]-> S36
+  S21 -[P0]-> S4
+  S21 -[P1]-> S38
+  S22 -[P0]-> S30
+  S22 -[P0]-> S37
+  S22 -[P3]-> S39
+  S23 -[P0]-> S31
+  S23 -[P0]-> S38
+  S23 -[P1]-> S39
+  S23 -[P3]-> S40
+  S24 -[P0]-> S33
+  S24 -[P0]-> S41
+  S24 -[P1]-> S40
+  S24 -[P3]-> S42
+  S25 -[P0]-> S28
+  S25 -[P0]-> S39
+  S25 -[P3]-> S43
+  S26 -[P0]-> S29
+  S26 -[P0]-> S40
+  S26 -[P1]-> S43
+  S26 -[P3]-> S44
+  S27 -[P0]-> S45
+  S27 -[P0]-> S42
+  S27 -[P1]-> S44
+  S27 -[P3]-> S46
+  S28 -[P0]-> S47
+  S28 -[P3]-> S48
+  S29 -[P1]-> S48
+  S30 -[P0]-> S49
+  S30 -[P3]-> S50
+  S31 -[P0]-> S51
+  S31 -[P1]-> S50
+  S31 -[P3]-> S52
+  S32 -[P1]-> S51
+  S32 -[P3]-> S53
+  S33 -[P0]-> S53
+  S33 -[P1]-> S52
+  S34 -[P1]-> S54
+  S34 -[P3]-> S55
+  S35 -[P0]-> S54
+  S35 -[P1]-> S56
+  S35 -[P3]-> S57
+  S36 -[P1]-> S57
+  S37 -[P0]-> S56
+  S37 -[P0]-> S11
+  S37 -[P3]-> S58
+  S38 -[P0]-> S57
+  S38 -[P0]-> S12
+  S38 -[P1]-> S58
+  S39 -[P0]-> S50
+  S39 -[P0]-> S58
+  S40 -[P0]-> S52
+  S40 -[P0]-> S59
+  S40 -[P1]-> S60
+  S40 -[P3]-> S61
+  S41 -[P0]-> S62
+  S41 -[P0]-> S13
+  S41 -[P1]-> S59
+  S41 -[P3]-> S63
+  S42 -[P0]-> S64
+  S42 -[P0]-> S63
+  S42 -[P1]-> S61
+  S42 -[P3]-> S65
+  S43 -[P0]-> S48
+  S43 -[P0]-> S60
+  S43 -[P3]-> S66
+  S44 -[P0]-> S67
+  S44 -[P0]-> S61
+  S44 -[P1]-> S66
+  S44 -[P3]-> S68
+  S45 -[P1]-> S67
+  S45 -[P3]-> S69
+  S46 -[P0]-> S69
+  S46 -[P0]-> S65
+  S46 -[P1]-> S68
+  S47 -[P3]-> S70
+  S48 -[P0]-> S70
+  S49 -[P3]-> S71
+  S50 -[stutter]-> S50
+  S51 -[P1]-> S71
+  S51 -[P3]-> S72
+  S52 -[P0]-> S72
+  S52 -[P1]-> S73
+  S53 -[P1]-> S72
+  S54 -[P1]-> S74
+  S54 -[P3]-> S75
+  S55 -[P1]-> S75
+  S56 -[P3]-> S76
+  S57 -[P1]-> S76
+  S58 -[P0]-> S76
+  S58 -[P0]-> S25
+  S58 -[P3]-> S77
+  S59 -[P0]-> S78
+  S59 -[P0]-> S26
+  S59 -[P1]-> S77
+  S59 -[P3]-> S79
+  S60 -[P0]-> S73
+  S60 -[P0]-> S77
+  S60 -[P3]-> S80
+  S61 -[P0]-> S81
+  S61 -[P0]-> S79
+  S61 -[P1]-> S80
+  S61 -[P3]-> S82
+  S62 -[P1]-> S78
+  S63 -[P0]-> S83
+  S63 -[P0]-> S27
+  S63 -[P1]-> S79
+  S63 -[P3]-> S84
+  S64 -[P0]-> S85
+  S64 -[P1]-> S81
+  S64 -[P3]-> S86
+  S65 -[P0]-> S86
+  S65 -[P0]-> S84
+  S65 -[P1]-> S82
+  S66 -[P0]-> S87
+  S66 -[P0]-> S80
+  S66 -[P3]-> S88
+  S67 -[P1]-> S87
+  S67 -[P3]-> S89
+  S68 -[P0]-> S89
+  S68 -[P0]-> S82
+  S68 -[P1]-> S88
+  S69 -[P1]-> S89
+  S70 -[stutter]-> S70
+  S71 -[stutter]-> S71
+  S72 -[P1]-> S90
+  S73 -[stutter]-> S73
+  S74 -[P3]-> S91
+  S75 -[P1]-> S91
+  S76 -[P3]-> S92
+  S77 -[P0]-> S92
+  S77 -[P0]-> S43
+  S77 -[P3]-> S93
+  S78 -[P1]-> S92
+  S79 -[P0]-> S94
+  S79 -[P0]-> S44
+  S79 -[P1]-> S93
+  S79 -[P3]-> S95
+  S80 -[P0]-> S96
+  S80 -[P0]-> S93
+  S80 -[P3]-> S97
+  S81 -[P0]-> S98
+  S81 -[P1]-> S96
+  S81 -[P3]-> S99
+  S82 -[P0]-> S99
+  S82 -[P0]-> S95
+  S82 -[P1]-> S97
+  S83 -[P1]-> S94
+  S83 -[P3]-> S100
+  S84 -[P0]-> S100
+  S84 -[P0]-> S46
+  S84 -[P1]-> S95
+  S85 -[P1]-> S98
+  S85 -[P3]-> S101
+  S86 -[P0]-> S101
+  S86 -[P1]-> S99
+  S87 -[P0]-> S102
+  S87 -[P3]-> S103
+  S88 -[P0]-> S103
+  S88 -[P0]-> S97
+  S88 -[P1]-> S104
+  S89 -[P1]-> S103
+  S90 -[stutter]-> S90
+  S91 -[P3]-> S105
+  S92 -[stutter]-> S92
+  S93 -[P0]-> S106
+  S93 -[P0]-> S66
+  S93 -[P3]-> S107
+  S94 -[P1]-> S106
+  S94 -[P3]-> S108
+  S95 -[P0]-> S108
+  S95 -[P0]-> S68
+  S95 -[P1]-> S107
+  S96 -[P3]-> S109
+  S97 -[P0]-> S109
+  S97 -[P0]-> S107
+  S97 -[P1]-> S110
+  S98 -[P1]-> S111
+  S98 -[P3]-> S112
+  S99 -[P0]-> S112
+  S99 -[P1]-> S109
+  S100 -[P1]-> S108
+  S101 -[P1]-> S112
+  S102 -[P3]-> S113
+  S103 -[P0]-> S113
+  S103 -[P1]-> S114
+  S104 -[P0]-> S114
+  S104 -[P0]-> S110
+  S105 -[stutter]-> S105
+  S106 -[P3]-> S115
+  S107 -[P0]-> S115
+  S107 -[P0]-> S88
+  S107 -[P1]-> S116
+  S108 -[P1]-> S115
+  S109 -[P1]-> S117
+  S110 -[P0]-> S117
+  S110 -[P0]-> S116
+  S111 -[P3]-> S118
+  S112 -[P1]-> S118
+  S113 -[P1]-> S119
+  S114 -[P0]-> S119
+  S115 -[P1]-> S120
+  S116 -[P0]-> S120
+  S116 -[P0]-> S104
+  S117 -[stutter]-> S117
+  S118 -[P1]-> S121
+  S119 -[stutter]-> S119
+  S120 -[stutter]-> S120
+  S121 -[stutter]-> S121
+  accepting SCCs (comp, unfair-procs): [([68, 82, 95], ['P1']), ([44, 61, 79], ['P1', 'P3']), ([26, 40, 59], ['P1', 'P3']), ([12, 23, 38], ['P1']), ([3, 9, 20], ['P1', 'P3'])]
+  fair accepting SCC: None
+## stutter_extension=OFF states=122 edges=261
+S0: {'a': 0, 'b': 0, 'd': 0} pcs=(0, 0, 0) claim=None acc=False disabled=[]
+S1: {'a': 1, 'b': 0, 'd': 0} pcs=(1, 0, 0) claim=None acc=False disabled=['P0']
+S2: {'a': 0, 'b': 0, 'd': 1} pcs=(0, 0, 0) claim=None acc=False disabled=[]
+S3: {'a': 0, 'b': 0, 'd': 0} pcs=(0, 1, 0) claim=None acc=True disabled=[]
+S4: {'a': 0, 'b': 0, 'd': 1} pcs=(0, 0, 1) claim=None acc=False disabled=[]
+S5: {'a': 1, 'b': 0, 'd': 0} pcs=(1, 1, 0) claim=None acc=True disabled=['P0']
+S6: {'a': 1, 'b': 0, 'd': 1} pcs=(1, 0, 1) claim=None acc=False disabled=['P0']
+S7: {'a': 1, 'b': 0, 'd': 1} pcs=(1, 0, 0) claim=None acc=False disabled=['P0']
+S8: {'a': 0, 'b': 0, 'd': 2} pcs=(0, 0, 0) claim=None acc=False disabled=[]
+S9: {'a': 0, 'b': 0, 'd': 1} pcs=(0, 1, 0) claim=None acc=True disabled=[]
+S10: {'a': 0, 'b': 0, 'd': 2} pcs=(0, 0, 1) claim=None acc=False disabled=[]
+S11: {'a': 0, 'b': 0, 'd': 1} pcs=(0, 2, 0) claim=None acc=False disabled=['P1']
+S12: {'a': 0, 'b': 0, 'd': 1} pcs=(0, 1, 1) claim=None acc=True disabled=[]
+S13: {'a': 0, 'b': 0, 'd': 1} pcs=(0, 0, 2) claim=None acc=False disabled=[]
+S14: {'a': 1, 'b': 0, 'd': 1} pcs=(1, 2, 0) claim=None acc=False disabled=['P0', 'P1']
+S15: {'a': 1, 'b': 0, 'd': 1} pcs=(1, 1, 1) claim=None acc=True disabled=['P0']
+S16: {'a': 1, 'b': 0, 'd': 1} pcs=(1, 0, 2) claim=None acc=False disabled=['P0', 'P3']
+S17: {'a': 1, 'b': 0, 'd': 1} pcs=(1, 1, 0) claim=None acc=True disabled=['P0']
+S18: {'a': 1, 'b': 0, 'd': 2} pcs=(1, 0, 1) claim=None acc=False disabled=[]
+S19: {'a': 1, 'b': 0, 'd': 2} pcs=(1, 0, 0) claim=None acc=False disabled=[]
+S20: {'a': 0, 'b': 0, 'd': 2} pcs=(0, 1, 0) claim=None acc=True disabled=[]
+S21: {'a': 0, 'b': 0, 'd': 0} pcs=(0, 0, 1) claim=None acc=False disabled=['P3']
+S22: {'a': 0, 'b': 0, 'd': 2} pcs=(0, 2, 0) claim=None acc=False disabled=['P1']
+S23: {'a': 0, 'b': 0, 'd': 2} pcs=(0, 1, 1) claim=None acc=True disabled=[]
+S24: {'a': 0, 'b': 0, 'd': 2} pcs=(0, 0, 2) claim=None acc=False disabled=[]
+S25: {'a': 0, 'b': 0, 'd': 2} pcs=(0, 2, 1) claim=None acc=False disabled=['P1']
+S26: {'a': 0, 'b': 0, 'd': 1} pcs=(0, 1, 2) claim=None acc=True disabled=[]
+S27: {'a': 0, 'b': 0, 'd': 1} pcs=(0, 0, 3) claim=None acc=False disabled=[]
+S28: {'a': 1, 'b': 0, 'd': 2} pcs=(1, 2, 1) claim=None acc=False disabled=['P1']
+S29: {'a': 1, 'b': 0, 'd': 1} pcs=(1, 1, 2) claim=None acc=True disabled=['P0', 'P3']
+S30: {'a': 1, 'b': 0, 'd': 2} pcs=(1, 2, 0) claim=None acc=False disabled=['P1']
+S31: {'a': 1, 'b': 0, 'd': 2} pcs=(1, 1, 1) claim=None acc=True disabled=[]
+S32: {'a': 1, 'b': 0, 'd': 2} pcs=(2, 0, 1) claim=None acc=False disabled=['P0']
+S33: {'a': 1, 'b': 0, 'd': 2} pcs=(1, 0, 2) claim=None acc=False disabled=['P3']
+S34: {'a': 1, 'b': 0, 'd': 2} pcs=(2, 0, 0) claim=None acc=False disabled=['P0']
+S35: {'a': 1, 'b': 0, 'd': 2} pcs=(1, 1, 0) claim=None acc=True disabled=[]
+S36: {'a': 1, 'b': 0, 'd': 0} pcs=(1, 0, 1) claim=None acc=False disabled=['P0', 'P3']
+S37: {'a': 0, 'b': 0, 'd': 0} pcs=(0, 2, 0) claim=None acc=False disabled=['P1']
+S38: {'a': 0, 'b': 0, 'd': 0} pcs=(0, 1, 1) claim=None acc=True disabled=['P3']
+S39: {'a': 0, 'b': 0, 'd': 0} pcs=(0, 2, 1) claim=None acc=False disabled=['P1', 'P3']
+S40: {'a': 0, 'b': 0, 'd': 2} pcs=(0, 1, 2) claim=None acc=True disabled=[]
+S41: {'a': 0, 'b': 0, 'd': 0} pcs=(0, 0, 2) claim=None acc=False disabled=[]
+S42: {'a': 0, 'b': 0, 'd': 2} pcs=(0, 0, 3) claim=None acc=False disabled=[]
+S43: {'a': 0, 'b': 0, 'd': 2} pcs=(0, 2, 2) claim=None acc=False disabled=['P1']
+S44: {'a': 0, 'b': 0, 'd': 1} pcs=(0, 1, 3) claim=None acc=True disabled=[]
+S45: {'a': 1, 'b': 0, 'd': 1} pcs=(1, 0, 3) claim=None acc=False disabled=['P0']
+S46: {'a': 0, 'b': 0, 'd': 1} pcs=(0, 0, -1) claim=None acc=False disabled=['P3']
+S47: {'a': 1, 'b': 0, 'd': 2} pcs=(2, 2, 1) claim=None acc=False disabled=['P0', 'P1']
+S48: {'a': 1, 'b': 0, 'd': 2} pcs=(1, 2, 2) claim=None acc=False disabled=['P1', 'P3']
+S49: {'a': 1, 'b': 0, 'd': 2} pcs=(2, 2, 0) claim=None acc=False disabled=['P0', 'P1']
+S50: {'a': 1, 'b': 0, 'd': 0} pcs=(1, 2, 1) claim=None acc=False disabled=['P0', 'P1', 'P3']
+S51: {'a': 1, 'b': 0, 'd': 2} pcs=(2, 1, 1) claim=None acc=True disabled=['P0']
+S52: {'a': 1, 'b': 0, 'd': 2} pcs=(1, 1, 2) claim=None acc=True disabled=['P3']
+S53: {'a': 1, 'b': 0, 'd': 2} pcs=(2, 0, 2) claim=None acc=False disabled=['P0', 'P3']
+S54: {'a': 1, 'b': 0, 'd': 2} pcs=(2, 1, 0) claim=None acc=True disabled=['P0']
+S55: {'a': 1, 'b': 0, 'd': 0} pcs=(2, 0, 1) claim=None acc=False disabled=['P0', 'P3']
+S56: {'a': 1, 'b': 0, 'd': 0} pcs=(1, 2, 0) claim=None acc=False disabled=['P0', 'P1']
+S57: {'a': 1, 'b': 0, 'd': 0} pcs=(1, 1, 1) claim=None acc=True disabled=['P0', 'P3']
+S58: {'a': 0, 'b': 0, 'd': 1} pcs=(0, 2, 1) claim=None acc=False disabled=['P1']
+S59: {'a': 0, 'b': 0, 'd': 0} pcs=(0, 1, 2) claim=None acc=True disabled=[]
+S60: {'a': 0, 'b': 0, 'd': 0} pcs=(0, 2, 2) claim=None acc=False disabled=['P1']
+S61: {'a': 0, 'b': 0, 'd': 2} pcs=(0, 1, 3) claim=None acc=True disabled=[]
+S62: {'a': 1, 'b': 0, 'd': 0} pcs=(1, 0, 2) claim=None acc=False disabled=['P0', 'P3']
+S63: {'a': 0, 'b': 0, 'd': 0} pcs=(0, 0, 3) claim=None acc=False disabled=[]
+S64: {'a': 1, 'b': 0, 'd': 2} pcs=(1, 0, 3) claim=None acc=False disabled=[]
+S65: {'a': 0, 'b': 0, 'd': 2} pcs=(0, 0, -1) claim=None acc=False disabled=['P3']
+S66: {'a': 0, 'b': 0, 'd': 2} pcs=(0, 2, 3) claim=None acc=False disabled=['P1']
+S67: {'a': 1, 'b': 0, 'd': 1} pcs=(1, 1, 3) claim=None acc=True disabled=['P0']
+S68: {'a': 0, 'b': 0, 'd': 1} pcs=(0, 1, -1) claim=None acc=True disabled=['P3']
+S69: {'a': 1, 'b': 0, 'd': 1} pcs=(1, 0, -1) claim=None acc=False disabled=['P0', 'P3']
+S70: {'a': 1, 'b': 0, 'd': 2} pcs=(2, 2, 2) claim=None acc=False disabled=['P0', 'P1', 'P3']
+S71: {'a': 1, 'b': 0, 'd': 0} pcs=(2, 2, 1) claim=None acc=False disabled=['P0', 'P1', 'P3']
+S72: {'a': 1, 'b': 0, 'd': 2} pcs=(2, 1, 2) claim=None acc=True disabled=['P0', 'P3']
+S73: {'a': 1, 'b': 0, 'd': 0} pcs=(1, 2, 2) claim=None acc=False disabled=['P0', 'P1', 'P3']
+S74: {'a': 1, 'b': 0, 'd': 0} pcs=(2, 2, 0) claim=None acc=False disabled=['P0', 'P1']
+S75: {'a': 1, 'b': 0, 'd': 0} pcs=(2, 1, 1) claim=None acc=True disabled=['P0', 'P3']
+S76: {'a': 1, 'b': 0, 'd': 1} pcs=(1, 2, 1) claim=None acc=False disabled=['P0', 'P1']
+S77: {'a': 0, 'b': 0, 'd': 1} pcs=(0, 2, 2) claim=None acc=False disabled=['P1']
+S78: {'a': 1, 'b': 0, 'd': 0} pcs=(1, 1, 2) claim=None acc=True disabled=['P0', 'P3']
+S79: {'a': 0, 'b': 0, 'd': 0} pcs=(0, 1, 3) claim=None acc=True disabled=[]
+S80: {'a': 0, 'b': 0, 'd': 0} pcs=(0, 2, 3) claim=None acc=False disabled=['P1']
+S81: {'a': 1, 'b': 0, 'd': 2} pcs=(1, 1, 3) claim=None acc=True disabled=[]
+S82: {'a': 0, 'b': 0, 'd': 2} pcs=(0, 1, -1) claim=None acc=True disabled=['P3']
+S83: {'a': 1, 'b': 0, 'd': 0} pcs=(1, 0, 3) claim=None acc=False disabled=['P0']
+S84: {'a': 0, 'b': 0, 'd': 0} pcs=(0, 0, -1) claim=None acc=False disabled=['P3']
+S85: {'a': 1, 'b': 0, 'd': 2} pcs=(2, 0, 3) claim=None acc=False disabled=['P0']
+S86: {'a': 1, 'b': 0, 'd': 2} pcs=(1, 0, -1) claim=None acc=False disabled=['P3']
+S87: {'a': 1, 'b': 0, 'd': 2} pcs=(1, 2, 3) claim=None acc=False disabled=['P1']
+S88: {'a': 0, 'b': 0, 'd': 2} pcs=(0, 2, -1) claim=None acc=False disabled=['P3']
+S89: {'a': 1, 'b': 0, 'd': 1} pcs=(1, 1, -1) claim=None acc=True disabled=['P0', 'P3']
+S90: {'a': 1, 'b': 0, 'd': 0} pcs=(2, 2, 2) claim=None acc=False disabled=['P0', 'P1', 'P3']
+S91: {'a': 1, 'b': 0, 'd': 1} pcs=(2, 2, 1) claim=None acc=False disabled=['P0', 'P1']
+S92: {'a': 1, 'b': 0, 'd': 1} pcs=(1, 2, 2) claim=None acc=False disabled=['P0', 'P1', 'P3']
+S93: {'a': 0, 'b': 0, 'd': 1} pcs=(0, 2, 3) claim=None acc=False disabled=['P1']
+S94: {'a': 1, 'b': 0, 'd': 0} pcs=(1, 1, 3) claim=None acc=True disabled=['P0']
+S95: {'a': 0, 'b': 0, 'd': 0} pcs=(0, 1, -1) claim=None acc=True disabled=['P3']
+S96: {'a': 1, 'b': 0, 'd': 0} pcs=(1, 2, 3) claim=None acc=False disabled=['P0', 'P1']
+S97: {'a': 0, 'b': 0, 'd': 0} pcs=(0, 2, -1) claim=None acc=False disabled=['P3']
+S98: {'a': 1, 'b': 0, 'd': 2} pcs=(2, 1, 3) claim=None acc=True disabled=['P0']
+S99: {'a': 1, 'b': 0, 'd': 2} pcs=(1, 1, -1) claim=None acc=True disabled=['P3']
+S100: {'a': 1, 'b': 0, 'd': 0} pcs=(1, 0, -1) claim=None acc=False disabled=['P0', 'P3']
+S101: {'a': 1, 'b': 0, 'd': 2} pcs=(2, 0, -1) claim=None acc=False disabled=['P0', 'P3']
+S102: {'a': 1, 'b': 0, 'd': 2} pcs=(2, 2, 3) claim=None acc=False disabled=['P0', 'P1']
+S103: {'a': 1, 'b': 0, 'd': 2} pcs=(1, 2, -1) claim=None acc=False disabled=['P3']
+S104: {'a': 0, 'b': 0, 'd': 2} pcs=(0, -1, -1) claim=None acc=False disabled=['P1', 'P3']
+S105: {'a': 1, 'b': 0, 'd': 1} pcs=(2, 2, 2) claim=None acc=False disabled=['P0', 'P1', 'P3']
+S106: {'a': 1, 'b': 0, 'd': 1} pcs=(1, 2, 3) claim=None acc=False disabled=['P0', 'P1']
+S107: {'a': 0, 'b': 0, 'd': 1} pcs=(0, 2, -1) claim=None acc=False disabled=['P3']
+S108: {'a': 1, 'b': 0, 'd': 0} pcs=(1, 1, -1) claim=None acc=True disabled=['P0', 'P3']
+S109: {'a': 1, 'b': 0, 'd': 0} pcs=(1, 2, -1) claim=None acc=False disabled=['P0', 'P3']
+S110: {'a': 0, 'b': 0, 'd': 0} pcs=(0, -1, -1) claim=None acc=False disabled=['P1', 'P3']
+S111: {'a': 1, 'b': 0, 'd': 0} pcs=(2, 2, 3) claim=None acc=False disabled=['P0', 'P1']
+S112: {'a': 1, 'b': 0, 'd': 2} pcs=(2, 1, -1) claim=None acc=True disabled=['P0', 'P3']
+S113: {'a': 1, 'b': 0, 'd': 2} pcs=(2, 2, -1) claim=None acc=False disabled=['P0', 'P3']
+S114: {'a': 1, 'b': 0, 'd': 2} pcs=(1, -1, -1) claim=None acc=False disabled=['P1', 'P3']
+S115: {'a': 1, 'b': 0, 'd': 1} pcs=(1, 2, -1) claim=None acc=False disabled=['P0', 'P3']
+S116: {'a': 0, 'b': 0, 'd': 1} pcs=(0, -1, -1) claim=None acc=False disabled=['P1', 'P3']
+S117: {'a': 1, 'b': 0, 'd': 0} pcs=(1, -1, -1) claim=None acc=False disabled=['P0', 'P1', 'P3']
+S118: {'a': 1, 'b': 0, 'd': 0} pcs=(2, 2, -1) claim=None acc=False disabled=['P0', 'P3']
+S119: {'a': 1, 'b': 0, 'd': 2} pcs=(2, -1, -1) claim=None acc=False disabled=['P0', 'P1', 'P3']
+S120: {'a': 1, 'b': 0, 'd': 1} pcs=(1, -1, -1) claim=None acc=False disabled=['P0', 'P1', 'P3']
+S121: {'a': 1, 'b': 0, 'd': 0} pcs=(2, -1, -1) claim=None acc=False disabled=['P0', 'P1', 'P3']
+  S0 -[P0]-> S1
+  S0 -[P0]-> S2
+  S0 -[P1]-> S3
+  S0 -[P3]-> S4
+  S1 -[P1]-> S5
+  S1 -[P3]-> S6
+  S2 -[P0]-> S7
+  S2 -[P0]-> S8
+  S2 -[P1]-> S9
+  S2 -[P3]-> S10
+  S3 -[P0]-> S5
+  S3 -[P0]-> S9
+  S3 -[P1]-> S11
+  S3 -[P3]-> S12
+  S4 -[P0]-> S6
+  S4 -[P0]-> S10
+  S4 -[P1]-> S12
+  S4 -[P3]-> S13
+  S5 -[P1]-> S14
+  S5 -[P3]-> S15
+  S6 -[P1]-> S15
+  S6 -[P3]-> S16
+  S7 -[P1]-> S17
+  S7 -[P3]-> S18
+  S8 -[P0]-> S19
+  S8 -[P0]-> S0
+  S8 -[P1]-> S20
+  S8 -[P3]-> S21
+  S9 -[P0]-> S17
+  S9 -[P0]-> S20
+  S9 -[P1]-> S22
+  S9 -[P3]-> S23
+  S10 -[P0]-> S18
+  S10 -[P0]-> S21
+  S10 -[P1]-> S23
+  S10 -[P3]-> S24
+  S11 -[P0]-> S14
+  S11 -[P0]-> S22
+  S11 -[P3]-> S25
+  S12 -[P0]-> S15
+  S12 -[P0]-> S23
+  S12 -[P1]-> S25
+  S12 -[P3]-> S26
+  S13 -[P0]-> S16
+  S13 -[P0]-> S24
+  S13 -[P1]-> S26
+  S13 -[P3]-> S27
+  S14 -[P3]-> S28
+  S15 -[P1]-> S28
+  S15 -[P3]-> S29
+  S16 -[P1]-> S29
+  S17 -[P1]-> S30
+  S17 -[P3]-> S31
+  S18 -[P0]-> S32
+  S18 -[P1]-> S31
+  S18 -[P3]-> S33
+  S19 -[P0]-> S34
+  S19 -[P1]-> S35
+  S19 -[P3]-> S36
+  S20 -[P0]-> S35
+  S20 -[P0]-> S3
+  S20 -[P1]-> S37
+  S20 -[P3]-> S38
+  S21 -[P0]-> S36
+  S21 -[P0]-> S4
+  S21 -[P1]-> S38
+  S22 -[P0]-> S30
+  S22 -[P0]-> S37
+  S22 -[P3]-> S39
+  S23 -[P0]-> S31
+  S23 -[P0]-> S38
+  S23 -[P1]-> S39
+  S23 -[P3]-> S40
+  S24 -[P0]-> S33
+  S24 -[P0]-> S41
+  S24 -[P1]-> S40
+  S24 -[P3]-> S42
+  S25 -[P0]-> S28
+  S25 -[P0]-> S39
+  S25 -[P3]-> S43
+  S26 -[P0]-> S29
+  S26 -[P0]-> S40
+  S26 -[P1]-> S43
+  S26 -[P3]-> S44
+  S27 -[P0]-> S45
+  S27 -[P0]-> S42
+  S27 -[P1]-> S44
+  S27 -[P3]-> S46
+  S28 -[P0]-> S47
+  S28 -[P3]-> S48
+  S29 -[P1]-> S48
+  S30 -[P0]-> S49
+  S30 -[P3]-> S50
+  S31 -[P0]-> S51
+  S31 -[P1]-> S50
+  S31 -[P3]-> S52
+  S32 -[P1]-> S51
+  S32 -[P3]-> S53
+  S33 -[P0]-> S53
+  S33 -[P1]-> S52
+  S34 -[P1]-> S54
+  S34 -[P3]-> S55
+  S35 -[P0]-> S54
+  S35 -[P1]-> S56
+  S35 -[P3]-> S57
+  S36 -[P1]-> S57
+  S37 -[P0]-> S56
+  S37 -[P0]-> S11
+  S37 -[P3]-> S58
+  S38 -[P0]-> S57
+  S38 -[P0]-> S12
+  S38 -[P1]-> S58
+  S39 -[P0]-> S50
+  S39 -[P0]-> S58
+  S40 -[P0]-> S52
+  S40 -[P0]-> S59
+  S40 -[P1]-> S60
+  S40 -[P3]-> S61
+  S41 -[P0]-> S62
+  S41 -[P0]-> S13
+  S41 -[P1]-> S59
+  S41 -[P3]-> S63
+  S42 -[P0]-> S64
+  S42 -[P0]-> S63
+  S42 -[P1]-> S61
+  S42 -[P3]-> S65
+  S43 -[P0]-> S48
+  S43 -[P0]-> S60
+  S43 -[P3]-> S66
+  S44 -[P0]-> S67
+  S44 -[P0]-> S61
+  S44 -[P1]-> S66
+  S44 -[P3]-> S68
+  S45 -[P1]-> S67
+  S45 -[P3]-> S69
+  S46 -[P0]-> S69
+  S46 -[P0]-> S65
+  S46 -[P1]-> S68
+  S47 -[P3]-> S70
+  S48 -[P0]-> S70
+  S49 -[P3]-> S71
+  S51 -[P1]-> S71
+  S51 -[P3]-> S72
+  S52 -[P0]-> S72
+  S52 -[P1]-> S73
+  S53 -[P1]-> S72
+  S54 -[P1]-> S74
+  S54 -[P3]-> S75
+  S55 -[P1]-> S75
+  S56 -[P3]-> S76
+  S57 -[P1]-> S76
+  S58 -[P0]-> S76
+  S58 -[P0]-> S25
+  S58 -[P3]-> S77
+  S59 -[P0]-> S78
+  S59 -[P0]-> S26
+  S59 -[P1]-> S77
+  S59 -[P3]-> S79
+  S60 -[P0]-> S73
+  S60 -[P0]-> S77
+  S60 -[P3]-> S80
+  S61 -[P0]-> S81
+  S61 -[P0]-> S79
+  S61 -[P1]-> S80
+  S61 -[P3]-> S82
+  S62 -[P1]-> S78
+  S63 -[P0]-> S83
+  S63 -[P0]-> S27
+  S63 -[P1]-> S79
+  S63 -[P3]-> S84
+  S64 -[P0]-> S85
+  S64 -[P1]-> S81
+  S64 -[P3]-> S86
+  S65 -[P0]-> S86
+  S65 -[P0]-> S84
+  S65 -[P1]-> S82
+  S66 -[P0]-> S87
+  S66 -[P0]-> S80
+  S66 -[P3]-> S88
+  S67 -[P1]-> S87
+  S67 -[P3]-> S89
+  S68 -[P0]-> S89
+  S68 -[P0]-> S82
+  S68 -[P1]-> S88
+  S69 -[P1]-> S89
+  S72 -[P1]-> S90
+  S74 -[P3]-> S91
+  S75 -[P1]-> S91
+  S76 -[P3]-> S92
+  S77 -[P0]-> S92
+  S77 -[P0]-> S43
+  S77 -[P3]-> S93
+  S78 -[P1]-> S92
+  S79 -[P0]-> S94
+  S79 -[P0]-> S44
+  S79 -[P1]-> S93
+  S79 -[P3]-> S95
+  S80 -[P0]-> S96
+  S80 -[P0]-> S93
+  S80 -[P3]-> S97
+  S81 -[P0]-> S98
+  S81 -[P1]-> S96
+  S81 -[P3]-> S99
+  S82 -[P0]-> S99
+  S82 -[P0]-> S95
+  S82 -[P1]-> S97
+  S83 -[P1]-> S94
+  S83 -[P3]-> S100
+  S84 -[P0]-> S100
+  S84 -[P0]-> S46
+  S84 -[P1]-> S95
+  S85 -[P1]-> S98
+  S85 -[P3]-> S101
+  S86 -[P0]-> S101
+  S86 -[P1]-> S99
+  S87 -[P0]-> S102
+  S87 -[P3]-> S103
+  S88 -[P0]-> S103
+  S88 -[P0]-> S97
+  S88 -[P1]-> S104
+  S89 -[P1]-> S103
+  S91 -[P3]-> S105
+  S93 -[P0]-> S106
+  S93 -[P0]-> S66
+  S93 -[P3]-> S107
+  S94 -[P1]-> S106
+  S94 -[P3]-> S108
+  S95 -[P0]-> S108
+  S95 -[P0]-> S68
+  S95 -[P1]-> S107
+  S96 -[P3]-> S109
+  S97 -[P0]-> S109
+  S97 -[P0]-> S107
+  S97 -[P1]-> S110
+  S98 -[P1]-> S111
+  S98 -[P3]-> S112
+  S99 -[P0]-> S112
+  S99 -[P1]-> S109
+  S100 -[P1]-> S108
+  S101 -[P1]-> S112
+  S102 -[P3]-> S113
+  S103 -[P0]-> S113
+  S103 -[P1]-> S114
+  S104 -[P0]-> S114
+  S104 -[P0]-> S110
+  S106 -[P3]-> S115
+  S107 -[P0]-> S115
+  S107 -[P0]-> S88
+  S107 -[P1]-> S116
+  S108 -[P1]-> S115
+  S109 -[P1]-> S117
+  S110 -[P0]-> S117
+  S110 -[P0]-> S116
+  S111 -[P3]-> S118
+  S112 -[P1]-> S118
+  S113 -[P1]-> S119
+  S114 -[P0]-> S119
+  S115 -[P1]-> S120
+  S116 -[P0]-> S120
+  S116 -[P0]-> S104
+  S118 -[P1]-> S121
+  accepting SCCs (comp, unfair-procs): [([68, 82, 95], ['P1']), ([44, 61, 79], ['P1', 'P3']), ([26, 40, 59], ['P1', 'P3']), ([12, 23, 38], ['P1']), ([3, 9, 20], ['P1', 'P3'])]
+  fair accepting SCC: None
