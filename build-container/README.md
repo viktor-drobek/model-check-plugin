@@ -20,14 +20,14 @@ security script runs them from their own pinned images).
 
 ## The image in a registry
 
-The image is named `<registry>/model-check/build`, with the tags `<plugin version>` (`0.3.0`) and `<plugin version>-go<Go version>`
-(`0.3.0-go1.26.8`). Build it, or pull it from the registry where your team keeps it; the examples below write the registry as
+The image is named `<registry>/model-check/build`, with the tags `<plugin version>` (`0.3.1`) and `<plugin version>-go<Go version>`
+(`0.3.1-go1.26.8`). Build it, or pull it from the registry where your team keeps it; the examples below write the registry as
 `$REGISTRY` (a host and port, for example `registry.example.org:5000`). A registry that speaks plain HTTP must be listed in the docker
 daemon's `insecure-registries`.
 
 ```bash
 export REGISTRY=registry.example.org:5000
-docker pull $REGISTRY/model-check/build:0.3.0
+docker pull $REGISTRY/model-check/build:0.3.1
 ```
 
 ## Use
@@ -36,7 +36,7 @@ Run it as the user of the checkout, with the checkout mounted:
 
 ```bash
 docker run --rm -it --user "$(id -u):$(id -g)" -v "$PWD:/work" -w /work/model-check-plugin/engine \
-    $REGISTRY/model-check/build:0.3.0 \
+    $REGISTRY/model-check/build:0.3.1 \
     sh -c 'go vet ./... && go test ./...'
 ```
 
@@ -44,8 +44,8 @@ Release build, reproducible, from the plugin root (the Go of the image is the on
 
 ```bash
 docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" -w /work/model-check-plugin \
-    $REGISTRY/model-check/build:0.3.0 \
-    ./build.sh --version 0.3.0 --source-commit "$(git rev-parse HEAD)" --verify-repro
+    $REGISTRY/model-check/build:0.3.1 \
+    ./build.sh --version 0.3.1 --source-commit "$(git rev-parse HEAD)" --verify-repro
 ```
 
 Vulnerability check of the built files: `govulncheck -mode=binary engine/bin/mcd-linux-amd64`.

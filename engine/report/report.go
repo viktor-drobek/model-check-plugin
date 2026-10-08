@@ -44,7 +44,7 @@ import (
 
 const (
 	EngineName    = "mcd"
-	EngineVersion = "0.3.0"
+	EngineVersion = "0.3.1"
 	ReportSchema  = "mcd-report/1"
 )
 
