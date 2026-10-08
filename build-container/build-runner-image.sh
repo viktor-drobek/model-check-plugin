@@ -4,7 +4,7 @@
 #
 #   build-runner-image.sh --registry HOST[:PORT] [--host SSH_HOST] [--push] [--no-check]
 #
-# With --host the build runs on that machine over ssh (the context is sent as a tar stream: the Dockerfile, nothing else; the Go
+# With --host the build runs on that machine over ssh (the context is sent as a tar stream: the Dockerfile and install-spin.sh, nothing else; the Go
 # toolchain and the modules come from the build container in the registry); without --host, on the local docker. The image is named
 # REGISTRY/model-check/runner:VERSION and REGISTRY/model-check/runner:VERSION-goGOVERSION (VERSION from plugin.json, GOVERSION
 # from the Dockerfile). The registry is the one in --registry or MCD_REGISTRY, as the docker host builds and pushes to it (a
@@ -64,7 +64,7 @@ for img in json.load(sys.stdin):
 [ -n "$BUILD_DIGEST" ] || die "no digest for $BUILD_REF"
 
 printf 'build-runner-image.sh: building %s:%s (Go %s) on %s\n' "$IMAGE" "$VERSION" "$GOVERSION" "${HOST:-the local docker}" >&2
-tar -C "$PLUGIN_DIR" -cf - build-container/runner.Dockerfile \
+tar -C "$PLUGIN_DIR" -cf - build-container/runner.Dockerfile build-container/install-spin.sh \
   | dk build --build-arg "VERSION=$VERSION" --build-arg "GOVERSION=$GOVERSION" --build-arg "BUILD_IMAGE=$BUILD_DIGEST" \
       -f build-container/runner.Dockerfile -t "$IMAGE:$VERSION" -t "$IMAGE:$VERSION-go$GOVERSION" - \
   || die "docker build failed"

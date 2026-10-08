@@ -87,3 +87,12 @@ Feature: S3 The build container of the plugin
     And the repository file "model-check-plugin/.trivyignore.yaml" mentions "DS-0026"
     And the repository file "model-check-plugin/.trivyignore.yaml" mentions "expired_at"
     And the repository file "model-check-plugin/.trivyignore.yaml" mentions "statement"
+
+  Scenario: SPIN is built from the pinned upstream source with the X operator, not taken from the distribution
+    Given the repository root
+    Then the repository file "model-check-plugin/build-container/install-spin.sh" exists and is executable
+    And the repository file "model-check-plugin/build-container/install-spin.sh" mentions "-DNXT"
+    And the repository file "model-check-plugin/build-container/install-spin.sh" mentions "sha256sum -c"
+    And the repository file "model-check-plugin/build-container/Dockerfile" mentions "install-spin.sh"
+    And the repository file "model-check-plugin/build-container/runner.Dockerfile" mentions "install-spin.sh"
+    And the repository file "model-check-plugin/.dockerignore" mentions "install-spin.sh"

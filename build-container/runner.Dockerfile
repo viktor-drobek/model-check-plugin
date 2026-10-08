@@ -23,10 +23,14 @@ LABEL org.opencontainers.image.title="model-check CI runner" \
       org.opencontainers.image.version="${VERSION}"
 
 USER root
+# SPIN is built from the upstream source with -DNXT (install-spin.sh): Ubuntu 24.04's package lacks the operator X that the tests use.
+COPY build-container/install-spin.sh /tmp/install-spin.sh
 RUN set -eu \
     && apt-get update \
-    && apt-get install -y --no-install-recommends spin gcc libc6-dev make python3 bc numactl git \
-    && rm -rf /var/lib/apt/lists/* \
+    && apt-get install -y --no-install-recommends gcc libc6-dev make python3 bc numactl git curl ca-certificates bison \
+    && sh /tmp/install-spin.sh \
+    && apt-get purge -y bison && apt-get autoremove -y \
+    && rm -rf /var/lib/apt/lists/* /tmp/install-spin.sh \
     && spin -V \
     && printf '#include <pthread.h>\n#include <stdint.h>\nint main(void){return 0;}\n' | gcc -x c - -o /dev/null
 
