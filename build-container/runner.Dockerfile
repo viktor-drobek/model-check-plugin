@@ -1,6 +1,6 @@
 # Runner image of the self-hosted CI job of this repository (the label model-check-ci): the official GitHub Actions
 # runner image (pinned by digest, the version of the other runners on the host) plus what ci.yml needs, so that
-# the job downloads no toolchain: Go 1.26.8 in the runner's tool cache (actions/setup-go finds it there and does not
+# the job downloads no toolchain: Go 1.26.9 in the runner's tool cache (actions/setup-go finds it there and does not
 # fetch one), SPIN 6.5.2 and gcc for the differential tests, Python 3, numactl and bc, and the Go modules of the
 # engine already in the module cache of the runner user.
 #
@@ -17,7 +17,7 @@ FROM ${BUILD_IMAGE} AS go
 FROM ghcr.io/actions/actions-runner:2.337.0@sha256:e5496277be5d09bc968b3d64911b74e219ac4a3f2edce956a3ecf9271bea1ef4
 
 ARG VERSION=dev
-ARG GOVERSION=1.26.8
+ARG GOVERSION=1.26.9
 LABEL org.opencontainers.image.title="model-check CI runner" \
       org.opencontainers.image.description="GitHub Actions runner with Go ${GOVERSION}, SPIN 6.5.2, gcc, Python 3 and the Go modules of the model-check engine" \
       org.opencontainers.image.version="${VERSION}"

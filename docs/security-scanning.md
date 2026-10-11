@@ -19,7 +19,7 @@ artifact `security-reports`.
 - **trivy**: filesystem scan: dependency vulnerabilities (`engine/go.mod`, `go.sum`), secrets, misconfiguration. Misconfiguration is report-only.
 - **semgrep**: SAST with `SEMGREP_CONFIGS` (default `p/golang p/python`). Report-only until the backlog is triaged.
 - **govulncheck**: the Go vulnerability database against the call graph of the module in `GOVULNCHECK_DIR` (default `engine` here). It judges the
-  standard library of the toolchain the build uses, which is Go 1.26.8 in the pinned image and in `engine/go.mod`. To judge a built file:
+  standard library of the toolchain the build uses, which is Go 1.26.9 in the pinned image and in `engine/go.mod`. To judge a built file:
   `govulncheck -mode=binary engine/bin/mcd-linux-amd64`.
 
 A scanner binary on `PATH` is used when present; otherwise a pinned docker image runs (`tag@sha256:` constants at the top of the script).

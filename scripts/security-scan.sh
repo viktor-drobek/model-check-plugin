@@ -60,7 +60,7 @@ SEMGREP_IMAGE="semgrep/semgrep:1.177.0@sha256:acaac22ffc7b7cc5926de0751b223bce0b
 # it. Inside the container GOTOOLCHAIN=auto lets go switch to the `toolchain`
 # line of go.mod, so the standard library it judges is the one release builds
 # link, even when this image lags behind that line.
-GO_IMAGE="golang:1.26.8-bookworm@sha256:dc9ad6c05acc7a88e5b71bde60a5fe3bd4b9f0db209011711b464107438a8107"
+GO_IMAGE="golang:1.26.9-bookworm@sha256:bcef992b77b1e2031aaaa51da75cebc32da8e9c182e12e633ea79023c79d9eff"
 GOVULNCHECK_VERSION="v1.8.0"
 
 SEC_SCANNERS="${SEC_SCANNERS:-trivy,semgrep,govulncheck}"

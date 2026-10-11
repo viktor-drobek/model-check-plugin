@@ -126,11 +126,11 @@ discarding an unfair counterexample.
 - `skills/model-check/` — `SKILL.md`, workflows, property guidance, format references, assets, and report templates.
 - `evals-workspace/` — evaluation fixtures, graders, benchmark runs, and review data when included in the release.
 - `BUILD-PROTOCOL.md` — the six-part step protocol (scenarios first, tests, logic review, confirmation record); the build itself is documented in the build section below and in `build.sh`.
-- `RELEASE-NOTES-0.3.2.md`, `RELEASE-NOTES-0.3.1.md`, `RELEASE-NOTES-0.3.0.md` — release-specific changes, verdict boundaries, and known limitations.
+- `RELEASE-NOTES-0.3.3.md`, `RELEASE-NOTES-0.3.2.md`, `RELEASE-NOTES-0.3.1.md`, `RELEASE-NOTES-0.3.0.md` — release-specific changes, verdict boundaries, and known limitations.
 - `scripts/security-scan.sh`, `trivy.yaml`, `.trivyignore.yaml`, `.semgrepignore`, `docs/security-scanning.md`, `.github/workflows/security.yml` — the security scan (trivy, semgrep, govulncheck) and its guide.
 - `AGENT-COMMON.md` — shared historical build-agent guidance.
 - `build.sh` — reproducible multi-platform build and release verification script.
-- `build-container/` — the build container (Go 1.26.8, SPIN, gcc, Python 3, the Go modules of the engine): `Dockerfile`, `build-image.sh`, the runner image, its README.
+- `build-container/` — the build container (Go 1.26.9, SPIN, gcc, Python 3, the Go modules of the engine): `Dockerfile`, `build-image.sh`, the runner image, its README.
 
 ## Requirements
 
@@ -143,7 +143,7 @@ A ready-made release needs an agent/plugin host that supports the plugin manifes
 
 ### Build and test
 
-- Go 1.26.8, declared in `engine/go.mod`; `build.sh` refuses any other Go, because the release binaries carry the standard library of the Go that built them.
+- Go 1.26.9, declared in `engine/go.mod`; `build.sh` refuses any other Go, because the release binaries carry the standard library of the Go that built them.
 - Python 3, required by `build.sh` and release metadata generation.
 - A POSIX shell for `build.sh`.
 - SPIN 6.5.2 or a compatible installation for SPIN-dependent tests and comparisons.
@@ -162,7 +162,7 @@ Use the public `model-check-plugin` project/repository or the complete `model-ch
 From the plugin root:
 
 ```bash
-./build.sh --host-only --version 0.3.2
+./build.sh --host-only --version 0.3.3
 engine/bin/mcd version
 ```
 
@@ -241,7 +241,7 @@ Run the checks from a clean, reviewed checkout. Do not include credentials, priv
 
 ### Build container
 
-Instead of installing the toolchain on the host, build and test in the container `<registry>/model-check/build:0.3.2` (Go 1.26.8, SPIN 6.5.2, gcc, make, git, Python 3, govulncheck, and the Go modules of the engine already downloaded; stored in the docker registry your team uses). Its definition, use and how it is built and stored are in [`build-container/README.md`](build-container/README.md).
+Instead of installing the toolchain on the host, build and test in the container `<registry>/model-check/build:0.3.3` (Go 1.26.9, SPIN 6.5.2, gcc, make, git, Python 3, govulncheck, and the Go modules of the engine already downloaded; stored in the docker registry your team uses). Its definition, use and how it is built and stored are in [`build-container/README.md`](build-container/README.md).
 
 ### Security scanning
 
@@ -292,7 +292,7 @@ What it refuses, with the reason in `search.parallel.reason` and the run execute
 ### Reproducible release build
 
 ```bash
-./build.sh --version 0.3.2 --source-commit <SOURCE-COMMIT> --verify-repro
+./build.sh --version 0.3.3 --source-commit <SOURCE-COMMIT> --verify-repro
 ```
 
 `<SOURCE-COMMIT>` is the commit the engine sources are built from. For a release it is the commit just before the one that commits the built files under `engine/bin/` (the artifacts commit), because a commit cannot name itself; `BUILD-INFO.json` records it as `source_commit`. Without `--source-commit` the script records `git rev-parse HEAD` of the plugin checkout (or `unknown` outside a Git checkout), which after the artifacts commit is the artifacts commit, so the committed `BUILD-INFO.json` is not reproduced from that checkout.
@@ -309,7 +309,7 @@ The script:
 For a faster local build:
 
 ```bash
-./build.sh --host-only --version 0.3.2
+./build.sh --host-only --version 0.3.3
 ```
 
 Useful options are `--source-commit HASH`, `--platforms "goos/goarch ..."`, `--out DIR`, `--no-verify`, and `--verify-repro`; the options and exit codes are listed at the top of `build.sh`. Use `--no-verify` only for an intentional intermediate build. Record which platforms were built and which were actually smoke-tested; cross-building is not the same as executing a platform binary.
@@ -322,7 +322,7 @@ engine/bin/mcd version
 cat engine/bin/BUILD-INFO.json
 ```
 
-The build and its options are described in this section and at the top of `build.sh`. [`BUILD-PROTOCOL.md`](BUILD-PROTOCOL.md) is the six-part protocol every development step follows (scenarios first, tests, logic review, confirmation record), not a build manual; the record of a release is a `steps/*-confirmation.md` file (for 0.2.0, the addendum at the top of `steps/g6-confirmation.md`; for 0.3.0, 0.3.1, and 0.3.2, `steps/release-0.3.0-confirmation.md`, `steps/release-0.3.1-confirmation.md`, and `steps/release-0.3.2-confirmation.md`).
+The build and its options are described in this section and at the top of `build.sh`. [`BUILD-PROTOCOL.md`](BUILD-PROTOCOL.md) is the six-part protocol every development step follows (scenarios first, tests, logic review, confirmation record), not a build manual; the record of a release is a `steps/*-confirmation.md` file (for 0.2.0, the addendum at the top of `steps/g6-confirmation.md`; for 0.3.0 through 0.3.3, `steps/release-0.3.0-confirmation.md` through `steps/release-0.3.3-confirmation.md`).
 
 ## Use the CLI
 

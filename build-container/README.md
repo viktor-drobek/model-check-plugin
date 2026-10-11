@@ -7,7 +7,7 @@ is the preparation of `README.md` ("Requirements", "Prepare and build") done onc
 
 | Tool | Version | Used for |
 |---|---|---|
-| Go | 1.26.8 (`golang:1.26.8-bookworm`, pinned by digest in the Dockerfile) | `go build`, `go test`, `go vet`, `build.sh` (which refuses any other Go; `GOTOOLCHAIN=local`, so none is downloaded) |
+| Go | 1.26.9 (`golang:1.26.9-bookworm`, pinned by digest in the Dockerfile) | `go build`, `go test`, `go vet`, `build.sh` (which refuses any other Go; `GOTOOLCHAIN=local`, so none is downloaded) |
 | SPIN | 6.5.2, built from the upstream source with `-DNXT` by `install-spin.sh` | `spin -a` for the differential tests against `pan` (`tools/pandiff`, the `@spin` scenarios) |
 | gcc, make, git, curl | Debian 12 (bookworm) | build `pan.c`, run the scripts, source-commit identification |
 | Python 3 | 3.11 | `build.sh`, release metadata |
@@ -20,14 +20,14 @@ security script runs them from their own pinned images).
 
 ## The image in a registry
 
-The image is named `<registry>/model-check/build`, with the tags `<plugin version>` (`0.3.2`) and `<plugin version>-go<Go version>`
-(`0.3.2-go1.26.8`). Build it, or pull it from the registry where your team keeps it; the examples below write the registry as
+The image is named `<registry>/model-check/build`, with the tags `<plugin version>` (`0.3.3`) and `<plugin version>-go<Go version>`
+(`0.3.3-go1.26.9`). Build it, or pull it from the registry where your team keeps it; the examples below write the registry as
 `$REGISTRY` (a host and port, for example `registry.example.org:5000`). A registry that speaks plain HTTP must be listed in the docker
 daemon's `insecure-registries`.
 
 ```bash
 export REGISTRY=registry.example.org:5000
-docker pull $REGISTRY/model-check/build:0.3.2
+docker pull $REGISTRY/model-check/build:0.3.3
 ```
 
 ## Use
@@ -36,7 +36,7 @@ Run it as the user of the checkout, with the checkout mounted:
 
 ```bash
 docker run --rm -it --user "$(id -u):$(id -g)" -v "$PWD:/work" -w /work/model-check-plugin/engine \
-    $REGISTRY/model-check/build:0.3.2 \
+    $REGISTRY/model-check/build:0.3.3 \
     sh -c 'go vet ./... && go test ./...'
 ```
 
@@ -44,8 +44,8 @@ Release build, reproducible, from the plugin root (the Go of the image is the on
 
 ```bash
 docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" -w /work/model-check-plugin \
-    $REGISTRY/model-check/build:0.3.2 \
-    ./build.sh --version 0.3.2 --source-commit "$(git rev-parse HEAD)" --verify-repro
+    $REGISTRY/model-check/build:0.3.3 \
+    ./build.sh --version 0.3.3 --source-commit "$(git rev-parse HEAD)" --verify-repro
 ```
 
 Vulnerability check of the built files: `govulncheck -mode=binary engine/bin/mcd-linux-amd64`.

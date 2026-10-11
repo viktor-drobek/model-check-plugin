@@ -7,7 +7,7 @@
 # binaries carry the standard library of the Go that builds them, and build.sh refuses any other. Run the container
 # as the user of the checkout it works on (`--user "$(id -u):$(id -g)"`): HOME, the build cache and the module
 # cache are set so that any user id can use them; the modules the engine needs are already in the image.
-FROM golang:1.26.8-bookworm@sha256:dc9ad6c05acc7a88e5b71bde60a5fe3bd4b9f0db209011711b464107438a8107
+FROM golang:1.26.9-bookworm@sha256:bcef992b77b1e2031aaaa51da75cebc32da8e9c182e12e633ea79023c79d9eff
 
 ARG VERSION=dev
 ARG SOURCE=https://github.com/viktor-drobek/model-check-plugin

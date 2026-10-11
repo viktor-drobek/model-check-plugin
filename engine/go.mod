@@ -1,6 +1,6 @@
 module modelcheck
 
-go 1.26.8
+go 1.26.9
 
 require (
 	github.com/cucumber/godog v0.16.0
