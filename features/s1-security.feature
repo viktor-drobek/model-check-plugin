@@ -34,6 +34,11 @@ Feature: S1 Security checks stay in the project
     Given the repository root
     Then the security gate Go image has the same minor version as "model-check-plugin/engine/go.mod"
 
+  Scenario: The scratch-space probe uses cryptographic randomness
+    Given the repository root
+    Then the repository file "model-check-plugin/engine/internal/tmpspace/tmpspace.go" mentions "crypto/rand"
+    And no text file of "model-check-plugin/engine/internal/tmpspace/tmpspace.go" matches "math/rand"
+
   Scenario Outline: The security gate refuses a bad setting instead of passing
     Given the repository root
     When the security gate runs with <variable> set to "<value>"

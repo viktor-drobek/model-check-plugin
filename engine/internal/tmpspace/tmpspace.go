@@ -16,10 +16,10 @@
 package tmpspace
 
 import (
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"io/fs"
-	"math/rand/v2"
 	"os"
 	"strconv"
 	"syscall"
@@ -107,9 +107,8 @@ func write(dir string, needMB int, r *Report) (err error) {
 		}
 	}()
 	buf := make([]byte, chunkMB<<20)
-	rng := rand.New(rand.NewPCG(uint64(os.Getpid()), uint64(needMB)))
-	for i := range buf {
-		buf[i] = byte(rng.Uint32())
+	if _, err := rand.Read(buf); err != nil {
+		return fmt.Errorf("fill probe buffer with random bytes: %w", err)
 	}
 	for r.WrittenMB < needMB {
 		n, wErr := f.Write(buf)
