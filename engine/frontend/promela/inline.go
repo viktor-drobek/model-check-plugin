@@ -57,7 +57,8 @@ func ExpandInlines(toks []Token, file string) ([]Token, *Error) {
 		return rest, nil
 	}
 	counter := 0
-	return expandCalls(rest, file, defs, &counter, 0)
+	budget := maxExpansion
+	return expandCalls(rest, file, defs, &counter, &budget, 0)
 }
 
 // collectInlines takes the definitions out of the stream.
@@ -123,7 +124,7 @@ func collectInlines(toks []Token, file string, defs map[string]*inlineDef) ([]To
 }
 
 // expandCalls replaces `name(args)` for every known inline.
-func expandCalls(toks []Token, file string, defs map[string]*inlineDef, counter *int, depth int) ([]Token, *Error) {
+func expandCalls(toks []Token, file string, defs map[string]*inlineDef, counter, budget *int, depth int) ([]Token, *Error) {
 	if depth > maxInlineDepth {
 		return nil, semanticErr(file, 0, 0, "inline expansion nested deeper than %d: inlines call each other in a cycle", maxInlineDepth)
 	}
@@ -147,14 +148,23 @@ func expandCalls(toks []Token, file string, defs map[string]*inlineDef, counter 
 			return nil, semanticErr(file, t.Line, t.Col, "inline %s: %d argument(s) for %d parameter(s)", d.name, len(args), len(d.params))
 		}
 		*counter++
-		out = append(out, substitute(d, args, *counter)...)
+		// An inline that calls the previous one twice per level produces
+		// 2^n copies of the body, and one call can fan a long argument out
+		// over many uses of a parameter: the size of the substitution is
+		// charged to the file's budget (limits.go) before it is built.
+		*budget -= substituteSize(d, args)
+		if *budget < 0 {
+			return nil, outside(file, t.Line, t.Col, fmt.Sprintf("inline expansion of more than %d tokens (an inline that calls others many times)", maxExpansion), limitNote)
+		}
+		sub := substitute(d, args, *counter)
+		out = append(out, sub...)
 		i = next - 1
 		changed = true
 	}
 	if !changed {
 		return out, nil
 	}
-	return expandCalls(out, file, defs, counter, depth+1)
+	return expandCalls(out, file, defs, counter, budget, depth+1)
 }
 
 // inlineArgs reads the argument token lists of a call whose "(" is at open;
@@ -191,6 +201,25 @@ func inlineArgs(toks []Token, open int, file string, at Token) ([][]Token, int, 
 		}
 	}
 	return nil, 0, syntaxErr(file, at.Line, at.Col, "unterminated argument list of inline %s", at.Text)
+}
+
+// substituteSize is the number of tokens substitute would produce.
+func substituteSize(d *inlineDef, args [][]Token) int {
+	param := map[string]int{}
+	for i, p := range d.params {
+		param[p] = len(args[i])
+	}
+	n := 2 // the braces
+	for _, t := range d.body {
+		if t.Kind == Ident {
+			if k, ok := param[t.Text]; ok {
+				n += k
+				continue
+			}
+		}
+		n++
+	}
+	return n
 }
 
 // substitute builds one expansion: parameters replaced by arguments,

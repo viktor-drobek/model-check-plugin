@@ -304,14 +304,12 @@ type cycleSearch struct {
 	pcur      []byte
 	pnext     []byte
 	// per stored state
-	inner   []bool
-	onStack []bool
-	// counters
-	transitionsSinceTick int
-	info                 *TemporalInfo
-	res                  *Stats
-	found                bool
-	loopStates           [][]byte // system states of the last rendered loop
+	inner      []bool
+	onStack    []bool
+	info       *TemporalInfo
+	res        *Stats
+	found      bool
+	loopStates [][]byte // system states of the last rendered loop
 }
 
 // runCycle checks one ltl / progress property and returns its outcome.
@@ -343,7 +341,24 @@ func runCycle(ctx0 *search, base *ir.Model, prop ir.Property, propIndex int, opt
 			return o, err
 		}
 		claimName = "never:" + prop.ID
-		c, err := ltl.ForProperty(claimName, prop.Formula, ltl.Options{Defines: opt.Defines, Scope: l0.Scope(-1)})
+		// A deadline that passed before this property (in the safety search
+		// or an earlier temporal one) is the plain time budget; only a
+		// deadline that passes inside the construction names the automaton.
+		if ctx0.ctx.Err() != nil {
+			o.Status, o.Evidence, o.Reason = Inconclusive, EvUnknown, "time budget exhausted"
+			o.Temporal = info
+			o.Stats = &Stats{Stop: "time budget exhausted", Elapsed: time.Since(start)}
+			return o, nil
+		}
+		c, err := ltl.ForPropertyCtx(ctx0.ctx, claimName, prop.Formula, ltl.Options{Defines: opt.Defines, Scope: l0.Scope(-1)})
+		if errors.Is(err, ltl.ErrBudget) {
+			// The automaton outlived the time budget: no search ran. The
+			// stop names the phase; nothing in it depends on timing.
+			o.Status, o.Evidence, o.Reason = Inconclusive, EvUnknown, ltl.ErrBudget.Error()
+			o.Temporal = info
+			o.Stats = &Stats{Stop: ltl.ErrBudget.Error(), Elapsed: time.Since(start)}
+			return o, nil
+		}
 		if err != nil {
 			return o, &FormulaError{PropertyID: prop.ID, Logic: "ltl", Err: err}
 		}
@@ -626,11 +641,13 @@ func (cs *cycleSearch) nextProduct(f *frame, st []byte) (productMove, error) {
 func (cs *cycleSearch) apply(pm productMove) error {
 	s := cs.s
 	if pm.null {
+		s.work++ // a move of the product is work for the clock, fired or not
 		copy(cs.pnext, cs.pcur)
 		cs.pnext[cs.size] = byte(pm.toCopy)
 		return nil
 	}
 	if pm.stutter {
+		s.work++
 		copy(cs.pnext, cs.pcur)
 		if pm.claim >= 0 {
 			s.c.layout.WritePC(s.next, cs.claim, pm.claimTo)
@@ -686,14 +703,14 @@ func newFrame(idx int32, pm productMove) frame {
 	return f
 }
 
-// tick checks the time and memory budgets every 1024 transitions.
+// tick checks the time and memory budgets every tickWork units of the
+// search's work (edges fired and d_step steps, as checkBudgets counts them).
 func (cs *cycleSearch) tick(extra int64) bool {
-	cs.transitionsSinceTick++
-	if cs.transitionsSinceTick < 1024 {
+	s := cs.s
+	if s.work-s.lastTick < tickWork {
 		return true
 	}
-	cs.transitionsSinceTick = 0
-	s := cs.s
+	s.lastTick = s.work
 	if s.ctx.Err() != nil {
 		s.budget("time budget exhausted")
 		return false

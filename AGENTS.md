@@ -11,7 +11,7 @@ plugin root layout: `.claude-plugin/`, `engine/`, `mcp/`, `skills/`, `features/`
 2. Use `engine/bin/mcd` from this checkout, or the `model-check` MCP server. Do not
    look for SPIN, NuSMV, or another checker as a runtime replacement.
 3. Run `engine/bin/mcd version` before a smoke test. If the host binary is absent,
-   build it with `./build.sh --host-only --version 0.3.1` rather than substituting a
+   build it with `./build.sh --host-only --version 0.3.2` rather than substituting a
    binary from another checkout.
 4. Keep `verified`, `violated`, `inconclusive`, `unknown`, `not-executed`, and
    `invalid-model` distinct, and report the evidence level and assumptions.
@@ -92,13 +92,13 @@ registration: keep one `model-check` server to avoid duplicate sessions.
 
 ## Resources before a run
 
-Before `mc_estimate`, `mc_check`, `mcd check`, or a batch of runs, look at the machine and wait while it is busy: run `skills/model-check/assets/wait-for-capacity.sh` (waits while CPU or memory use is above 90%, exit 3 if it stays busy), and lower `workers` and the budgets or queue the run instead of starting into a saturated machine. Details: `README.md` ("Running on a shared machine") and `skills/model-check/SKILL.md` step 5.
+Before `mc_estimate`, `mc_check`, `mcd check`, or a batch of runs, look at the machine and wait while it is busy: run `skills/model-check/assets/wait-for-capacity.sh` (waits while CPU or memory use is above 90%, exit 3 if it stays busy; writes a probe of `--min-disk-mb` into `--dir` or `TMPDIR` and exits 3 at once when it cannot — `df` does not see a quota, so set `TMPDIR` to a directory on disk), and lower `workers` and the budgets or queue the run instead of starting into a saturated machine. The engine's test suite and the SPIN campaigns probe `TMPDIR` the same way before they start (`MCD_TMP_MIN_MB`, default 256, `0` switches it off). Details: `README.md` ("Running on a shared machine") and `skills/model-check/SKILL.md` step 5.
 
 ## Testing boundary
 
 Use `go test ./...`, `go vet ./...`, formatting checks, and SPIN-dependent checks
 only when validating the source checkout. A shipped binary needs neither Go nor SPIN
-for ordinary runtime use. Use `./build.sh --version 0.3.1 --source-commit
+for ordinary runtime use. Use `./build.sh --version 0.3.2 --source-commit
 <SOURCE-COMMIT> --verify-repro` for a release build (`<SOURCE-COMMIT>` is the
 commit just before the one that commits the built files under `engine/bin/`) and verify
 `engine/bin/SHA256SUMS` and `BUILD-INFO.json` before publishing.

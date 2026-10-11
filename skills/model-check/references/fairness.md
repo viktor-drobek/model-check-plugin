@@ -70,6 +70,23 @@ statement). A process that waits at a rendezvous receive has no move of its own 
 the sender's step counts as a move of both. The copy that stands for a process belongs
 to the k-th process that is not the never claim, wherever the claim stands in an IR.
 
+**Rendezvous partner convention.** For weak fairness, a capacity-0 receive is
+executable only as part of the concrete sender/receiver pair selected for a
+rendezvous transition. If one sender can rendezvous with `R1` or `R2`, and an infinite
+run always pairs it with `R1`, the unselected receiver `R2` counts as **blocked** for
+this fairness check. Thus weak fairness does not remove that run merely because `R2`
+could have been the sender's partner in another scheduler choice. This is the
+process-level rendezvous convention of SPIN `pan -f`, and the engine deliberately
+matches it.
+
+That convention is narrower than the textbook reading "a process is enabled whenever
+there exists any possible rendezvous partner". Under that reading, `R2` would be
+continuously enabled and the run above would be unfair. The engine has no option for
+that alternative semantics; do not report `fairness: weak` as if it provided fair
+choice among rendezvous partners. When that is the requirement, model an explicit
+arbiter or turn discipline, and state the additional scheduling assumption in the
+report.
+
 A null step is bookkeeping and never a step of the run: it changes neither the system
 state nor the claim. So the loop of a weakly fair counterexample always contains at
 least one real step — a move of a process, or the claim moving on a system that has

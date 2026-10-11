@@ -297,11 +297,13 @@ type parWorker struct {
 	dirty   []uint8   // partitions this worker stored a state in during the group
 	nEv     int       // how many of evs are set
 
-	mode   parMode
-	cnt    *parCounts
-	target []byte
-	found  []cex.Ref
-	ticks  int // states expanded since the last look at the context
+	mode     parMode
+	cnt      *parCounts
+	target   []byte
+	found    []cex.Ref
+	ticks    int   // states expanded since the last look at the context
+	lastTick int64 // s.work at the walker's last look at the clock (issue #8)
+	cut      bool  // the walk of an inline group was ended by the clock
 
 	// An inline group expands one state at a time into pend before it inserts
 	// anything, so that a state whose records do not fit can be left out whole.
@@ -772,7 +774,7 @@ func (r *parRun) runInline(ranges []parRange, rcap int64) (parCounts, int, group
 	w := r.workers[0]
 	r.nActive = 1
 	w.inl = parCounts{}
-	w.skip = false
+	w.skip, w.cut = false, false
 	var used int64
 	consumed := 0
 	for _, rg := range ranges {
@@ -783,6 +785,21 @@ func (r *parRun) runInline(ranges []parRange, rcap int64) (parCounts, int, group
 			p.buf, p.n = p.buf[:0], 0
 			w.mode, w.cnt, w.room, w.over = pmPend, &w.inl, rcap-used, false
 			w.walk(u)
+			if w.cut {
+				// The clock ran out inside the expansion of this state: the
+				// state is left out whole, so that a partially expanded one
+				// never enters the visited set. The states before it were
+				// inserted and counted: they are the group's prefix, whose
+				// events afterGroup delivers before it sees the clock; with
+				// nothing before it, the group is discarded like a batched one.
+				w.cut = false
+				w.inl = before
+				w.dropEvents(u)
+				if consumed == 0 {
+					return parCounts{}, 0, groupDiscarded
+				}
+				return w.inl, consumed, groupOK
+			}
 			if w.over {
 				w.inl = before
 				w.dropEvents(u)

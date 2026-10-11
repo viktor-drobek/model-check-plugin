@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
+	"time"
 
 	"github.com/cucumber/godog"
 
@@ -21,13 +23,15 @@ const corpusDir = "../../Promela - examples"
 // g1World is the per-scenario state for features/g1-promela.feature. Every
 // mcd step goes through cli.Run, the same code path as the binary.
 type g1World struct {
-	model  string
-	stdout bytes.Buffer
-	stderr bytes.Buffer
-	exit   int
-	kept   map[string][]byte
-	tmp    string
-	cmp    *pandiff.Comparison
+	model     string
+	stdout    bytes.Buffer
+	stderr    bytes.Buffer
+	exit      int
+	elapsed   time.Duration // wall time of the last mcd command
+	allocated uint64        // bytes the last measured command allocated
+	kept      map[string][]byte
+	tmp       string
+	cmp       *pandiff.Comparison
 }
 
 func init() {
@@ -67,6 +71,16 @@ func registerG1Steps(sc *godog.ScenarioContext) {
 		w.model = path
 		return nil
 	})
+	// The resource-limit scenarios (issue #9) generate their model: the
+	// shapes are listed in steps_limits_test.go.
+	sc.Step(`^a generated Promela model "([^"]*)" of size (\d+)$`, func(shape string, n int) error {
+		src, err := generatedModel(shape, n)
+		if err != nil {
+			return err
+		}
+		w.model = filepath.Join(w.tmp, shape+".pml")
+		return os.WriteFile(w.model, []byte(src), 0o644)
+	})
 	sc.Step(`^spin is installed$`, func() error {
 		if !(pandiff.Tools{}).Available() {
 			return godog.ErrSkip
@@ -78,10 +92,46 @@ func registerG1Steps(sc *godog.ScenarioContext) {
 	run := func(cmd string) {
 		w.stdout.Reset()
 		w.stderr.Reset()
+		t0 := time.Now()
 		w.exit = cli.Run(w.args(cmd), &w.stdout, &w.stderr)
+		w.elapsed = time.Since(t0)
 	}
 	sc.Step(`^I execute "mcd ([^"]*)"$`, func(cmd string) error {
 		run(cmd)
+		return nil
+	})
+	// Memory scenarios (issue #7): the bytes the run allocated against the
+	// estimate it reports, as the g0 steps measure them.
+	sc.Step(`^I execute "mcd ([^"]*)" measuring the bytes allocated$`, func(cmd string) error {
+		var before, after runtime.MemStats
+		runtime.GC()
+		runtime.ReadMemStats(&before)
+		run(cmd)
+		runtime.ReadMemStats(&after)
+		w.allocated = after.TotalAlloc - before.TotalAlloc
+		return nil
+	})
+	sc.Step(`^the bytes the command allocated are at most (\d+) times the memory estimate of "([^"]*)"$`, func(factor int, id string) error {
+		p, err := w.property(id)
+		if err != nil {
+			return err
+		}
+		est, _ := p["counters"].(map[string]any)["memory_bytes_est"].(float64)
+		if est == 0 {
+			return fmt.Errorf("the report carries no memory estimate")
+		}
+		if float64(w.allocated) > float64(factor)*est {
+			return fmt.Errorf("the run allocated %d bytes = %.1f x the memory estimate %.0f, want at most %d x", w.allocated, float64(w.allocated)/est, est, factor)
+		}
+		return nil
+	})
+	// The time budget is a deadline the run must honour on every path; the
+	// bound here is loose (several times the budget) so that a loaded machine
+	// does not fail it, and still an order below a hang.
+	sc.Step(`^the command finished within (\d+) seconds$`, func(secs int) error {
+		if w.elapsed > time.Duration(secs)*time.Second {
+			return fmt.Errorf("the command took %s, more than %d s", w.elapsed.Round(time.Millisecond), secs)
+		}
 		return nil
 	})
 	sc.Step(`^I execute "mcd ([^"]*)" and keep the output as "([^"]*)"$`, func(cmd, name string) error {

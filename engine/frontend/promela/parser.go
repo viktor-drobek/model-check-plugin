@@ -1,6 +1,7 @@
 package promela
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -61,12 +62,29 @@ type parser struct {
 	// structVars records the instances of a typedef, so that `run me(foo)`
 	// can be expanded to the fields SPIN passes ("run me(foo.f,foo.g)").
 	structVars map[string][]string
+
+	// The resource limits of limits.go: heights is the height of every
+	// expression node built so far, depth the parser's recursion into an
+	// expression, blockDepth the nesting of statement blocks, fields the
+	// flattened typedef fields of the module.
+	heights    map[Expr]int
+	depth      int
+	blockDepth int
+	fields     int
+	// slots counts the state-vector slots the globals declare (limits.go
+	// addSlots); inside a proctype, init or never the declarations go to
+	// curProc.Slots instead, per instance, and curProc.Tokens is the length
+	// of its body; nameBytes is the total length of flattened typedef
+	// field names.
+	slots     int64
+	curProc   *Proctype
+	nameBytes int
 }
 
 // parseModule builds the AST of preprocessed tokens.
 func parseModule(toks []Token, file string) (*Module, *Error) {
 	p := &parser{toks: toks, file: file, mod: &Module{Text: &TextSource{Toks: toks}}, procNames: map[string]bool{},
-		typedefs: map[string][]*VarDecl{}, structVars: map[string][]string{}}
+		typedefs: map[string][]*VarDecl{}, structVars: map[string][]string{}, heights: map[Expr]int{}}
 	if err := p.module(); err != nil {
 		return nil, err
 	}
@@ -191,7 +209,11 @@ func (p *parser) typedefDecl() *Error {
 			}
 			return p.errAt(t, "expected a field type in typedef %s, got %s", name.Text, t)
 		}
+		// A definition declares no storage: the slots its fields would
+		// take are counted at every instance, so they are not counted here.
+		saved := p.slots
 		decls, err := p.varDecls(true)
+		p.slots = saved
 		if err != nil {
 			return err
 		}
@@ -265,6 +287,14 @@ func (p *parser) varDecls(global bool) ([]*VarDecl, *Error) {
 			if n <= 0 {
 				return nil, semanticErr(p.file, name.Line, name.Col, "array %s needs a positive length, got %d", d.Name, n)
 			}
+			// The IR's bound, checked here before any per-element work
+			// (initialisers are built element by element).
+			if n > maxArrayLen {
+				return nil, outside(p.file, name.Line, name.Col, fmt.Sprintf("array %s of %d elements, the limit is %d", d.Name, n, maxArrayLen), limitNote)
+			}
+			if typ.Text == "chan" && n > maxChanArrayLen {
+				return nil, outside(p.file, name.Line, name.Col, fmt.Sprintf("array %s of %d channels, the limit is %d (a channel id is one byte)", d.Name, n, maxChanArrayLen), limitNote)
+			}
 			d.Len = int(n)
 			if _, err := p.expect("]"); err != nil {
 				return nil, err
@@ -276,6 +306,13 @@ func (p *parser) varDecls(global bool) ([]*VarDecl, *Error) {
 			}
 			inst, err := p.instantiate(d.Name, fields, name)
 			if err != nil {
+				return nil, err
+			}
+			var n int64
+			for _, f := range inst {
+				n += declSlots(f)
+			}
+			if err := p.addSlots(name, n); err != nil {
 				return nil, err
 			}
 			out = append(out, inst...)
@@ -305,6 +342,9 @@ func (p *parser) varDecls(global bool) ([]*VarDecl, *Error) {
 			}
 			d.Init = e
 		}
+		if err := p.addSlots(name, declSlots(d)); err != nil {
+			return nil, err
+		}
 		out = append(out, d)
 		if p.peek().is(",") {
 			p.next()
@@ -316,9 +356,22 @@ func (p *parser) varDecls(global bool) ([]*VarDecl, *Error) {
 
 // instantiate expands a typedef instance into its flattened fields.
 func (p *parser) instantiate(base string, fields []*VarDecl, at Token) ([]*VarDecl, *Error) {
+	// A typedef that nests the previous one twice per level flattens to 2^n
+	// fields; the count is over the whole module, so many instances of a
+	// permitted typedef are bounded as well.
+	p.fields += len(fields)
+	if p.fields > maxFields {
+		return nil, outside(p.file, at.Line, at.Col, fmt.Sprintf("typedef instances flatten to more than %d fields", maxFields), limitNote)
+	}
 	var out []string
 	var decls []*VarDecl
 	for _, f := range fields {
+		// The flattened names of a chain of typedefs grow with the chain;
+		// their total length is bounded before the strings are built.
+		p.nameBytes += len(base) + 1 + len(f.Name)
+		if p.nameBytes > maxFieldNameBytes {
+			return nil, outside(p.file, at.Line, at.Col, fmt.Sprintf("typedef field names of more than %d bytes in all", maxFieldNameBytes), limitNote)
+		}
 		c := *f
 		c.Name = base + "." + f.Name
 		c.Pos = Pos{at.Line, at.Col}
@@ -478,6 +531,10 @@ func (p *parser) proctype() *Error {
 			}
 		}
 	}
+	// Parameters and locals are counted per instance into pt.Slots; the
+	// lowering multiplies by the instances it creates.
+	p.curProc = pt
+	defer func() { p.curProc = nil }()
 	kw := p.peek()
 	if kw.isIdent("D_proctype") {
 		return outside(p.file, kw.Line, kw.Col, "D_proctype", "outside the subset")
@@ -549,11 +606,12 @@ func (p *parser) proctype() *Error {
 	if t := p.peek(); t.Kind == Ident && outsideKeywords[t.Text] != [2]string{} {
 		return p.outsideAt(t)
 	}
+	start := p.i
 	body, end, err := p.body()
 	if err != nil {
 		return err
 	}
-	pt.Body, pt.End = body, end
+	pt.Body, pt.End, pt.Tokens = body, end, p.i-start
 	p.mod.Procs = append(p.mod.Procs, pt)
 	return nil
 }
@@ -576,8 +634,11 @@ func (p *parser) initOrNever(isInit bool) *Error {
 		return p.outsideAt(p.peek())
 	}
 	p.inInit, p.inNever = isInit, !isInit
+	p.curProc = pt
+	start := p.i
 	body, end, err := p.body()
-	p.inInit, p.inNever = false, false
+	pt.Tokens = p.i - start
+	p.inInit, p.inNever, p.curProc = false, false, nil
 	if err != nil {
 		return err
 	}
@@ -622,6 +683,10 @@ func isSep(t Token) bool { return t.is(";") || t.is("->") }
 
 // seq parses statements up to one of the closers (not consumed).
 func (p *parser) seq(closers ...string) ([]Item, *Error) {
+	if err := p.enterBlock(p.peek()); err != nil {
+		return nil, err
+	}
+	defer p.leaveBlock()
 	var items []Item
 	for {
 		for isSep(p.peek()) {
@@ -1117,12 +1182,14 @@ func (p *parser) orExpr() (Expr, *Error) {
 		return nil, err
 	}
 	for p.peek().is("||") {
-		p.next()
+		t := p.next()
 		y, err := p.andExpr()
 		if err != nil {
 			return nil, err
 		}
-		x = &Binary{Op: "||", X: x, Y: y}
+		if x, err = p.built(t, &Binary{Op: "||", X: x, Y: y}, x, y); err != nil {
+			return nil, err
+		}
 	}
 	return x, nil
 }
@@ -1133,12 +1200,14 @@ func (p *parser) andExpr() (Expr, *Error) {
 		return nil, err
 	}
 	for p.peek().is("&&") {
-		p.next()
+		t := p.next()
 		y, err := p.eqExpr()
 		if err != nil {
 			return nil, err
 		}
-		x = &Binary{Op: "&&", X: x, Y: y}
+		if x, err = p.built(t, &Binary{Op: "&&", X: x, Y: y}, x, y); err != nil {
+			return nil, err
+		}
 	}
 	return x, nil
 }
@@ -1165,7 +1234,9 @@ func (p *parser) eqExpr() (Expr, *Error) {
 		if err != nil {
 			return nil, err
 		}
-		x = &Binary{Op: t.Text, X: x, Y: y}
+		if x, err = p.built(t, &Binary{Op: t.Text, X: x, Y: y}, x, y); err != nil {
+			return nil, err
+		}
 	}
 }
 
@@ -1187,7 +1258,9 @@ func (p *parser) relExpr() (Expr, *Error) {
 		if err != nil {
 			return nil, err
 		}
-		x = &Binary{Op: t.Text, X: x, Y: y}
+		if x, err = p.built(t, &Binary{Op: t.Text, X: x, Y: y}, x, y); err != nil {
+			return nil, err
+		}
 	}
 }
 
@@ -1202,7 +1275,9 @@ func (p *parser) addExpr() (Expr, *Error) {
 		if err != nil {
 			return nil, err
 		}
-		x = &Binary{Op: t.Text, X: x, Y: y}
+		if x, err = p.built(t, &Binary{Op: t.Text, X: x, Y: y}, x, y); err != nil {
+			return nil, err
+		}
 	}
 	return x, nil
 }
@@ -1218,7 +1293,9 @@ func (p *parser) mulExpr() (Expr, *Error) {
 		if err != nil {
 			return nil, err
 		}
-		x = &Binary{Op: t.Text, X: x, Y: y}
+		if x, err = p.built(t, &Binary{Op: t.Text, X: x, Y: y}, x, y); err != nil {
+			return nil, err
+		}
 	}
 	return x, nil
 }
@@ -1228,13 +1305,21 @@ func (p *parser) unaryExpr() (Expr, *Error) {
 	switch {
 	case t.is("!"):
 		p.next()
+		if err := p.enter(t); err != nil {
+			return nil, err
+		}
+		defer p.leave()
 		x, err := p.unaryExpr()
 		if err != nil {
 			return nil, err
 		}
-		return &Unary{Op: "!", X: x}, nil
+		return p.built(t, &Unary{Op: "!", X: x}, x)
 	case t.is("-"):
 		p.next()
+		if err := p.enter(t); err != nil {
+			return nil, err
+		}
+		defer p.leave()
 		x, err := p.unaryExpr()
 		if err != nil {
 			return nil, err
@@ -1242,7 +1327,7 @@ func (p *parser) unaryExpr() (Expr, *Error) {
 		if n, ok := x.(*Num); ok {
 			return &Num{Val: -n.Val}, nil
 		}
-		return &Unary{Op: "-", X: x}, nil
+		return p.built(t, &Unary{Op: "-", X: x}, x)
 	case t.is("~"):
 		return nil, p.bitwise(t)
 	}
@@ -1257,6 +1342,10 @@ func (p *parser) primary() (Expr, *Error) {
 	case t.Kind == String:
 		return nil, p.errAt(t, "a string is allowed only in printf")
 	case t.is("("):
+		if err := p.enter(t); err != nil {
+			return nil, err
+		}
+		defer p.leave()
 		e, err := p.expr()
 		if err != nil {
 			return nil, err
@@ -1288,8 +1377,12 @@ func (p *parser) primary() (Expr, *Error) {
 			}
 			ce := &ChanExpr{Fn: t.Text, Chan: p.dotted(c), Pos: Pos{t.Line, t.Col}}
 			if p.peek().is("[") {
-				p.next()
+				open := p.next()
+				if err := p.enter(open); err != nil {
+					return nil, err
+				}
 				idx, err := p.expr()
+				p.leave()
 				if err != nil {
 					return nil, err
 				}
@@ -1301,21 +1394,26 @@ func (p *parser) primary() (Expr, *Error) {
 			if _, err := p.expect(")"); err != nil {
 				return nil, err
 			}
-			return ce, nil
+			return p.built(t, ce, ce.Index)
 		case "_nr_pr":
 			return &NrPrExpr{Pos: Pos{t.Line, t.Col}}, nil
 		case "pc_value":
-			if _, err := p.expect("("); err != nil {
+			open, err := p.expect("(")
+			if err != nil {
+				return nil, err
+			}
+			if err := p.enter(open); err != nil {
 				return nil, err
 			}
 			e, err := p.expr()
+			p.leave()
 			if err != nil {
 				return nil, err
 			}
 			if _, err := p.expect(")"); err != nil {
 				return nil, err
 			}
-			return &PCValueExpr{Proc: e, Pos: Pos{t.Line, t.Col}}, nil
+			return p.built(t, &PCValueExpr{Proc: e, Pos: Pos{t.Line, t.Col}}, e)
 		}
 		if outsideKeywords[t.Text] != [2]string{} {
 			return nil, p.outsideAt(t)
@@ -1333,15 +1431,19 @@ func (p *parser) primary() (Expr, *Error) {
 		case n.is("!!"):
 			return nil, outside(p.file, t.Line, t.Col, "sorted send (!!)", "outside the subset")
 		case n.is("["):
-			p.next()
+			open := p.next()
+			if err := p.enter(open); err != nil {
+				return nil, err
+			}
 			e, err := p.expr()
+			p.leave()
 			if err != nil {
 				return nil, err
 			}
 			if _, err := p.expect("]"); err != nil {
 				return nil, err
 			}
-			return &IndexExpr{Name: t.Text, Index: e, Pos: Pos{t.Line, t.Col}}, nil
+			return p.built(t, &IndexExpr{Name: t.Text, Index: e, Pos: Pos{t.Line, t.Col}}, e)
 		case n.is("(") && !p.noCall:
 			return nil, p.errAt(t, "%s is not a variable, a macro or an operator of the subset", t.Text)
 		}

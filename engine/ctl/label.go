@@ -1,6 +1,8 @@
 package ctl
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"sort"
 )
@@ -42,19 +44,47 @@ type Labelling struct {
 	g   Graph
 	sat map[string][]bool
 	val Valuation
+	// ctx is the budget of every evaluation and witness search made through
+	// this labelling (issue #8); LabelCtx sets it, Label leaves it open.
+	ctx context.Context
 }
+
+// ErrBudget is the error of a labelling or a witness search that the
+// context ended (issue #8). The text is the stop reason the report carries:
+// it names the phase and no count.
+var ErrBudget = errors.New("time budget exhausted during the labelling of the formula")
 
 // Label evaluates f (which must be normalised) over g.
 func Label(g Graph, f *Formula, val Valuation) (*Labelling, error) {
+	return LabelCtx(context.Background(), g, f, val)
+}
+
+// LabelCtx is Label under a context: every sub-formula, and every few
+// thousand steps of a fixed-point or witness search, look at it, and the
+// evaluation ends with ErrBudget (wrapping the context's error) when it is
+// done.
+func LabelCtx(ctx context.Context, g Graph, f *Formula, val Valuation) (*Labelling, error) {
 	if !IsNormal(f) {
 		return nil, fmt.Errorf("ctl: Label needs a formula in the EX/EU/EG basis; call Normalise first (got %s)", f)
 	}
-	l := &Labelling{g: g, sat: map[string][]bool{}, val: val}
+	l := &Labelling{g: g, sat: map[string][]bool{}, val: val, ctx: ctx}
 	if _, err := l.eval(f); err != nil {
 		return nil, err
 	}
 	return l, nil
 }
+
+// budgetErr is ErrBudget wrapping the context's error, or nil.
+func budgetErr(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("%w: %w", ErrBudget, err)
+	}
+	return nil
+}
+
+// tickSteps is how many steps of a fixed-point or witness search pass
+// between two looks at the context.
+const tickSteps = 4096
 
 // Sat returns the set of states satisfying the subformula, or nil when it
 // was not evaluated.
@@ -79,6 +109,9 @@ func (l *Labelling) eval(f *Formula) ([]bool, error) {
 	key := f.String()
 	if s, ok := l.sat[key]; ok {
 		return s, nil
+	}
+	if err := budgetErr(l.ctx); err != nil {
+		return nil, err
 	}
 	n := l.g.Len()
 	out := make([]bool, n)
@@ -152,13 +185,17 @@ func (l *Labelling) eval(f *Formula) ([]bool, error) {
 		if err != nil {
 			return nil, err
 		}
-		out = euSat(l.g, a, b)
+		if out, err = euSat(l.ctx, l.g, a, b); err != nil {
+			return nil, err
+		}
 	case EG:
 		a, err := l.eval(f.L)
 		if err != nil {
 			return nil, err
 		}
-		out = egSat(l.g, a)
+		if out, err = egSat(l.ctx, l.g, a); err != nil {
+			return nil, err
+		}
 	default:
 		return nil, fmt.Errorf("ctl: %s is not in the EX/EU/EG basis", f)
 	}
@@ -167,7 +204,7 @@ func (l *Labelling) eval(f *Formula) ([]bool, error) {
 }
 
 // euSat is the least fixed point of X = b ∨ (a ∧ EX X).
-func euSat(g Graph, a, b []bool) []bool {
+func euSat(ctx context.Context, g Graph, a, b []bool) ([]bool, error) {
 	n := g.Len()
 	out := make([]bool, n)
 	var queue []int
@@ -177,7 +214,12 @@ func euSat(g Graph, a, b []bool) []bool {
 			queue = append(queue, i)
 		}
 	}
-	for len(queue) > 0 {
+	for steps := 0; len(queue) > 0; steps++ {
+		if steps%tickSteps == 0 {
+			if err := budgetErr(ctx); err != nil {
+				return nil, err
+			}
+		}
 		cur := queue[len(queue)-1]
 		queue = queue[:len(queue)-1]
 		for _, p := range g.Pred(cur) {
@@ -187,18 +229,23 @@ func euSat(g Graph, a, b []bool) []bool {
 			}
 		}
 	}
-	return out
+	return out, nil
 }
 
 // egSat is the greatest fixed point of X = a ∧ EX X: start from every state
 // of a and drop those whose successors have all been dropped. The counter
 // makes it one pass over the edges.
-func egSat(g Graph, a []bool) []bool {
+func egSat(ctx context.Context, g Graph, a []bool) ([]bool, error) {
 	n := g.Len()
 	out := append([]bool(nil), a...)
 	count := make([]int32, n)
 	var queue []int
 	for i := 0; i < n; i++ {
+		if i%tickSteps == 0 {
+			if err := budgetErr(ctx); err != nil {
+				return nil, err
+			}
+		}
 		if !out[i] {
 			continue
 		}
@@ -213,7 +260,12 @@ func egSat(g Graph, a []bool) []bool {
 			queue = append(queue, i)
 		}
 	}
-	for len(queue) > 0 {
+	for steps := 0; len(queue) > 0; steps++ {
+		if steps%tickSteps == 0 {
+			if err := budgetErr(ctx); err != nil {
+				return nil, err
+			}
+		}
 		cur := queue[len(queue)-1]
 		queue = queue[:len(queue)-1]
 		out[cur] = false
@@ -227,7 +279,7 @@ func egSat(g Graph, a []bool) []bool {
 			}
 		}
 	}
-	return out
+	return out, nil
 }
 
 // ---- witnesses ------------------------------------------------------------------
@@ -323,7 +375,7 @@ func BuildWitness(g Graph, f *Formula, l *Labelling, holds bool) (Witness, error
 		if err != nil {
 			return Witness{}, err
 		}
-		return pathWitness(g, allStates(g), goal), nil
+		return pathWitness(l.ctx, g, allStates(g), goal)
 	case EU:
 		left, err := sat(Normalise(f.L))
 		if err != nil {
@@ -337,19 +389,22 @@ func BuildWitness(g Graph, f *Formula, l *Labelling, holds bool) (Witness, error
 		for i := range within {
 			within[i] = left[i] || goal[i]
 		}
-		return pathWitness(g, within, goal), nil
+		return pathWitness(l.ctx, g, within, goal)
 	case EG:
 		inner, err := sat(Normalise(f.L))
 		if err != nil {
 			return Witness{}, err
 		}
-		return lassoWitness(g, egSat(g, inner))
+		return lassoInEG(l.ctx, g, inner)
 	case AG:
 		inner, err := sat(Normalise(f.L))
 		if err != nil {
 			return Witness{}, err
 		}
-		w := pathWitness(g, allStates(g), negate(inner))
+		w, err := pathWitness(l.ctx, g, allStates(g), negate(inner))
+		if err != nil {
+			return Witness{}, err
+		}
 		if w.Kind == "path" && hasTemporal(f.L) {
 			w.Note = NestedNote
 		}
@@ -374,7 +429,7 @@ func BuildWitness(g Graph, f *Formula, l *Labelling, holds bool) (Witness, error
 		if err != nil {
 			return Witness{}, err
 		}
-		w, err := lassoWitness(g, egSat(g, negate(inner)))
+		w, err := lassoInEG(l.ctx, g, negate(inner))
 		if err == nil && w.Kind == "lasso" && hasTemporal(f.L) {
 			w.Note = NestedNote
 		}
@@ -402,10 +457,14 @@ func BuildWitness(g Graph, f *Formula, l *Labelling, holds bool) (Witness, error
 		for i := range within {
 			within[i] = nr[i] || both[i]
 		}
-		if w := pathWitness(g, within, both); w.Kind == "path" {
+		w, err := pathWitness(l.ctx, g, within, both)
+		if err != nil {
+			return Witness{}, err
+		}
+		if w.Kind == "path" {
 			return w, nil
 		}
-		return lassoWitness(g, egSat(g, nr))
+		return lassoInEG(l.ctx, g, nr)
 	}
 	return Witness{Kind: "none", Why: whyBoolean}, nil
 }
@@ -444,12 +503,12 @@ func hasTemporal(g *Formula) bool {
 // using only states of within. It reports only whether such a path exists;
 // the reason for an absence belongs to the branch that asked (see
 // BuildWitness), because the same absence means different things there.
-func pathWitness(g Graph, within, goal []bool) Witness {
+func pathWitness(ctx context.Context, g Graph, within, goal []bool) (Witness, error) {
 	if !within[0] {
-		return Witness{Kind: "none", Why: whyNoRunFound}
+		return Witness{Kind: "none", Why: whyNoRunFound}, nil
 	}
 	if goal[0] {
-		return Witness{Kind: "path", Path: []int{0}, Loop: -1}
+		return Witness{Kind: "path", Path: []int{0}, Loop: -1}, nil
 	}
 	prev := make([]int32, g.Len())
 	for i := range prev {
@@ -458,7 +517,12 @@ func pathWitness(g Graph, within, goal []bool) Witness {
 	seen := make([]bool, g.Len())
 	seen[0] = true
 	queue := []int{0}
-	for len(queue) > 0 {
+	for steps := 0; len(queue) > 0; steps++ {
+		if steps%tickSteps == 0 {
+			if err := budgetErr(ctx); err != nil {
+				return Witness{}, err
+			}
+		}
 		cur := queue[0]
 		queue = queue[1:]
 		for _, t := range g.Succ(cur) {
@@ -468,25 +532,39 @@ func pathWitness(g Graph, within, goal []bool) Witness {
 			seen[t] = true
 			prev[t] = int32(cur)
 			if goal[t] {
-				return Witness{Kind: "path", Path: backtrack(prev, int(t)), Loop: -1}
+				return Witness{Kind: "path", Path: backtrack(prev, int(t)), Loop: -1}, nil
 			}
 			queue = append(queue, int(t))
 		}
 	}
-	return Witness{Kind: "none", Why: whyNoRunFound}
+	return Witness{Kind: "none", Why: whyNoRunFound}, nil
+}
+
+// lassoInEG is the lasso witness inside egSat(a), both under the context.
+func lassoInEG(ctx context.Context, g Graph, a []bool) (Witness, error) {
+	set, err := egSat(ctx, g, a)
+	if err != nil {
+		return Witness{}, err
+	}
+	return lassoWitness(ctx, g, set)
 }
 
 // lassoWitness walks from the initial state inside the set (every state of
 // which has a successor in the set, because the set is egSat of something)
 // until a state repeats: the prefix and the loop are then read off the walk.
-func lassoWitness(g Graph, set []bool) (Witness, error) {
+func lassoWitness(ctx context.Context, g Graph, set []bool) (Witness, error) {
 	if !set[0] {
 		return Witness{Kind: "none", Why: whyNoRunFound}, nil
 	}
 	pos := map[int]int{}
 	var path []int
 	cur := 0
-	for {
+	for steps := 0; ; steps++ {
+		if steps%tickSteps == 0 {
+			if err := budgetErr(ctx); err != nil {
+				return Witness{}, err
+			}
+		}
 		if k, ok := pos[cur]; ok {
 			path = append(path, cur)
 			return Witness{Kind: "lasso", Path: path, Loop: k}, nil

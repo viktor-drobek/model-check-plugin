@@ -1,6 +1,7 @@
 package ltl
 
 import (
+	"context"
 	"sort"
 
 	"modelcheck/ir"
@@ -21,12 +22,21 @@ type Claim struct {
 // acceptance cycle of the product of the model with this claim is a run
 // satisfying !(formula), i.e. a counterexample to the property.
 func ForProperty(name, formula string, opt Options) (*Claim, error) {
+	return ForPropertyCtx(context.Background(), name, formula, opt)
+}
+
+// ForPropertyCtx is ForProperty under a context: the construction of the
+// automaton stops with ErrBudget when the context ends (issue #8).
+func ForPropertyCtx(ctx context.Context, name, formula string, opt Options) (*Claim, error) {
 	f, err := Parse(formula, opt)
 	if err != nil {
 		return nil, err
 	}
 	neg := NotF(f)
-	a := Translate(neg)
+	a, err := TranslateCtx(ctx, neg)
+	if err != nil {
+		return nil, err
+	}
 	c := &Claim{Process: Lower(a, name, "!("+formula+")")}
 	c.Info = Info{
 		Formula:          formula,

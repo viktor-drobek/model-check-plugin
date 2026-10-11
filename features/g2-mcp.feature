@@ -135,6 +135,22 @@ Feature: G2 — MCP server with the seven tools, session directory, budgets
     And the error of manifest call 2 does not mention "goroutine"
     And the manifest file in the session directory records call 2 as "error"
 
+  Scenario: an input beyond a resource limit is a structured rejection, and the server keeps answering
+    # Deeply nested or chained text used to end the server with a fatal
+    # error that no recover sees (issue #9). The limits of the frontend and
+    # of the formula parsers answer as rejections, through the same tools.
+    Given the server has the Promela frontend
+    When I call "mc_parse" with a generated Promela source of 1001 nested parentheses
+    Then the call is not an error
+    And the answer field "outcome" is "rejected"
+    And the rejection reason mentions "limit"
+    When I call "mc_parse" with the Petri net "testdata/petri/petrinet1.json" inline
+    Then the call is not an error
+    And the answer field "outcome" is "ir"
+    When I call "mc_lint_property" in that session with kind "ltl" and a generated formula of 20 chained iffs
+    Then the call is not an error
+    And the answer field "type_error" mentions "normal form"
+
   # --- mc_check --------------------------------------------------------------
 
   Scenario: mc_check finds the deadlock of petrinet1 and stores the counterexample in the session directory
@@ -502,3 +518,19 @@ Feature: G2 — MCP server with the seven tools, session directory, budgets
     Then the call is not an error
     And the manifest file read before agrees with the manifest on the tool, outcome and error of each of its calls
     And 300 manifest calls of "mc_parse" are errors that mention "internal error in mc_parse"
+
+  # --- the time budget holds through the server (issue #8) ------------------------
+
+  Scenario: mc_check and mc_estimate answer within their time budget on an atomic sequence that never stores a state
+    Given the server has the Promela frontend
+    When I call "mc_parse" with the Promela source "byte i; bit a; active proctype P(){ atomic { do :: i < 40 -> i++; if :: a=0 :: a=1 fi :: else -> break od } } active proctype Q(){ skip }"
+    Then the call is not an error
+    And the answer field "outcome" is "ir"
+    When I call "mc_check" in that session with the model's own properties and budget states 0, depth 0, ms 300, memory_mb 0
+    Then the call is not an error
+    And the call finished within 5 seconds
+    And the answer property "deadlock" has status "inconclusive" with evidence "unknown"
+    And the answer says the search is not complete
+    When I call "mc_estimate" in that session with a time limit of 300 ms
+    Then the call is not an error
+    And the call finished within 5 seconds

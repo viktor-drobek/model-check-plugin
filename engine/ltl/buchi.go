@@ -1,6 +1,9 @@
 package ltl
 
 import (
+	"context"
+	"errors"
+	"fmt"
 	"sort"
 	"strconv"
 	"strings"
@@ -60,19 +63,54 @@ type Info struct {
 // the atoms that satisfy f; TestLanguage checks this on bounded lassos
 // against the brute-force semantics.
 func Translate(f *Formula) *Automaton {
+	a, err := TranslateCtx(context.Background(), f)
+	if err != nil {
+		// A background context never ends; the error is unreachable.
+		panic("ltl: Translate under a background context stopped: " + err.Error())
+	}
+	return a
+}
+
+// ErrBudget is the error of a translation that the context ended (issue
+// #8): the tableau can take minutes on a formula of a few dozen characters,
+// and the search's time budget must hold there too. The text is the stop
+// reason the report carries, so it names the phase and no count.
+var ErrBudget = errors.New("time budget exhausted while building the automaton of the formula")
+
+// TranslateCtx is Translate under a context: every expansion of the tableau
+// and every phase after it look at the context, and the construction ends
+// with ErrBudget (wrapping the context's error) when it is done.
+func TranslateCtx(ctx context.Context, f *Formula) (*Automaton, error) {
 	g := NNF(f)
 	atoms := g.Atoms()
 	index := map[string]int{}
 	for i, a := range atoms {
 		index[a.Text] = i
 	}
-	nodes := tableau(g)
+	nodes, err := tableau(ctx, g)
+	if err != nil {
+		return nil, err
+	}
 	gba := buildGBA(g, nodes, index)
+	if err := budgetErr(ctx); err != nil {
+		return nil, err
+	}
 	a := degeneralize(gba)
+	if err := budgetErr(ctx); err != nil {
+		return nil, err
+	}
 	a.Atoms = atoms
 	a = simplify(a)
 	nameStates(a)
-	return a
+	return a, nil
+}
+
+// budgetErr is ErrBudget wrapping the context's error, or nil.
+func budgetErr(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("%w: %w", ErrBudget, err)
+	}
+	return nil
 }
 
 // ---- tableau ----------------------------------------------------------------
@@ -105,16 +143,23 @@ type node struct {
 type tableauState struct {
 	nodes  []*node
 	nextID int
+	// ctx is the budget; err, once set, makes every expand return at once,
+	// so the recursion unwinds without a panic.
+	ctx context.Context
+	err error
 }
 
 // tableau runs the GPVW expansion from the formula g (in NNF).
-func tableau(g *Formula) []*node {
-	ts := &tableauState{nextID: 1} // id 0 is the initial pseudo-node
+func tableau(ctx context.Context, g *Formula) ([]*node, error) {
+	ts := &tableauState{nextID: 1, ctx: ctx} // id 0 is the initial pseudo-node
 	start := &node{id: ts.nextID, incoming: map[int]bool{0: true}, new: fset{}, old: fset{}, next: fset{}}
 	ts.nextID++
 	start.new.add(g)
 	ts.expand(start)
-	return ts.nodes
+	if ts.err != nil {
+		return nil, ts.err
+	}
+	return ts.nodes, nil
 }
 
 func (ts *tableauState) newNode(incoming map[int]bool, new, old, next fset) *node {
@@ -124,6 +169,14 @@ func (ts *tableauState) newNode(incoming map[int]bool, new, old, next fset) *nod
 }
 
 func (ts *tableauState) expand(n *node) {
+	// Every call looks at the context: next to the key sorting below the
+	// look costs nothing, and an already-ended context stops the first call.
+	if ts.err != nil {
+		return
+	}
+	if ts.err = budgetErr(ts.ctx); ts.err != nil {
+		return
+	}
 	if len(n.new) == 0 {
 		oldKey, nextKey := n.old.key(), n.next.key()
 		for _, r := range ts.nodes {

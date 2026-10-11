@@ -42,10 +42,13 @@ type Graph struct {
 	// Succ[i] lists the distinct successors of state i, ascending by first
 	// discovery. Every state has at least one successor (see Totality).
 	Succ [][]int32
-	// Chain[i][k] is the sequence of moves from state i to Succ[i][k]; it has
-	// more than one element only when the step passes through intermediate
-	// states of an atomic sequence. Empty for a stutter self-loop.
-	Chain [][][]cex.Ref
+	// chain[i][k] is the sequence of moves from state i to Succ[i][k], as
+	// the persistent node of the descent that found it (the nodes of one
+	// descent share their prefixes, issue #7); it has more than one move
+	// only when the step passes through intermediate states of an atomic
+	// sequence, and is nil for a stutter self-loop. chainBetween reads the
+	// references off it for a trace.
+	chain [][]*chainNode
 	// Pred[i] lists the predecessors of i (built on demand by BuildPred).
 	Pred [][]int32
 	// Stuttered marks the states whose only successor is the added self-loop.
@@ -94,7 +97,7 @@ func (g *Graph) build() {
 	s.next = make([]byte, l.Size)
 	s.visited.Add(init)
 	g.Succ = append(g.Succ, nil)
-	g.Chain = append(g.Chain, nil)
+	g.chain = append(g.chain, nil)
 	s.parent = append(s.parent, -1)
 	s.chains = append(s.chains, nil)
 	s.depth = append(s.depth, 0)
@@ -143,6 +146,13 @@ func (g *Graph) build() {
 				g.fail(err, func() *cex.Trace { return s.bfsPath(head, chain.refs(), s.next) })
 				break
 			}
+			// One look at the budgets per edge fired, whatever the successor
+			// turns out to be; the node stack and the chain of a descent, and
+			// the chain nodes the edges keep, are in the memory estimate
+			// (issues #8 and #7).
+			if !s.checkBudgets(s.bfsExtra(len(nodes))) {
+				break
+			}
 			if inter {
 				g.Stats.AtomicSteps++
 				if len(nodes) > dstepLimit {
@@ -157,20 +167,16 @@ func (g *Graph) build() {
 				break
 			}
 			moved = true
-			stored := chain.refs() // the chain of a stored state is a slice, kept by the graph
 			if isNew {
 				g.Succ = append(g.Succ, nil)
-				g.Chain = append(g.Chain, nil)
+				g.chain = append(g.chain, nil)
 				g.Stuttered = append(g.Stuttered, false)
 				s.parent = append(s.parent, int32(head))
-				s.chains = append(s.chains, stored)
-				s.depth = append(s.depth, int32(d+len(stored)))
+				s.chains = append(s.chains, chain) // the node, shared with the edge below
+				s.depth = append(s.depth, int32(d+chain.len()))
 				g.Stats.States = s.visited.Len()
-				if !s.checkBudgets(int64(s.visited.Len()) * bfsBytesPerState) {
-					break
-				}
 			}
-			g.addSucc(head, idx, stored)
+			g.addSucc(head, idx, chain)
 		}
 		if !moved && len(g.Succ[head]) == 0 && s.stop == "" {
 			// Totality: a state with no move stutters (see the package note).
@@ -181,12 +187,12 @@ func (g *Graph) build() {
 			// graph yields no CTL verdict.
 			g.Stuttered[head] = true
 			g.Succ[head] = []int32{int32(head)}
-			g.Chain[head] = [][]cex.Ref{nil}
+			g.chain[head] = []*chainNode{nil}
 		}
 		head++
 	}
 	g.Stats.States = s.visited.Len()
-	g.Stats.MemBytes = s.visited.Bytes() + int64(cap(s.parent))*bfsBytesPerState + g.edgeBytes()
+	g.Stats.MemBytes = s.visited.Bytes() + int64(cap(s.parent))*bfsBytesPerState + g.edgeBytes() + s.chainNodes*chainNodeBytes
 	if s.stop == "" && head >= s.visited.Len() {
 		s.stop = "complete"
 	}
@@ -200,22 +206,25 @@ func (g *Graph) build() {
 	g.Stats.Stop = s.stop
 }
 
+// edgeBytes is the memory of the edge lists: the successor index and the
+// chain pointer per edge, the two slice headers per state.
 func (g *Graph) edgeBytes() int64 {
 	n := int64(0)
 	for _, ss := range g.Succ {
-		n += int64(len(ss))*4 + 24
+		n += int64(len(ss))*12 + 48
 	}
 	return n
 }
 
-func (g *Graph) addSucc(from, to int, chain []cex.Ref) {
+func (g *Graph) addSucc(from, to int, chain *chainNode) {
 	for _, x := range g.Succ[from] {
 		if int(x) == to {
 			return
 		}
 	}
 	g.Succ[from] = append(g.Succ[from], int32(to))
-	g.Chain[from] = append(g.Chain[from], chain)
+	g.chain[from] = append(g.chain[from], chain)
+	chain.keep(g.s) // the edge holds the nodes: counted once, here
 }
 
 // fail records why the construction stopped: an exhausted process pool is
@@ -295,7 +304,7 @@ func (g *Graph) Trace(path []int, loopStart int) *cex.Trace {
 func (g *Graph) chainBetween(from, to int) []cex.Ref {
 	for k, t := range g.Succ[from] {
 		if int(t) == to {
-			return g.Chain[from][k]
+			return g.chain[from][k].refs()
 		}
 	}
 	return nil

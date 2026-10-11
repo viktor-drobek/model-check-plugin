@@ -90,6 +90,14 @@ Feature: G3 skill package — documentation half
     Then "references/fairness.md" states that strong fairness is not supported by the engine
     And "references/fairness.md" states that weak fairness is supported
 
+  Scenario: Fairness reference explains the rendezvous partner convention of weak fairness
+    Then "references/fairness.md" mentions each of:
+      | pan -f     |
+      | rendezvous |
+      | receiver   |
+      | partner    |
+      | blocked    |
+
   # -------------------------------------------------------------- structure
   Scenario: Long reference files have a table of contents
     Then every file under "references" with more than 300 lines has a table of contents in its first 40 lines
@@ -187,10 +195,12 @@ Feature: G3 skill package — documentation half
       | assets/wait-for-capacity.sh |
       | 90%                         |
       | wait                        |
+      | TMPDIR                      |
     And "references/workflow.md" mentions each of:
       | wait-for-capacity.sh |
       | 90%                  |
       | --max-memory-mb      |
+      | --min-disk-mb        |
     And "references/engine-tools.md" mentions each of:
       | wait-for-capacity.sh |
       | --concurrency        |
@@ -206,3 +216,23 @@ Feature: G3 skill package — documentation half
       | --timeout 2 --interval 1 --max-mem 0    | 3    |
       | --timeout 0 --no-such-option            | 2    |
       | --timeout 0 --max-cpu 100 --max-mem 100 --dir /nonexistent-dir-for-test --min-disk-mb 1 | 4 |
+      | --timeout 0 --max-cpu 100 --max-mem 100 --min-disk-mb 1 | 0 |
+
+  # df does not see a quota: on a tmpfs mounted with usrquota it reports
+  # gigabytes free while every write fails with "Disk quota exceeded". So the
+  # script writes a probe of --min-disk-mb into --dir (by default $TMPDIR) and
+  # answers 3 at once when that fails — waiting does not free a quota. A regular
+  # file stands in for an unwritable directory here: df accepts it, the probe
+  # cannot be created in it, and that holds for root too.
+  Scenario: The capacity script writes a probe into the directory, it does not only read df
+    Given a path that is a regular file
+    When I run the capacity script with "--timeout 0 --max-cpu 100 --max-mem 100 --dir $FILE --min-disk-mb 1"
+    Then the capacity script exits with 3
+    And the output of the capacity script mentions "cannot write"
+    And the output of the capacity script mentions "TMPDIR"
+
+  Scenario: The help of the capacity script is complete and names the disk options
+    When I run the capacity script with "--help"
+    Then the capacity script exits with 2
+    And the output of the capacity script mentions "--min-disk-mb"
+    And the output of the capacity script mentions "Exit codes"

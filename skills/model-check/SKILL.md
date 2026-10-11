@@ -167,10 +167,14 @@ property.
 memory in proportion to the state space, and the machine may be shared with other
 sessions. Before `mc_estimate`, every `mc_check` and every rerun with a larger budget run
 `sh assets/wait-for-capacity.sh --need-cores N --need-mem-mb M --dir <session dir>
---min-disk-mb 500` (N = the `workers` you plan to pass, M = the memory budget). It waits
-while CPU or memory use is above 90% (or the run would push it above) and exits 3 when
-the machine stays busy: then wait, lower `workers` and the budgets, or tell the user that
-the run was not started and why. Never start into a saturated machine: a time budget that
+--min-disk-mb 500` (N = the `workers` you plan to pass, M = the memory budget; without
+`--dir` the disk check goes to `TMPDIR`, the scratch directory of SPIN, gcc and the
+engine). It waits while CPU or memory use is above 90% (or the run would push it above)
+and exits 3 when the machine stays busy: then wait, lower `workers` and the budgets, or
+tell the user that the run was not started and why. It also writes a probe file of
+`--min-disk-mb` into the directory, because `df` does not see a quota, and exits 3 at
+once when that fails: then set `--dir` or `TMPDIR` to a directory on disk — waiting does
+not free a quota. Never start into a saturated machine: a time budget that
 runs out under load is `unknown`, not a result, and timings taken there are not
 measurements. Where the script cannot measure (exit 4, Windows), read the load, free
 memory and free disk with the host's own tools first.

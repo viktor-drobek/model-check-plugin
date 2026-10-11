@@ -254,6 +254,7 @@ func expandDefines(toks []token, defines map[string]string) ([]token, *Error) {
 		return toks, nil
 	}
 	var out []token
+	produced := 0
 	var expand func(ts []token, active map[string]bool, depth int) *Error
 	expand = func(ts []token, active map[string]bool, depth int) *Error {
 		for _, t := range ts {
@@ -270,6 +271,11 @@ func expandDefines(toks []token, defines map[string]string) ([]token, *Error) {
 				return &Error{t.pos, fmt.Sprintf("in the body of #define %s: %s", t.text, err.Msg)}
 			}
 			bt = bt[:len(bt)-1] // drop EOF
+			// A #define of the model that doubles per line expands to 2^n
+			// tokens here, whether or not the model itself uses it.
+			if produced += len(bt); produced > maxFormulaDefines {
+				return &Error{t.pos, fmt.Sprintf("the #define expansion inside the formula exceeds %d tokens (%s)", maxFormulaDefines, limitNote)}
+			}
 			for i := range bt {
 				bt[i].pos = t.pos
 			}
@@ -302,6 +308,12 @@ type parser struct {
 	i     int
 	scope ir.Scope
 	atoms map[string]*Atom
+
+	// The limits of limits.go: heights and eh record the height of every
+	// formula and atom-expression node built, depth the parser's recursion.
+	heights map[*Formula]int
+	eh      map[*ir.Expr]int
+	depth   int
 }
 
 func (p *parser) peek() token { return p.toks[p.i] }
@@ -332,13 +344,16 @@ func Parse(text string, opt Options) (*Formula, error) {
 	if err != nil {
 		return nil, err
 	}
-	p := &parser{toks: toks, scope: opt.Scope, atoms: map[string]*Atom{}}
+	p := &parser{toks: toks, scope: opt.Scope, atoms: map[string]*Atom{}, heights: map[*Formula]int{}, eh: map[*ir.Expr]int{}}
 	f, err := p.formula()
 	if err != nil {
 		return nil, err
 	}
 	if t := p.peek(); t.kind != tEOF {
 		return nil, p.fail(t, "unexpected %q after the formula", t.text)
+	}
+	if normalFormSize(f) > maxNormalForm {
+		return nil, limitError(0)
 	}
 	return f, nil
 }
@@ -349,15 +364,19 @@ func (p *parser) formula() (*Formula, *Error) {
 		return nil, err
 	}
 	if p.isOp("->") || p.isOp("<->") {
-		op := p.next().text
+		t := p.next()
+		if err := p.enter(t); err != nil {
+			return nil, err
+		}
 		r, err := p.formula()
+		p.leave()
 		if err != nil {
 			return nil, err
 		}
-		if op == "->" {
-			return ImplF(l, r), nil
+		if t.text == "->" {
+			return p.mk(t, ImplF(l, r), l, r)
 		}
-		return IffF(l, r), nil
+		return p.mk(t, IffF(l, r), l, r)
 	}
 	return l, nil
 }
@@ -368,12 +387,14 @@ func (p *parser) disjunction() (*Formula, *Error) {
 		return nil, err
 	}
 	for p.isOp("||") {
-		p.next()
+		t := p.next()
 		r, err := p.conjunction()
 		if err != nil {
 			return nil, err
 		}
-		l = OrF(l, r)
+		if l, err = p.mk(t, OrF(l, r), l, r); err != nil {
+			return nil, err
+		}
 	}
 	return l, nil
 }
@@ -384,12 +405,14 @@ func (p *parser) conjunction() (*Formula, *Error) {
 		return nil, err
 	}
 	for p.isOp("&&") {
-		p.next()
+		t := p.next()
 		r, err := p.until()
 		if err != nil {
 			return nil, err
 		}
-		l = AndF(l, r)
+		if l, err = p.mk(t, AndF(l, r), l, r); err != nil {
+			return nil, err
+		}
 	}
 	return l, nil
 }
@@ -400,41 +423,66 @@ func (p *parser) until() (*Formula, *Error) {
 		return nil, err
 	}
 	if p.isIdent("U") || p.isIdent("V") {
-		op := p.next().text
+		t := p.next()
+		if err := p.enter(t); err != nil {
+			return nil, err
+		}
 		r, err := p.until()
+		p.leave()
 		if err != nil {
 			return nil, err
 		}
-		if op == "U" {
-			return UntilF(l, r), nil
+		if t.text == "U" {
+			return p.mk(t, UntilF(l, r), l, r)
 		}
-		return ReleaseF(l, r), nil
+		return p.mk(t, ReleaseF(l, r), l, r)
 	}
 	return l, nil
 }
 
 func (p *parser) unary() (*Formula, *Error) {
 	t := p.peek()
+	// prefix parses the operand of a prefix operator, within the depth limit.
+	prefix := func() (*Formula, *Error) {
+		p.next()
+		if err := p.enter(t); err != nil {
+			return nil, err
+		}
+		defer p.leave()
+		return p.unary()
+	}
 	switch {
 	case p.isOp("[]"):
-		p.next()
-		f, err := p.unary()
-		return AlwaysF(f), err
+		f, err := prefix()
+		if err != nil {
+			return nil, err
+		}
+		return p.mk(t, AlwaysF(f), f)
 	case p.isOp("<>"):
-		p.next()
-		f, err := p.unary()
-		return EventuallyF(f), err
+		f, err := prefix()
+		if err != nil {
+			return nil, err
+		}
+		return p.mk(t, EventuallyF(f), f)
 	case p.isIdent("X"):
-		p.next()
-		f, err := p.unary()
-		return NextF(f), err
+		f, err := prefix()
+		if err != nil {
+			return nil, err
+		}
+		return p.mk(t, NextF(f), f)
 	case p.isOp("!"):
-		p.next()
-		f, err := p.unary()
-		return NotF(f), err
+		f, err := prefix()
+		if err != nil {
+			return nil, err
+		}
+		return p.mk(t, NotF(f), f)
 	case p.isOp("("):
 		p.next()
+		if err := p.enter(t); err != nil {
+			return nil, err
+		}
 		f, err := p.formula()
+		p.leave()
 		if err != nil {
 			return nil, err
 		}
@@ -473,7 +521,9 @@ func (p *parser) atom() (*Formula, *Error) {
 			if err != nil {
 				return nil, err
 			}
-			e = ir.Binary(op, l, r)
+			if e, err = p.mkE(t, ir.Binary(op, l, r), l, r); err != nil {
+				return nil, err
+			}
 		}
 	}
 	if p.scope != nil {
@@ -496,15 +546,18 @@ func (p *parser) arith() (*ir.Expr, *Error) {
 		return nil, err
 	}
 	for p.isOp("+") || p.isOp("-") {
+		t := p.next()
 		op := "add"
-		if p.next().text == "-" {
+		if t.text == "-" {
 			op = "sub"
 		}
 		r, err := p.term()
 		if err != nil {
 			return nil, err
 		}
-		l = ir.Binary(op, l, r)
+		if l, err = p.mkE(t, ir.Binary(op, l, r), l, r); err != nil {
+			return nil, err
+		}
 	}
 	return l, nil
 }
@@ -515,12 +568,15 @@ func (p *parser) term() (*ir.Expr, *Error) {
 		return nil, err
 	}
 	for p.isOp("*") || p.isOp("/") || p.isOp("%") {
-		op := map[string]string{"*": "mul", "/": "div", "%": "mod"}[p.next().text]
+		t := p.next()
+		op := map[string]string{"*": "mul", "/": "div", "%": "mod"}[t.text]
 		r, err := p.factor()
 		if err != nil {
 			return nil, err
 		}
-		l = ir.Binary(op, l, r)
+		if l, err = p.mkE(t, ir.Binary(op, l, r), l, r); err != nil {
+			return nil, err
+		}
 	}
 	return l, nil
 }
@@ -531,13 +587,21 @@ func (p *parser) factor() (*ir.Expr, *Error) {
 	case t.kind == tNum:
 		return ir.Const(t.num), nil
 	case t.kind == tOp && t.text == "-":
+		if err := p.enter(t); err != nil {
+			return nil, err
+		}
 		f, err := p.factor()
+		p.leave()
 		if err != nil {
 			return nil, err
 		}
-		return ir.Unary("neg", f), nil
+		return p.mkE(t, ir.Unary("neg", f), f)
 	case t.kind == tOp && t.text == "(":
+		if err := p.enter(t); err != nil {
+			return nil, err
+		}
 		e, err := p.arith()
+		p.leave()
 		if err != nil {
 			return nil, err
 		}
@@ -566,8 +630,12 @@ func (p *parser) factor() (*ir.Expr, *Error) {
 			return nil, p.fail(t, "%s is an operator, not a variable", t.text)
 		}
 		if p.isOp("[") {
-			p.next()
+			open := p.next()
+			if err := p.enter(open); err != nil {
+				return nil, err
+			}
 			idx, err := p.arith()
+			p.leave()
 			if err != nil {
 				return nil, err
 			}
@@ -575,7 +643,7 @@ func (p *parser) factor() (*ir.Expr, *Error) {
 				return nil, p.fail(p.peek(), "expected ] after the array index")
 			}
 			p.next()
-			return ir.Index(t.text, idx), nil
+			return p.mkE(t, ir.Index(t.text, idx), idx)
 		}
 		return ir.Ref(t.text), nil
 	case t.kind == tEOF:
@@ -590,9 +658,9 @@ func (p *parser) chanOp(t token, ch string) (*ir.Expr, *Error) {
 	case "len":
 		return l, nil
 	case "empty":
-		return ir.Binary("eq", l, ir.Const(0)), nil
+		return p.mkE(t, ir.Binary("eq", l, ir.Const(0)), l)
 	case "nempty":
-		return ir.Binary("gt", l, ir.Const(0)), nil
+		return p.mkE(t, ir.Binary("gt", l, ir.Const(0)), l)
 	}
 	if p.scope == nil {
 		return nil, p.fail(t, "%s(%s) needs the model to know the channel capacity", t.text, ch)
@@ -602,9 +670,9 @@ func (p *parser) chanOp(t token, ch string) (*ir.Expr, *Error) {
 		return nil, p.fail(t, "undeclared channel %q", ch)
 	}
 	if t.text == "full" {
-		return ir.Binary("eq", l, ir.Const(int64(c.Capacity))), nil
+		return p.mkE(t, ir.Binary("eq", l, ir.Const(int64(c.Capacity))), l)
 	}
-	return ir.Binary("lt", l, ir.Const(int64(c.Capacity))), nil
+	return p.mkE(t, ir.Binary("lt", l, ir.Const(int64(c.Capacity))), l)
 }
 
 // ---- negation normal form ---------------------------------------------------------

@@ -547,6 +547,9 @@ func Validate(m *Model) error {
 	if m.Schema != Schema {
 		return fmt.Errorf("schema: want %q, got %q", Schema, m.Schema)
 	}
+	if err := checkSize(m); err != nil {
+		return err
+	}
 	seen := map[string]bool{}
 	for i := range m.Globals {
 		if err := validateVar(&m.Globals[i], seen); err != nil {

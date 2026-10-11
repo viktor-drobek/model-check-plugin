@@ -154,6 +154,10 @@ type Options struct {
 	// porNoProviso switches the cycle proviso off. Tests only: it shows what
 	// the proviso is for.
 	porNoProviso bool
+	// ctlAfterGraph and ctlAfterLabel are test hooks of the CTL check: they
+	// run once the graph is complete and once the labelling is done, where a
+	// test ends the context to pin the two budget stops of issue #8.
+	ctlAfterGraph, ctlAfterLabel func()
 	// porTrace, when set, is called with every stored state the reduced search
 	// picks an ample set for and the choice (por.go pick). Tests only: the
 	// acyclicity audit of the cycle proviso reads the reduced graph from it.
@@ -791,6 +795,13 @@ type search struct {
 	// por is the partial-order reduction of this search, nil when it is not
 	// applied (por.go).
 	por *porRun
+	// work counts the edges fired and the d_step steps taken; lastTick is
+	// the work at the last look at the budgets (checkBudgets, cycle tick).
+	work, lastTick int64
+	// chainNodes counts the chain nodes the stored states and the graph's
+	// edges keep (chainNode.keep), for the memory estimate of a
+	// breadth-first run.
+	chainNodes int64
 	// tmp holds the intermediate atomic states of the DFS stack (frames
 	// with idx < 0 refer to tmp[-idx-1]); it grows and shrinks with the
 	// stack.
@@ -799,7 +810,7 @@ type search struct {
 	// state and the chain of moves from it (one move, or an atomic
 	// sequence's moves).
 	parent []int32
-	chains [][]cex.Ref
+	chains []*chainNode
 	depth  []int32
 
 	watched []*ir.Compiled
@@ -1237,8 +1248,10 @@ func (s *search) fire(m move) (failed *cEdge, err error) {
 	if err := s.apply(e, m.partner); err != nil {
 		return failed, err
 	}
+	s.work++
 	last := e
 	for n := 0; last.e.DStep; n++ {
+		s.work++ // a d_step of many steps is that much work for the clock
 		if n >= dstepLimit {
 			return failed, fmt.Errorf("d_step starting at %q did not finish after %d steps", cex.CommandText(e.e), dstepLimit)
 		}
@@ -1522,21 +1535,28 @@ func (s *search) assertFailed(e *cEdge, path func() *cex.Trace) {
 	}
 }
 
-// checkBudgets is called after each newly stored state.
+// tickWork is the work between two looks at the clock and the memory.
+const tickWork = 1024
+
+// checkBudgets is called after every expansion, stored or not. It looks at
+// the clock and the memory every tickWork units of work — the units that
+// fire counts: one per edge, one more per step of a d_step — and not every
+// so many stored states, because an atomic sequence that branches without
+// storing anything (issue #8) does its work between two stores.
 func (s *search) checkBudgets(extraBytes int64) bool {
-	b := s.opt.Budget
-	n := s.visited.Len()
-	if n&1023 == 0 {
-		if s.ctx.Err() != nil {
-			s.budget("time budget exhausted")
+	if s.work-s.lastTick < tickWork {
+		return true
+	}
+	s.lastTick = s.work
+	if s.ctx.Err() != nil {
+		s.budget("time budget exhausted")
+		return false
+	}
+	if b := s.opt.Budget; b.MaxMemBytes > 0 {
+		est := s.visited.Bytes() + extraBytes
+		if est > b.MaxMemBytes {
+			s.budget(fmt.Sprintf("memory budget exhausted: estimate %d bytes exceeds %d", est, b.MaxMemBytes))
 			return false
-		}
-		if b.MaxMemBytes > 0 {
-			est := s.visited.Bytes() + extraBytes
-			if est > b.MaxMemBytes {
-				s.budget(fmt.Sprintf("memory budget exhausted: estimate %d bytes exceeds %d", est, b.MaxMemBytes))
-				return false
-			}
 		}
 	}
 	return true
@@ -1680,12 +1700,15 @@ func (s *search) dfs() {
 			s.handleErr(err, func() *cex.Trace { return s.dfsPath(&m, s.next) })
 			break
 		}
+		// One look at the budgets per edge fired, whatever the successor
+		// turns out to be (intermediate, new, or already stored): the clock
+		// is counted by work (issue #8).
+		if !s.checkBudgets(int64(len(s.stack))*frameBytes + int64(len(s.tmp))*int64(l.Size)) {
+			break
+		}
 		if inter {
 			// Inside an atomic sequence: expand, do not store.
 			s.res.AtomicSteps++
-			if !s.checkBudgets(int64(len(s.stack))*frameBytes + int64(len(s.tmp))*int64(l.Size)) {
-				break
-			}
 			if s.opt.Budget.MaxDepth > 0 && depth > s.opt.Budget.MaxDepth {
 				s.truncated++
 				continue
@@ -1711,9 +1734,6 @@ func (s *search) dfs() {
 			break
 		}
 		if s.stop != "" {
-			break
-		}
-		if !s.checkBudgets(int64(len(s.stack))*frameBytes + int64(len(s.tmp))*int64(l.Size)) {
 			break
 		}
 		if s.opt.Budget.MaxDepth > 0 && depth > s.opt.Budget.MaxDepth {
@@ -1761,6 +1781,12 @@ func (s *search) dfsPath(extra *move, last []byte) *cex.Trace {
 
 const bfsBytesPerState = 40
 
+// bfsNodeBytes is what one intermediate node of a breadth-first descent
+// costs besides its state vector and its chain node: the bfsNode with its
+// frame; pinned by TestBFSNodeBytesIsTheNode. bfsExtra adds chainNodeBytes
+// for the chain node of each live node.
+const bfsNodeBytes = 104
+
 // bfsNode is an intermediate atomic state being expanded depth-first
 // inside a BFS step.
 type bfsNode struct {
@@ -1773,14 +1799,23 @@ type bfsNode struct {
 // intermediate atomic state: the nodes of one descent share their prefixes, so
 // an atomic sequence of n steps costs n nodes and not n copies of a chain of up
 // to n references (quadratic: a sequence that never ends, about 100 000 steps
-// before the bound answers, needed some 100 GB). The list is turned into a
-// []cex.Ref only for a state that is stored, which is where the chain is kept,
-// and for a trace.
+// before the bound answers, needed some 100 GB). A stored state and a graph
+// edge keep the node itself (issue #7: copying the list per stored state was
+// quadratic again on a loop that stores at every step); the list is turned
+// into a []cex.Ref only for a trace.
 type chainNode struct {
 	ref  cex.Ref
 	prev *chainNode
 	n    int
+	// kept marks a node that a stored state or a graph edge holds on to
+	// (issue #7): such nodes outlive the descent and are counted in the
+	// memory estimate once, by keep; the others are garbage once popped.
+	kept bool
 }
+
+// chainNodeBytes is what one kept chain node costs; pinned by
+// TestChainNodeBytesIsTheNode.
+const chainNodeBytes = 88
 
 // push is the chain extended by one move; the receiver may be nil (no moves).
 func (c *chainNode) push(r cex.Ref) *chainNode {
@@ -1789,6 +1824,17 @@ func (c *chainNode) push(r cex.Ref) *chainNode {
 		n = c.n + 1
 	}
 	return &chainNode{ref: r, prev: c, n: n}
+}
+
+// keep marks the chain as held by a stored state or an edge and charges the
+// nodes not yet counted to the search's memory estimate: the walk stops at
+// the first node already kept, so every node is counted once and a store
+// costs amortised O(1).
+func (c *chainNode) keep(s *search) {
+	for x := c; x != nil && !x.kept; x = x.prev {
+		x.kept = true
+		s.chainNodes++
+	}
 }
 
 // len is the number of moves of the chain.
@@ -1874,6 +1920,13 @@ func (s *search) bfs() {
 				s.handleErr(err, func() *cex.Trace { return s.bfsPath(head, chain.refs(), s.next) })
 				break
 			}
+			// One look at the budgets per edge fired, whatever the successor
+			// turns out to be; the node stack and the chain of a descent, and
+			// the chain nodes the stored states keep, are in the memory
+			// estimate (issues #8 and #7).
+			if !s.checkBudgets(s.bfsExtra(len(nodes))) {
+				break
+			}
 			if inter {
 				s.res.AtomicSteps++
 				if len(nodes) > dstepLimit {
@@ -1891,25 +1944,34 @@ func (s *search) bfs() {
 				continue
 			}
 			s.parent = append(s.parent, int32(head))
-			s.chains = append(s.chains, chain.refs())
+			// The chain is kept as its node (shared prefixes, issue #7); the
+			// references are read off it only for a trace.
+			s.chains = append(s.chains, chain)
+			chain.keep(s)
 			s.depth = append(s.depth, int32(d+chain.len()))
 			s.res.States = s.visited.Len()
 			if err := s.checkState(s.next, pathTo(idx)); err != nil {
 				s.fail(err.Error(), pathTo(idx)())
 				break
 			}
-			if !s.checkBudgets(int64(s.visited.Len()) * bfsBytesPerState) {
-				break
-			}
 		}
 		head++
 	}
 	s.res.States = s.visited.Len()
-	s.res.MemBytes = s.visited.Bytes() + int64(cap(s.parent))*bfsBytesPerState
+	s.res.MemBytes = s.visited.Bytes() + int64(cap(s.parent))*bfsBytesPerState + s.chainNodes*chainNodeBytes
 	if s.stop == "" && head >= s.visited.Len() {
 		s.stop = "complete"
 	}
 	s.res.Levels = s.levels(head)
+}
+
+// bfsExtra is the memory of a breadth-first run beyond the stored states:
+// the per-state records, the node stack of the descent in progress (its
+// state copies, nodes and chain nodes) and the chain nodes the stored
+// states keep. A live node whose chain a deeper store has already kept is
+// counted on both sides: an over-estimate bounded by the descent's length.
+func (s *search) bfsExtra(descent int) int64 {
+	return int64(s.visited.Len())*bfsBytesPerState + int64(descent)*(int64(len(s.next))+bfsNodeBytes+chainNodeBytes) + s.chainNodes*chainNodeBytes
 }
 
 // levels reads the per-depth counts off the breadth-first depth table.
@@ -1977,7 +2039,7 @@ func (s *search) bfsPath(idx int, extra []cex.Ref, last []byte) *cex.Trace {
 	}
 	for k := len(order) - 2; k >= 0; k-- {
 		i := order[k]
-		replay(s.chains[i], s.visited.Get(i))
+		replay(s.chains[i].refs(), s.visited.Get(i))
 	}
 	if len(extra) > 0 {
 		replay(extra, last)

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/cucumber/godog"
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
@@ -28,11 +29,12 @@ import (
 // shared. That is why they all read "G5 …" or a phrase no other feature
 // uses.
 type g5World struct {
-	model  string
-	isIR   bool
-	stdout bytes.Buffer
-	stderr bytes.Buffer
-	exit   int
+	model   string
+	isIR    bool
+	elapsed time.Duration // wall time of the last run
+	stdout  bytes.Buffer
+	stderr  bytes.Buffer
+	exit    int
 
 	srv    *mcp.Server
 	cs     *sdk.ClientSession
@@ -80,6 +82,11 @@ func registerG5Steps(sc *godog.ScenarioContext) {
 	w := &g5World{}
 	sc.Before(func(ctx context.Context, _ *godog.Scenario) (context.Context, error) {
 		*w = g5World{}
+		d, err := os.MkdirTemp("", "g5-")
+		if err != nil {
+			return ctx, fmt.Errorf("create the scenario's scratch directory: %w", err)
+		}
+		w.tmp = d
 		return ctx, nil
 	})
 	sc.After(func(ctx context.Context, _ *godog.Scenario, _ error) (context.Context, error) {
@@ -108,6 +115,18 @@ func registerG5Steps(sc *godog.ScenarioContext) {
 		w.model, w.isIR = p, false
 		return nil
 	})
+	// The formula-limit scenarios (issue #9): a two-line model with the
+	// variable x, optionally with doubling #defines that only a formula uses.
+	generated := func(defines int) error {
+		src, err := generatedModel("unused-defines", defines)
+		if err != nil {
+			return err
+		}
+		w.model, w.isIR = filepath.Join(w.tmp, "formulas.pml"), false
+		return os.WriteFile(w.model, []byte(src), 0o644)
+	}
+	sc.Step(`^a generated Promela model for the G5 formula limits$`, func() error { return generated(0) })
+	sc.Step(`^a generated Promela model for the G5 formula limits with (\d+) unused doubling defines$`, generated)
 	// A name with a directory in it is taken relative to testdata/ (the saved
 	// mutants live under testdata/mutate/…); a bare name is a Promela model
 	// of testdata/promela/.
@@ -163,11 +182,7 @@ func registerG5Steps(sc *godog.ScenarioContext) {
 		if !replaced {
 			return fmt.Errorf("%s has no `#define N` line to cut", name)
 		}
-		dir, err := os.MkdirTemp("", "g5-model-")
-		if err != nil {
-			return err
-		}
-		w.tmp = dir
+		dir := w.tmp
 		p := filepath.Join(dir, filepath.Base(name)+".pml")
 		if err := os.WriteFile(p, []byte(out), 0o644); err != nil {
 			return err
@@ -275,8 +290,16 @@ func registerG5Steps(sc *godog.ScenarioContext) {
 	run := func(args ...string) {
 		w.stdout.Reset()
 		w.stderr.Reset()
+		t0 := time.Now()
 		w.exit = cli.Run(args, &w.stdout, &w.stderr)
+		w.elapsed = time.Since(t0)
 	}
+	sc.Step(`^the G5 run finished within (\d+) seconds$`, func(secs int) error {
+		if w.elapsed > time.Duration(secs)*time.Second {
+			return fmt.Errorf("the run took %s, more than %d s", w.elapsed.Round(time.Millisecond), secs)
+		}
+		return nil
+	})
 	input := func() []string {
 		if w.isIR {
 			return []string{"--ir", w.model}
@@ -285,6 +308,18 @@ func registerG5Steps(sc *godog.ScenarioContext) {
 	}
 	sc.Step(`^I check it with the CTL formula "([^"]*)"$`, func(f string) error {
 		run(append([]string{"check"}, append(input(), "--ctl", f, "--no-timing")...)...)
+		return nil
+	})
+	sc.Step(`^I check the model with the generated CTL formula "([^"]*)" of size (\d+)$`, func(shape string, n int) error {
+		f, err := generatedFormula(shape, n)
+		if err != nil {
+			return err
+		}
+		run(append([]string{"check"}, append(input(), "--ctl", f, "--no-timing")...)...)
+		return nil
+	})
+	sc.Step(`^I check it with the CTL formula "([^"]*)" and a time budget of (\d+) ms$`, func(f string, ms int) error {
+		run(append([]string{"check"}, append(input(), "--ctl", f, "--budget-ms", strconv.Itoa(ms), "--no-timing")...)...)
 		return nil
 	})
 	sc.Step(`^I check it with the CTL formula "([^"]*)" under fairness "([^"]*)"$`, func(f, fair string) error {

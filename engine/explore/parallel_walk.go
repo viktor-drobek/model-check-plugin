@@ -206,6 +206,29 @@ func (w *parWorker) walk(u uint32) {
 			}
 		}
 		q++
+		// The clock is looked at by work — the edges and d_step steps fire
+		// counts into s.work — every tickWork units, in every mode but the
+		// re-derivation of a known successor (pmFind walks an expansion that
+		// once finished): an atomic sequence that branches without storing
+		// anything is all work and no depth (issue #8).
+		if s.work-w.lastTick >= tickWork {
+			w.lastTick = s.work
+			switch w.mode {
+			case pmRecord:
+				if r.s.ctx.Err() != nil {
+					r.cancelled.Store(true)
+				}
+				if r.cancelled.Load() || r.overflow.Load() {
+					return // the clock ran out, or the records no longer fit, inside a long expansion
+				}
+			case pmPend, pmCount:
+				if r.s.ctx.Err() != nil {
+					r.cancelled.Store(true)
+					w.cut = true
+					return
+				}
+			}
+		}
 		inter, err := s.intermediate(s.next)
 		if err != nil {
 			if !quiet {
@@ -220,9 +243,6 @@ func (w *parWorker) walk(u uint32) {
 					w.keep(&parEvent{key: key, kind: evAtomic})
 				}
 				return
-			}
-			if w.mode == pmRecord && depth&255 == 255 && w.stopped() {
-				return // the clock ran out, or the records no longer fit, inside a long atomic sequence
 			}
 			if depth == len(nodes) {
 				nodes = append(nodes, parNode{state: make([]byte, r.stateLen)})

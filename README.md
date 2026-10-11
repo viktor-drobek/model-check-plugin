@@ -126,7 +126,7 @@ discarding an unfair counterexample.
 - `skills/model-check/` — `SKILL.md`, workflows, property guidance, format references, assets, and report templates.
 - `evals-workspace/` — evaluation fixtures, graders, benchmark runs, and review data when included in the release.
 - `BUILD-PROTOCOL.md` — the six-part step protocol (scenarios first, tests, logic review, confirmation record); the build itself is documented in the build section below and in `build.sh`.
-- `RELEASE-NOTES-0.3.1.md`, `RELEASE-NOTES-0.3.0.md` — what changed in 0.3.1 and in 0.3.0, the verdicts that differ from 0.2.0, the known limitations.
+- `RELEASE-NOTES-0.3.2.md`, `RELEASE-NOTES-0.3.1.md`, `RELEASE-NOTES-0.3.0.md` — release-specific changes, verdict boundaries, and known limitations.
 - `scripts/security-scan.sh`, `trivy.yaml`, `.trivyignore.yaml`, `.semgrepignore`, `docs/security-scanning.md`, `.github/workflows/security.yml` — the security scan (trivy, semgrep, govulncheck) and its guide.
 - `AGENT-COMMON.md` — shared historical build-agent guidance.
 - `build.sh` — reproducible multi-platform build and release verification script.
@@ -162,7 +162,7 @@ Use the public `model-check-plugin` project/repository or the complete `model-ch
 From the plugin root:
 
 ```bash
-./build.sh --host-only --version 0.3.1
+./build.sh --host-only --version 0.3.2
 engine/bin/mcd version
 ```
 
@@ -241,7 +241,7 @@ Run the checks from a clean, reviewed checkout. Do not include credentials, priv
 
 ### Build container
 
-Instead of installing the toolchain on the host, build and test in the container `<registry>/model-check/build:0.3.1` (Go 1.26.8, SPIN 6.5.2, gcc, make, git, Python 3, govulncheck, and the Go modules of the engine already downloaded; stored in the docker registry your team uses). Its definition, use and how it is built and stored are in [`build-container/README.md`](build-container/README.md).
+Instead of installing the toolchain on the host, build and test in the container `<registry>/model-check/build:0.3.2` (Go 1.26.8, SPIN 6.5.2, gcc, make, git, Python 3, govulncheck, and the Go modules of the engine already downloaded; stored in the docker registry your team uses). Its definition, use and how it is built and stored are in [`build-container/README.md`](build-container/README.md).
 
 ### Security scanning
 
@@ -292,7 +292,7 @@ What it refuses, with the reason in `search.parallel.reason` and the run execute
 ### Reproducible release build
 
 ```bash
-./build.sh --version 0.3.1 --source-commit <SOURCE-COMMIT> --verify-repro
+./build.sh --version 0.3.2 --source-commit <SOURCE-COMMIT> --verify-repro
 ```
 
 `<SOURCE-COMMIT>` is the commit the engine sources are built from. For a release it is the commit just before the one that commits the built files under `engine/bin/` (the artifacts commit), because a commit cannot name itself; `BUILD-INFO.json` records it as `source_commit`. Without `--source-commit` the script records `git rev-parse HEAD` of the plugin checkout (or `unknown` outside a Git checkout), which after the artifacts commit is the artifacts commit, so the committed `BUILD-INFO.json` is not reproduced from that checkout.
@@ -309,7 +309,7 @@ The script:
 For a faster local build:
 
 ```bash
-./build.sh --host-only --version 0.3.1
+./build.sh --host-only --version 0.3.2
 ```
 
 Useful options are `--source-commit HASH`, `--platforms "goos/goarch ..."`, `--out DIR`, `--no-verify`, and `--verify-repro`; the options and exit codes are listed at the top of `build.sh`. Use `--no-verify` only for an intentional intermediate build. Record which platforms were built and which were actually smoke-tested; cross-building is not the same as executing a platform binary.
@@ -322,7 +322,7 @@ engine/bin/mcd version
 cat engine/bin/BUILD-INFO.json
 ```
 
-The build and its options are described in this section and at the top of `build.sh`. [`BUILD-PROTOCOL.md`](BUILD-PROTOCOL.md) is the six-part protocol every development step follows (scenarios first, tests, logic review, confirmation record), not a build manual; the record of a release is a `steps/*-confirmation.md` file (for 0.2.0, the addendum at the top of `steps/g6-confirmation.md`; for 0.3.0 and 0.3.1, `steps/release-0.3.0-confirmation.md` and `steps/release-0.3.1-confirmation.md`).
+The build and its options are described in this section and at the top of `build.sh`. [`BUILD-PROTOCOL.md`](BUILD-PROTOCOL.md) is the six-part protocol every development step follows (scenarios first, tests, logic review, confirmation record), not a build manual; the record of a release is a `steps/*-confirmation.md` file (for 0.2.0, the addendum at the top of `steps/g6-confirmation.md`; for 0.3.0, 0.3.1, and 0.3.2, `steps/release-0.3.0-confirmation.md`, `steps/release-0.3.1-confirmation.md`, and `steps/release-0.3.2-confirmation.md`).
 
 ## Use the CLI
 
@@ -411,13 +411,28 @@ sh skills/model-check/assets/wait-for-capacity.sh --need-cores 4 --need-mem-mb 2
    --dir "$SESSION_DIR" --min-disk-mb 500 --timeout 900
 ```
 
-It returns when CPU use and memory use, including what the run would add (`--need-cores`, `--need-mem-mb`), are within 90% (`--max-cpu`, `--max-mem`) and the session directory has the free space asked for. Exit codes: `0` there is room, `3` the machine was still busy when the timeout ended, `2` usage error, `4` this platform cannot be measured (Linux and macOS are; on Windows read the load, free memory and free disk by hand). On exit `3` do not start the run: wait and look again, lower `--workers` and the budgets, or tell the user why it was not started. Do not take timing or speed-up measurements on a busy machine, and do not run several heavy runs at once on a machine that cannot hold them: queue them. The agent skill carries the same instruction (`SKILL.md` step 5).
+It returns when CPU use and memory use, including what the run would add (`--need-cores`, `--need-mem-mb`), are within 90% (`--max-cpu`, `--max-mem`), when `df` reports the free space asked for in `--dir`, and when a probe file of `--min-disk-mb` megabytes could be written there and removed. Without `--dir`, `--min-disk-mb` checks `$TMPDIR` (or `/tmp`), the scratch directory of SPIN, gcc and the engine. Exit codes: `0` there is room, `3` the machine was still busy when the timeout ended — or, at once, `--dir` could not take the probe (a quota does not clear by waiting: set `--dir` or `TMPDIR` to a directory on disk), `2` usage error, `4` this platform cannot be measured (Linux and macOS are; on Windows read the load, free memory and free disk by hand). On exit `3` do not start the run: wait and look again, lower `--workers` and the budgets, or tell the user why it was not started. Do not take timing or speed-up measurements on a busy machine, and do not run several heavy runs at once on a machine that cannot hold them: queue them. The agent skill carries the same instruction (`SKILL.md` step 5).
+
+### The scratch directory
+
+SPIN and gcc compile `pan.c` into the temporary directory (`TMPDIR`, `/tmp` by default), `go test` writes its test log there, and `go` itself builds in a work directory under `TMPDIR` unless `GOTMPDIR` points elsewhere. A `/tmp` that is a small tmpfs, or a tmpfs with a user quota, fails half-way through a long run with `Disk quota exceeded` from gcc — while `df` reports gigabytes free, because a quota is invisible to `df` and `statfs`. Two things follow:
+
+- The engine's test suite (the root package and `tools/pandiff`) and the SPIN campaigns (`cmd/pandiff`, `mutate run`, `mutate corpus2`) probe `TMPDIR` before they start: they write `MCD_TMP_MIN_MB` megabytes there (default 256 per package: a heuristic above the 175 MB peak the whole suite occupied in `TMPDIR` under `go test -p 4` on a 16-core host at load average 6–8, with room for several `pan.c` compiling at once; `0` switches the probe off) and refuse to start with a message of the form `tmpspace: <dir>: <free> free, wrote <w> MB of <n> MB: <cause> — set TMPDIR to a directory on disk with at least <n> MB`. Such a message is about the machine, not about a model. The probe is not a reservation (another process can take the space afterwards), it holds that much memory on a tmpfs for a moment, and it writes random bytes so that a file system with transparent compression cannot pass it with zeros; the script's probe writes zeros and does not have that protection.
+- Run the suite with the scratch directory on disk when the host's `/tmp` is small or quota-limited: `TMPDIR=<directory on disk> go test ./...` (add `GOTMPDIR` for the build itself). The CI workflow sets `TMPDIR` to the runner's temporary directory.
 
 ## Files, sessions, and safety
 
 MCP sessions write IR, check, simulation, counterexample, and manifest artifacts under the configured session directory. The server applies path guards and an optional read allow-list. Do not pass arbitrary host paths, interpolate model text into shell commands, or copy models and traces containing sensitive data into public examples.
 
 For CLI use, create a separate session directory and preserve the input, command line, report, and relevant traces. Never overwrite the user's source model. Treat reports and traces as potentially sensitive.
+
+### The time budget holds on every path
+
+`--budget-ms` (the `budget.ms` of `mc_check`, the `ms` of `mc_estimate`) is a deadline that every search honours by the work it does, not by the states it stores: an atomic sequence or a `d_step` that branches without storing anything used to run past every budget (and a `mc_check` on it never answered); now it stops at the budget in every mode, `inconclusive` with evidence `unknown` and the reason `time budget exhausted`. The construction of an LTL automaton and the labelling of a CTL formula honour the same deadline and name their phase in the reason (`… while building the automaton of the formula`, `… during the labelling of the formula`); see [`skills/model-check/references/engine-tools.md`](skills/model-check/references/engine-tools.md) §"statuses".
+
+### Input size limits
+
+Model text and formulas are untrusted input. Shapes that amplify inside the frontend — expressions nested or chained thousands deep, `#define`, `inline` or `typedef` definitions that double per line, arrays of a billion elements, hundreds of deep expressions whose indented IR runs to gigabytes, formulas whose normal form doubles per `<->` — used to end `mcd`, and a running `mcd serve`, with a fatal error. The engine now measures the size of what it builds and refuses such an input by name, as a rejection (`outside-subset` for a model, `ltl`/`ctl` for a formula, `ir` for an IR document) whose message says `limit of the engine`. The limits (expression height 1 000, statement nesting 1 000, macro and inline expansion 4 000 000 tokens, 100 000 typedef fields, arrays of 65 535, a state vector of 1 048 576 slots, an IR weight of 4 000 000, a formula normal form of 100 000 weighted nodes) sit far above any real model; the full table is in [`skills/model-check/references/promela-subset.md`](skills/model-check/references/promela-subset.md) §3 and [`properties-ltl-ctl.md`](skills/model-check/references/properties-ltl-ctl.md) §2. A formula within the limits can still be slow to translate into its automaton; that is bounded by the time budget of the check, not by the parser.
 
 ## Troubleshooting
 

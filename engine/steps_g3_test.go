@@ -35,7 +35,10 @@ type g3World struct {
 	statuses  []string // list captured by "lists exactly these statuses"
 	report    map[string]any
 	property  map[string]any
-	capExit   int // exit code of the last run of the capacity script
+	capExit   int    // exit code of the last run of the capacity script
+	capOut    string // combined output of that run
+	capTmp    string // a fresh directory handed to the script as TMPDIR
+	capFile   string // a regular file, stands in for an unwritable --dir
 }
 
 func init() {
@@ -303,10 +306,51 @@ func registerG3Steps(sc *godog.ScenarioContext) {
 		}
 		return nil
 	})
+	// The script runs with TMPDIR set to a fresh directory, so that the
+	// examples that rely on the default --dir do not depend on the machine's
+	// own /tmp; the token $FILE in the arguments is replaced by the path of
+	// the regular file of the Given step (a plain replacement, not the shell's).
+	sc.After(func(ctx context.Context, _ *godog.Scenario, _ error) (context.Context, error) {
+		if w.capTmp != "" {
+			os.RemoveAll(w.capTmp)
+			w.capTmp, w.capFile = "", ""
+		}
+		return ctx, nil
+	})
+	capScratch := func() (string, error) {
+		if w.capTmp == "" {
+			dir, err := os.MkdirTemp("", "g3-capacity-")
+			if err != nil {
+				return "", fmt.Errorf("create a scratch directory for the capacity script: %w", err)
+			}
+			w.capTmp = dir
+		}
+		return w.capTmp, nil
+	}
+	sc.Step(`^a path that is a regular file$`, func() error {
+		dir, err := capScratch()
+		if err != nil {
+			return err
+		}
+		w.capFile = filepath.Join(dir, "a-regular-file")
+		return os.WriteFile(w.capFile, []byte("not a directory\n"), 0o644)
+	})
 	sc.Step(`^I run the capacity script with "([^"]*)"$`, func(args string) error {
+		dir, err := capScratch()
+		if err != nil {
+			return err
+		}
+		if strings.Contains(args, "$FILE") {
+			if w.capFile == "" {
+				return errors.New("$FILE used without the step that creates the regular file")
+			}
+			args = strings.ReplaceAll(args, "$FILE", w.capFile)
+		}
 		script := filepath.Join(w.skillDir, "assets", "wait-for-capacity.sh")
 		cmd := exec.Command("sh", append([]string{script}, strings.Fields(args)...)...)
+		cmd.Env = append(os.Environ(), "TMPDIR="+dir)
 		out, err := cmd.CombinedOutput()
+		w.capOut = string(out)
 		var ee *exec.ExitError
 		switch {
 		case err == nil:
@@ -320,7 +364,13 @@ func registerG3Steps(sc *godog.ScenarioContext) {
 	})
 	sc.Step(`^the capacity script exits with (\d+)$`, func(want int) error {
 		if w.capExit != want {
-			return fmt.Errorf("the capacity script exited with %d, want %d", w.capExit, want)
+			return fmt.Errorf("the capacity script exited with %d, want %d: %s", w.capExit, want, strings.TrimSpace(w.capOut))
+		}
+		return nil
+	})
+	sc.Step(`^the output of the capacity script mentions "([^"]+)"$`, func(s string) error {
+		if !strings.Contains(w.capOut, s) {
+			return fmt.Errorf("the output of the capacity script does not mention %q: %s", s, strings.TrimSpace(w.capOut))
 		}
 		return nil
 	})

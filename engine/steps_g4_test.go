@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/cucumber/godog"
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
@@ -27,12 +28,13 @@ import (
 // mcp.Server configured as `mcd serve` configures it (Promela frontend
 // linked).
 type g4World struct {
-	model  string
-	stdout bytes.Buffer
-	stderr bytes.Buffer
-	exit   int
-	first  []byte // output of the first of two runs
-	tmp    string
+	model   string
+	stdout  bytes.Buffer
+	stderr  bytes.Buffer
+	elapsed time.Duration // wall time of the last invocation
+	exit    int
+	first   []byte // output of the first of two runs
+	tmp     string
 
 	// MCP
 	srv    *mcp.Server
@@ -57,9 +59,11 @@ func registerG4Steps(sc *godog.ScenarioContext) {
 	w := &g4World{}
 	sc.Before(func(ctx context.Context, _ *godog.Scenario) (context.Context, error) {
 		*w = g4World{}
-		if d, err := os.MkdirTemp("", "g4-"); err == nil {
-			w.tmp = d
+		d, err := os.MkdirTemp("", "g4-")
+		if err != nil {
+			return ctx, fmt.Errorf("create the scenario's scratch directory: %w", err)
 		}
+		w.tmp = d
 		return ctx, nil
 	})
 	sc.After(func(ctx context.Context, _ *godog.Scenario, _ error) (context.Context, error) {
@@ -81,6 +85,39 @@ func registerG4Steps(sc *godog.ScenarioContext) {
 	// --- Given -------------------------------------------------------------
 	sc.Step(`^the corpus model "([^"]*)"$`, func(name string) error {
 		p := filepath.Join(corpusDir, name)
+		if _, err := os.Stat(p); err != nil {
+			return err
+		}
+		w.model = p
+		return nil
+	})
+	// The formula-limit scenarios (issue #9): a two-line model with the
+	// variable x, optionally with doubling #defines that only a formula uses.
+	generated := func(defines int) error {
+		src, err := generatedModel("unused-defines", defines)
+		if err != nil {
+			return err
+		}
+		w.model = filepath.Join(w.tmp, "formulas.pml")
+		return os.WriteFile(w.model, []byte(src), 0o644)
+	}
+	sc.Step(`^a generated Promela model for formulas$`, func() error { return generated(0) })
+	sc.Step(`^a generated Promela model for formulas with (\d+) unused doubling defines$`, generated)
+	sc.Step(`^I check the model with the generated LTL formula "([^"]*)" of size (\d+)$`, func(shape string, n int) error {
+		f, err := generatedFormula(shape, n)
+		if err != nil {
+			return err
+		}
+		w.stdout.Reset()
+		w.stderr.Reset()
+		w.exit = cli.Run([]string{"check", "--promela", w.model, "--ltl", f, "--no-timing"}, &w.stdout, &w.stderr)
+		return nil
+	})
+	// The models of testdata/budget are built to outlive any time budget;
+	// they live outside testdata/promela so that the corpus comparisons do
+	// not pick them up (testdata/budget/README.md).
+	sc.Step(`^the budget model "([^"]*)"$`, func(name string) error {
+		p := filepath.Join("testdata", "budget", name)
 		if _, err := os.Stat(p); err != nil {
 			return err
 		}
@@ -289,10 +326,30 @@ func registerG4Steps(sc *godog.ScenarioContext) {
 		}
 		w.stdout.Reset()
 		w.stderr.Reset()
+		t0 := time.Now()
+		defer func() { w.elapsed = time.Since(t0) }()
 		w.exit = cli.Run(args, &w.stdout, &w.stderr)
 		return nil
 	}
+	sc.Step(`^the reason of property "([^"]*)" does not mention "([^"]*)"$`, func(id, text string) error {
+		p, err := w.property(id)
+		if err != nil {
+			return err
+		}
+		if strings.Contains(fmt.Sprint(p["reason"]), text) {
+			return fmt.Errorf("reason of %s mentions %q: %v", id, text, p["reason"])
+		}
+		return nil
+	})
 	sc.Step(`^I invoke "([^"]*)"$`, run)
+	// The time budget is a deadline the run must honour on every path; the
+	// bound is loose (several times the budget) for a loaded machine.
+	sc.Step(`^the run finished within (\d+) seconds$`, func(secs int) error {
+		if w.elapsed > time.Duration(secs)*time.Second {
+			return fmt.Errorf("the run took %s, more than %d s", w.elapsed.Round(time.Millisecond), secs)
+		}
+		return nil
+	})
 	sc.Step(`^I invoke "([^"]*)" twice$`, func(cmd string) error {
 		if err := run(cmd); err != nil {
 			return err

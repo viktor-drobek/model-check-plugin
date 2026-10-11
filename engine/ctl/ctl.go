@@ -328,6 +328,7 @@ func expandDefines(toks []token, defines map[string]string) ([]token, *Error) {
 		return toks, nil
 	}
 	var out []token
+	produced := 0
 	var expand func(ts []token, active map[string]bool, depth int) *Error
 	expand = func(ts []token, active map[string]bool, depth int) *Error {
 		for _, t := range ts {
@@ -344,6 +345,11 @@ func expandDefines(toks []token, defines map[string]string) ([]token, *Error) {
 				return &Error{t.pos, fmt.Sprintf("in the body of #define %s: %s", t.text, err.Msg)}
 			}
 			bt = bt[:len(bt)-1]
+			// A #define of the model that doubles per line expands to 2^n
+			// tokens here, whether or not the model itself uses it.
+			if produced += len(bt); produced > maxFormulaDefines {
+				return &Error{t.pos, fmt.Sprintf("the #define expansion inside the formula exceeds %d tokens (%s)", maxFormulaDefines, limitNote)}
+			}
 			for i := range bt {
 				bt[i].pos = t.pos
 			}
@@ -368,6 +374,12 @@ type parser struct {
 	i     int
 	env   Env
 	atoms map[string]*Atom
+
+	// The limits of limits.go: heights and eh record the height of every
+	// formula and atom-expression node built, depth the parser's recursion.
+	heights map[*Formula]int
+	eh      map[*ir.Expr]int
+	depth   int
 }
 
 func (p *parser) peek() token { return p.toks[p.i] }
@@ -404,13 +416,16 @@ func Parse(text string, opt Options) (*Formula, error) {
 	if err != nil {
 		return nil, err
 	}
-	p := &parser{toks: toks, env: opt.Env, atoms: map[string]*Atom{}}
+	p := &parser{toks: toks, env: opt.Env, atoms: map[string]*Atom{}, heights: map[*Formula]int{}, eh: map[*ir.Expr]int{}}
 	f, err := p.formula()
 	if err != nil {
 		return nil, err
 	}
 	if t := p.peek(); t.kind != tEOF {
 		return nil, p.fail(t, "unexpected %q after the formula; CTL has no %s here (LTL operators such as [], <> and U outside A[..] / E[..] are not CTL)", t.text, t.text)
+	}
+	if normalFormSize(f) > maxNormalForm {
+		return nil, limitError(0)
 	}
 	return f, nil
 }
@@ -421,15 +436,19 @@ func (p *parser) formula() (*Formula, *Error) {
 		return nil, err
 	}
 	if p.isOp("->") || p.isOp("<->") {
-		op := p.next().text
+		t := p.next()
+		if err := p.enter(t); err != nil {
+			return nil, err
+		}
 		r, err := p.formula()
+		p.leave()
 		if err != nil {
 			return nil, err
 		}
-		if op == "->" {
-			return &Formula{Op: Impl, L: l, R: r}, nil
+		if t.text == "->" {
+			return p.mk(t, &Formula{Op: Impl, L: l, R: r}, l, r)
 		}
-		return &Formula{Op: Iff, L: l, R: r}, nil
+		return p.mk(t, &Formula{Op: Iff, L: l, R: r}, l, r)
 	}
 	return l, nil
 }
@@ -440,12 +459,14 @@ func (p *parser) disjunction() (*Formula, *Error) {
 		return nil, err
 	}
 	for p.isOp("||") {
-		p.next()
+		t := p.next()
 		r, err := p.conjunction()
 		if err != nil {
 			return nil, err
 		}
-		l = OrF(l, r)
+		if l, err = p.mk(t, OrF(l, r), l, r); err != nil {
+			return nil, err
+		}
 	}
 	return l, nil
 }
@@ -456,12 +477,14 @@ func (p *parser) conjunction() (*Formula, *Error) {
 		return nil, err
 	}
 	for p.isOp("&&") {
-		p.next()
+		t := p.next()
 		r, err := p.unary()
 		if err != nil {
 			return nil, err
 		}
-		l = AndF(l, r)
+		if l, err = p.mk(t, AndF(l, r), l, r); err != nil {
+			return nil, err
+		}
 	}
 	return l, nil
 }
@@ -475,14 +498,22 @@ func (p *parser) unary() (*Formula, *Error) {
 	switch {
 	case t.kind == tIdent && isPathOp(t.text):
 		p.next()
+		if err := p.enter(t); err != nil {
+			return nil, err
+		}
 		f, err := p.unary()
+		p.leave()
 		if err != nil {
 			return nil, err
 		}
-		return Unary(pathOps[t.text], f), nil
+		return p.mk(t, Unary(pathOps[t.text], f), f)
 	case (p.isIdent("A") || p.isIdent("E")) && p.peekN(1).kind == tOp && p.peekN(1).text == "[":
 		quant := p.next().text
 		p.next() // [
+		if err := p.enter(t); err != nil {
+			return nil, err
+		}
+		defer p.leave()
 		l, err := p.formula()
 		if err != nil {
 			return nil, err
@@ -500,19 +531,27 @@ func (p *parser) unary() (*Formula, *Error) {
 		}
 		p.next()
 		if quant == "A" {
-			return Until(AU, l, r), nil
+			return p.mk(t, Until(AU, l, r), l, r)
 		}
-		return Until(EU, l, r), nil
+		return p.mk(t, Until(EU, l, r), l, r)
 	case p.isOp("!"):
 		p.next()
+		if err := p.enter(t); err != nil {
+			return nil, err
+		}
 		f, err := p.unary()
+		p.leave()
 		if err != nil {
 			return nil, err
 		}
-		return NotF(f), nil
+		return p.mk(t, NotF(f), f)
 	case p.isOp("("):
 		open := p.next()
+		if err := p.enter(open); err != nil {
+			return nil, err
+		}
 		f, err := p.formula()
+		p.leave()
 		if err != nil {
 			return nil, err
 		}
@@ -561,7 +600,9 @@ func (p *parser) atom() (*Formula, *Error) {
 			if err != nil {
 				return nil, err
 			}
-			e = ir.Binary(op, l, r)
+			if e, err = p.mkE(t, ir.Binary(op, l, r), l, r); err != nil {
+				return nil, err
+			}
 		}
 	}
 	return p.mkAtom(start, e, "")
@@ -613,7 +654,11 @@ func (p *parser) remote() (*Formula, *Error, bool) {
 	if !ok {
 		return nil, p.fail(at, "%s: process %s has no control location labelled %s", src, name, lbl.text), true
 	}
-	f, err := p.mkAtom(at, ir.Binary("eq", ir.PC(proc), ir.Const(int64(loc))), src)
+	e, err := p.mkE(at, ir.Binary("eq", ir.PC(proc), ir.Const(int64(loc))))
+	if err != nil {
+		return nil, err, true
+	}
+	f, err := p.mkAtom(at, e, src)
 	return f, err, true
 }
 
@@ -623,15 +668,18 @@ func (p *parser) arith() (*ir.Expr, *Error) {
 		return nil, err
 	}
 	for p.isOp("+") || p.isOp("-") {
+		t := p.next()
 		op := "add"
-		if p.next().text == "-" {
+		if t.text == "-" {
 			op = "sub"
 		}
 		r, err := p.term()
 		if err != nil {
 			return nil, err
 		}
-		l = ir.Binary(op, l, r)
+		if l, err = p.mkE(t, ir.Binary(op, l, r), l, r); err != nil {
+			return nil, err
+		}
 	}
 	return l, nil
 }
@@ -642,12 +690,15 @@ func (p *parser) term() (*ir.Expr, *Error) {
 		return nil, err
 	}
 	for p.isOp("*") || p.isOp("/") || p.isOp("%") {
-		op := map[string]string{"*": "mul", "/": "div", "%": "mod"}[p.next().text]
+		t := p.next()
+		op := map[string]string{"*": "mul", "/": "div", "%": "mod"}[t.text]
 		r, err := p.factor()
 		if err != nil {
 			return nil, err
 		}
-		l = ir.Binary(op, l, r)
+		if l, err = p.mkE(t, ir.Binary(op, l, r), l, r); err != nil {
+			return nil, err
+		}
 	}
 	return l, nil
 }
@@ -658,13 +709,21 @@ func (p *parser) factor() (*ir.Expr, *Error) {
 	case t.kind == tNum:
 		return ir.Const(t.num), nil
 	case t.kind == tOp && t.text == "-":
+		if err := p.enter(t); err != nil {
+			return nil, err
+		}
 		f, err := p.factor()
+		p.leave()
 		if err != nil {
 			return nil, err
 		}
-		return ir.Unary("neg", f), nil
+		return p.mkE(t, ir.Unary("neg", f), f)
 	case t.kind == tOp && t.text == "(":
+		if err := p.enter(t); err != nil {
+			return nil, err
+		}
 		e, err := p.arith()
+		p.leave()
 		if err != nil {
 			return nil, err
 		}
@@ -685,8 +744,12 @@ func (p *parser) factor() (*ir.Expr, *Error) {
 			return nil, p.fail(t, "%s is a CTL operator, not a variable", t.text)
 		}
 		if p.isOp("[") {
-			p.next()
+			open := p.next()
+			if err := p.enter(open); err != nil {
+				return nil, err
+			}
 			idx, err := p.arith()
+			p.leave()
 			if err != nil {
 				return nil, err
 			}
@@ -694,7 +757,7 @@ func (p *parser) factor() (*ir.Expr, *Error) {
 				return nil, p.fail(p.peek(), "expected ] after the array index")
 			}
 			p.next()
-			return ir.Index(t.text, idx), nil
+			return p.mkE(t, ir.Index(t.text, idx), idx)
 		}
 		return ir.Ref(t.text), nil
 	case t.kind == tEOF:
@@ -737,9 +800,9 @@ func (p *parser) chanOp(t token) (*ir.Expr, *Error) {
 	case "len":
 		return l, nil
 	case "empty":
-		return ir.Binary("eq", l, ir.Const(0)), nil
+		return p.mkE(t, ir.Binary("eq", l, ir.Const(0)))
 	case "nempty":
-		return ir.Binary("gt", l, ir.Const(0)), nil
+		return p.mkE(t, ir.Binary("gt", l, ir.Const(0)))
 	}
 	if p.env == nil {
 		return nil, p.fail(t, "%s(%s) needs the model to know the channel capacity", t.text, ch.text)
@@ -749,7 +812,7 @@ func (p *parser) chanOp(t token) (*ir.Expr, *Error) {
 		return nil, p.fail(t, "undeclared channel %q", ch.text)
 	}
 	if t.text == "full" {
-		return ir.Binary("eq", l, ir.Const(int64(c.Capacity))), nil
+		return p.mkE(t, ir.Binary("eq", l, ir.Const(int64(c.Capacity))))
 	}
-	return ir.Binary("lt", l, ir.Const(int64(c.Capacity))), nil
+	return p.mkE(t, ir.Binary("lt", l, ir.Const(int64(c.Capacity))))
 }

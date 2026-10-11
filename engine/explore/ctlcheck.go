@@ -1,6 +1,7 @@
 package explore
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -83,6 +84,9 @@ func runCTL(ctx0 *search, base *ir.Model, prop ir.Property, opt Options) (Outcom
 		return o, nil
 	}
 	g.BuildPred()
+	if opt.ctlAfterGraph != nil {
+		opt.ctlAfterGraph()
+	}
 	gg := ctlGraph{g}
 	cache := map[string][]bool{}
 	val := func(a *ctl.Atom) ([]bool, error) {
@@ -95,6 +99,10 @@ func runCTL(ctx0 *search, base *ir.Model, prop ir.Property, opt Options) (Outcom
 		}
 		s := make([]bool, g.Len())
 		for i := range s {
+			// A valuation over a million states is work too (issue #8).
+			if i%4096 == 0 && ctx0.ctx.Err() != nil {
+				return nil, fmt.Errorf("%w: %w", ctl.ErrBudget, ctx0.ctx.Err())
+			}
 			v, err := g.Eval(c, i)
 			if err != nil {
 				return nil, err
@@ -104,16 +112,38 @@ func runCTL(ctx0 *search, base *ir.Model, prop ir.Property, opt Options) (Outcom
 		cache[a.Text] = s
 		return s, nil
 	}
-	lab, err := ctl.Label(gg, nf, val)
+	// The labelling outliving the time budget is an inconclusive outcome
+	// on a complete graph: the verdict was not reached, the graph stands.
+	budgetOut := func() (Outcome, error) {
+		o.Status, o.Evidence, o.Reason = Inconclusive, EvUnknown, ctl.ErrBudget.Error()
+		o.Stats.Complete, o.Stats.Stop = false, ctl.ErrBudget.Error()
+		o.Stats.Elapsed = time.Since(start)
+		return o, nil
+	}
+	lab, err := ctl.LabelCtx(ctx0.ctx, gg, nf, val)
+	if errors.Is(err, ctl.ErrBudget) {
+		return budgetOut()
+	}
 	if err != nil {
 		return o, err
 	}
 	sat, err := lab.Eval(nf)
+	if errors.Is(err, ctl.ErrBudget) {
+		return budgetOut()
+	}
 	if err != nil {
 		return o, err
 	}
 	holds := sat[0]
+	if opt.ctlAfterLabel != nil {
+		opt.ctlAfterLabel()
+	}
 	w, err := ctl.BuildWitness(gg, f, lab, holds)
+	if errors.Is(err, ctl.ErrBudget) {
+		// The verdict stands (the labelling finished); only the run that
+		// would illustrate it is missing.
+		w, err = ctl.Witness{Kind: "none", Why: "witness not built: time budget exhausted"}, nil
+	}
 	if err != nil {
 		return o, err
 	}

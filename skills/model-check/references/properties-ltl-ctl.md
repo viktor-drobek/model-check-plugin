@@ -12,9 +12,11 @@ Engine as built: `engine/ltl/` (parser, NNF, GPVW tableau, Büchi automaton),
 `engine/frontend/promela/lower.go` (which properties the frontend adds),
 `steps/g4-confirmation.md` §1, §5.
 
-Contents: 1 classification axes · 2 engine syntax and its limits · 3 LTL/CTL
-patterns · 4 where they diverge · 5 `mc_lint_property` · 6 never claims and claim
-semantics · 7 `progress` labels and non-progress · 8 formalisation checklist.
+## Contents
+
+1 classification axes · 2 engine syntax and its limits · 3 LTL/CTL patterns ·
+4 where they diverge · 5 `mc_lint_property` · 6 never claims and claim semantics ·
+7 `progress` labels and non-progress · 8 formalisation checklist.
 
 ## 1. Three classification axes (FR-004)
 
@@ -90,6 +92,16 @@ substitute. For the full CTL vocabulary — witness and counterexample shapes, t
 vacuity fields, the division of evidence — the authority is
 `steps/g5-confirmation.md` §8 and `features/g5-ctl-v1.feature`; this file has not
 yet had its row-by-row pass against them.
+
+Size limits: a formula is untrusted input too, and the parsers refuse — as a
+rejection of kind `ltl` or `ctl` that names the limit (`limit of the engine`) — a
+formula nested or chained deeper than 1 000 levels (parentheses, prefix operators,
+`->`/`U` chains, an atom's own arithmetic), a `#define` expansion inside the formula
+of more than 100 000 tokens, and a formula whose normal form would exceed 100 000
+weighted nodes (an operator weighs one, an atom the length of its text): every `<->`
+doubles the normal form, every `A[ p U q ]` uses `q` three times in it, and the
+tableau and the labelling key on the text. A formula within these limits can still be
+expensive to translate; the time budget of `mc_check` is the bound there.
 
 Polarity: for an LTL property the engine builds the automaton for the **negation**
 and searches for an accepting cycle in the product; a `never { }` claim you pass is

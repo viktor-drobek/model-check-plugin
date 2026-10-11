@@ -1,6 +1,7 @@
 package promela
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -26,6 +27,24 @@ type preprocessor struct {
 	macros map[string]*Macro
 	conds  []cond
 	out    []Token
+
+	// The resource limits of limits.go: expanded counts every token an
+	// expansion produces (bodies, arguments, rescans), depth the nested
+	// rescans, disabled the macros of the rescans in progress (one set with
+	// push and pop; the recursion is strictly nested).
+	expanded int
+	depth    int
+	disabled map[string]bool
+}
+
+// charge counts n tokens about to be produced by an expansion at t and
+// refuses the expansion once the file's budget is spent.
+func (pp *preprocessor) charge(t Token, n int) *Error {
+	pp.expanded += n
+	if pp.expanded > maxExpansion {
+		return outside(pp.file, t.Line, t.Col, fmt.Sprintf("macro expansion of more than %d tokens (a #define that doubles or repeats)", maxExpansion), limitNote)
+	}
+	return nil
 }
 
 // Preprocess expands the C-like preprocessor over toks: #define (object-
@@ -96,11 +115,10 @@ func PreprocessMacros(toks []Token, defines []string, file string) ([]Token, map
 			i++
 			continue
 		}
-		n, expanded, err := pp.expand(toks, i, nil)
+		n, err := pp.expand(toks, i, &pp.out)
 		if err != nil {
 			return nil, nil, err
 		}
-		pp.out = append(pp.out, expanded...)
 		i = n
 	}
 	return pp.out, pp.macros, nil
@@ -220,17 +238,26 @@ func (pp *preprocessor) define(d Token) *Error {
 	return nil
 }
 
-// expand handles toks[i]: if it is a macro invocation it returns the
-// expansion (recursively expanded, with the invocation's line) and the
-// index after it; otherwise the token itself. disabled guards recursion.
-func (pp *preprocessor) expand(toks []Token, i int, disabled map[string]bool) (int, []Token, *Error) {
+// expand handles toks[i]: if it is a macro invocation it appends the
+// expansion (recursively expanded, with the invocation's line) to out and
+// returns the index after it; otherwise it appends the token itself. The
+// one sink is what keeps a nested expansion linear: every produced token is
+// appended once, not copied once per level of nesting. disabled guards
+// recursion.
+func (pp *preprocessor) expand(toks []Token, i int, out *[]Token) (int, *Error) {
 	t := toks[i]
 	m := (*Macro)(nil)
-	if t.Kind == Ident && !disabled[t.Text] {
+	if t.Kind == Ident && !pp.disabled[t.Text] {
 		m = pp.macros[t.Text]
 	}
 	if m == nil {
-		return i + 1, []Token{t}, nil
+		*out = append(*out, t)
+		return i + 1, nil
+	}
+	pp.depth++
+	defer func() { pp.depth-- }()
+	if pp.depth > maxExpansionDepth {
+		return 0, outside(pp.file, t.Line, t.Col, fmt.Sprintf("macro expansion nested deeper than %d levels (a chain of #define)", maxExpansionDepth), limitNote)
 	}
 	var body []Token
 	next := i + 1
@@ -238,46 +265,57 @@ func (pp *preprocessor) expand(toks []Token, i int, disabled map[string]bool) (i
 		if next >= len(toks) || !toks[next].is("(") {
 			// A function-like macro name without arguments is an ordinary
 			// identifier (cpp semantics).
-			return i + 1, []Token{t}, nil
+			*out = append(*out, t)
+			return i + 1, nil
 		}
 		args, n, err := pp.collectArgs(toks, next, t)
 		if err != nil {
-			return 0, nil, err
+			return 0, err
 		}
 		if len(args) != len(m.Params) && !(len(m.Params) == 0 && len(args) == 1 && len(args[0]) == 0) {
-			return 0, nil, syntaxErr(pp.file, t.Line, t.Col, "macro %s takes %d argument(s), got %d", m.Name, len(m.Params), len(args))
+			return 0, syntaxErr(pp.file, t.Line, t.Col, "macro %s takes %d argument(s), got %d", m.Name, len(m.Params), len(args))
 		}
 		next = n
 		for _, bt := range m.Body {
 			if bt.Kind == Ident {
 				if k := indexOf(m.Params, bt.Text); k >= 0 {
+					// Charged before the copy: a parameter used many times
+					// with a long argument fans out without any nesting.
+					if err := pp.charge(t, len(args[k])); err != nil {
+						return 0, err
+					}
 					body = append(body, args[k]...)
 					continue
 				}
 			}
+			if err := pp.charge(t, 1); err != nil {
+				return 0, err
+			}
 			body = append(body, bt)
 		}
 	} else {
+		if err := pp.charge(t, len(m.Body)); err != nil {
+			return 0, err
+		}
 		body = append(body, m.Body...)
 	}
 	for k := range body {
 		body[k].Line, body[k].Col = t.Line, t.Col
 	}
-	// Rescan the expansion with this macro disabled.
-	dis := map[string]bool{m.Name: true}
-	for k := range disabled {
-		dis[k] = true
+	// Rescan the expansion with this macro disabled, into the same sink.
+	if pp.disabled == nil {
+		pp.disabled = map[string]bool{}
 	}
-	var out []Token
+	pp.disabled[m.Name] = true
+	defer delete(pp.disabled, m.Name)
 	for k := 0; k < len(body); {
-		n, ex, err := pp.expand(body, k, dis)
+		n, err := pp.expand(body, k, out)
 		if err != nil {
-			return 0, nil, err
+			return 0, err
 		}
-		out = append(out, ex...)
 		k = n
 	}
-	return next, out, nil
+	return next, nil
 }
 
 // collectArgs reads "( a, b, … )" starting at toks[open]; arguments are
@@ -355,11 +393,10 @@ func (pp *preprocessor) evalIf(d Token) (int64, *Error) {
 			i = j
 			continue
 		}
-		n, ex, err := pp.expand(d.Args, i, nil)
+		n, err := pp.expand(d.Args, i, &toks)
 		if err != nil {
 			return 0, err
 		}
-		toks = append(toks, ex...)
 		i = n
 	}
 	toks = append(toks, Token{Kind: EOF, Line: d.Line, Col: d.Col})
@@ -375,11 +412,12 @@ func (pp *preprocessor) evalIf(d Token) (int64, *Error) {
 }
 
 type ifEval struct {
-	toks []Token
-	i    int
-	file string
-	d    Token
-	err  *Error
+	toks  []Token
+	i     int
+	file  string
+	d     Token
+	err   *Error
+	depth int // recursion of unary(): parentheses and prefix operators
 }
 
 func (e *ifEval) peek() Token { return e.toks[e.i] }
@@ -471,6 +509,21 @@ func (e *ifEval) mul() int64 {
 
 func (e *ifEval) unary() int64 {
 	t := e.peek()
+	switch {
+	case t.is("!"), t.is("-"), t.is("("):
+		// The three recursive cases share the depth limit of the parser.
+		e.depth++
+		defer func() { e.depth-- }()
+		if e.depth > maxDepth {
+			if e.err == nil {
+				e.err = outside(e.file, e.d.Line, e.d.Col, fmt.Sprintf("#if expression nested deeper than %d levels", maxDepth), limitNote)
+			}
+			for e.toks[e.i].Kind != EOF {
+				e.i++
+			}
+			return 0
+		}
+	}
 	switch {
 	case t.is("!"):
 		e.next()

@@ -9,7 +9,7 @@
 #
 # Usage:
 #   wait-for-capacity.sh [--max-cpu PCT] [--max-mem PCT] [--need-cores N]
-#                        [--need-mem-mb MB] [--dir PATH --min-disk-mb MB]
+#                        [--need-mem-mb MB] [--dir PATH] [--min-disk-mb MB]
 #                        [--timeout SEC] [--interval SEC] [--quiet]
 #
 #   --max-cpu PCT      busy CPU above this percentage is "busy" (default 90)
@@ -18,17 +18,24 @@
 #                      when busy CPU plus N/ncpu stays within --max-cpu
 #   --need-mem-mb MB   memory the run will take (its --budget-mem-mb): the run fits
 #                      when used memory plus MB stays within --max-mem
-#   --dir PATH         a directory the run writes to (the session directory,
-#                      TMPDIR); with --min-disk-mb the free space there is checked
+#   --dir PATH         a directory the run writes to (the session directory);
+#                      default: $TMPDIR, or /tmp, the scratch directory of SPIN,
+#                      gcc and go test
+#   --min-disk-mb MB   space the run needs in --dir: df must report it free, and
+#                      a probe file of MB megabytes is written there and removed
+#                      (df does not see a quota: a tmpfs with usrquota reports
+#                      gigabytes free while every write fails)
 #   --timeout SEC      give up after SEC seconds of waiting (default 900);
 #                      0 = look once and do not wait
 #   --interval SEC     seconds between looks (default 5)
 #   --quiet            no progress lines on standard error
 #
 # Exit codes: 0 there is room; 3 still busy when the timeout ended (do not start
-# the run: queue it, lower --workers or the budgets, or ask the user); 2 usage
-# error; 4 the machine cannot be measured here (check it by hand, for example
-# with uptime, free and df, before you start).
+# the run: queue it, lower --workers or the budgets, or ask the user), or, at
+# once, --dir cannot take the --min-disk-mb probe (waiting does not free a
+# quota: set --dir or TMPDIR to a directory on disk); 2 usage error; 4 the
+# machine cannot be measured here (check it by hand, for example with uptime,
+# free and df, before you start).
 #
 # CPU: Linux reads /proc/stat over one second; macOS uses the one-minute load
 # average divided by the number of CPUs. Memory: MemAvailable on Linux; free,
@@ -36,7 +43,8 @@
 
 max_cpu=90 max_mem=90 need_cores=0 need_mem=0 dir="" min_disk=0 timeout=900 interval=5 quiet=0
 
-usage() { sed -n '2,32p' "$0" >&2; exit 2; }
+# The help is the header above, up to its first blank line.
+usage() { sed -n '2,/^$/p' "$0" >&2; exit 2; }
 num() { case "$1" in ''|*[!0-9]*) echo "wait-for-capacity: not a number: $1" >&2; exit 2 ;; esac; }
 
 while [ $# -gt 0 ]; do
@@ -55,6 +63,8 @@ while [ $# -gt 0 ]; do
   esac
 done
 [ "$interval" -ge 1 ] 2>/dev/null || interval=1
+# --min-disk-mb without --dir checks the scratch directory the run will use.
+[ "$min_disk" -gt 0 ] && [ -z "$dir" ] && dir=${TMPDIR:-/tmp}
 
 os=$(uname -s 2>/dev/null)
 
@@ -87,6 +97,34 @@ measure() {
   esac
 }
 
+# probe writes --min-disk-mb megabytes into --dir and removes the file. It runs
+# once, after CPU, memory and df have passed: a directory that cannot take the
+# file will not take it after waiting either, so a failure exits 3 at once.
+probe_file=""
+cleanup() { [ -n "$probe_file" ] && rm -f "$probe_file"; }
+probe() {
+  if ! command -v dd >/dev/null 2>&1 || ! command -v mktemp >/dev/null 2>&1; then
+    echo "wait-for-capacity: dd or mktemp is missing, cannot probe $dir; write a file of ${min_disk}MB there by hand" >&2
+    exit 4
+  fi
+  trap cleanup EXIT
+  trap 'cleanup; exit 130' INT
+  trap 'cleanup; exit 143' TERM
+  probe_file=$(mktemp "$dir/.wait-for-capacity.XXXXXX" 2>/dev/null) || probe_file=""
+  if [ -z "$probe_file" ] || ! dd if=/dev/zero of="$probe_file" bs=1048576 count="$min_disk" conv=notrunc >/dev/null 2>&1; then
+    cleanup
+    echo "wait-for-capacity: cannot write ${min_disk}MB in $dir (df said ${free_mb}MB free: a quota, a full disk, or no directory): waiting will not help; set --dir or TMPDIR to a directory on disk" >&2
+    exit 3
+  fi
+  # The probe must go away again: a file that cannot be removed keeps the
+  # space the run was promised.
+  if ! cleanup; then
+    echo "wait-for-capacity: cannot remove the probe $probe_file; remove it by hand before the run" >&2
+    exit 3
+  fi
+  probe_file=""
+}
+
 waited=0
 while :; do
   m=$(measure) || { echo "wait-for-capacity: cannot measure this machine ($os); check CPU, memory and disk by hand" >&2; exit 4; }
@@ -99,6 +137,7 @@ while :; do
   why=""
   [ $((cpu + add_cpu)) -gt "$max_cpu" ] && why="$why cpu ${cpu}%+${add_cpu}% over ${max_cpu}%;"
   [ $((mem + add_mem)) -gt "$max_mem" ] && why="$why mem ${mem}%+${add_mem}% over ${max_mem}%;"
+  free_mb=""
   if [ -n "$dir" ] && [ "$min_disk" -gt 0 ]; then
     free_mb=$(df -Pk "$dir" 2>/dev/null | awk 'NR==2 { printf "%d", $4/1024 }')
     if [ -z "$free_mb" ]; then
@@ -108,6 +147,7 @@ while :; do
   fi
 
   if [ -z "$why" ]; then
+    [ -n "$dir" ] && [ "$min_disk" -gt 0 ] && probe
     [ "$quiet" -eq 1 ] || echo "wait-for-capacity: room (cpu ${cpu}%, mem ${mem}%, ${ncpu} cpus)" >&2
     exit 0
   fi

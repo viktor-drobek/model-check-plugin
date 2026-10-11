@@ -35,6 +35,12 @@ type Proctype struct {
 	Pos      Pos
 	End      Pos // the closing brace (pan's line for -end-)
 	Hints    []*XrXs
+	// Slots is the state-vector size of one instance (parameters and
+	// locals, with channel buffers) and Tokens the length of the body, both
+	// counted by the parser (limits.go): the lowering multiplies them by the
+	// instances it creates and refuses the model before building any.
+	Slots  int64
+	Tokens int
 }
 
 // VarDecl declares a variable or channel.

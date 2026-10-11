@@ -19,6 +19,7 @@ import (
 	"os"
 	"strings"
 
+	"modelcheck/internal/tmpspace"
 	"modelcheck/tools/pandiff"
 )
 
@@ -45,6 +46,12 @@ func main() {
 	tools := pandiff.Tools{Spin: *spin, GCC: *gcc}
 	if !tools.Available() {
 		fmt.Fprintln(os.Stderr, "pandiff: spin or gcc not found on PATH")
+		os.Exit(2)
+	}
+	// Every model compiles pan.c into the temporary directory; a quota there
+	// is invisible to df, so the scratch space is probed by writing it first.
+	if _, err := tmpspace.ProbeEnv(tmpspace.DefaultMB); err != nil {
+		fmt.Fprintln(os.Stderr, "pandiff:", err)
 		os.Exit(2)
 	}
 	exit := 0

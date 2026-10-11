@@ -25,6 +25,7 @@ import (
 	"os"
 	"strings"
 
+	"modelcheck/internal/tmpspace"
 	"modelcheck/tools/mutate"
 )
 
@@ -64,6 +65,14 @@ func main() {
 func usage() {
 	fmt.Fprintln(os.Stderr, "usage: mutate (gen|run|corpus2|render) [flags] …")
 	fmt.Fprintln(os.Stderr, "operators:", strings.Join(operatorNames(), ", "))
+}
+
+// probeScratch checks the temporary directory before a campaign: the pan
+// runs of every mutant compile pan.c there, and a quota is invisible to df,
+// so the space is probed by writing it (tmpspace.DefaultMB, or MCD_TMP_MIN_MB).
+func probeScratch() error {
+	_, err := tmpspace.ProbeEnv(tmpspace.DefaultMB)
+	return err
 }
 
 func operatorNames() []string {
@@ -141,6 +150,10 @@ func run(args []string) int {
 		fmt.Fprintln(os.Stderr, "mutate run: -out is required")
 		return 2
 	}
+	if err := probeScratch(); err != nil {
+		fmt.Fprintln(os.Stderr, "mutate run:", err)
+		return 2
+	}
 	campaign := mutate.SubsetCampaign()
 	if *cfg != "" {
 		data, err := os.ReadFile(*cfg)
@@ -205,6 +218,10 @@ func corpus2(args []string) int {
 	title := fs.String("title", "Second corpus (plan 14 §2.3)", "title of the generated README")
 	preamble := fs.String("preamble", "", "file whose contents go above the table")
 	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+	if err := probeScratch(); err != nil {
+		fmt.Fprintln(os.Stderr, "mutate corpus2:", err)
 		return 2
 	}
 	pre := ""

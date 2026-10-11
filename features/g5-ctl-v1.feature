@@ -194,6 +194,49 @@ Feature: G5 CTL labelling, vacuity hints, mc_estimate growth model, Promela v1
     Then the run exits with 2
     And the G5 rejection has kind "ctl" and status "not-executed"
 
+  # ---------------------------------------------------------------- formula limits (issue #9)
+  # As for LTL: deep or long formulas overflowed the stack, every `<->`
+  # doubles the normal form, and every A[ p U q ] uses q three times in it —
+  # and the labelling keys on the text of the normalised formula, so a long
+  # atom under a few A[..U..] is the same blow-up. Each shape meets a stated
+  # limit and is a rejected input with the limit named.
+  Scenario Outline: a CTL formula that amplifies beyond a limit is a rejected input, not a crash
+    Given a generated Promela model for the G5 formula limits
+    When I check the model with the generated CTL formula "<shape>" of size <n>
+    Then the run exits with 2
+    And the G5 rejection has kind "ctl" and status "not-executed"
+    And the G5 rejection mentions "<mentions>"
+
+    Examples:
+      | shape        | n    | mentions    |
+      | parens       | 1001 | 1000        |
+      | and-chain    | 1001 | 1000        |
+      | impl-chain   | 1001 | 1000        |
+      | not-chain    | 1001 | 1000        |
+      | long-atom    | 1001 | 1000        |
+      | iff-chain    | 20   | normal form |
+      | au-nest      | 14   | normal form |
+      | au-long-atom | 10   | normal form |
+
+  Scenario: a doubling #define that the model never uses is bounded when a CTL formula names it
+    Given a generated Promela model for the G5 formula limits with 28 unused doubling defines
+    When I check the model with the generated CTL formula "define-use-ctl" of size 28
+    Then the run exits with 2
+    And the G5 rejection has kind "ctl" and status "not-executed"
+    And the G5 rejection mentions "define"
+
+  Scenario Outline: within the limits the CTL formula is checked
+    Given a generated Promela model for the G5 formula limits
+    When I check the model with the generated CTL formula "<shape>" of size <n>
+    Then the run exits with 0
+
+    Examples:
+      | shape     | n    |
+      | parens    | 1000 |
+      | and-chain | 1000 |
+      | iff-chain | 8    |
+      | au-nest   | 6    |
+
   Scenario: a budget that stops the graph short makes the CTL property inconclusive
     Given the IR "testdata/ir/counters-10-5.json" of the engine testdata
     When I check the IR with the CTL formula "EF (pc_value(0) == 0)" and a state budget of 100
@@ -689,3 +732,14 @@ Feature: G5 CTL labelling, vacuity hints, mc_estimate growth model, Promela v1
       | <>[](nr_leaders == 1) | none     |
       | <>[](nr_leaders == 1) | weak     |
       | [](nr_leaders == 0)   | none     |
+
+  # ---------------------------------------------------------------- the time budget holds for a CTL check (issue #8)
+  # The graph of the atomic model never completes within the budget; the
+  # labelling's own budget check is pinned by the unit tests of ctl.
+  Scenario: a CTL check of an atomic sequence that never stores a state stops at the time budget
+    Given the model "budget/time-budget.pml" of the engine testdata
+    When I check it with the CTL formula "AG (i < 41)" and a time budget of 300 ms
+    Then the run exits with 0
+    And the G5 property "ctl1" is "inconclusive" with evidence "unknown"
+    And the reason of the G5 property "ctl1" mentions "time budget"
+    And the G5 run finished within 5 seconds

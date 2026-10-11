@@ -63,7 +63,7 @@ authority for any particular file.
 | **Nondeterminism inside `d_step`** | the first executable alternative is taken (as SPIN) | same | — |
 | **`atomic` storage rule** (explanatory) | intermediate states inside an `atomic` sequence are **not stored** while the holder can move; the state where an `atomic` sequence is interrupted (its statement blocks) **is stored** | same rule | This is why `App_C/petrinet1` has 8 states, not 28: the marking updates inside `atomic` are one stored step. Invariants and `reach` are checked on **stored** states; `assert` on every step. Counters compare with `pan -c0`, not with the number of statements executed |
 | **`run`** | every proctype has a **pool** of instances (`--max-procs`, default 8, bounds it); the static processes (`active`, `init`) come first in textual order, then each proctype's pool; **every `run` draws from its own proctype's pool and takes the first dormant slot at the moment it fires** | same, including that a slot — and so a pid — is **reused** once its process has died | The choice of slot is made during the search, not by the frontend: two `run`s of the same proctype with **equal arguments** are the case that shows it. `engine/testdata/mutate/state-count/you_run2-equal-run-arguments.pml` gives 12 states, exactly `pan -c0`; a per-statement slot gave 14 and was a real divergence, found by the K3 mutation campaign and fixed in the G5 addendum (`steps/g5-addendum-confirmation.md` §4). Never tell a user that pids are not recycled, and do not read two instances of one proctype as two distinct identities unless the model stores the pid itself |
-| **A loop inside `atomic` / `d_step`** | the process keeps the exclusive control through every iteration and gives it up when it leaves the loop (an `atomic { do … od }` is one atomic sequence, a `d_step { do … od }` one step). When the loop is the first statement of the block **and** shares its entry with another alternative (the block is one option of an outer `if`/`do`), the model is refused: `outside-subset`, "loop at the start of an atomic block that shares its entry with another alternative" — pan keeps a state of its own for the inside of the block, and the engine's one location per point between statements cannot tell the two apart | same | give the loop a statement of its own in front, or move it out of the option. Versions before the fix let the control go at the back edge of such a loop and could report an assertion violation pan does not find. An atomic loop that never blocks and never ends is `inconclusive` (the engine stores no state inside an atomic sequence, so there is none to close a cycle on; pan cannot answer either) |
+| **A loop inside `atomic` / `d_step`** | the process keeps the exclusive control through every iteration and gives it up when it leaves the loop (an `atomic { do … od }` is one atomic sequence, a `d_step { do … od }` one step). When the loop is the first statement of the block **and** shares its entry with another alternative (the block is one option of an outer `if`/`do`), the model is refused: `outside-subset`, "loop at the start of an atomic block that shares its entry with another alternative" — pan keeps a state of its own for the inside of the block, and the engine's one location per point between statements cannot tell the two apart | same | give the loop a statement of its own in front, or move it out of the option. A `goto` into such a loop, from outside the block, from another option of it or from inside the block, is the same shape and is refused the same way, and so is a `goto` from inside a block back to its first statement when that start is shared (versions before the fix of issue #6 let a forward goto bypass the refusal and reported an assertion violation pan does not find). Whether the step that ends in a `goto` keeps the exclusive control is decided as in pan: a `goto` written inside an atomic block keeps it when the location it lands on is inside a block (another atomic block included) or is the first statement of a block, and when every `goto` of the chain it leads through (a label on a `goto`) is written inside a block too; a `goto` written outside gives it up, and the jump into a block gets the control with the statement it lands on; a label that leads out of the block (on a `break`, on a `goto` out of it, on the block itself as `L: atomic { … }`) gives it up. A label on the first statement of an `atomic` block that is not a `do` (`atomic { L: n = 1; … }`) is accepted here with that semantics, where SPIN refuses it ("label placed incorrectly"). A `goto` to a label on the first statement of an `if`/`do` option that has other alternatives is refused (`outside-subset`): this engine lowers such a label to the point of choice, pan jumps to the statement itself; put a `skip` in front of the statement or move the label. A `goto` into or out of a `d_step` sequence is refused (`semantic`), as SPIN refuses it ("jump into d_step sequence"); a label on the `d_step` block itself (`L: d_step { … }`) is accepted and the jump enters the block, where SPIN refuses it. Versions before the fix let the control go at the back edge of such a loop and could report an assertion violation pan does not find. An atomic loop that never blocks and never ends is `inconclusive` (the engine stores no state inside an atomic sequence, so there is none to close a cycle on; pan cannot answer either) |
 | **Rendezvous** | one step for sender and receiver; each matching receiver is a separate transition; the trace step carries `partner`; rendezvous inside `d_step` is outside the subset; **a process whose `provided` clause is false takes part on neither side** | same | — |
 | **`else`** | dynamic: executable iff no other option of the same `if`/`do` is | same | — |
 | **`timeout`** | two-phase: true iff nothing at all is executable with `timeout` false (02 гл. 13) | same | an abstraction of "stuck", not a clock |
@@ -180,6 +180,35 @@ defects, and so that a user porting a model from SPIN is told why it stopped.
 | **sibling blocks declaring one name with different types** — `{ int y; … }; { byte y; … }`, or a scalar and an array (probe `out-sibling-different-types`; SPIN makes two separate variables) | the engine keeps one flat set of locals per process, where the name *is* the slot. Accepting would mean renaming, which changes the state-vector layout and every counterexample in which the name appears — a bad trade for a shape no corpus model uses |
 
 
+### Size limits — refused by name, never a crash
+
+Model text is untrusted input, and some of its shapes amplify inside the frontend: a
+tree the lowering recurses over, a `#define`, `inline` or `typedef` that doubles per
+line, an array of a billion elements, many deep expressions whose indented IR runs to
+gigabytes. Each of these used to end `mcd` — and a running `mcd serve` — with a fatal
+error that no recover sees. The frontend now measures the size of what it builds and
+answers `outside-subset` with the limit named (`limit of the engine, not a syntax
+error`). Every limit sits far above any real model; a model that meets one is a model
+to simplify, not a defect of the engine.
+
+| Limit | Value | What it bounds |
+|---|---|---|
+| expression height | 1 000 | nesting plus the length of an operator chain along one path (`((…))`, `1+1+…`, `!-!-…`, `a[a[…]]`) |
+| statement nesting | 1 000 blocks | nested `{}`, `if`, `do`, `atomic`, `d_step`; the body of a proctype is the first block, so 999 nested `if` are the most |
+| `#if` expression | 1 000 | nesting of the condition |
+| macro expansion | 4 000 000 tokens, 1 000 nested rescans | `#define` chains, doubling and argument fan-out |
+| inline expansion | 4 000 000 tokens | `inline` bodies that call others many times, or use a parameter many times |
+| typedef fields | 100 000 per model, 4 000 000 bytes of flattened names | flattened fields of all definitions and instances (a chain of typedefs makes long names) |
+| array length | 65 535 (255 for an array of channels) | the IR's bound, checked before any per-element work |
+| state vector | 1 048 576 slots | scalars and array elements of every variable, times the instances of its process (`active [N]`, the `run` pool of `--max-procs`), plus each channel's field table and buffer (message width × (capacity + 1)) — counted by the parser per declaration and by the lowering over the instances, before any instance is built |
+| process bodies | 4 000 000 tokens over all instances | the body of a proctype times its instances, before any is lowered |
+| `--max-procs` / `max_procs` | 254 | the pool of a run-created proctype; more instances than the engine can name are refused before the pool is built |
+| IR weight | 4 000 000 | the sum of expression-node depths over the model (the size of the IR file); the same bound applies to an IR document (kind `ir`) |
+
+The formula parsers have their own limits (`properties-ltl-ctl.md` §2). A formula
+within them can still exceed the time budget inside the tableau; that is a budget
+question of `mc_check`, not a parser one.
+
 ## 4. Reading a rejection
 
 The CLI prints `{"error": {"kind", "status", "path", "message"}}` on stdout with exit
@@ -195,7 +224,7 @@ message construct outside subset: c_code (embedded C is outside the subset) (sim
 
 | `kind` | Meaning | Answer |
 |---|---|---|
-| `outside-subset` | the grammar is not accepted (§3) | `not-executed` with construct and line; rewrite from §3 |
+| `outside-subset` | the grammar is not accepted (§3), or a size limit is met (§3, "Size limits": the message says `limit of the engine`) | `not-executed` with construct and line; rewrite from §3, or simplify the shape the limit names |
 | `syntax` | the text is not Promela the parser can read | fix the model; quote the position |
 | `semantic` | undeclared variable, type mismatch, bad `run` arity | fix the model |
 

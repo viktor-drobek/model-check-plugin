@@ -1,6 +1,7 @@
 package promela
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -120,8 +121,24 @@ type instance struct {
 	// head is outside it.
 	keepAtomic, keepDStep map[int]bool
 	breakOf               map[int]int
-	openLoops             []openLoop
-	keepLoops             []keepLoop
+	// gotoEdge holds the raw edges that end in a `goto`: the edge of a goto
+	// that opens an option, and the edges into the position of any other goto
+	// (issue #6: whether such an edge keeps the control is told by where the
+	// goto is written and where the chain of gotos it starts lands, see
+	// landing and finalise). gotoAt holds, by its position, a goto that
+	// follows a statement (a link of such a chain); labelBlocks the blocks
+	// open where each label is written; labelEntry the block whose first
+	// statement a label is on; labelOpt the raw edges of the option whose
+	// first statement a label is on; blockRange the raw edges lowered for
+	// each atomic / d_step block, by block id.
+	gotoEdge    map[int]gotoMark
+	gotoAt      map[int]gotoMark
+	labelBlocks map[string]blocks
+	labelEntry  map[string]labelEntry
+	labelOpt    map[string][2]int
+	blockRange  map[int][2]int
+	openLoops   []openLoop
+	keepLoops   []keepLoop
 	// breakFrom holds, per loop id, the nodes at which a break that is not the
 	// first statement of its option leaves the loop: such a break leaves no edge
 	// of its own, the node is merged with the exit, so an edge into it leaves
@@ -153,10 +170,47 @@ type pendingRun struct {
 	target *instance
 }
 
-// gotoRef is one `goto` and where it was written.
+// blocks are the atomic and d_step blocks open at a point of the text,
+// innermost last.
+type blocks struct {
+	atomic, dstep []int
+}
+
+// innermost is the id of the innermost block open, 0 when none is.
+func (b blocks) innermost() int {
+	id := 0
+	if n := len(b.atomic); n > 0 {
+		id = b.atomic[n-1]
+	}
+	if n := len(b.dstep); n > 0 && b.dstep[n-1] > id {
+		id = b.dstep[n-1]
+	}
+	return id
+}
+
+// gotoRef is one `goto`, where it was written, and the blocks open there:
+// a goto across a d_step boundary is refused as SPIN refuses it ("jump into
+// d_step sequence"), and a goto that keeps the control into the location in
+// front of a block is refused when that location has another alternative,
+// see lowerInstance.
 type gotoRef struct {
 	label string
 	pos   Pos
+	at    blocks
+}
+
+// gotoMark is the goto an edge of gotoEdge ends in: its label and whether
+// it is written inside an atomic / d_step block.
+type gotoMark struct {
+	label         string
+	atomic, dstep bool
+}
+
+// labelEntry: a label on the first statement of an atomic / d_step block
+// names the location in front of the block; the block's id and kind.
+type labelEntry struct {
+	id   int
+	kind string
 }
 
 type lowerer struct {
@@ -238,6 +292,10 @@ func Lower(mod *Module, file, name string) (*Lowered, *Error) {
 
 // LowerWith translates the module with an explicit process-pool bound.
 func LowerWith(mod *Module, file, name string, maxProcs int) (*Lowered, *Error) {
+	// Every expression is within maxHeight, but many of them together can
+	// make an IR file whose indentation alone is gigabytes: ir.Validate,
+	// run by lower, bounds the weight (ir.MaxIRWeight) and the state vector,
+	// and lower reports its LimitError as a refused shape.
 	m, w, pl, err := lower(mod, file, name, maxProcs)
 	if err != nil {
 		return nil, err
@@ -248,6 +306,12 @@ func LowerWith(mod *Module, file, name string, maxProcs int) (*Lowered, *Error) 
 func lower(mod *Module, file, name string, maxProcs int) (*ir.Model, []string, map[string][]int, *Error) {
 	if maxProcs <= 0 {
 		maxProcs = DefaultMaxProcs
+	}
+	// The pool of a run-created proctype has maxProcs instances; the engine
+	// names at most 254, so a larger request is refused before any pool is
+	// built.
+	if maxProcs > 254 {
+		return nil, nil, nil, semanticErr(file, 0, 0, "max-procs %d exceeds the 254 process instances the engine can name", maxProcs)
 	}
 	l := &lowerer{mod: mod, file: file, maxProcs: maxProcs, mtype: map[string]int64{}, globals: map[string]*ir.Var{},
 		chans: map[string]*ir.Channel{}, chanCap: map[string]int{},
@@ -424,6 +488,25 @@ func lower(mod *Module, file, name string, maxProcs int) (*ir.Model, []string, m
 	if len(l.insts) > 254 {
 		return nil, nil, nil, semanticErr(file, 0, 0, "%d process instances exceed the 254 the engine can name; lower --max-procs", len(l.insts))
 	}
+	// The size of the model is the globals plus every instance's locals and
+	// body: refused here, from the parser's counts, before any instance is
+	// lowered (the lowered IR has at most one node per body token, so the
+	// token count bounds the IR's weight too; ir.Validate is the exact
+	// backstop).
+	var slots, tokens int64
+	for _, d := range mod.Globals {
+		slots += declSlots(d)
+	}
+	for _, in := range l.insts {
+		slots += in.pt.Slots
+		tokens += int64(in.pt.Tokens)
+	}
+	if slots > ir.MaxStateSlots {
+		return nil, nil, nil, outside(file, 0, 0, fmt.Sprintf("the state vector of this model would have more than %d slots over its %d process instances", ir.MaxStateSlots, len(l.insts)), limitNote)
+	}
+	if tokens > ir.MaxIRWeight {
+		return nil, nil, nil, outside(file, 0, 0, fmt.Sprintf("the bodies of the %d process instances of this model hold more than %d tokens together", len(l.insts), ir.MaxIRWeight), limitNote)
+	}
 	if mod.Never != nil {
 		l.insts = append(l.insts, &instance{pt: mod.Never, pid: len(l.insts), claim: true})
 	}
@@ -542,6 +625,12 @@ func lower(mod *Module, file, name string, maxProcs int) (*ir.Model, []string, m
 		l.warnings = append(l.warnings, fmt.Sprintf("printf: %d statement(s) kept as no-op steps so that state counts match SPIN; their output is not produced", l.printfs))
 	}
 	if err := ir.Validate(m); err != nil {
+		// A size limit of the IR is a shape the engine refuses, not a
+		// defect of the lowering (the parser catches most of them earlier).
+		var le *ir.LimitError
+		if errors.As(err, &le) {
+			return nil, nil, nil, outside(file, 0, 0, le.Msg, "")
+		}
 		return nil, nil, nil, semanticErr(file, 0, 0, "internal: lowered IR does not validate: %v", err)
 	}
 	panLines := map[string][]int{}
@@ -791,6 +880,33 @@ func (l *lowerer) newNode() int {
 	return n.rep
 }
 
+// landing follows the label of a goto written inside (atomic, dstep) blocks
+// through the chain of gotos the label leads through (a label on a goto that
+// follows a statement aliases its location to the next label) to the location
+// the process lands on, and tells whether it still holds the exclusive
+// control of an atomic / d_step block there: every goto of the chain is
+// written inside a block, and the location is inside one or in front of one
+// (issue #6).
+func (in *instance) landing(label string, atomic, dstep bool) (at int, entry labelEntry, keepAtomic, keepDStep, chainAtomic, chainDStep bool) {
+	n, last := in.labels[label], label
+	for i := 0; i < len(in.nodes); i++ {
+		if m, ok := in.gotoAt[n]; ok {
+			// a goto of the chain: its own label is the next step (alias
+			// compresses the rep chain past it)
+			atomic, dstep = atomic && m.atomic, dstep && m.dstep
+			last = m.label
+			n = in.labels[last]
+			continue
+		}
+		if in.nodes[n].rep == n {
+			break
+		}
+		n = in.nodes[n].rep
+	}
+	nd, e := &in.nodes[n], in.labelEntry[last]
+	return n, e, atomic && (len(nd.atomic) > 0 || e.id != 0), dstep && (len(nd.dstep) > 0 || e.id != 0), atomic, dstep
+}
+
 func (in *instance) find(n int) int {
 	for i := 0; i < len(in.nodes); i++ {
 		r := in.nodes[n].rep
@@ -843,6 +959,12 @@ func (l *lowerer) lowerInstance(in *instance) *Error {
 	l.cur = in
 	l.curAtomic, l.curDStep, l.loops = nil, nil, nil
 	in.keepAtomic, in.keepDStep, in.breakOf = map[int]bool{}, map[int]bool{}, map[int]int{}
+	in.gotoEdge = map[int]gotoMark{}
+	in.labelBlocks = map[string]blocks{}
+	in.gotoAt = map[int]gotoMark{}
+	in.labelEntry = map[string]labelEntry{}
+	in.labelOpt = map[string][2]int{}
+	in.blockRange = map[int][2]int{}
 	in.breakFrom = map[int][]int{}
 	in.labels = map[string]int{}
 	in.defined = map[string]bool{}
@@ -889,6 +1011,14 @@ func (l *lowerer) lowerInstance(in *instance) *Error {
 			return semanticErr(l.file, g.pos.Line, g.pos.Col,
 				"undefined label %s: %s has no statement labelled %s, so the goto has no target (SPIN reports the same)", g.label, pt.Name, g.label)
 		}
+		// SPIN refuses a jump into or out of a d_step sequence ("jump into
+		// d_step sequence", or "label placed incorrectly" for a label on
+		// its first statement); this engine executes a d_step as one step
+		// from its entry and could not either (issue #6).
+		if !slices.Equal(g.at.dstep, in.labelBlocks[g.label].dstep) {
+			return semanticErr(l.file, g.pos.Line, g.pos.Col,
+				"goto %s crosses a d_step boundary: a jump into or out of a d_step sequence is not executable (SPIN refuses it too)", g.label)
+		}
 	}
 	// A loop that opens an atomic or d_step block has the location in front of
 	// the block as its head, and the lock bit alone tells "inside" from
@@ -908,6 +1038,42 @@ func (l *lowerer) lowerInstance(in *instance) *Error {
 				}
 				return outside(l.file, ol.pos.Line, ol.pos.Col, "loop at the start of an "+kind+" block that shares its entry with another alternative",
 					"the process could take the other alternative while it is inside the block, and this engine version keeps no separate location for the inside of the loop; give the loop a statement of its own in front, or move it out of the option")
+			}
+		}
+	}
+	// The same holds for a goto written inside a block whose label is on the
+	// block's first statement: the process keeps the control at the jump and
+	// stands at the location in front of the block, so that location must
+	// have no other alternative (issue #6).
+	for _, g := range in.gotos {
+		h, en, ka, kd, _, _ := in.landing(g.label, len(g.at.atomic) > 0, len(g.at.dstep) > 0)
+		if !(ka || kd) || en.id == 0 {
+			continue
+		}
+		r := in.blockRange[en.id]
+		for i := range in.edges {
+			if (i < r[0] || i >= r[1]) && in.find(in.edges[i].From) == h {
+				kind := en.kind
+				return outside(l.file, g.pos.Line, g.pos.Col, "goto to the start of an "+kind+" block that shares its entry with another alternative",
+					"the process keeps the exclusive control at the jump, the other alternative would be available inside the block, and this engine version keeps no separate location for the start of the block; give the block a statement of its own in front, or move it out of the option")
+			}
+		}
+	}
+	// A label on the first statement of an if/do option is lowered to the
+	// point of choice, where the other options are available too; pan marks
+	// the statement itself. A goto to such a label would make the other
+	// options available after the jump. Refuse, rather than answer for a
+	// different model.
+	for _, g := range in.gotos {
+		o, ok := in.labelOpt[g.label]
+		if !ok {
+			continue
+		}
+		h := in.find(in.labels[g.label])
+		for i := range in.edges {
+			if (i < o[0] || i >= o[1]) && in.find(in.edges[i].From) == h {
+				return outside(l.file, g.pos.Line, g.pos.Col, "goto to a label on the first statement of an option that has other alternatives",
+					fmt.Sprintf("label %s stands on the first statement of an if/do option, which this engine version lowers to the point of choice, so the other options would be available after the jump (pan jumps to the statement itself); give the statement a label of its own by putting a skip in front of it, or move the label", g.label))
 			}
 		}
 	}
@@ -1028,6 +1194,7 @@ func (l *lowerer) lowerSeq(items []Item, from, to int, ctx seqCtx) *Error {
 		pos[i] = l.newNode()
 	}
 	pos[len(items)] = to
+	var optHeads []string // labels on the first statement of this option
 	for i, it := range items {
 		for li, lb := range it.Labels {
 			at := it.Pos
@@ -1047,13 +1214,20 @@ func (l *lowerer) lowerSeq(items []Item, from, to int, ctx seqCtx) *Error {
 					"label %s redeclared: %s already has a statement labelled %s (SPIN reports the same)", lb, in.pt.Name, lb)
 			}
 			in.defined[lb] = true
+			in.labelBlocks[lb] = blocks{append([]int(nil), l.curAtomic...), append([]int(nil), l.curDStep...)}
 			n := pos[i]
 			if existing, ok := in.labels[lb]; ok {
 				if in.find(existing) != in.find(n) {
-					// allocated by a forward goto: it becomes this position
-					r := in.find(existing)
-					in.nodes[r].atomic = append([]int(nil), l.curAtomic...)
-					in.nodes[r].dstep = append([]int(nil), l.curDStep...)
+					// Allocated by a forward goto: it becomes this position,
+					// with the blocks of this position — the head of the
+					// enclosing sequence for its first statement (outside a
+					// block that the sequence opens), the node made inside
+					// the block for a later one — never the stack current
+					// here, which is what made a loop head outside an atomic
+					// block count as inside it (issue #6).
+					r, c := in.find(existing), in.find(n)
+					in.nodes[r].atomic = append([]int(nil), in.nodes[c].atomic...)
+					in.nodes[r].dstep = append([]int(nil), in.nodes[c].dstep...)
 					if err := l.alias(n, r, it.Pos); err != nil {
 						return err
 					}
@@ -1068,6 +1242,18 @@ func (l *lowerer) lowerSeq(items []Item, from, to int, ctx seqCtx) *Error {
 				in.labels[lb] = n
 			}
 			r := in.find(n)
+			if !in.nodes[r].insideAll(l.curAtomic, l.curDStep) {
+				b := blocks{l.curAtomic, l.curDStep}
+				e := labelEntry{b.innermost(), "atomic"}
+				if n := len(l.curDStep); n > 0 && l.curDStep[n-1] == e.id {
+					e.kind = "d_step"
+				}
+				in.labelEntry[lb] = e
+			}
+			if i == 0 && ctx.isOption {
+				optHeads = append(optHeads, lb)
+				in.labelOpt[lb] = [2]int{len(in.edges), -1}
+			}
 			if in.nodes[r].name == "" {
 				in.nodes[r].name = lb
 				in.nodes[r].origin = &ir.Origin{File: l.file, Line: it.Pos.Line, Name: lb}
@@ -1090,6 +1276,9 @@ func (l *lowerer) lowerSeq(items []Item, from, to int, ctx seqCtx) *Error {
 		if err := l.lowerStmt(it, pos[i], pos[i+1], c, i == 0 && ctx.isOption); err != nil {
 			return err
 		}
+	}
+	for _, lb := range optHeads {
+		in.labelOpt[lb] = [2]int{in.labelOpt[lb][0], len(in.edges)}
 	}
 	return nil
 }
@@ -1136,7 +1325,11 @@ func (l *lowerer) lowerStmt(it Item, from, to int, ctx seqCtx, first bool) *Erro
 		// A block that opens an option passes the option context on: pan
 		// attributes its first statement to the first option's line, and a
 		// lone goto/break inside it is its own transition.
+		lo, id := len(in.edges), l.blockID
 		err := l.lowerSeq(s.Items, from, to, seqCtx{breakTo: ctx.breakTo, isOption: first, optLine: ctx.optLine})
+		if s.Kind == "atomic" || s.Kind == "d_step" {
+			in.blockRange[id] = [2]int{lo, len(in.edges)}
+		}
 		l.curAtomic, l.curDStep = saveA, saveD
 		l.declDepth--
 		in.scopes = in.scopes[:len(in.scopes)-1]
@@ -1254,12 +1447,30 @@ func (l *lowerer) lowerStmt(it Item, from, to int, ctx seqCtx, first bool) *Erro
 		}
 		return nil
 	case *Goto:
-		in.gotos = append(in.gotos, gotoRef{s.Label, it.Pos})
+		in.gotos = append(in.gotos, gotoRef{s.Label, it.Pos,
+			blocks{append([]int(nil), l.curAtomic...), append([]int(nil), l.curDStep...)}})
 		target := l.labelNode(s.Label)
+		mark := gotoMark{label: s.Label, atomic: len(l.curAtomic) > 0, dstep: len(l.curDStep) > 0}
 		if first {
+			// The edge of a goto keeps the exclusive control only when the
+			// goto is written inside a block and the location it lands on is
+			// inside one (finalise): a jump into a block from outside gets
+			// the control with the statement it lands on, as pan (issue #6).
+			in.gotoEdge[len(in.edges)] = mark
 			l.addEdge(it, ir.Edge{From: from, To: target}, panLine)
 			return nil
 		}
+		// A goto that follows a statement leaves no edge of its own: the
+		// edges into its position end in it, and keep or give up the control
+		// by the same rule. Before the alias, only those edges lead here.
+		here, lexical := in.find(from), mark
+		mark.atomic, mark.dstep = len(in.nodes[here].atomic) > 0, len(in.nodes[here].dstep) > 0
+		for i := range in.edges {
+			if _, marked := in.gotoEdge[i]; !marked && in.find(in.edges[i].To) == here {
+				in.gotoEdge[i] = mark
+			}
+		}
+		in.gotoAt[here] = lexical
 		return l.alias(from, target, it.Pos)
 	case *Break:
 		if ctx.breakTo < 0 {
@@ -1809,6 +2020,24 @@ func (l *lowerer) finalise(in *instance) {
 		tgt := &in.nodes[to]
 		e.Atomic = len(tgt.atomic) > 0 || in.keepAtomic[i]
 		e.DStep = len(tgt.dstep) > 0 || in.keepDStep[i]
+		if g, ok := in.gotoEdge[i]; ok {
+			// An edge that ends in a goto keeps the control when the goto,
+			// and every goto of the chain its label leads through, is
+			// written inside a block, and the location the chain lands on
+			// is inside one (a jump from one atomic block into another keeps
+			// it, as pan) or is the location in front of a block (a label on
+			// its first statement); it gives the control up when a goto of
+			// the chain is outside — a jump into a block gets it with the
+			// statement it lands on — or when the chain leads out of the
+			// block (a label on a break, or on the block itself). An edge
+			// that goes round a loop inside a block keeps the control
+			// whatever the label's place (keepAtomic), unless its route
+			// passes a goto written outside the block, which gives the
+			// control up there.
+			_, _, ka, kd, ca, cd := in.landing(g.label, g.atomic, g.dstep)
+			e.Atomic = ka || ca && in.keepAtomic[i]
+			e.DStep = kd || cd && in.keepDStep[i]
+		}
 		in.edgeMap[i] = len(in.proc.Edges)
 		in.proc.Edges = append(in.proc.Edges, e)
 		in.finalPanLines = append(in.finalPanLines, in.panLines[i])
