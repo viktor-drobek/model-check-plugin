@@ -1,0 +1,9 @@
+{"meta":{"note":"C++ RE2 is installed for external oracle use; these initial frozen cases use Go's RE2-derived oracle subset.","oracle":"go-regexp RE2-compatible fixture generator","schema":"re2log/v1","semantic_mode":"leftmost_first"},"request":{"op":"","pattern":"","text":""},"expected":{"schema":"","ok":false}}
+{"request":{"op":"find","pattern":"a|bc","text":"xxbc"},"expected":{"schema":"rex/v1","ok":true,"match":{"matched":true,"span":[2,4],"groups":[[2,4]]}}}
+{"request":{"op":"find","pattern":"(a+)(b)","text":"aaab"},"expected":{"schema":"rex/v1","ok":true,"match":{"matched":true,"span":[0,4],"groups":[[0,4],[0,3],[3,4]]}}}
+{"request":{"op":"find","pattern":"ab*c","text":"ac"},"expected":{"schema":"rex/v1","ok":true,"match":{"matched":true,"span":[0,2],"groups":[[0,2]]}}}
+{"request":{"op":"find","pattern":"[a-c]+","text":"xxabc"},"expected":{"schema":"rex/v1","ok":true,"match":{"matched":true,"span":[2,5],"groups":[[2,5]]}}}
+{"request":{"op":"find","pattern":"^a.$","text":"ab"},"expected":{"schema":"rex/v1","ok":true,"match":{"matched":true,"span":[0,2],"groups":[[0,2]]}}}
+{"request":{"op":"find","pattern":"\\d+","text":"x42"},"expected":{"schema":"rex/v1","ok":true,"match":{"matched":true,"span":[1,3],"groups":[[1,3]]}}}
+{"request":{"op":"find_all","pattern":"a*","text":"bb","limit":10},"expected":{"schema":"rex/v1","ok":true,"matches":[{"matched":true,"span":[0,0],"groups":[[0,0]]},{"matched":true,"span":[1,1],"groups":[[1,1]]},{"matched":true,"span":[2,2],"groups":[[2,2]]}]}}
+{"request":{"op":"find","pattern":"z+","text":"abc"},"expected":{"schema":"rex/v1","ok":true,"match":{"matched":false,"span":[-1,-1],"groups":[[-1,-1]]}}}

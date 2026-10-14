@@ -125,9 +125,11 @@ discarding an unfair counterexample.
 - `mcp/servers.json` — Claude Code stdio MCP server declaration using `${CLAUDE_PLUGIN_ROOT}`.
 - `skills/model-check/` — `SKILL.md`, workflows, property guidance, format references, assets, and report templates.
 - `evals-workspace/` — evaluation fixtures, graders, benchmark runs, and review data when included in the release.
+- [`test-projects/`](test-projects/) — versioned source fixtures used for model construction, review, and regression experiments; they are not plugin runtime dependencies.
 - `BUILD-PROTOCOL.md` — the six-part step protocol (scenarios first, tests, logic review, confirmation record); the build itself is documented in the build section below and in `build.sh`.
 - `RELEASE-NOTES-0.3.4.md`, `RELEASE-NOTES-0.3.3.md`, `RELEASE-NOTES-0.3.2.md`, `RELEASE-NOTES-0.3.1.md`, `RELEASE-NOTES-0.3.0.md` — release-specific changes, verdict boundaries, and known limitations.
 - `scripts/security-scan.sh`, `trivy.yaml`, `.trivyignore.yaml`, `.semgrepignore`, `docs/security-scanning.md`, `.github/workflows/security.yml` — the security scan (trivy, semgrep, govulncheck) and its guide.
+- [`docs/cross-model-test-comparison.md`](docs/cross-model-test-comparison.md) — comparison of source-level and bounded-model audit runs for the synthetic RE2 engine test target, with evidence boundaries and Mermaid charts.
 - `AGENT-COMMON.md` — shared historical build-agent guidance.
 - `build.sh` — reproducible multi-platform build and release verification script.
 - `build-container/` — the build container (Go 1.26.9, SPIN, gcc, Python 3, the Go modules of the engine): `Dockerfile`, `build-image.sh`, the runner image, its README.

@@ -1,0 +1,19 @@
+---
+description: Pike VM and regex semantic contract
+paths:
+  - internal/syntax/**/*.go
+  - internal/program/**/*.go
+  - internal/vm/**/*.go
+---
+
+# Pike VM and semantic contract
+
+Implement a Pike-style ordered-thread NFA VM, not recursive backtracking. Each
+thread owns capture slots; epsilon closure must add each program counter at most
+once per input position. Greedy and lazy quantifiers differ by ordered split
+transitions, and input byte offsets stay stable across malformed UTF-8 decoding.
+
+Do not import a regexp implementation, use cgo, call external tools, or bypass
+compile-time limits. Start every behavior change with a focused failing test. Keep
+the syntax matrix, C++ RE2 log fixtures, program limits, error class, and JSONL
+contract synchronized with implementation behavior.
