@@ -56,6 +56,11 @@ func TestValidateRejectsFailClosedViolations(t *testing.T) {
 		{"dangling edge", func(d *Document) { d.Edges[0].Target = "similar.name" }, "does not name a node"},
 		{"unknown evidence", func(d *Document) { d.Nodes[0].Evidence = []string{"missing"} }, "unknown evidence"},
 		{"cross subject evidence", func(d *Document) { d.Nodes[0].Evidence = []string{"ev.symbol"} }, "references evidence"},
+		{"orphan evidence", func(d *Document) {
+			d.Evidence = append(d.Evidence, Evidence{ID: "ev.orphan", Subject: "node:symbol.send", Level: Runtime, Provenance: provenance("trace.json:1")})
+		}, "is not listed by its subject"},
+		{"source verified evidence", func(d *Document) { d.Evidence[1].Level = Verified }, "must apply only to a formal-model artifact"},
+		{"empty node evidence", func(d *Document) { d.Nodes[0].Evidence = []string{} }, "must not be empty"},
 		{"duplicate node", func(d *Document) { d.Nodes = append(d.Nodes, d.Nodes[0]) }, "duplicates a node"},
 		{"malformed hash", func(d *Document) { d.Nodes[0].Provenance.ContentSHA256 = "ABC" }, "lowercase SHA-256"},
 		{"no pinned source", func(d *Document) { d.Nodes[0].Provenance.ContentSHA256 = "" }, "source_revision or content_sha256"},
@@ -78,6 +83,7 @@ func TestUnmarshalRejectsUnknownDuplicateAndTrailingJSON(t *testing.T) {
 		want string
 	}{
 		{"unknown nested field", `{"schema":"mcd-trace-ledger/1","nodes":[],"edges":[],"evidence":[],"gaps":[],"unexpected":true}`, "unknown field"},
+		{"case variant root field", `{"Schema":"mcd-trace-ledger/1","nodes":[],"edges":[],"evidence":[],"gaps":[]}`, "unknown field"},
 		{"duplicate root key", `{"schema":"mcd-trace-ledger/1","schema":"mcd-trace-ledger/1","nodes":[],"edges":[],"evidence":[],"gaps":[]}`, "duplicate JSON key"},
 		{"duplicate nested key", `{"schema":"mcd-trace-ledger/1","nodes":[{"id":"n","id":"n","kind":"Issue","label":"x","provenance":{"content_sha256":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","anchor":"a","producer":{"name":"p","version":"1"}},"evidence":[]}],"edges":[],"evidence":[],"gaps":[]}`, "duplicate JSON key"},
 		{"trailing value", `{"schema":"mcd-trace-ledger/1","nodes":[],"edges":[],"evidence":[],"gaps":[]} null`, "trailing data"},
@@ -88,6 +94,13 @@ func TestUnmarshalRejectsUnknownDuplicateAndTrailingJSON(t *testing.T) {
 				t.Fatalf("error = %v, want substring %q", err, tc.want)
 			}
 		})
+	}
+}
+
+func TestUnmarshalRejectsExcessiveNesting(t *testing.T) {
+	data := []byte(strings.Repeat("[", maxJSONNestingDepth+1) + "null" + strings.Repeat("]", maxJSONNestingDepth+1))
+	if _, err := UnmarshalJSON(data); err == nil || !strings.Contains(err.Error(), "JSON nesting exceeds") {
+		t.Fatalf("error = %v, want nesting rejection", err)
 	}
 }
 
@@ -128,6 +141,26 @@ func TestJSONIsDeterministicAndDoesNotMutateInput(t *testing.T) {
 	}
 }
 
+func TestJSONRoundTripsEmptyCollections(t *testing.T) {
+	d := &Document{
+		Schema:   Schema,
+		Nodes:    []Node{},
+		Edges:    []Edge{},
+		Evidence: []Evidence{},
+		Gaps:     []Gap{},
+	}
+	encoded, err := JSON(d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(encoded, []byte(": null")) {
+		t.Fatalf("canonical JSON contains null collection:\n%s", encoded)
+	}
+	if _, err := UnmarshalJSON(encoded); err != nil {
+		t.Fatalf("canonical JSON does not round trip: %v\n%s", err, encoded)
+	}
+}
+
 func TestReportsAreDeterministicAndNameGaps(t *testing.T) {
 	d := validDocument()
 	markdown, err := Markdown(d)
@@ -143,10 +176,28 @@ func TestReportsAreDeterministicAndNameGaps(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{`"version": "2.1.0"`, `"$schema": "https://json.schemastore.org/sarif-2.1.0.json"`, `"ruleId": "trace/unmapped-operation"`} {
+	for _, want := range []string{`"version": "2.1.0"`, `"$schema": "https://json.schemastore.org/sarif-2.1.0.json"`, `"ruleId": "trace/unmapped-operation"`, `"gapId": "gap.timeout"`, `"uri": "timeout.go"`, `"startLine": 8`, `"schema": "mcd-trace-ledger/1"`} {
 		if !strings.Contains(string(sarif), want) {
 			t.Fatalf("SARIF lacks %q:\n%s", want, sarif)
 		}
+	}
+}
+
+func TestMarkdownEscapesUntrustedCells(t *testing.T) {
+	d := validDocument()
+	d.Nodes[0].Label = "<img src=x onerror=alert(1)>\\|note\r\nnext"
+	markdown, err := Markdown(d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(markdown)
+	for _, want := range []string{"&lt;img src=x onerror=alert(1)&gt;", strings.Repeat("\\", 3) + "|note<br>next"} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("Markdown lacks escaped %q:\n%s", want, text)
+		}
+	}
+	if strings.Contains(text, "\r") || strings.Contains(text, "<img src=") {
+		t.Fatalf("Markdown did not safely normalise cells:\n%s", text)
 	}
 }
 

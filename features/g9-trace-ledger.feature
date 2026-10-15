@@ -12,3 +12,15 @@ Feature: Trace ledger contract
   Scenario: reject a dangling relation instead of guessing its target
     Given the trace ledger fixture "trace/dangling-edge.json"
     Then the trace ledger is rejected with "does not name a node"
+
+  Scenario: reject evidence detached from its subject
+    Given the trace ledger fixture "trace/orphan-evidence.json"
+    Then the trace ledger is rejected with "is not listed by its subject"
+
+  Scenario: reject case-variant JSON field names
+    Given the trace ledger fixture "trace/case-variant-field.json"
+    Then the trace ledger is rejected with "unknown field"
+
+  Scenario: retain the finite-model boundary for verified evidence
+    Given the trace ledger fixture "trace/source-verified.json"
+    Then the trace ledger is rejected with "must apply only to a formal-model artifact"

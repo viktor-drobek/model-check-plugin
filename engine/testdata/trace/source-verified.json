@@ -1,0 +1,30 @@
+{
+  "schema": "mcd-trace-ledger/1",
+  "nodes": [
+    {
+      "id": "symbol.send",
+      "kind": "SourceSymbol",
+      "label": "Send",
+      "provenance": {
+        "source_revision": "abc123",
+        "anchor": "send.go:10",
+        "producer": {"name": "fixture", "version": "1"}
+      },
+      "evidence": ["ev.verified"]
+    }
+  ],
+  "edges": [],
+  "evidence": [
+    {
+      "id": "ev.verified",
+      "subject": "node:symbol.send",
+      "level": "verified",
+      "provenance": {
+        "source_revision": "abc123",
+        "anchor": "report.json#/properties/0",
+        "producer": {"name": "fixture", "version": "1"}
+      }
+    }
+  ],
+  "gaps": []
+}

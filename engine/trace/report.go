@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"html"
+	"strconv"
 	"strings"
 )
 
@@ -73,7 +75,12 @@ func joinedIDs(ids []string) string {
 }
 
 func markdownCell(value string) string {
-	return strings.ReplaceAll(strings.ReplaceAll(strings.TrimSpace(value), "|", "\\|"), "\n", "<br>")
+	value = strings.ReplaceAll(value, "\r\n", "\n")
+	value = strings.ReplaceAll(value, "\r", "\n")
+	value = html.EscapeString(strings.TrimSpace(value))
+	value = strings.ReplaceAll(value, "\\", "\\\\")
+	value = strings.ReplaceAll(value, "|", "\\|")
+	return strings.ReplaceAll(value, "\n", "<br>")
 }
 
 // SARIF returns SARIF 2.1.0 findings for explicit gaps. Existing graph facts
@@ -97,8 +104,11 @@ func SARIF(d *Document) ([]byte, error) {
 			RuleID:  ruleID,
 			Level:   "warning",
 			Message: sarifMessage{Text: gap.Reason},
+			Properties: map[string]string{
+				"gapId": gap.ID,
+			},
 			Locations: []sarifLocation{{
-				PhysicalLocation: sarifPhysicalLocation{ArtifactLocation: sarifArtifactLocation{URI: gap.Reference}},
+				PhysicalLocation: sarifLocationForReference(gap.Reference),
 			}},
 		})
 	}
@@ -106,7 +116,7 @@ func SARIF(d *Document) ([]byte, error) {
 		Version: "2.1.0",
 		Schema:  "https://json.schemastore.org/sarif-2.1.0.json",
 		Runs: []sarifRun{{
-			Tool:    sarifTool{Driver: sarifDriver{Name: "mcd-trace-ledger", Version: Schema, Rules: rules}},
+			Tool:    sarifTool{Driver: sarifDriver{Name: "mcd-trace-ledger", Version: "1", Rules: rules, Properties: map[string]string{"schema": Schema}}},
 			Results: results,
 		}},
 	}
@@ -118,6 +128,21 @@ func SARIF(d *Document) ([]byte, error) {
 		return nil, err
 	}
 	return buf.Bytes(), nil
+}
+
+func sarifLocationForReference(reference string) sarifPhysicalLocation {
+	location := sarifPhysicalLocation{ArtifactLocation: sarifArtifactLocation{URI: reference}}
+	separator := strings.LastIndexByte(reference, ':')
+	if separator <= 0 || separator == len(reference)-1 {
+		return location
+	}
+	line, err := strconv.Atoi(reference[separator+1:])
+	if err != nil || line < 1 {
+		return location
+	}
+	location.ArtifactLocation.URI = reference[:separator]
+	location.Region = &sarifRegion{StartLine: line}
+	return location
 }
 
 type sarifLog struct {
@@ -136,9 +161,10 @@ type sarifTool struct {
 }
 
 type sarifDriver struct {
-	Name    string      `json:"name"`
-	Version string      `json:"version"`
-	Rules   []sarifRule `json:"rules"`
+	Name       string            `json:"name"`
+	Version    string            `json:"version"`
+	Rules      []sarifRule       `json:"rules"`
+	Properties map[string]string `json:"properties"`
 }
 
 type sarifRule struct {
@@ -148,10 +174,11 @@ type sarifRule struct {
 }
 
 type sarifResult struct {
-	RuleID    string          `json:"ruleId"`
-	Level     string          `json:"level"`
-	Message   sarifMessage    `json:"message"`
-	Locations []sarifLocation `json:"locations"`
+	RuleID     string            `json:"ruleId"`
+	Level      string            `json:"level"`
+	Message    sarifMessage      `json:"message"`
+	Locations  []sarifLocation   `json:"locations"`
+	Properties map[string]string `json:"properties"`
 }
 
 type sarifMessage struct {
@@ -164,8 +191,13 @@ type sarifLocation struct {
 
 type sarifPhysicalLocation struct {
 	ArtifactLocation sarifArtifactLocation `json:"artifactLocation"`
+	Region           *sarifRegion          `json:"region,omitempty"`
 }
 
 type sarifArtifactLocation struct {
 	URI string `json:"uri"`
+}
+
+type sarifRegion struct {
+	StartLine int `json:"startLine"`
 }

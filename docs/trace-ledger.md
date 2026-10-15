@@ -11,7 +11,7 @@ A document has four ordered collections:
 - **evidence** — append-only evidence records for a node or edge; and
 - **gaps** — explicit obligations that remain unresolved.
 
-Each record has provenance with a source revision or lowercase SHA-256 content digest, a stable anchor, and a producer name/version. The validator rejects unknown fields, duplicate JSON keys at any nesting depth, trailing JSON, invalid hashes, unknown vocabulary values, duplicate IDs, dangling relations, and evidence attached to the wrong subject.
+Each record has provenance with a source revision or lowercase SHA-256 content digest, a stable anchor, and a producer name/version. Nodes and edges list one or more evidence record IDs; every evidence record must in turn be listed by its exact subject. The validator rejects unknown or case-variant fields, duplicate JSON keys at any nesting depth, excessive JSON nesting, trailing JSON, invalid hashes, unknown vocabulary values, duplicate IDs within a record collection, dangling relations, detached evidence, and evidence attached to the wrong subject.
 
 ## Go API
 
@@ -37,6 +37,8 @@ In particular:
 - an inferred protocol vocabulary stays a hypothesis until reviewed;
 - a `verified` model result remains a result about the finite model and its assumptions; and
 - an implementation-level claim requires the separate conformance argument described by issue #11.
+
+The `modelled` and `verified` labels may attach only to `ModelTransition`, `Property`, or `Counterexample` nodes, or to edges wholly between those formal-model artefacts. This rejects a source-side verdict transfer at the ledger boundary rather than merely warning about it in a report.
 
 ## Adapter boundary
 

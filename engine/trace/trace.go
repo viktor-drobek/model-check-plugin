@@ -16,6 +16,8 @@ import (
 
 const Schema = "mcd-trace-ledger/1"
 
+const maxJSONNestingDepth = 64
+
 var (
 	idRE     = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9._:-]*$`)
 	sha256RE = regexp.MustCompile(`^[0-9a-f]{64}$`)
@@ -150,6 +152,9 @@ func UnmarshalJSON(data []byte) (*Document, error) {
 	if err := rejectDuplicateKeys(data); err != nil {
 		return nil, fmt.Errorf("trace: %w", err)
 	}
+	if err := validateExactJSONKeys(data); err != nil {
+		return nil, fmt.Errorf("trace: %w", err)
+	}
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.DisallowUnknownFields()
 	var d Document
@@ -196,7 +201,7 @@ func Validate(d *Document) error {
 		if err := validateProvenance(n.Provenance, path+".provenance"); err != nil {
 			return err
 		}
-		if err := uniqueIDs(n.Evidence, path+".evidence"); err != nil {
+		if err := validateEvidenceIDs(n.Evidence, path+".evidence"); err != nil {
 			return err
 		}
 		nodes[n.ID] = n
@@ -223,7 +228,7 @@ func Validate(d *Document) error {
 		if err := validateProvenance(e.Provenance, path+".provenance"); err != nil {
 			return err
 		}
-		if err := uniqueIDs(e.Evidence, path+".evidence"); err != nil {
+		if err := validateEvidenceIDs(e.Evidence, path+".evidence"); err != nil {
 			return err
 		}
 		edges[e.ID] = e
@@ -250,7 +255,9 @@ func Validate(d *Document) error {
 		evidence[ev.ID] = ev
 	}
 
-	for id, n := range nodes {
+	referencedEvidence := make(map[string]bool, len(d.Evidence))
+	for _, n := range d.Nodes {
+		id := n.ID
 		for _, evidenceID := range n.Evidence {
 			ev, ok := evidence[evidenceID]
 			if !ok {
@@ -259,9 +266,11 @@ func Validate(d *Document) error {
 			if ev.Subject != "node:"+id {
 				return fmt.Errorf("node %q references evidence %q for %q", id, evidenceID, ev.Subject)
 			}
+			referencedEvidence[evidenceID] = true
 		}
 	}
-	for id, e := range edges {
+	for _, e := range d.Edges {
+		id := e.ID
 		for _, evidenceID := range e.Evidence {
 			ev, ok := evidence[evidenceID]
 			if !ok {
@@ -270,6 +279,15 @@ func Validate(d *Document) error {
 			if ev.Subject != "edge:"+id {
 				return fmt.Errorf("edge %q references evidence %q for %q", id, evidenceID, ev.Subject)
 			}
+			referencedEvidence[evidenceID] = true
+		}
+	}
+	for i, ev := range d.Evidence {
+		if !referencedEvidence[ev.ID] {
+			return fmt.Errorf("evidence[%d] %q is not listed by its subject", i, ev.ID)
+		}
+		if err := validateEvidenceApplicability(ev, nodes, edges, fmt.Sprintf("evidence[%d]", i)); err != nil {
+			return err
 		}
 	}
 
@@ -281,6 +299,9 @@ func Validate(d *Document) error {
 		}
 		if gaps[gap.ID] {
 			return fmt.Errorf("%s.id %q duplicates a gap", path, gap.ID)
+		}
+		if !idRE.MatchString(gap.Kind) {
+			return fmt.Errorf("%s.kind %q is not a stable identifier", path, gap.Kind)
 		}
 		if strings.TrimSpace(gap.Kind) == "" || strings.TrimSpace(gap.Reference) == "" || strings.TrimSpace(gap.Reason) == "" {
 			return fmt.Errorf("%s needs non-blank kind, reference, and reason", path)
@@ -313,6 +334,16 @@ func uniqueIDs(ids []string, path string) error {
 			return fmt.Errorf("%s contains duplicate evidence %q", path, id)
 		}
 		seen[id] = true
+	}
+	return nil
+}
+
+func validateEvidenceIDs(ids []string, path string) error {
+	if err := uniqueIDs(ids, path); err != nil {
+		return err
+	}
+	if len(ids) == 0 {
+		return fmt.Errorf("%s must not be empty", path)
 	}
 	return nil
 }
@@ -353,6 +384,33 @@ func validateSubject(subject string, nodes map[string]Node, edges map[string]Edg
 	return nil
 }
 
+func validateEvidenceApplicability(ev Evidence, nodes map[string]Node, edges map[string]Edge, path string) error {
+	if ev.Level != Modelled && ev.Level != Verified {
+		return nil
+	}
+	kind, id, _ := strings.Cut(ev.Subject, ":")
+	switch kind {
+	case "node":
+		if isModelArtifact(nodes[id].Kind) {
+			return nil
+		}
+	case "edge":
+		edge := edges[id]
+		if isModelArtifact(nodes[edge.Source].Kind) && isModelArtifact(nodes[edge.Target].Kind) {
+			return nil
+		}
+	}
+	return fmt.Errorf("%s.level %q must apply only to a formal-model artifact", path, ev.Level)
+}
+
+func isModelArtifact(kind NodeKind) bool {
+	switch kind {
+	case ModelTransition, Property, Counterexample:
+		return true
+	}
+	return false
+}
+
 func validNodeKind(kind NodeKind) bool {
 	switch kind {
 	case Issue, Requirement, Assumption, StandardClause, ProtocolMessage, BinaryField, SourceSymbol, Endpoint, ModelTransition, Property, Scenario, Test, RuntimeSpan, Counterexample, ReviewDecision:
@@ -379,7 +437,7 @@ func validEvidenceLevel(level EvidenceLevel) bool {
 
 func rejectDuplicateKeys(data []byte) error {
 	dec := json.NewDecoder(bytes.NewReader(data))
-	if err := consumeJSONValue(dec); err != nil {
+	if err := consumeJSONValue(dec, 0); err != nil {
 		return err
 	}
 	if _, err := dec.Token(); err != io.EOF {
@@ -388,7 +446,10 @@ func rejectDuplicateKeys(data []byte) error {
 	return nil
 }
 
-func consumeJSONValue(dec *json.Decoder) error {
+func consumeJSONValue(dec *json.Decoder, depth int) error {
+	if depth > maxJSONNestingDepth {
+		return fmt.Errorf("JSON nesting exceeds %d levels", maxJSONNestingDepth)
+	}
 	token, err := dec.Token()
 	if err != nil {
 		return err
@@ -413,7 +474,7 @@ func consumeJSONValue(dec *json.Decoder) error {
 				return fmt.Errorf("duplicate JSON key %q", key)
 			}
 			keys[key] = true
-			if err := consumeJSONValue(dec); err != nil {
+			if err := consumeJSONValue(dec, depth+1); err != nil {
 				return err
 			}
 		}
@@ -421,7 +482,7 @@ func consumeJSONValue(dec *json.Decoder) error {
 		return err
 	case '[':
 		for dec.More() {
-			if err := consumeJSONValue(dec); err != nil {
+			if err := consumeJSONValue(dec, depth+1); err != nil {
 				return err
 			}
 		}
@@ -432,6 +493,108 @@ func consumeJSONValue(dec *json.Decoder) error {
 	}
 }
 
+func validateExactJSONKeys(data []byte) error {
+	var root json.RawMessage = data
+	return validateJSONDocument(root)
+}
+
+func validateJSONDocument(raw json.RawMessage) error {
+	object, err := validateJSONObject(raw, "document", "schema", "nodes", "edges", "evidence", "gaps")
+	if err != nil {
+		return err
+	}
+	if err := validateJSONArray(object["nodes"], "nodes", validateJSONNode); err != nil {
+		return err
+	}
+	if err := validateJSONArray(object["edges"], "edges", validateJSONEdge); err != nil {
+		return err
+	}
+	if err := validateJSONArray(object["evidence"], "evidence", validateJSONEvidence); err != nil {
+		return err
+	}
+	return validateJSONArray(object["gaps"], "gaps", validateJSONGap)
+}
+
+func validateJSONNode(raw json.RawMessage) error {
+	object, err := validateJSONObject(raw, "node", "id", "kind", "label", "provenance", "evidence")
+	if err != nil {
+		return err
+	}
+	return validateJSONProvenance(object["provenance"])
+}
+
+func validateJSONEdge(raw json.RawMessage) error {
+	object, err := validateJSONObject(raw, "edge", "id", "kind", "source", "target", "provenance", "evidence")
+	if err != nil {
+		return err
+	}
+	return validateJSONProvenance(object["provenance"])
+}
+
+func validateJSONEvidence(raw json.RawMessage) error {
+	object, err := validateJSONObject(raw, "evidence", "id", "subject", "level", "provenance")
+	if err != nil {
+		return err
+	}
+	return validateJSONProvenance(object["provenance"])
+}
+
+func validateJSONGap(raw json.RawMessage) error {
+	object, err := validateJSONObject(raw, "gap", "id", "kind", "reference", "reason", "provenance")
+	if err != nil {
+		return err
+	}
+	return validateJSONProvenance(object["provenance"])
+}
+
+func validateJSONProvenance(raw json.RawMessage) error {
+	object, err := validateJSONObject(raw, "provenance", "source_revision", "content_sha256", "anchor", "producer")
+	if err != nil {
+		return err
+	}
+	_, err = validateJSONObject(object["producer"], "producer", "name", "version")
+	return err
+}
+
+func validateJSONObject(raw json.RawMessage, path string, allowed ...string) (map[string]json.RawMessage, error) {
+	if raw == nil {
+		return nil, nil
+	}
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &object); err != nil {
+		return nil, fmt.Errorf("%s must be an object: %w", path, err)
+	}
+	if object == nil {
+		return nil, nil
+	}
+	allowedKeys := make(map[string]bool, len(allowed))
+	for _, key := range allowed {
+		allowedKeys[key] = true
+	}
+	for key := range object {
+		if !allowedKeys[key] {
+			return nil, fmt.Errorf("unknown field %q in %s", key, path)
+		}
+	}
+	return object, nil
+}
+
+func validateJSONArray(raw json.RawMessage, path string, validate func(json.RawMessage) error) error {
+	if raw == nil {
+		return nil
+	}
+	var values []json.RawMessage
+	if err := json.Unmarshal(raw, &values); err != nil {
+		return fmt.Errorf("%s must be an array: %w", path, err)
+	}
+	for _, value := range values {
+		if err := validate(value); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Canonical returns a validation-preserving copy whose lists are sorted by
 // stable ID. It does not modify the caller's document.
 func Canonical(d *Document) (*Document, error) {
@@ -439,16 +602,16 @@ func Canonical(d *Document) (*Document, error) {
 		return nil, err
 	}
 	out := *d
-	out.Nodes = append([]Node(nil), d.Nodes...)
-	out.Edges = append([]Edge(nil), d.Edges...)
-	out.Evidence = append([]Evidence(nil), d.Evidence...)
-	out.Gaps = append([]Gap(nil), d.Gaps...)
+	out.Nodes = append([]Node{}, d.Nodes...)
+	out.Edges = append([]Edge{}, d.Edges...)
+	out.Evidence = append([]Evidence{}, d.Evidence...)
+	out.Gaps = append([]Gap{}, d.Gaps...)
 	for i := range out.Nodes {
-		out.Nodes[i].Evidence = append([]string(nil), out.Nodes[i].Evidence...)
+		out.Nodes[i].Evidence = append([]string{}, out.Nodes[i].Evidence...)
 		sort.Strings(out.Nodes[i].Evidence)
 	}
 	for i := range out.Edges {
-		out.Edges[i].Evidence = append([]string(nil), out.Edges[i].Evidence...)
+		out.Edges[i].Evidence = append([]string{}, out.Edges[i].Evidence...)
 		sort.Strings(out.Edges[i].Evidence)
 	}
 	sort.Slice(out.Nodes, func(i, j int) bool { return out.Nodes[i].ID < out.Nodes[j].ID })
