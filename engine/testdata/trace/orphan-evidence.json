@@ -1,0 +1,40 @@
+{
+  "schema": "mcd-trace-ledger/1",
+  "nodes": [
+    {
+      "id": "symbol.send",
+      "kind": "SourceSymbol",
+      "label": "Send",
+      "provenance": {
+        "source_revision": "abc123",
+        "anchor": "send.go:10",
+        "producer": {"name": "fixture", "version": "1"}
+      },
+      "evidence": ["ev.syntactic"]
+    }
+  ],
+  "edges": [],
+  "evidence": [
+    {
+      "id": "ev.syntactic",
+      "subject": "node:symbol.send",
+      "level": "syntactic",
+      "provenance": {
+        "source_revision": "abc123",
+        "anchor": "send.go:10",
+        "producer": {"name": "fixture", "version": "1"}
+      }
+    },
+    {
+      "id": "ev.orphan",
+      "subject": "node:symbol.send",
+      "level": "runtime",
+      "provenance": {
+        "source_revision": "abc123",
+        "anchor": "trace.json:4",
+        "producer": {"name": "fixture", "version": "1"}
+      }
+    }
+  ],
+  "gaps": []
+}

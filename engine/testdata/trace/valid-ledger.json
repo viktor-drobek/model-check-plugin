@@ -1,0 +1,74 @@
+{
+  "schema": "mcd-trace-ledger/1",
+  "nodes": [
+    {
+      "id": "requirement.ack",
+      "kind": "Requirement",
+      "label": "A sent message must be acknowledged",
+      "provenance": {
+        "content_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "anchor": "requirements.md#ack",
+        "producer": {"name": "fixture", "version": "1"}
+      },
+      "evidence": ["ev.contract", "ev.review"]
+    },
+    {
+      "id": "symbol.send",
+      "kind": "SourceSymbol",
+      "label": "Send",
+      "provenance": {
+        "source_revision": "abc123",
+        "anchor": "send.go:10",
+        "producer": {"name": "fixture", "version": "1"}
+      },
+      "evidence": ["ev.syntactic", "ev.runtime"]
+    },
+    {
+      "id": "transition.send",
+      "kind": "ModelTransition",
+      "label": "send",
+      "provenance": {
+        "content_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "anchor": "model.pml:7",
+        "producer": {"name": "fixture", "version": "1"}
+      },
+      "evidence": ["ev.modelled", "ev.verified"]
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge.maps_to",
+      "kind": "maps_to",
+      "source": "symbol.send",
+      "target": "transition.send",
+      "provenance": {
+        "content_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "anchor": "mapping.yaml#send",
+        "producer": {"name": "fixture", "version": "1"}
+      },
+      "evidence": ["ev.mapping"]
+    }
+  ],
+  "evidence": [
+    {"id": "ev.contract", "subject": "node:requirement.ack", "level": "contract", "provenance": {"source_revision": "abc123", "anchor": "requirements.md#ack", "producer": {"name": "fixture", "version": "1"}}},
+    {"id": "ev.review", "subject": "node:requirement.ack", "level": "reviewed", "provenance": {"source_revision": "abc123", "anchor": "review.md#ack", "producer": {"name": "fixture", "version": "1"}}},
+    {"id": "ev.syntactic", "subject": "node:symbol.send", "level": "syntactic", "provenance": {"source_revision": "abc123", "anchor": "send.go:10", "producer": {"name": "fixture", "version": "1"}}},
+    {"id": "ev.runtime", "subject": "node:symbol.send", "level": "runtime", "provenance": {"source_revision": "abc123", "anchor": "trace.json:4", "producer": {"name": "fixture", "version": "1"}}},
+    {"id": "ev.modelled", "subject": "node:transition.send", "level": "modelled", "provenance": {"source_revision": "abc123", "anchor": "model.pml:7", "producer": {"name": "fixture", "version": "1"}}},
+    {"id": "ev.verified", "subject": "node:transition.send", "level": "verified", "provenance": {"source_revision": "abc123", "anchor": "report.json#/properties/0", "producer": {"name": "fixture", "version": "1"}}},
+    {"id": "ev.mapping", "subject": "edge:edge.maps_to", "level": "reviewed", "provenance": {"source_revision": "abc123", "anchor": "mapping.yaml#send", "producer": {"name": "fixture", "version": "1"}}}
+  ],
+  "gaps": [
+    {
+      "id": "gap.timeout",
+      "kind": "unmapped-operation",
+      "reference": "timeout.go:8",
+      "reason": "No model transition is mapped",
+      "provenance": {
+        "source_revision": "abc123",
+        "anchor": "timeout.go:8",
+        "producer": {"name": "fixture", "version": "1"}
+      }
+    }
+  ]
+}

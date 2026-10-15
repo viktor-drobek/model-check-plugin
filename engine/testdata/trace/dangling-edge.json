@@ -1,0 +1,20 @@
+{
+  "schema": "mcd-trace-ledger/1",
+  "nodes": [],
+  "edges": [
+    {
+      "id": "edge.dangling",
+      "kind": "implements",
+      "source": "symbol.missing",
+      "target": "requirement.missing",
+      "provenance": {
+        "source_revision": "abc123",
+        "anchor": "mapping.yaml#missing",
+        "producer": {"name": "fixture", "version": "1"}
+      },
+      "evidence": []
+    }
+  ],
+  "evidence": [],
+  "gaps": []
+}
