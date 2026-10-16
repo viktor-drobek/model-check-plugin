@@ -82,14 +82,25 @@ func registerG9TraceSteps(sc *godog.ScenarioContext) {
 			return fmt.Errorf("trace ledger was not loaded")
 		}
 		levels := map[string]bool{}
+		levelsBySubject := map[string]map[string]bool{}
 		for _, evidence := range w.document.Evidence {
-			levels[string(evidence.Level)] = true
+			level := string(evidence.Level)
+			levels[level] = true
+			if levelsBySubject[evidence.Subject] == nil {
+				levelsBySubject[evidence.Subject] = map[string]bool{}
+			}
+			levelsBySubject[evidence.Subject][level] = true
 		}
 		if !levels[first] || !levels[second] {
 			return fmt.Errorf("levels %q and %q are not both present: %v", first, second, levels)
 		}
 		if first == second {
 			return fmt.Errorf("evidence levels must differ")
+		}
+		for subject, subjectLevels := range levelsBySubject {
+			if subjectLevels[first] && subjectLevels[second] {
+				return fmt.Errorf("levels %q and %q are attached to the same subject %q", first, second, subject)
+			}
 		}
 		return nil
 	})
@@ -116,6 +127,23 @@ func registerG9TraceSteps(sc *godog.ScenarioContext) {
 		}
 		if !strings.Contains(string(report), "does not transfer a model verdict") {
 			return fmt.Errorf("trace report does not state its implementation boundary")
+		}
+		return nil
+	})
+	sc.Step(`^the trace SARIF report preserves the URL reference "([^"]*)"$`, func(reference string) error {
+		if w.document == nil {
+			return fmt.Errorf("trace ledger was not loaded")
+		}
+		report, err := trace.SARIF(w.document)
+		if err != nil {
+			return err
+		}
+		text := string(report)
+		if !strings.Contains(text, `"uri": "`+reference+`"`) {
+			return fmt.Errorf("trace SARIF report does not preserve URL reference %q:\n%s", reference, text)
+		}
+		if strings.Contains(text, `"startLine": 443`) {
+			return fmt.Errorf("trace SARIF report invents line 443 for URL reference %q:\n%s", reference, text)
 		}
 		return nil
 	})

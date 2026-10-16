@@ -1,0 +1,42 @@
+{
+  "schema": "mcd-trace-ledger/1",
+  "nodes": [
+    {
+      "id": "requirement.r1",
+      "kind": "Requirement",
+      "label": "A requirement",
+      "provenance": {
+        "content_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "anchor": "requirements.md#r1",
+        "producer": {"name": "fixture", "version": "1"}
+      },
+      "evidence": ["ev.requirement"]
+    }
+  ],
+  "edges": [],
+  "evidence": [
+    {
+      "id": "ev.requirement",
+      "subject": "node:requirement.r1",
+      "level": "contract",
+      "provenance": {
+        "content_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "anchor": "requirements.md#r1",
+        "producer": {"name": "fixture", "version": "1"}
+      }
+    }
+  ],
+  "gaps": [
+    {
+      "id": "gap.external-reference",
+      "kind": "external-reference",
+      "reference": "https://example.org:443",
+      "reason": "External review is required",
+      "provenance": {
+        "content_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "anchor": "requirements.md#r1",
+        "producer": {"name": "fixture", "version": "1"}
+      }
+    }
+  ]
+}

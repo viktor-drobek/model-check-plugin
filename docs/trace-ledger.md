@@ -8,10 +8,14 @@ A document has four ordered collections:
 
 - **nodes** — typed artefacts such as a requirement, source symbol, protocol message, model transition, property, test, or review decision;
 - **edges** — exact, typed relations between node IDs;
-- **evidence** — append-only evidence records for a node or edge; and
+- **evidence** — evidence records for a node or edge; and
 - **gaps** — explicit obligations that remain unresolved.
 
 Each record has provenance with a source revision or lowercase SHA-256 content digest, a stable anchor, and a producer name/version. Nodes and edges list one or more evidence record IDs; every evidence record must in turn be listed by its exact subject. The validator rejects unknown or case-variant fields, duplicate JSON keys at any nesting depth, excessive JSON nesting, trailing JSON, invalid hashes, unknown vocabulary values, duplicate IDs within a record collection, dangling relations, detached evidence, and evidence attached to the wrong subject.
+
+Stage 1 validates one ledger document; it does not enforce append-only history
+or make a ledger tamper-evident. Preserving evidence history and reviewing
+changes are Stage 6 responsibilities.
 
 ## Go API
 

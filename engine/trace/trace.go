@@ -349,7 +349,11 @@ func validateEvidenceIDs(ids []string, path string) error {
 }
 
 func validateProvenance(p Provenance, path string) error {
-	if strings.TrimSpace(p.SourceRevision) == "" && p.ContentSHA256 == "" {
+	sourceRevision := strings.TrimSpace(p.SourceRevision)
+	if p.SourceRevision != "" && sourceRevision == "" {
+		return fmt.Errorf("%s.source_revision is blank", path)
+	}
+	if sourceRevision == "" && p.ContentSHA256 == "" {
 		return fmt.Errorf("%s needs source_revision or content_sha256", path)
 	}
 	if p.ContentSHA256 != "" && !sha256RE.MatchString(p.ContentSHA256) {
@@ -552,8 +556,40 @@ func validateJSONProvenance(raw json.RawMessage) error {
 	if err != nil {
 		return err
 	}
+	if rawSourceRevision, ok := object["source_revision"]; ok {
+		if err := validateNonBlankJSONString(rawSourceRevision, "provenance.source_revision"); err != nil {
+			return err
+		}
+	}
+	if rawContentSHA256, ok := object["content_sha256"]; ok {
+		if err := validateSHA256JSONString(rawContentSHA256, "provenance.content_sha256"); err != nil {
+			return err
+		}
+	}
 	_, err = validateJSONObject(object["producer"], "producer", "name", "version")
 	return err
+}
+
+func validateNonBlankJSONString(raw json.RawMessage, path string) error {
+	var value string
+	if err := json.Unmarshal(raw, &value); err != nil {
+		return fmt.Errorf("%s must be a string: %w", path, err)
+	}
+	if strings.TrimSpace(value) == "" {
+		return fmt.Errorf("%s is blank", path)
+	}
+	return nil
+}
+
+func validateSHA256JSONString(raw json.RawMessage, path string) error {
+	var value string
+	if err := json.Unmarshal(raw, &value); err != nil {
+		return fmt.Errorf("%s must be a string: %w", path, err)
+	}
+	if !sha256RE.MatchString(value) {
+		return fmt.Errorf("%s must be a lowercase SHA-256", path)
+	}
+	return nil
 }
 
 func validateJSONObject(raw json.RawMessage, path string, allowed ...string) (map[string]json.RawMessage, error) {

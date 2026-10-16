@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html"
+	"net/url"
 	"strconv"
 	"strings"
 )
@@ -105,7 +106,8 @@ func SARIF(d *Document) ([]byte, error) {
 			Level:   "warning",
 			Message: sarifMessage{Text: gap.Reason},
 			Properties: map[string]string{
-				"gapId": gap.ID,
+				"gapId":     gap.ID,
+				"reference": gap.Reference,
 			},
 			Locations: []sarifLocation{{
 				PhysicalLocation: sarifLocationForReference(gap.Reference),
@@ -131,18 +133,29 @@ func SARIF(d *Document) ([]byte, error) {
 }
 
 func sarifLocationForReference(reference string) sarifPhysicalLocation {
-	location := sarifPhysicalLocation{ArtifactLocation: sarifArtifactLocation{URI: reference}}
+	location := sarifPhysicalLocation{ArtifactLocation: sarifArtifactLocation{URI: sarifURI(reference)}}
+	if strings.Contains(reference, "://") {
+		return location
+	}
 	separator := strings.LastIndexByte(reference, ':')
-	if separator <= 0 || separator == len(reference)-1 {
+	if separator <= 0 || separator == len(reference)-1 || strings.Contains(reference[:separator], ":") {
 		return location
 	}
 	line, err := strconv.Atoi(reference[separator+1:])
 	if err != nil || line < 1 {
 		return location
 	}
-	location.ArtifactLocation.URI = reference[:separator]
+	location.ArtifactLocation.URI = sarifURI(reference[:separator])
 	location.Region = &sarifRegion{StartLine: line}
 	return location
+}
+
+func sarifURI(reference string) string {
+	parsed, err := url.Parse(reference)
+	if err == nil && parsed.IsAbs() {
+		return parsed.String()
+	}
+	return (&url.URL{Path: reference}).String()
 }
 
 type sarifLog struct {

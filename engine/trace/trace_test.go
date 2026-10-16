@@ -97,6 +97,37 @@ func TestUnmarshalRejectsUnknownDuplicateAndTrailingJSON(t *testing.T) {
 	}
 }
 
+func TestUnmarshalRejectsSchemaInvalidPresentProvenanceFields(t *testing.T) {
+	encoded, err := JSON(validDocument())
+	if err != nil {
+		t.Fatal(err)
+	}
+	contentHash := `"content_sha256": "` + digest + `"`
+	cases := []struct {
+		name string
+		data string
+		want string
+	}{
+		{
+			name: "blank source revision",
+			data: strings.Replace(string(encoded), contentHash, `"source_revision": "   ", `+contentHash, 1),
+			want: "provenance.source_revision is blank",
+		},
+		{
+			name: "empty content hash",
+			data: strings.Replace(string(encoded), contentHash, `"source_revision": "abc123", "content_sha256": ""`, 1),
+			want: "provenance.content_sha256 must be a lowercase SHA-256",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if _, err := UnmarshalJSON([]byte(tc.data)); err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("error = %v, want substring %q", err, tc.want)
+			}
+		})
+	}
+}
+
 func TestUnmarshalRejectsExcessiveNesting(t *testing.T) {
 	data := []byte(strings.Repeat("[", maxJSONNestingDepth+1) + "null" + strings.Repeat("]", maxJSONNestingDepth+1))
 	if _, err := UnmarshalJSON(data); err == nil || !strings.Contains(err.Error(), "JSON nesting exceeds") {
@@ -216,6 +247,43 @@ func TestSARIFUsesOneRuleDefinitionPerGapKind(t *testing.T) {
 	}
 	if got := strings.Count(string(sarif), `"ruleId": "trace/unmapped-operation"`); got != 2 {
 		t.Fatalf("SARIF has %d results, want 2:\n%s", got, sarif)
+	}
+}
+
+func TestSARIFParsesOnlyUnambiguousFileLineReferences(t *testing.T) {
+	cases := []struct {
+		name          string
+		reference     string
+		wantURI       string
+		wantStartLine string
+	}{
+		{"file line", "timeout.go:8", "timeout.go", `"startLine": 8`},
+		{"URL port", "https://example.org:443", "https://example.org:443", ""},
+		{"file line column", "timeout.go:8:3", "timeout.go:8:3", ""},
+		{"space in path", "docs/my file.md", "docs/my%20file.md", ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			d := validDocument()
+			d.Gaps[0].Reference = tc.reference
+			sarif, err := SARIF(d)
+			if err != nil {
+				t.Fatal(err)
+			}
+			text := string(sarif)
+			if !strings.Contains(text, `"uri": "`+tc.wantURI+`"`) {
+				t.Fatalf("SARIF URI does not contain %q:\n%s", tc.wantURI, text)
+			}
+			if !strings.Contains(text, `"reference": "`+tc.reference+`"`) {
+				t.Fatalf("SARIF does not preserve reference %q:\n%s", tc.reference, text)
+			}
+			if tc.wantStartLine == "" && strings.Contains(text, `"startLine":`) {
+				t.Fatalf("SARIF invents a line for %q:\n%s", tc.reference, text)
+			}
+			if tc.wantStartLine != "" && !strings.Contains(text, tc.wantStartLine) {
+				t.Fatalf("SARIF lacks %s for %q:\n%s", tc.wantStartLine, tc.reference, text)
+			}
+		})
 	}
 }
 
