@@ -33,7 +33,7 @@ func validDocument() *Document {
 			{ID: "ev.symbol", Subject: "node:symbol.send", Level: Syntactic, Provenance: provenance("send.go:10")},
 			{ID: "ev.edge", Subject: "edge:edge.implements", Level: Reviewed, Provenance: provenance("review.md#mapping")},
 		},
-		Gaps: []Gap{{ID: "gap.timeout", Kind: "unmapped-operation", Reference: "timeout.go:8", Reason: "No model transition is mapped", Provenance: provenance("timeout.go:8")}},
+		Gaps: []Gap{{ID: "gap.timeout", Kind: "unmapped-operation", Reference: "./timeout.go:8", Reason: "No model transition is mapped", Provenance: provenance("timeout.go:8")}},
 	}
 }
 
@@ -207,7 +207,7 @@ func TestReportsAreDeterministicAndNameGaps(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{`"version": "2.1.0"`, `"$schema": "https://json.schemastore.org/sarif-2.1.0.json"`, `"ruleId": "trace/unmapped-operation"`, `"gapId": "gap.timeout"`, `"uri": "timeout.go"`, `"startLine": 8`, `"schema": "mcd-trace-ledger/1"`} {
+	for _, want := range []string{`"version": "2.1.0"`, `"$schema": "https://json.schemastore.org/sarif-2.1.0.json"`, `"ruleId": "trace/unmapped-operation"`, `"gapId": "gap.timeout"`, `"uri": "./timeout.go"`, `"startLine": 8`, `"schema": "mcd-trace-ledger/1"`} {
 		if !strings.Contains(string(sarif), want) {
 			t.Fatalf("SARIF lacks %q:\n%s", want, sarif)
 		}
@@ -257,9 +257,31 @@ func TestSARIFParsesOnlyUnambiguousFileLineReferences(t *testing.T) {
 		wantURI       string
 		wantStartLine string
 	}{
-		{"file line", "timeout.go:8", "timeout.go", `"startLine": 8`},
+		{"explicit file line", "./timeout.go:8", "./timeout.go", `"startLine": 8`},
+		{"slash path line", "docs/timeout.go:8", "docs/timeout.go", `"startLine": 8`},
 		{"URL port", "https://example.org:443", "https://example.org:443", ""},
-		{"file line column", "timeout.go:8:3", "timeout.go:8:3", ""},
+		{"opaque URN", "urn:ietf:rfc:2119", "urn:ietf:rfc:2119", ""},
+		{"opaque mailto", "mailto:owner@example.org", "mailto:owner@example.org", ""},
+		{"file URI", "file:/abs/path", "file:/abs/path", ""},
+		{"dotted opaque URI", "iris.beep:opaque", "iris.beep:opaque", ""},
+		{"dotted opaque URI numeric suffix", "iris.beep:123", "iris.beep:123", ""},
+		{"extensionless ambiguous reference", "Makefile:12", "makefile:12", ""},
+		{"drive relative ambiguous reference", `C:repo\x.go`, `c:repo\x.go`, ""},
+		{"fragment", "requirements.md#r1", "requirements.md#r1", ""},
+		{"query", "requirements.md?version=1", "requirements.md?version=1", ""},
+		{"query line suffix", "timeout.go?rev=x:8", "timeout.go?rev=x:8", ""},
+		{"fragment line suffix", "requirements.md#r1:2", "requirements.md#r1:2", ""},
+		{"explicit path fragment line suffix", "./a.md#L:12", "./a.md#L:12", ""},
+		{"slash path query line suffix", "docs/a.md?x=y:3", "docs/a.md?x=y:3", ""},
+		{"file line column", "./timeout.go:8:3", "./timeout.go:8:3", ""},
+		{"file line query with URL", "timeout.go:8?see=https://x", "timeout.go:8?see=https://x", ""},
+		{"POSIX absolute path line", "/repo/timeout.go:8", "/repo/timeout.go:8", ""},
+		{"percent path line", "docs/100%.md:5", "docs/100%25.md", `"startLine": 5`},
+		{"encoded-looking percent path line", "docs/50%20off.md:5", "docs/50%2520off.md", `"startLine": 5`},
+		{"hex-looking percent path line", "docs/100%41.md:5", "docs/100%2541.md", `"startLine": 5`},
+		{"windows style path", "C:/repo/x.go", "./C:/repo/x.go", ""},
+		{"windows style path with line", "C:/repo/x.go:12", "./C:/repo/x.go:12", ""},
+		{"network path line", "//host.example/x.go:5", "//host.example/x.go:5", ""},
 		{"space in path", "docs/my file.md", "docs/my%20file.md", ""},
 	}
 	for _, tc := range cases {
@@ -271,10 +293,10 @@ func TestSARIFParsesOnlyUnambiguousFileLineReferences(t *testing.T) {
 				t.Fatal(err)
 			}
 			text := string(sarif)
-			if !strings.Contains(text, `"uri": "`+tc.wantURI+`"`) {
+			if !containsSARIFString(text, "uri", tc.wantURI) {
 				t.Fatalf("SARIF URI does not contain %q:\n%s", tc.wantURI, text)
 			}
-			if !strings.Contains(text, `"reference": "`+tc.reference+`"`) {
+			if !containsSARIFString(text, "reference", tc.reference) {
 				t.Fatalf("SARIF does not preserve reference %q:\n%s", tc.reference, text)
 			}
 			if tc.wantStartLine == "" && strings.Contains(text, `"startLine":`) {
@@ -285,6 +307,14 @@ func TestSARIFParsesOnlyUnambiguousFileLineReferences(t *testing.T) {
 			}
 		})
 	}
+}
+
+func containsSARIFString(report, field, value string) bool {
+	encoded, err := json.Marshal(value)
+	if err != nil {
+		return false
+	}
+	return strings.Contains(report, `"`+field+`": `+string(encoded))
 }
 
 func TestJSONSchemaIsValidAndReturnedAsACopy(t *testing.T) {

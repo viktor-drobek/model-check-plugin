@@ -134,28 +134,61 @@ func SARIF(d *Document) ([]byte, error) {
 
 func sarifLocationForReference(reference string) sarifPhysicalLocation {
 	location := sarifPhysicalLocation{ArtifactLocation: sarifArtifactLocation{URI: sarifURI(reference)}}
-	if strings.Contains(reference, "://") {
+	path, line, ok := sarifSourceLine(reference)
+	if !ok {
 		return location
 	}
-	separator := strings.LastIndexByte(reference, ':')
-	if separator <= 0 || separator == len(reference)-1 || strings.Contains(reference[:separator], ":") {
-		return location
-	}
-	line, err := strconv.Atoi(reference[separator+1:])
-	if err != nil || line < 1 {
-		return location
-	}
-	location.ArtifactLocation.URI = sarifURI(reference[:separator])
+	location.ArtifactLocation.URI = sarifPathURI(path)
 	location.Region = &sarifRegion{StartLine: line}
 	return location
 }
 
-func sarifURI(reference string) string {
+func sarifSourceLine(reference string) (string, int, bool) {
+	if strings.ContainsAny(reference, "?#") || strings.HasPrefix(reference, "//") {
+		return "", 0, false
+	}
+	separator := strings.LastIndexByte(reference, ':')
+	if separator <= 0 || separator == len(reference)-1 || strings.Contains(reference[:separator], ":") {
+		return "", 0, false
+	}
+	line, err := strconv.Atoi(reference[separator+1:])
+	if err != nil || line < 1 {
+		return "", 0, false
+	}
+	path := reference[:separator]
+	if strings.HasPrefix(path, "/") || !strings.Contains(path, "/") {
+		return "", 0, false
+	}
 	parsed, err := url.Parse(reference)
-	if err == nil && parsed.IsAbs() {
+	if err == nil && (parsed.IsAbs() || parsed.Host != "") {
+		return "", 0, false
+	}
+	return path, line, true
+}
+
+func sarifURI(reference string) string {
+	if isWindowsAbsolutePath(reference) {
+		if relative, err := url.Parse("./" + reference); err == nil {
+			return relative.String()
+		}
+	}
+	parsed, err := url.Parse(reference)
+	if err == nil {
 		return parsed.String()
 	}
 	return (&url.URL{Path: reference}).String()
+}
+
+func sarifPathURI(path string) string {
+	return (&url.URL{Path: path}).String()
+}
+
+func isWindowsAbsolutePath(reference string) bool {
+	return len(reference) >= 3 && isASCIIAlpha(reference[0]) && reference[1] == ':' && (reference[2] == '/' || reference[2] == '\\')
+}
+
+func isASCIIAlpha(value byte) bool {
+	return value >= 'A' && value <= 'Z' || value >= 'a' && value <= 'z'
 }
 
 type sarifLog struct {

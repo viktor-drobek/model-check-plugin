@@ -130,7 +130,7 @@ func registerG9TraceSteps(sc *godog.ScenarioContext) {
 		}
 		return nil
 	})
-	sc.Step(`^the trace SARIF report preserves the URL reference "([^"]*)"$`, func(reference string) error {
+	sc.Step(`^the trace SARIF report preserves the reference "([^"]*)" without a region$`, func(reference string) error {
 		if w.document == nil {
 			return fmt.Errorf("trace ledger was not loaded")
 		}
@@ -140,10 +140,13 @@ func registerG9TraceSteps(sc *godog.ScenarioContext) {
 		}
 		text := string(report)
 		if !strings.Contains(text, `"uri": "`+reference+`"`) {
-			return fmt.Errorf("trace SARIF report does not preserve URL reference %q:\n%s", reference, text)
+			return fmt.Errorf("trace SARIF report does not preserve reference %q:\n%s", reference, text)
 		}
-		if strings.Contains(text, `"startLine": 443`) {
-			return fmt.Errorf("trace SARIF report invents line 443 for URL reference %q:\n%s", reference, text)
+		if !strings.Contains(text, `"reference": "`+reference+`"`) {
+			return fmt.Errorf("trace SARIF report does not preserve raw reference %q:\n%s", reference, text)
+		}
+		if strings.Contains(text, `"region":`) {
+			return fmt.Errorf("trace SARIF report invents a region for reference %q:\n%s", reference, text)
 		}
 		return nil
 	})

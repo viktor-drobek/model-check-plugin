@@ -31,6 +31,17 @@ sarif, err := trace.SARIF(ledger)
 
 `trace.JSON` makes a validation-preserving copy, sorts every list by stable ID, and emits two-space-indented JSON with a trailing newline. `trace.Markdown` is a review summary. `trace.SARIF` reports only explicit `gaps` as SARIF warnings; recorded facts are not findings merely because they exist.
 
+SARIF creates a source region only for an unambiguous relative `path:line`
+gap reference. A bare `name:line` that could be an opaque URI must be written
+as `./name:line`; a path containing a slash is already unambiguous. Relative
+references retain their query or fragment, while syntactically absolute URIs
+(including opaque forms such as `urn:`), network-path references, and any
+reference with a query or fragment remain URI-only. Windows absolute paths
+(`C:/...`) are rendered as paths, but their drive colon does not create a source
+region; POSIX-absolute paths are URI-only. Source-path URIs escape literal
+percent signs so a ledger filename is never decoded as URI escaping. The exact
+ledger reference is retained in each result's `properties.reference`.
+
 ## Evidence is not a verdict transfer
 
 The labels `syntactic`, `decoded`, `grammar`, `inferred`, `contract`, `normative_candidate`, `licensed_clause_reference`, `runtime`, `modelled`, `verified`, and `reviewed` describe the origin of a record. They are not rank-ordered and one label cannot silently replace another.
