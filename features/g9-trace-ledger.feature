@@ -24,3 +24,27 @@ Feature: Trace ledger contract
   Scenario: retain the finite-model boundary for verified evidence
     Given the trace ledger fixture "trace/source-verified.json"
     Then the trace ledger is rejected with "must apply only to a formal-model artifact"
+
+  Scenario: reject a schema-invalid provenance field even when another pin is present
+    Given the trace ledger fixture "trace/empty-content-sha.json"
+    Then the trace ledger is rejected with "content_sha256 must be a lowercase SHA-256"
+
+  Scenario: preserve a URL gap reference without inventing a line number
+    Given the trace ledger fixture "trace/url-gap.json"
+    Then the trace ledger is accepted
+    And the trace SARIF report preserves the reference "https://example.org:443" without a region
+
+  Scenario: preserve a relative fragment gap reference without inventing a region
+    Given the trace ledger fixture "trace/fragment-gap.json"
+    Then the trace ledger is accepted
+    And the trace SARIF report preserves the reference "requirements.md#r1:2" without a region
+
+  Scenario: preserve an opaque URI gap reference without inventing a region
+    Given the trace ledger fixture "trace/opaque-uri-gap.json"
+    Then the trace ledger is accepted
+    And the trace SARIF report preserves the reference "iris.beep:opaque" without a region
+
+  Scenario: preserve an absolute POSIX gap reference without inventing a region
+    Given the trace ledger fixture "trace/posix-absolute-gap.json"
+    Then the trace ledger is accepted
+    And the trace SARIF report preserves the reference "/repo/timeout.go:8" without a region
