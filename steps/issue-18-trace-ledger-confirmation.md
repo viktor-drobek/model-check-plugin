@@ -76,6 +76,30 @@ completed in about 380 seconds. The temporary `/tmp` monorepo links used only
 to let existing root-sensitive feature checks find their rule files are not
 part of the candidate or this repository change.
 
+## Bounded local model confirmation
+
+At the user's direction, the candidate was also checked on this host with a
+fresh `mcd` binary built from commit `5e1661f`. This is a regression check of
+the finite engine fixture below, not evidence about a Trace Ledger user,
+protocol, or implementation.
+
+| Field | Value |
+| --- | --- |
+| Model | `engine/testdata/promela/ctl-switch.pml` (`sha256:0788375397e79ab749086dcaf84e136ac698446bdbb537151fe8133d2759f160`) |
+| System boundary | One untimed Promela process and one bounded byte variable; no external environment or messages |
+| Property | CTL `AG EF (x == 0)` — every reachable state has a path to `x == 0` |
+| Fairness | `none`; CTL fairness is outside the engine's supported semantics |
+| Limits | 1,000 states, depth 1,000, 5,000 ms, 512 MiB, one worker |
+| Capacity preflight | Passed twice: CPU 0%, memory 27–28%, 32 CPUs available |
+| Estimate | Complete: 7 states, 8 transitions, depth 5 |
+| Result | `ctl1`: `verified` with `exhaustive` evidence on the complete 7-state graph |
+
+The built-in deadlock property also returned `verified` with `exhaustive`
+evidence. The check completed well inside every declared limit. A universal
+CTL property that holds has no single witness trace; its justification is the
+complete reachable graph. This result therefore confirms only that property of
+this finite fixture under the stated modelling assumptions.
+
 ## Outstanding confirmation gate
 
 The required bounded remote model confirmation has **not** passed yet. The
