@@ -1,0 +1,81 @@
+{
+  "schema": "mcd-ir/1",
+  "name": "ctl-atomic-depth",
+  "globals": [
+    {
+      "name": "n",
+      "type": "byte"
+    }
+  ],
+  "processes": [
+    {
+      "name": "P",
+      "locations": [
+        {
+          "name": "atomic"
+        },
+        {
+          "name": "done"
+        }
+      ],
+      "initial": 0,
+      "edges": [
+        {
+          "from": 0,
+          "to": 0,
+          "guard": {
+            "op": "lt",
+            "args": [
+              {
+                "op": "var",
+                "var": "n"
+              },
+              {
+                "op": "const",
+                "value": 2
+              }
+            ]
+          },
+          "effect": [
+            {
+              "var": "n",
+              "value": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "var",
+                    "var": "n"
+                  },
+                  {
+                    "op": "const",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "atomic": true,
+          "text": "n++"
+        },
+        {
+          "from": 0,
+          "to": 1,
+          "guard": {
+            "op": "eq",
+            "args": [
+              {
+                "op": "var",
+                "var": "n"
+              },
+              {
+                "op": "const",
+                "value": 2
+              }
+            ]
+          },
+          "text": "n == 2"
+        }
+      ]
+    }
+  ]
+}

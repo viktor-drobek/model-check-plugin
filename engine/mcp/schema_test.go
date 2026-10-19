@@ -82,6 +82,12 @@ func TestSchemas(t *testing.T) {
 		if strings.Contains(s, `"maximum":255`) {
 			t.Errorf("mc_check input schema encodes a byte array: %s", s)
 		}
+		if !strings.Contains(s, "CTL-only call") || !strings.Contains(s, "mixed safety plus CTL") {
+			t.Errorf("mc_check input schema lacks the CTL parallel eligibility description: %s", s)
+		}
+		if !strings.Contains(s, "transition-depth semantics") || !strings.Contains(s, "reconstructs witnesses sequentially") {
+			t.Errorf("mc_check input schema lacks the CTL depth and witness semantics: %s", s)
+		}
 	}
 }
 

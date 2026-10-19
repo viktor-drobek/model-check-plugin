@@ -614,14 +614,29 @@ type AtomStat struct {
 
 // Stats evaluates every atom of f over the graph.
 func Stats(g Graph, f *Formula, val Valuation) ([]AtomStat, error) {
+	return StatsCtx(context.Background(), g, f, val)
+}
+
+// StatsCtx evaluates every atom of f over the graph while observing ctx.
+// Statistics are optional report enrichment, so callers may keep an already
+// decided verdict when the context ends during this pass.
+func StatsCtx(ctx context.Context, g Graph, f *Formula, val Valuation) ([]AtomStat, error) {
 	var out []AtomStat
 	for _, a := range f.Atoms() {
+		if err := budgetErr(ctx); err != nil {
+			return nil, err
+		}
 		s, err := val(a)
 		if err != nil {
 			return nil, err
 		}
 		st := AtomStat{Atom: a}
-		for _, v := range s {
+		for i, v := range s {
+			if i%tickSteps == 0 {
+				if err := budgetErr(ctx); err != nil {
+					return nil, err
+				}
+			}
 			if v {
 				st.EverTrue = true
 			} else {

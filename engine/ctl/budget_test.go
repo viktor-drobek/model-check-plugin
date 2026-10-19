@@ -62,3 +62,39 @@ func TestLabellingStopsWithTheContext(t *testing.T) {
 		t.Error("EF q does not hold in s0")
 	}
 }
+
+func TestStatsStopsWithTheContext(t *testing.T) {
+	g := newGraph([][]int32{{1}, {1}})
+	f, err := Parse("AG p", Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, err := StatsCtx(ctx, g, f, valuation(map[string][]bool{"p": {true, true}})); !errors.Is(err, ErrBudget) || !errors.Is(err, context.Canceled) {
+		t.Fatalf("StatsCtx under a cancelled context: %v, want ErrBudget wrapping context.Canceled", err)
+	}
+}
+
+func TestStatsStopsWhenValuationCancelsTheContext(t *testing.T) {
+	g := newGraph([][]int32{{0}})
+	f, err := Parse("AG p", Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	called := false
+	val := Valuation(func(*Atom) ([]bool, error) {
+		called = true
+		cancel()
+		return make([]bool, g.Len()), nil
+	})
+	_, err = StatsCtx(ctx, g, f, val)
+	if !called {
+		t.Fatal("StatsCtx returned before it evaluated the atom")
+	}
+	if !errors.Is(err, ErrBudget) || !errors.Is(err, context.Canceled) {
+		t.Fatalf("StatsCtx after valuation cancellation: %v, want ErrBudget wrapping context.Canceled", err)
+	}
+}

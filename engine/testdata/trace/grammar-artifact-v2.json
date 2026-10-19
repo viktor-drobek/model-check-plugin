@@ -1,0 +1,53 @@
+{
+  "schema": "mcd-trace-ledger/2",
+  "nodes": [
+    {
+      "id": "grammar.8621b1ba283b844d72b9256c2f51bb161b207ef964ece0c59e7dc3dfdbd46d20",
+      "kind": "GrammarArtifact",
+      "label": "Registered Kaitai grammar artifact",
+      "provenance": {
+        "content_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "anchor": "grammar:kaitai@0.10:grammars/packet.ksy#declared=root",
+        "producer": {
+          "name": "mcd-grammar-adapter",
+          "version": "1"
+        }
+      },
+      "evidence": [
+        "evidence.grammar.8621b1ba283b844d72b9256c2f51bb161b207ef964ece0c59e7dc3dfdbd46d20"
+      ]
+    }
+  ],
+  "edges": [],
+  "evidence": [
+    {
+      "id": "evidence.grammar.8621b1ba283b844d72b9256c2f51bb161b207ef964ece0c59e7dc3dfdbd46d20",
+      "subject": "node:grammar.8621b1ba283b844d72b9256c2f51bb161b207ef964ece0c59e7dc3dfdbd46d20",
+      "level": "grammar",
+      "provenance": {
+        "content_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "anchor": "grammar:kaitai@0.10:grammars/packet.ksy#declared=root",
+        "producer": {
+          "name": "mcd-grammar-adapter",
+          "version": "1"
+        }
+      }
+    }
+  ],
+  "gaps": [
+    {
+      "id": "gap.grammar.anchor_unverified.8621b1ba283b844d72b9256c2f51bb161b207ef964ece0c59e7dc3dfdbd46d20",
+      "kind": "grammar.anchor_unverified",
+      "reference": "node:grammar.8621b1ba283b844d72b9256c2f51bb161b207ef964ece0c59e7dc3dfdbd46d20",
+      "reason": "the declared grammar anchor was not syntax-verified",
+      "provenance": {
+        "content_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "anchor": "grammar:kaitai@0.10:grammars/packet.ksy#declared=root",
+        "producer": {
+          "name": "mcd-grammar-adapter",
+          "version": "1"
+        }
+      }
+    }
+  ]
+}

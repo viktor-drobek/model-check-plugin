@@ -21,7 +21,7 @@ deadlock): `verified`, evidence `exhaustive`, 128 states."
 - Transition semantics: *interleaving / rendezvous / buffered channels; atomic step*
 - Fairness: *`none` / `weak`; which infinite paths are excluded and why that is admissible*
 - Bounds and capacities: *every domain, queue size, process count that limits the model*
-- Relation to the implementation: *hand-written model / extracted / built from prose; what is not claimed*
+- Relation to the implementation: *hand-written model / extracted / built from prose; what is not claimed; link to the conformance dossier when an implementation claim is considered*
 
 ## 3. Model
 

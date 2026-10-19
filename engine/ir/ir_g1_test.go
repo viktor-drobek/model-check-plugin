@@ -74,6 +74,7 @@ func TestValidateG1Constructs(t *testing.T) {
 			m.Processes[0].Edges[0].Else = true
 			m.Processes[0].Edges[0].Guard = Const(1)
 		}, "else edge has no guard"},
+		{"priority ok", func(m *Model) { m.Processes[0].Edges[0].Priority = 1 }, ""},
 		{"len ok", func(m *Model) { m.Processes[0].Edges[0].Guard = Binary("lt", Len("c"), Const(2)) }, ""},
 		{"len unknown", func(m *Model) { m.Processes[0].Edges[0].Guard = Binary("lt", Len("zz"), Const(2)) }, "undeclared channel"},
 		{"pc ok", func(m *Model) { m.Processes[0].Edges[0].Guard = Binary("eq", PC(1), Const(1)) }, ""},

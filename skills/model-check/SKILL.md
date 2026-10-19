@@ -38,8 +38,8 @@ engine, and you call a tool for it.
 Two facts shape every answer you give:
 
 1. A result is a statement about a **model** under **assumptions**, never about the
-   real system. Carrying it over to the implementation needs a separate argument
-   (conformance, testing, a documented refinement), which you name but do not invent.
+   real system. Carrying it over to the implementation needs a separate argument;
+   follow `references/conformance.md` and retain its dossier rather than inventing one.
 2. The worst outcome is a false `verified`. When the search was not exhaustive, when
    fairness was added to silence a counterexample, or when the property is vacuously
    true, say so with the exact status and evidence level; never round up to "proved".
@@ -279,6 +279,8 @@ the status, the status × evidence table, and the list of phrasings you must not
 | `references/counterexamples.md` | a property came back `violated`; the user asks what the trace means |
 | `references/evidence-and-status.md` | writing the report; any doubt about which status applies |
 | `references/pitfalls.md` | reviewing a model or a property someone else wrote; before declaring `verified` |
+| `references/conformance.md` | connecting a model verdict to an implementation claim or reviewing a refinement |
+| [capability matrix](../../docs/capability-matrix.md) | confirming whether a capability is supported before promising a run or selecting a backend |
 
 ## Five short examples from the corpus
 

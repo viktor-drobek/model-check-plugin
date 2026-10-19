@@ -1,0 +1,8 @@
+Request for Comments: 9003
+Category: Informational
+
+A preface MUST NOT become a candidate before the BCP 14 declaration.
+
+The key words "MUST" and "SHOULD" are to be interpreted as described in BCP 14.
+
+An implementation MUST preserve the source revision after the declaration.

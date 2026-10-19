@@ -1,0 +1,11 @@
+{
+  "standard_id": "IEEE 802.1Q",
+  "edition": "2022",
+  "document_sha256": "not-a-sha256",
+  "clauses": [
+    {
+      "anchor": "8.6.8",
+      "summary": "A concise permitted clause summary."
+    }
+  ]
+}

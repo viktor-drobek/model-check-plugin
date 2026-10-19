@@ -1,0 +1,8 @@
+Request for Comments: 9044
+Category: Informational
+
+The key words "MUST" in this document are to be interpreted as described in RFC 8174.
+
+Clients MUST include this text in the Reason header.
+
+Senders MUST use the following text encoding: UTF-8.

@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"modelcheck/ir"
 )
 
 func runCLI(t *testing.T, args ...string) (int, string, string) {
@@ -68,6 +70,64 @@ func TestInvalidIRIsRejected(t *testing.T) {
 	code, out, _ := runCLI(t, "check", "--ir", p)
 	if code != ExitRejected || !strings.Contains(out, `"kind": "ir"`) {
 		t.Fatalf("exit %d: %s", code, out)
+	}
+}
+
+func TestCatalogIsDeterministicAndReconstructible(t *testing.T) {
+	code, first, stderr := runCLI(t, "catalog", "--petri", petriDir+"petrinet1.json")
+	if code != ExitOK || stderr != "" {
+		t.Fatalf("first catalog: exit %d, stderr %q", code, stderr)
+	}
+	code, second, stderr := runCLI(t, "catalog", "--petri", petriDir+"petrinet1.json")
+	if code != ExitOK || stderr != "" {
+		t.Fatalf("second catalog: exit %d, stderr %q", code, stderr)
+	}
+	if first != second {
+		t.Fatal("catalog output is not deterministic")
+	}
+	catalog, err := ir.ReadStaticCatalog([]byte(first))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := catalog.Reconstruct(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestValidateCatalogRejectsPositionalArguments(t *testing.T) {
+	missing := t.TempDir() + "/does-not-exist.json"
+	code, out, stderr := runCLI(t,
+		"validate-catalog", "--catalog", "catalog.json", "--petri", missing,
+		"unexpected", "--petri", petriDir+"petrinet2.json")
+	if code != ExitTool || out != "" || !strings.Contains(stderr, "unexpected positional arguments") || strings.Contains(stderr, missing) {
+		t.Fatalf("code %d, stdout %q, stderr %q", code, out, stderr)
+	}
+}
+
+func TestInputByteLimitIsRejected(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "oversized.json")
+	if err := os.WriteFile(path, bytes.Repeat([]byte(" "), int(MaxInputBytes+1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	code, out, errs := runCLI(t, "parse", "--petri", path)
+	if code != ExitRejected || errs != "" || !strings.Contains(out, `"kind": "input-too-large"`) || !strings.Contains(out, `"path": `) || !strings.Contains(out, "input limit") {
+		t.Fatalf("code %d, stderr %q, output %s", code, errs, out)
+	}
+	code, out, errs = runCLI(t, "check", "--petri", path)
+	if code != ExitRejected || errs != "" || !strings.Contains(out, `"kind": "input-too-large"`) {
+		t.Fatalf("check: code %d, stderr %q, output %s", code, errs, out)
+	}
+}
+
+func TestReadInputFileAcceptsExactLimit(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "exact.pml")
+	if err := os.WriteFile(path, bytes.Repeat([]byte("x"), 64), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	data, err := ReadInputFile(path, 64)
+	if err != nil || len(data) != 64 {
+		t.Fatalf("ReadInputFile exact limit = %d bytes, %v", len(data), err)
 	}
 }
 

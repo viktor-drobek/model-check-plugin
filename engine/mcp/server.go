@@ -47,6 +47,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -139,6 +140,12 @@ type Config struct {
 	// concurrency bound counts calls, not workers, so the CPU a server may use is
 	// Concurrency * MaxWorkers.
 	MaxWorkers int
+	// MaxInputBytes bounds a source before mc_parse materializes it for a
+	// frontend. Zero uses cli.MaxInputBytes.
+	MaxInputBytes int64
+	// MaxOutputBytes bounds one persisted report or trace. Zero uses the
+	// default ceiling.
+	MaxOutputBytes int64
 	// Promela is nil when no Promela frontend is linked in this build.
 	Promela PromelaFrontend
 }
@@ -156,6 +163,24 @@ func (c *Config) normalize() error {
 	}
 	if c.MaxWorkers > explore.MaxWorkers {
 		c.MaxWorkers = explore.MaxWorkers
+	}
+	if c.MaxInputBytes < 0 {
+		return errors.New("max input bytes must not be negative")
+	}
+	if c.MaxInputBytes == math.MaxInt64 {
+		return errors.New("max input bytes must be below 9223372036854775807")
+	}
+	if c.MaxInputBytes == 0 {
+		c.MaxInputBytes = cli.MaxInputBytes
+	}
+	if c.MaxOutputBytes < 0 {
+		return errors.New("max output bytes must not be negative")
+	}
+	if c.MaxOutputBytes == math.MaxInt64 {
+		return errors.New("max output bytes must be below 9223372036854775807")
+	}
+	if c.MaxOutputBytes == 0 {
+		c.MaxOutputBytes = DefaultMaxOutputBytes
 	}
 	var allow []string
 	for _, d := range c.AllowRead {
@@ -194,7 +219,7 @@ func New(cfg Config) (*Server, error) {
 		return nil, err
 	}
 	ss, err := NewSessions(cfg.SessionBase, cfg.Cleanup, ServerParams{
-		DefaultBudget: cfg.Default, Ceiling: cfg.Ceiling, Concurrency: cfg.Concurrency, MaxWorkers: cfg.MaxWorkers, AllowRead: cfg.AllowRead,
+		DefaultBudget: cfg.Default, Ceiling: cfg.Ceiling, Concurrency: cfg.Concurrency, MaxWorkers: cfg.MaxWorkers, MaxInputBytes: cfg.MaxInputBytes, MaxOutputBytes: cfg.MaxOutputBytes, AllowRead: cfg.AllowRead,
 	})
 	if err != nil {
 		return nil, err

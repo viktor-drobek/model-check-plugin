@@ -1,0 +1,10 @@
+Request for Comments: 9055
+Category: Informational
+
+The key words "MUST" in this document are to be interpreted as described in RFC 8174.
+
+A genuine requirement MUST become a candidate.
+
+The key words "MUST" are to be interpreted as described in RFC 8174. RFC 2119 says:
+
+A quoted requirement MUST not become a candidate.

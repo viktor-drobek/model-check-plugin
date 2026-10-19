@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"modelcheck/cli"
 	"modelcheck/frontend/petri"
 	"modelcheck/ir"
 )
@@ -63,43 +63,64 @@ func (s *Server) parse(ctx context.Context, req *sdk.CallToolRequest, in ParseIn
 	if given != 1 {
 		return nil, nil, errors.New("exactly one of promela, petri, ir or file must be given")
 	}
-	// Policy first: a file is read only under an allowed prefix. No session
+	// Policy first: a file is read only under an allowed prefix. No new session
 	// is created for a refused request.
-	var src modelSource
+	var (
+		src       modelSource
+		err       error
+		sess      *Session
+		timer     *callTimer
+		out       *ParseOut
+		artifacts []string
+	)
+	if in.SessionID != "" {
+		sess, err = s.session(in.SessionID, false)
+		if err != nil {
+			return nil, nil, err
+		}
+		timer = s.begin(ctx, sess, "mc_parse")
+		out = &ParseOut{SessionID: sess.ID, Warnings: []string{}}
+		defer func() { timer.end(err, nil, artifacts) }()
+	}
 	if in.File != nil {
 		switch in.File.Kind {
 		case "promela", "petri", "ir":
 		default:
-			return nil, nil, fmt.Errorf("file.kind must be promela, petri or ir, got %q", in.File.Kind)
+			err = fmt.Errorf("file.kind must be promela, petri or ir, got %q", in.File.Kind)
+			return nil, nil, err
 		}
-		real, err := s.allowedRead(in.File.Path)
+		var real string
+		real, err = s.allowedRead(in.File.Path)
 		if err != nil {
 			return nil, nil, err
 		}
-		data, err := os.ReadFile(real)
+		var data []byte
+		data, err = cli.ReadInputFile(real, s.cfg.MaxInputBytes)
 		if err != nil {
+			if out := inputLimitParseOut(out, err, in.File.Path); out != nil {
+				err = nil
+				return nil, out, nil
+			}
 			return nil, nil, err
 		}
 		src = modelSource{kind: in.File.Kind, source: real, data: data}
 	}
-	sess, err := s.session(in.SessionID, true)
-	if err != nil {
-		return nil, nil, err
-	}
-	timer := s.begin(ctx, sess, "mc_parse")
-	out := &ParseOut{SessionID: sess.ID, Warnings: []string{}}
-	var artifacts []string
-	defer func() { timer.end(err, nil, artifacts) }()
 
 	if in.File == nil {
 		switch {
 		case in.Promela != "":
+			if out := inputLimitParseOut(out, cli.CheckInputSize(int64(len(in.Promela)), s.cfg.MaxInputBytes), "inline:promela"); out != nil {
+				return nil, out, nil
+			}
 			src = modelSource{kind: "promela", source: "inline", data: []byte(in.Promela)}
 		case in.Petri != nil:
 			data, e := json.Marshal(in.Petri)
 			if e != nil {
 				err = e
 				return nil, nil, err
+			}
+			if out := inputLimitParseOut(out, cli.CheckInputSize(int64(len(data)), s.cfg.MaxInputBytes), "inline:petri"); out != nil {
+				return nil, out, nil
 			}
 			src = modelSource{kind: "petri", source: "inline", data: data}
 		default:
@@ -108,8 +129,20 @@ func (s *Server) parse(ctx context.Context, req *sdk.CallToolRequest, in ParseIn
 				err = e
 				return nil, nil, err
 			}
+			if out := inputLimitParseOut(out, cli.CheckInputSize(int64(len(data)), s.cfg.MaxInputBytes), "inline:ir"); out != nil {
+				return nil, out, nil
+			}
 			src = modelSource{kind: "ir", source: "inline", data: data}
 		}
+	}
+	if sess == nil {
+		sess, err = s.session("", true)
+		if err != nil {
+			return nil, nil, err
+		}
+		timer = s.begin(ctx, sess, "mc_parse")
+		out = &ParseOut{SessionID: sess.ID, Warnings: []string{}}
+		defer func() { timer.end(err, nil, artifacts) }()
 	}
 
 	var m *ir.Model
@@ -162,6 +195,24 @@ func (s *Server) parse(ctx context.Context, req *sdk.CallToolRequest, in ParseIn
 	out.IR = asAny
 	out.Origins = origins(m)
 	return nil, out, nil
+}
+
+func inputLimitParseOut(out *ParseOut, err error, file string) *ParseOut {
+	var limit *cli.InputLimitError
+	if !errors.As(err, &limit) {
+		return nil
+	}
+	if out == nil {
+		out = &ParseOut{Warnings: []string{}}
+	}
+	out.Outcome = "rejected"
+	out.Rejection = &Rejection{
+		Kind:      "input-too-large",
+		Construct: "source",
+		File:      file,
+		Reason:    limit.Error(),
+	}
+	return out
 }
 
 func fileOf(src modelSource) string {

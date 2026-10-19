@@ -1,0 +1,1 @@
+{"openapi":"3.0.3","info":{"title":"Synthetic acceptance protocol","version":"1"},"paths":{"/accept":{"post":{"operationId":"Accept","responses":{"204":{"description":"Accepted"}}}}}}

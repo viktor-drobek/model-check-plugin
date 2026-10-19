@@ -39,6 +39,27 @@ Feature: Trace ledger contract
     Then the trace ledger is accepted
     And the trace SARIF report preserves the reference "requirements.md#r1:2" without a region
 
+  Scenario: accept an isolated grammar artifact in schema v2
+    Given the trace ledger fixture "trace/grammar-artifact-v2.json"
+    Then the trace ledger is accepted
+    And the trace ledger has schema "mcd-trace-ledger/2"
+    And the trace report names the gap "gap.grammar.anchor_unverified.8621b1ba283b844d72b9256c2f51bb161b207ef964ece0c59e7dc3dfdbd46d20"
+
+  Scenario: accept legal whitespace around the schema v2 selector
+    Given the trace ledger fixture "trace/grammar-artifact-v2-whitespace.json"
+    Then the trace ledger is accepted
+    And the trace ledger has schema "mcd-trace-ledger/2"
+    And the trace canonical JSON starts with schema "mcd-trace-ledger/2"
+    And the trace SARIF report declares schema "mcd-trace-ledger/2"
+
+  Scenario: reject an escaped schema v2 selector on the v1 path
+    Given the trace ledger fixture "trace/grammar-artifact-v2-escaped-selector.json"
+    Then the trace ledger is rejected as a v1 schema
+
+  Scenario: reject an unpaired surrogate after the v2 selector
+    Given the trace ledger fixture "trace/grammar-artifact-v2-unpaired-surrogate.json"
+    Then the trace ledger is rejected with "unpaired surrogate"
+
   Scenario: preserve an opaque URI gap reference without inventing a region
     Given the trace ledger fixture "trace/opaque-uri-gap.json"
     Then the trace ledger is accepted

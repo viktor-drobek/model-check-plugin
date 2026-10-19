@@ -68,7 +68,40 @@ func registerG9TraceSteps(sc *godog.ScenarioContext) {
 		}
 		return nil
 	})
+	sc.Step(`^the trace ledger has schema "([^"]*)"$`, func(want string) error {
+		if w.document == nil {
+			return fmt.Errorf("trace ledger was not loaded")
+		}
+		if w.document.Schema != want {
+			return fmt.Errorf("trace schema = %q, want %q", w.document.Schema, want)
+		}
+		return nil
+	})
+	sc.Step(`^the trace canonical JSON starts with schema "([^"]*)"$`, func(want string) error {
+		if w.document == nil {
+			return fmt.Errorf("trace ledger was not loaded")
+		}
+		canonical, err := trace.JSON(w.document)
+		if err != nil {
+			return err
+		}
+		prefix := "{\n  \"schema\": \"" + want + "\""
+		if !strings.HasPrefix(string(canonical), prefix) {
+			return fmt.Errorf("canonical trace JSON does not start with %q: %s", prefix, canonical)
+		}
+		return nil
+	})
 	sc.Step(`^the trace ledger is rejected with "([^"]*)"$`, func(want string) error {
+		if w.err == nil {
+			return fmt.Errorf("trace ledger was accepted")
+		}
+		if !strings.Contains(w.err.Error(), want) {
+			return fmt.Errorf("rejection %q does not contain %q", w.err, want)
+		}
+		return nil
+	})
+	sc.Step(`^the trace ledger is rejected as a v1 schema$`, func() error {
+		want := `schema is "mcd-trace-ledger/2", want "mcd-trace-ledger/1"`
 		if w.err == nil {
 			return fmt.Errorf("trace ledger was accepted")
 		}
@@ -147,6 +180,19 @@ func registerG9TraceSteps(sc *godog.ScenarioContext) {
 		}
 		if strings.Contains(text, `"region":`) {
 			return fmt.Errorf("trace SARIF report invents a region for reference %q:\n%s", reference, text)
+		}
+		return nil
+	})
+	sc.Step(`^the trace SARIF report declares schema "([^"]*)"$`, func(want string) error {
+		if w.document == nil {
+			return fmt.Errorf("trace ledger was not loaded")
+		}
+		report, err := trace.SARIF(w.document)
+		if err != nil {
+			return err
+		}
+		if !strings.Contains(string(report), `"schema": "`+want+`"`) {
+			return fmt.Errorf("trace SARIF report does not declare schema %q: %s", want, report)
 		}
 		return nil
 	})

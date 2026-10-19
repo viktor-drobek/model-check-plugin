@@ -153,7 +153,9 @@ func (e *InternalError) Error() string { return "internal error in the parallel 
 // Reasons a parallel run is refused. The run is then the sequential default,
 // unchanged, and Parallel.Reason carries the sentence.
 const (
-	parRefuseTemporal = "an ltl, progress or ctl property is decided by a nested depth-first search or a graph labelling that this version does not parallelise; the whole run was executed sequentially"
+	parRefuseTemporal = "an ltl or progress property is decided by a nested depth-first search that this version does not parallelise; the whole run was executed sequentially"
+	parRefuseMixedCTL = "a safety property and a ctl property share this call; the safety search and CTL graph construction ran sequentially"
+	parRefuseCTLPOR   = "a ctl property cannot use partial-order reduction; the reachable graph was built sequentially"
 	parRefusePOR      = "partial-order reduction is depth-first only; with --por the reduced sequential search ran. Drop --por to search in parallel"
 	parRefuseVisited  = "a caller-supplied visited set is for tests of the sequential search; the whole run was executed sequentially"
 	parRefuseIdle     = "no property of the call was left to search for (every one of them was refused, see their reasons): nothing was searched"
@@ -171,7 +173,7 @@ const (
 // (a property that reads the live-process table over a model that keeps none,
 // tableread.go), so there is nothing to decide. The parallel search is then not
 // applied, and the report says why instead of claiming workers that did no work.
-func (s *search) chooseParallel(temporal, idle bool) bool {
+func (s *search) chooseParallel(temporal, mixedCTL, ctlPOR, idle bool) bool {
 	if s.opt.Workers <= 0 {
 		return false
 	}
@@ -180,6 +182,10 @@ func (s *search) chooseParallel(temporal, idle bool) bool {
 	switch {
 	case temporal:
 		p.Reason = parRefuseTemporal
+	case mixedCTL:
+		p.Reason = parRefuseMixedCTL
+	case ctlPOR:
+		p.Reason = parRefuseCTLPOR
 	case s.por != nil:
 		p.Reason = parRefusePOR
 	case s.opt.NewVisited != nil:

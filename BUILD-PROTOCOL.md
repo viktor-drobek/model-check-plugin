@@ -1,6 +1,6 @@
 # Протокол выполнения шага сборки
 
-Применяется к каждому шагу плана [14](../model-check-skill-notes/14-skill-building-plan.md) §9 (Spike, G0–G7) и к каждому подшагу, который агент выделяет внутри шага. Порядок обязателен; шаг не считается завершённым, пока не пройдены все шесть пунктов.
+This protocol applies to every Spike/G0–G7 step and its substeps. All six checks below are mandatory before a step is complete. The historical plan 14 §9 is a monorepo-only source at `model-check-skill-notes/14-skill-building-plan.md`, not an installation dependency of this standalone plugin; see [the provenance index](PROVENANCE.md).
 
 1. **Cucumber сначала.** До кода пишется `features/<step>-<topic>.feature` на Gherkin (русский или английский язык, ключевые слова Gherkin на английском). Сценарии описывают наблюдаемое поведение через CLI/MCP/JSON, а не внутренние структуры. Feature-файл фиксирует критерий выхода шага из плана 14 §9 дословно или в уточнённом виде.
 2. **Реализация.** Только то, что нужно для сценариев шага и его юнит-тестов. Подмножество Promela и объём движка — строго по плану 14 §4–§5; расширения объёма без правки плана запрещены.
@@ -11,6 +11,7 @@
 
 Общие правила:
 - Код и тесты — в `model-check-plugin/engine/` (Go-модуль `modelcheck`), skill — в `model-check-plugin/skills/model-check/`, feature-файлы — в `model-check-plugin/features/`, отчёты — в `model-check-plugin/steps/`.
+- Offline trace adapters in `engine/trace` are Go-library APIs over caller-supplied bytes. They are not `mcd` CLI commands or MCP tools; preserve that boundary and update `docs/trace-adapter-matrix.md` when an adapter profile, evidence boundary, or release status changes.
 - Ничего не менять в `books-md/`, `Promela - examples/`, `model-check-skill-notes/` (кроме явного поручения).
 - Статусы результата только из словаря 11 §14: `verified`, `violated`, `inconclusive`, `unknown`, `not-executed`, `invalid-model`. Evidence: `exhaustive`, `bounded`, `approximate`, `unknown`.
 - Детерминизм: одинаковый вход → одинаковый JSON (порядок переходов фиксирован, никаких map-итераций в выводе).

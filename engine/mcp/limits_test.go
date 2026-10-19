@@ -3,7 +3,9 @@ package mcp
 import (
 	"context"
 	"encoding/json"
+	"math"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -108,5 +110,168 @@ func TestLimitsKeepTheServerAlive(t *testing.T) {
 	out = call("mc_lint_property", map[string]any{"session_id": session, "kind": "ltl", "formula": "[] (p1 >= 0)"})
 	if field(out, "type_error") != "null" {
 		t.Fatalf("an ordinary lint after the rejections fails: %.300s", out)
+	}
+}
+
+func TestParseRejectsSourceByteLimit(t *testing.T) {
+	allowDir := t.TempDir()
+	srv, cs := connect(t, Config{MaxInputBytes: 64, AllowRead: []string{allowDir}, Promela: PromelaViaCLI})
+	ctx := context.Background()
+	sessionCount := func() int {
+		sessions := srv.Sessions()
+		sessions.mu.Lock()
+		defer sessions.mu.Unlock()
+		return len(sessions.order)
+	}
+	call := func(args map[string]any) map[string]any {
+		t.Helper()
+		res, err := cs.CallTool(ctx, &sdk.CallToolParams{Name: "mc_parse", Arguments: args})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if res.IsError {
+			t.Fatalf("tool error: %v", res.Content)
+		}
+		var text string
+		for _, c := range res.Content {
+			if tc, ok := c.(*sdk.TextContent); ok {
+				text += tc.Text
+			}
+		}
+		var out map[string]any
+		if err := json.Unmarshal([]byte(text), &out); err != nil {
+			t.Fatalf("unmarshal response: %v: %s", err, text)
+		}
+		return out
+	}
+
+	before := sessionCount()
+	out := call(map[string]any{"promela": strings.Repeat("x", 65)})
+	if out["outcome"] != "rejected" || out["session_id"] != "" || sessionCount() != before {
+		t.Fatalf("anonymous oversized parse allocated a session: %#v", out)
+	}
+
+	out = call(map[string]any{"promela": "active proctype P(){ skip }"})
+	if out["outcome"] != "ir" {
+		t.Fatalf("initial ordinary parse: %#v", out)
+	}
+	sessionID, _ := out["session_id"].(string)
+	if sessionID == "" {
+		t.Fatalf("initial parse has no session id: %#v", out)
+	}
+
+	out = call(map[string]any{"promela": strings.Repeat("x", 65), "session_id": sessionID})
+	if out["outcome"] != "rejected" {
+		t.Fatalf("outcome = %v, want rejected", out["outcome"])
+	}
+	rejection, _ := out["rejection"].(map[string]any)
+	if out["session_id"] != sessionID || rejection["kind"] != "input-too-large" || rejection["file"] != "inline:promela" || !strings.Contains(rejection["reason"].(string), "input limit") {
+		t.Fatalf("rejection = %#v", rejection)
+	}
+	sess, err := srv.Sessions().Get(sessionID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sess.mu.Lock()
+	calls := append([]Call(nil), sess.manifest.Calls...)
+	sess.mu.Unlock()
+	if len(calls) != 2 || calls[1].Tool != "mc_parse" || calls[1].Outcome != "ok" {
+		t.Fatalf("manifest calls = %#v", calls)
+	}
+
+	file := filepath.Join(t.TempDir(), "outside-allow-list.pml")
+	if err := os.WriteFile(file, []byte("active proctype P(){ skip }"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	res, err := cs.CallTool(ctx, &sdk.CallToolParams{Name: "mc_parse", Arguments: map[string]any{
+		"session_id": sessionID,
+		"file":       map[string]any{"kind": "promela", "path": file},
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.IsError {
+		t.Fatalf("refused file parse did not return a tool error: %#v", res)
+	}
+	sess.mu.Lock()
+	calls = append([]Call(nil), sess.manifest.Calls...)
+	sess.mu.Unlock()
+	if len(calls) != 3 || calls[2].Tool != "mc_parse" || calls[2].Outcome != "error" || calls[2].Error == "" {
+		t.Fatalf("manifest calls after refused file = %#v", calls)
+	}
+
+	allowedFile := filepath.Join(allowDir, "oversized.pml")
+	if err := os.WriteFile(allowedFile, []byte(strings.Repeat("x", 65)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	out = call(map[string]any{
+		"session_id": sessionID,
+		"file":       map[string]any{"kind": "promela", "path": allowedFile},
+	})
+	if out["outcome"] != "rejected" || out["session_id"] != sessionID {
+		t.Fatalf("allowed oversized file response = %#v", out)
+	}
+	sess.mu.Lock()
+	calls = append([]Call(nil), sess.manifest.Calls...)
+	sess.mu.Unlock()
+	if len(calls) != 4 || calls[3].Tool != "mc_parse" || calls[3].Outcome != "ok" || calls[3].Error != "" {
+		t.Fatalf("manifest calls after oversized file = %#v", calls)
+	}
+
+	out = call(map[string]any{"promela": "active proctype P(){ skip }"})
+	if out["outcome"] != "ir" {
+		t.Fatalf("ordinary parse after rejection: %#v", out)
+	}
+}
+
+func TestParseRejectsOversizedAllowedFile(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "oversized.pml")
+	if err := os.WriteFile(path, []byte(strings.Repeat("x", 65)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, cs := connect(t, Config{MaxInputBytes: 64, AllowRead: []string{dir}, Promela: PromelaViaCLI})
+	res, err := cs.CallTool(context.Background(), &sdk.CallToolParams{Name: "mc_parse", Arguments: map[string]any{
+		"file": map[string]any{"kind": "promela", "path": path},
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.IsError {
+		t.Fatalf("tool error: %v", res.Content)
+	}
+	var out map[string]any
+	if err := json.Unmarshal([]byte(res.Content[0].(*sdk.TextContent).Text), &out); err != nil {
+		t.Fatal(err)
+	}
+	rejection, _ := out["rejection"].(map[string]any)
+	if out["outcome"] != "rejected" || rejection["kind"] != "input-too-large" || rejection["file"] != path {
+		t.Fatalf("response = %#v", out)
+	}
+}
+
+func TestMaxInputBytesRejectsOverflowingValue(t *testing.T) {
+	if _, err := New(Config{MaxInputBytes: math.MaxInt64}); err == nil {
+		t.Fatal("New accepted an overflowing max input byte limit")
+	}
+}
+
+func TestMaxOutputBytesIsRecordedAndValidated(t *testing.T) {
+	srv, err := New(Config{SessionBase: t.TempDir(), MaxOutputBytes: 123})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sess, err := srv.Sessions().New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifest, _ := sess.snapshot()
+	if manifest.Server.MaxOutputBytes != 123 {
+		t.Fatalf("manifest max_output_bytes = %d, want 123", manifest.Server.MaxOutputBytes)
+	}
+	for _, n := range []int64{-1, math.MaxInt64} {
+		if _, err := New(Config{SessionBase: t.TempDir(), MaxOutputBytes: n}); err == nil {
+			t.Fatalf("New accepted max output bytes %d", n)
+		}
 	}
 }

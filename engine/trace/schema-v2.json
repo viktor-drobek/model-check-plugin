@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://model-check.dev/schemas/mcd-trace-ledger-2.json",
+  "title": "mcd trace ledger schema v2",
+  "description": "Versioned trace graph and evidence ledger. Evidence labels record provenance and never by themselves prove an implementation claim.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "nodes", "edges", "evidence", "gaps"],
+  "properties": {
+    "schema": {"const": "mcd-trace-ledger/2"},
+    "nodes": {"type": "array", "items": {"$ref": "#/$defs/node"}},
+    "edges": {"type": "array", "items": {"$ref": "#/$defs/edge"}},
+    "evidence": {"type": "array", "items": {"$ref": "#/$defs/evidence"}},
+    "gaps": {"type": "array", "items": {"$ref": "#/$defs/gap"}}
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9._:-]*$"
+    },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": {"type": "string", "pattern": ".*\\S.*"},
+        "version": {"type": "string", "pattern": ".*\\S.*"}
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["anchor", "producer"],
+      "anyOf": [
+        {"required": ["source_revision"]},
+        {"required": ["content_sha256"]}
+      ],
+      "properties": {
+        "source_revision": {"type": "string", "pattern": ".*\\S.*"},
+        "content_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "anchor": {"type": "string", "pattern": ".*\\S.*"},
+        "producer": {"$ref": "#/$defs/producer"}
+      }
+    },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "label", "provenance", "evidence"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "kind": {
+          "enum": [
+            "Issue", "Requirement", "Assumption", "StandardClause",
+            "ProtocolMessage", "BinaryField", "SourceSymbol", "Endpoint",
+            "ModelTransition", "Property", "Scenario", "Test", "RuntimeSpan",
+            "Counterexample", "ReviewDecision", "GrammarArtifact"
+          ]
+        },
+        "label": {"type": "string", "pattern": ".*\\S.*"},
+        "provenance": {"$ref": "#/$defs/provenance"},
+        "evidence": {"type": "array", "items": {"$ref": "#/$defs/id"}, "uniqueItems": true, "minItems": 1}
+      }
+    },
+    "edge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "source", "target", "provenance", "evidence"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "kind": {
+          "enum": [
+            "implements", "maps_to", "calls", "sends", "receives", "decodes_as",
+            "tests", "verifies", "assumes", "omits", "contradicts", "derived_from"
+          ]
+        },
+        "source": {"$ref": "#/$defs/id"},
+        "target": {"$ref": "#/$defs/id"},
+        "provenance": {"$ref": "#/$defs/provenance"},
+        "evidence": {"type": "array", "items": {"$ref": "#/$defs/id"}, "uniqueItems": true, "minItems": 1}
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "subject", "level", "provenance"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "subject": {"type": "string", "pattern": "^(node|edge):[A-Za-z][A-Za-z0-9._:-]*$"},
+        "level": {
+          "enum": [
+            "syntactic", "decoded", "grammar", "inferred", "contract",
+            "normative_candidate", "licensed_clause_reference", "runtime",
+            "modelled", "verified", "reviewed"
+          ]
+        },
+        "provenance": {"$ref": "#/$defs/provenance"}
+      }
+    },
+    "gap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "reference", "reason", "provenance"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "kind": {"$ref": "#/$defs/id"},
+        "reference": {"type": "string", "pattern": ".*\\S.*"},
+        "reason": {"type": "string", "pattern": ".*\\S.*"},
+        "provenance": {"$ref": "#/$defs/provenance"}
+      }
+    }
+  }
+}

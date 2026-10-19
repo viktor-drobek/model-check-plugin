@@ -18,6 +18,7 @@ import (
 //
 //	mcd serve [--session-dir D] [--allow-read DIR]...
 //	          [--max-states N] [--max-depth N] [--max-ms N] [--max-memory-mb N]
+//	          [--max-input-bytes N] [--max-output-bytes N]
 //	          [--concurrency K] [--max-workers N] [--cleanup]
 //
 // --session-dir defaults to $MCD_SESSION_DIR, then to a fresh temporary
@@ -37,6 +38,8 @@ func serve(args []string) int {
 	maxDepth := fs.Int("max-depth", 0, "ceiling for the depth budget (0 = none)")
 	maxMS := fs.Int64("max-ms", 0, "ceiling for the time budget in ms (0 = none)")
 	maxMem := fs.Int64("max-memory-mb", 0, "ceiling for the memory budget in MiB (0 = none)")
+	maxInputBytes := fs.Int64("max-input-bytes", 0, "maximum source bytes accepted by mc_parse (0 = default)")
+	maxOutputBytes := fs.Int64("max-output-bytes", 0, "maximum bytes in one persisted report or trace (0 = default)")
 	concurrency := fs.Int("concurrency", 2, "maximum simultaneous mc_check/mc_estimate runs")
 	maxWorkers := fs.Int("max-workers", 0, "ceiling for the workers of one mc_check call (0 = GOMAXPROCS); the CPU the server may use is concurrency times this")
 	cleanup := fs.Bool("cleanup", false, "remove session directories at shutdown")
@@ -48,13 +51,15 @@ func serve(args []string) int {
 		return 1
 	}
 	srv, err := mcp.New(mcp.Config{
-		SessionBase: *sessionDir,
-		Cleanup:     *cleanup,
-		AllowRead:   allow,
-		Ceiling:     mcp.Budget{States: *maxStates, Depth: *maxDepth, MS: *maxMS, MemoryMB: *maxMem},
-		Concurrency: *concurrency,
-		MaxWorkers:  *maxWorkers,
-		Promela:     mcp.PromelaViaCLI,
+		SessionBase:    *sessionDir,
+		Cleanup:        *cleanup,
+		AllowRead:      allow,
+		Ceiling:        mcp.Budget{States: *maxStates, Depth: *maxDepth, MS: *maxMS, MemoryMB: *maxMem},
+		Concurrency:    *concurrency,
+		MaxWorkers:     *maxWorkers,
+		MaxInputBytes:  *maxInputBytes,
+		MaxOutputBytes: *maxOutputBytes,
+		Promela:        mcp.PromelaViaCLI,
 	})
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "mcd serve:", err)

@@ -1,0 +1,10 @@
+Example Working Group                                         A. Example
+Request for Comments: 9999                                      May 2026
+
+The key words "MUST", "MUST NOT", "SHOULD", and "MAY" in this document
+are to be interpreted as described in BCP 14 [RFC 2119] [RFC 8174].
+
+1. Protocol Behaviour
+
+A sender MUST emit one HELLO message before application data.
+A receiver SHOULD reject an unknown version.

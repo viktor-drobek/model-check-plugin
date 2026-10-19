@@ -1,0 +1,9 @@
+Request for Comments: 9005
+Category: Informational
+
+This explanatory paragraph is ordinary body text.
+   Updates: 9999
+
+The keywords "MUST" and "SHOULD" are to be interpreted as described in BCP 14.
+
+An implementation MUST preserve the supplied source revision.

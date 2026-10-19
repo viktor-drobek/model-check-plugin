@@ -38,6 +38,7 @@ error until the row-by-row probe of `steps/g3-evals3-subset-probe.md` caught it.
 | Channels | `chan` declarations `chan c = [N] of { t1, t2, … }` with `N ≥ 0` (`0` = rendezvous); `c!e1,e2` / `c!e1(e2,…)`; `c?x,y` with constants (pattern match) and variables; the predicates `len`, `empty`, `full`, `nempty`, `nfull` (as `len(c)`, `empty(c)`, …); `xr c` / `xs c` — `xr` and `xs` are parsed and kept as **hints** (recorded in the IR, no effect on the search) |
 | Control | `if … fi`, `do … od`, `::` options, `->` and `;` as separators, `else`, `break`, `goto`, labels; label prefixes `end`, `progress`, `accept` |
 | Atomicity | `atomic { … }`, `d_step { … }` (semantics in §2) |
+| Escape sequence | `{ main } unless { guard -> effects }`, where both sides are linear local sequences of expressions, assignments, or assertions; the escape is tested before every main statement and preempts it when enabled |
 | Statements | assignment, expression statements (guards), `assert(e)`, `skip`, `true`, `false`, `timeout`, `printf` (a step with no effect; warning) |
 | Preprocessor | `#define` (object-like `#define NAME body` and function-like `#define NAME(args) body`, with `\` continuation), `#undef`, `#ifdef`/`#ifndef`/`#if`/`#elif`/`#else`/`#endif` with constant expressions and `defined()`; symbols from the command line with `-D` (`-D NAME` / `-D NAME=value`, repeatable; MCP: `defines`); expanded tokens keep the line of the macro call for traces |
 | Properties | `never` claim (`never { … }`; since G4 it is **executed** and the frontend adds a property `never` of kind `ltl` — probe `in-never-claim.pml` gives properties `deadlock, never`; `#ifdef` pairs select claims, as `CH4/prop.pml` with `-D PHI`), `assert`, `end`/`progress`/`accept` labels (an `accept` label adds a property `accept`, a `progress` label a property `progress` — probe `in-label-prefixes.pml` gives `deadlock, accept, progress`) |
@@ -107,7 +108,7 @@ than a boundary to explain — with the one exception noted for `P[i]:var`.
 
 | Construct | Rejection `kind` | Corpus file | Rewrite to offer |
 |---|---|---|---|
-| `unless` | `outside-subset` ("plan 14 §5.2: outside the subset") | `CH7/example1.pml`–`example3.pml`, `CH3/pots.pml` | explicit `do` with a guard on the escape condition |
+| complex escape sequence | `outside-subset` (only the documented linear guarded brace-block form is supported) | `CH7/example1.pml`–`example3.pml`, `CH3/pots.pml` | use the supported escape form, or rewrite the escape as explicit control flow |
 | `c_code`, `c_expr`, `c_decl`, `c_state`, `c_track` | `outside-subset` ("embedded C is outside the subset"; a `c_track` file is refused at its `c_code`) | `CH17/simple1.pr` (line 1), `CH17/simple2.pr`, `CH10/fahr.pml` | model the C effect as Promela assignments and guards |
 | `eval(e)` in a receive | `outside-subset` ("plan 14 §5.2: not in the corpus, outside the subset") | — | receive into a variable and guard on it |
 | `priority n` | `outside-subset` ("process priorities are outside the subset") | `CH5/pathfinder.pml` | an explicit turn variable, if the priority matters to the property |

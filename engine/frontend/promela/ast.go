@@ -84,7 +84,11 @@ type (
 	Block struct {
 		Kind  string // "", "atomic", "d_step"
 		Items []Item
-		Pos   Pos
+		// Escape is the brace block of `{ main } unless { escape }`. It is
+		// checked when control enters this block and, when enabled, preempts
+		// the main sequence.
+		Escape *Block
+		Pos    Pos
 	}
 	Decl struct{ Var *VarDecl }
 	If   struct {

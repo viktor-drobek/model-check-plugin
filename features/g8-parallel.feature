@@ -26,8 +26,10 @@
 # run that is refused is the sequential one, and counts transitions.
 #
 # It refuses, with the reason in `search.parallel`, whatever it cannot yet
-# prove: any ltl, progress or ctl property in the run, and `--por` where the
-# reduction applies. A refused run is the sequential run, unchanged.
+# prove: ltl or progress properties, mixed temporal requests, and `--por` where
+# the reduction applies. A CTL-only request with fairness none builds its graph
+# in parallel before the unchanged sequential labelling and witness phases. A
+# refused run is the sequential run, unchanged.
 #
 # Without --workers the report has no `parallel` object and nothing changes.
 #
@@ -511,13 +513,43 @@ Feature: G8 parallel exploration - the same answers, found by several workers
     Then the parallel run reports the search mode "bfs"
     And the parallel search was applied with 2 workers
 
-  # A temporal property is decided by a nested depth-first search that this
-  # version does not parallelise: the run is the sequential one, with the reason.
+  # A CTL-only request builds the reachable graph in parallel. Labelling and
+  # witness reconstruction stay sequential, so the verdict and witness remain
+  # byte-identical to the sequential breadth-first run.
+  Scenario: a CTL-only run builds its graph in parallel before labelling
+    Given the model under parallel test "testdata/ir/ctl-switch-only.json"
+    When I check it sequentially with "--bfs --no-timing --ctl 'AG (x < 2)'"
+    And I check it in parallel with 4 workers and "--no-timing --ctl 'AG (x < 2)'"
+    Then the parallel search was applied with 4 workers
+    And property "ctl1" is "violated" in the parallel run
+    And the parallel run reports the search mode "bfs"
+    And the report of the parallel run equals the sequential report except for the parallel object
+
+  Scenario: a CTL-only atomic chain keeps the sequential depth-budget result
+    Given the model under parallel test "testdata/ir/ctl-atomic-depth.json"
+    When I check it sequentially with "--bfs --budget-depth 1 --no-timing --ctl 'EF (n == 2)'"
+    And I check it in parallel with 4 workers and "--budget-depth 1 --no-timing --ctl 'EF (n == 2)'"
+    Then the parallel search was applied with 4 workers
+    And the parallel run reports the search mode "bfs"
+    And property "ctl1" is "inconclusive" in the parallel run
+    And the report of the parallel run equals the sequential report except for the parallel object
+
+  # A CTL formula that is refused before evaluation must not build a reachable
+  # graph merely because workers were requested.
+  Scenario: all table-refused CTL formulas leave the parallel graph idle
+    Given the model under parallel test "testdata/ir/ctl-switch-only.json"
+    When I check it in parallel with 4 workers and "--no-timing --ctl 'EF (_nr_pr == 0)'"
+    Then the parallel search was refused with a reason mentioning "nothing was searched"
+    And property "ctl1" is "not-executed" in the parallel run
+    And the parallel run stores 0 states
+
+  # An LTL property is decided by a nested depth-first search that this version
+  # does not parallelise: the run is the sequential one, with the reason.
   Scenario: an ltl property in the run refuses the parallel search
     Given the model under parallel test "testdata/promela/por-shared.pml"
     When I check it sequentially with "--sweep --no-timing --ltl '[] (x <= 2)'"
     And I check it in parallel with 4 workers and "--sweep --no-timing --ltl '[] (x <= 2)'"
-    Then the parallel search was refused with a reason mentioning "ltl, progress or ctl"
+    Then the parallel search was refused with a reason mentioning "ltl or progress"
     And the report of the parallel run equals the sequential report except for the parallel object
     And the parallel run reports the search mode "dfs"
 
@@ -529,7 +561,7 @@ Feature: G8 parallel exploration - the same answers, found by several workers
     Given the model under parallel test "testdata/promela/<file>"
     When I check it sequentially with "--sweep --no-timing --fairness weak <extra>"
     And I check it in parallel with 4 workers and "--sweep --no-timing --fairness weak <extra>"
-    Then the parallel search was refused with a reason mentioning "ltl, progress or ctl"
+    Then the parallel search was refused with a reason mentioning "ltl or progress"
     And the report of the parallel run equals the sequential report except for the parallel object
     And the parallel run reports the search mode "dfs"
 
@@ -583,6 +615,13 @@ Feature: G8 parallel exploration - the same answers, found by several workers
     And the reduction was applied in the parallel run
     And the parallel run reports the search mode "dfs"
 
+  Scenario: --por with a CTL-only call reports a sequential CTL fallback
+    Given the model under parallel test "testdata/ir/ctl-switch-only.json"
+    When I check it in parallel with 4 workers and "--por --no-timing --ctl 'AG (x < 2)'"
+    Then the parallel search was refused with a reason mentioning "ctl property cannot use partial-order reduction"
+    And property "ctl1" is "violated" in the parallel run
+    And the parallel run reports the search mode "dfs"
+
   # Where the reduction refuses (a rendezvous channel; an atomic sequence was
   # the example before step 6 of the performance plan reduced them), the
   # parallel search runs and the reduction record keeps its own reason.
@@ -615,7 +654,7 @@ Feature: G8 parallel exploration - the same answers, found by several workers
     When I check it sequentially with "--budget-depth 1 --no-timing <temporal>"
     And I check it in parallel with 2 workers and "--budget-depth 1 --no-timing <temporal>"
     And I check it in parallel with 2 workers and "--budget-depth 1 --no-timing" as the second parallel run
-    Then the parallel search was refused with a reason mentioning "ltl, progress or ctl"
+    Then the parallel search was refused with a reason mentioning "ltl or progress"
     And the parallel run reports the search mode "dfs"
     And the parallel run has depth 1
     And property "assert" is "inconclusive" in the parallel run
@@ -627,7 +666,6 @@ Feature: G8 parallel exploration - the same answers, found by several workers
       | temporal          |
       | --ltl '[] true'   |
       | --progress        |
-      | --ctl 'AG(true)'  |
 
   # The same for --por where the reduction applies: the reduced depth-first run,
   # with --budget-depth counting transitions.

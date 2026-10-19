@@ -134,7 +134,7 @@ func TestRejectionPositions(t *testing.T) {
 	}{
 		{"syntax", "byte x;\nactive proctype A()\n{\tx = = 1\n}\n", KindSyntax, 3, 7, "unexpected ="},
 		{"c_code", "c_code { int x; }\n", KindOutside, 1, 1, "c_code"},
-		{"unless", "active proctype A() { { skip } unless { skip } }\n", KindOutside, 1, 32, "unless"},
+		{"complex unless", "active proctype A() { { skip } unless { if :: skip fi } }\n", KindOutside, 1, 32, "unless"},
 		{"inline call arity", "inline f(x) { x = 1 }\nbyte a;\ninit { f(a, a) }\n", KindSemantic, 3, 8, "1 parameter(s)"},
 		{"struct array", "typedef T { byte a }\nT v[2];\ninit { skip }\n", KindOutside, 2, 3, "array of structs"},
 		{"bitwise", "byte x;\nactive proctype A() { x = x & 1 }\n", KindOutside, 2, 29, "bitwise operator &"},

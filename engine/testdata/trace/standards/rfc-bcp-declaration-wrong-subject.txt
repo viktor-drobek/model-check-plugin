@@ -1,0 +1,6 @@
+Request for Comments: 9016
+Category: Informational
+
+The key words are merely examples, while status codes are to be interpreted as described in RFC 8174.
+
+An implementation MUST not be authorized by a declaration about status codes.

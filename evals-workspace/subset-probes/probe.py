@@ -26,6 +26,7 @@ subset whatever the reference says about it.
 import argparse
 import json
 import os
+import posixpath
 import subprocess
 import sys
 
@@ -114,7 +115,7 @@ PROBES = [
      "chan c;\nactive proctype P() { skip }\n"),
     ("out-nr-pr", "inside", "_nr_pr", "§3",
      "byte n;\nactive proctype P() { n = _nr_pr }\n"),
-    ("out-unless", "outside", "unless", "§3",
+    ("out-unless", "inside", "unless", "§1",
      "byte n;\nactive proctype P() { { n = 1; n = 2 } unless { n > 0 -> n = 3 } }\n"),
     ("out-c-code", "outside", "c_code", "§3",
      "c_code { int q; }\nactive proctype P() { skip }\n"),
@@ -220,11 +221,39 @@ def run(mcd, path):
         out["outcome"] = "rejected"
         out["kind"] = err.get("kind")
         out["message"] = err.get("message")
-        out["path"] = err.get("path")
+        err_path = err.get("path")
+        if err_path:
+            out["path"] = portable_path(err_path)
     except (json.JSONDecodeError, KeyError):
         out["outcome"] = "tool-error"
         out["message"] = p.stderr.strip()[:200]
     return out
+
+
+def portable_path(path, rooted_windows=None):
+    parts = path.rsplit(":", 2)
+    if len(parts) == 3 and parts[1].isdigit() and parts[2].isdigit():
+        return portable_basename(parts[0], rooted_windows) + ":" + parts[1] + ":" + parts[2]
+    return portable_basename(path, rooted_windows)
+
+
+def portable_basename(path, rooted_windows=None):
+    if is_windows_path(path, rooted_windows):
+        path = path.replace("\\", "/")
+    return posixpath.basename(path)
+
+
+def is_windows_path(path, rooted_windows=None):
+    if rooted_windows is None:
+        rooted_windows = os.name == "nt"
+    if len(path) >= 2 and path[0] in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" and path[1] == ":":
+        return True
+    if rooted_windows and path.startswith("\\") and not path.startswith("\\\\"):
+        return True
+    if not path.startswith("\\\\"):
+        return False
+    parts = path[2:].split("\\")
+    return len(parts) >= 2 and bool(parts[0]) and bool(parts[1])
 
 
 def main(argv=None):

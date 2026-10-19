@@ -1,0 +1,8 @@
+Request for Comments: 9041
+Category: Informational
+
+The key words "MUST" in this document are to be interpreted as described in RFC 8174.
+
+A genuine requirement MUST become a candidate.
+
+RFC 9999   TLS MUST-Staple   May 2026

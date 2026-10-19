@@ -638,6 +638,9 @@ func Validate(m *Model) error {
 			if e.From < 0 || e.From >= n || e.To < 0 || e.To >= n {
 				return fmt.Errorf("%s: from/to %d/%d outside 0..%d", path, e.From, e.To, n-1)
 			}
+			if e.Priority < 0 {
+				return fmt.Errorf("%s.priority: %d is negative", path, e.Priority)
+			}
 			if e.Guard != nil {
 				if _, err := Check(e.Guard, l.scope(p)); err != nil {
 					return fmt.Errorf("%s.guard: %w", path, err)

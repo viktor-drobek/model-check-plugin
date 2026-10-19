@@ -1,0 +1,6 @@
+Request for Comments: 9008
+Category: Informational
+
+The key words in the glossary are to be interpreted as described in Section 4; RFC 2119 is not used.
+
+An implementation MUST reject this false declaration.

@@ -1,0 +1,249 @@
+{
+  "schema": "model-check-capability-matrix/1",
+  "version": "1.0.0",
+  "product_version": "0.3.4",
+  "purpose": "Canonical public inventory of shipped model-check capabilities and boundaries for issue #11 M0a.",
+  "status_vocabulary": [
+    "supported",
+    "unsupported",
+    "experimental",
+    "delegated-integrated"
+  ],
+  "status_note": "Matrix statuses classify product capabilities. They are not mcd report statuses or frontend rejection kinds.",
+  "capabilities": [
+    {
+      "id": "frontend.promela-subset",
+      "category": "frontend",
+      "status": "supported",
+      "semantics": "promela-subset/1",
+      "semantics_version": "0.3.4",
+      "limits": ["finite-state subset only", "documented unsupported constructs are rejected"],
+      "surfaces": {"cli": ["parse", "check"], "mcp": ["mc_parse", "mc_check"], "manifest": ["model-check"]},
+      "regression_fixtures": ["features/g1-promela.feature"]
+    },
+    {
+      "id": "frontend.petri-pt",
+      "category": "frontend",
+      "status": "supported",
+      "semantics": "petri-pt-json/1",
+      "semantics_version": "0.3.4",
+      "limits": ["weighted bounded P/T nets", "inhibitor, coloured, and timed arcs are not accepted"],
+      "surfaces": {"cli": ["parse", "check"], "mcp": ["mc_parse", "mc_check"], "manifest": ["model-check"]},
+      "regression_fixtures": ["features/g0-engine.feature"]
+    },
+    {
+      "id": "frontend.canonical-ir",
+      "category": "frontend",
+      "status": "supported",
+      "semantics": "mcd-ir/1",
+      "semantics_version": "0.3.4",
+      "limits": ["finite canonical IR", "direct authoring remains an advanced interface"],
+      "surfaces": {"cli": ["parse", "check", "catalog", "validate-catalog"], "mcp": ["mc_parse", "mc_check"], "manifest": ["model-check"]},
+      "regression_fixtures": ["features/g0-engine.feature"]
+    },
+    {
+      "id": "property.safety-and-reachability",
+      "category": "property",
+      "status": "supported",
+      "semantics": "finite-state-safety-reachability/1",
+      "semantics_version": "0.3.4",
+      "limits": ["finite explicit graph", "reported verdict depends on stated budgets and evidence"],
+      "surfaces": {"cli": ["check"], "mcp": ["mc_check", "mc_lint_property"], "manifest": ["model-check"]},
+      "regression_fixtures": ["features/g0-engine.feature"]
+    },
+    {
+      "id": "property.ltl",
+      "category": "property",
+      "status": "supported",
+      "semantics": "finite-ltl-buchi/1",
+      "semantics_version": "0.3.4",
+      "limits": ["finite untimed models", "weak fairness only"],
+      "surfaces": {"cli": ["check"], "mcp": ["mc_check", "mc_lint_property"], "manifest": ["model-check"]},
+      "regression_fixtures": ["features/g4-ltl.feature"]
+    },
+    {
+      "id": "property.ctl",
+      "category": "property",
+      "status": "supported",
+      "semantics": "finite-ctl-labelling/1",
+      "semantics_version": "0.3.4",
+      "limits": ["finite untimed graph", "fairness is not supported for CTL"],
+      "surfaces": {"cli": ["check"], "mcp": ["mc_check", "mc_lint_property"], "manifest": ["model-check"]},
+      "regression_fixtures": ["features/g5-ctl-v1.feature"]
+    },
+    {
+      "id": "property.progress",
+      "category": "property",
+      "status": "supported",
+      "semantics": "finite-nonprogress-cycle/1",
+      "semantics_version": "0.3.4",
+      "limits": ["depends on model progress labels", "not a formula accepted by mc_lint_property"],
+      "surfaces": {"cli": ["check"], "mcp": ["mc_check"], "manifest": ["model-check"]},
+      "regression_fixtures": ["features/g4-ltl.feature"]
+    },
+    {
+      "id": "backend.explicit-state",
+      "category": "backend",
+      "status": "supported",
+      "semantics": "finite-explicit-state/1",
+      "semantics_version": "0.3.4",
+      "limits": ["default CPU search", "does not establish timed, probabilistic, symbolic, or unbounded semantics"],
+      "surfaces": {"cli": ["check"], "mcp": ["mc_check", "mc_estimate"], "manifest": ["model-check"]},
+      "regression_fixtures": ["features/g0-engine.feature"]
+    },
+    {
+      "id": "backend.parallel-safety",
+      "category": "backend",
+      "status": "supported",
+      "semantics": "parallel-level-synchronous-safety/1",
+      "semantics_version": "0.3.4",
+      "limits": ["opt-in workers", "safety properties only", "temporal requests retain an explicit sequential fallback"],
+      "surfaces": {"cli": ["check"], "mcp": ["mc_check"], "manifest": ["model-check"]},
+      "regression_fixtures": ["features/g1-promela.feature", "features/g2-mcp.feature"]
+    },
+    {
+      "id": "backend.parallel-ctl-graph",
+      "category": "backend",
+      "status": "supported",
+      "semantics": "parallel-ctl-graph-construction/1",
+      "semantics_version": "0.3.4",
+      "limits": ["eligible CTL-only requests without fairness", "CTL labelling and witness reconstruction remain sequential", "does not close M4 temporal parallelism"],
+      "surfaces": {"cli": ["check"], "mcp": ["mc_check"], "manifest": ["model-check"]},
+      "regression_fixtures": ["features/g8-parallel.feature"]
+    },
+    {
+      "id": "reduction.partial-order",
+      "category": "reduction",
+      "status": "supported",
+      "semantics": "safety-por/1",
+      "semantics_version": "0.3.4",
+      "limits": ["opt-in depth-first safety search", "refuses unsupported model and property shapes with a report reason"],
+      "surfaces": {"cli": ["check"], "mcp": ["mc_check"], "manifest": ["model-check"]},
+      "regression_fixtures": ["features/g7-por.feature"]
+    },
+    {
+      "id": "evidence.exhaustive-bounded-unknown",
+      "category": "evidence",
+      "status": "supported",
+      "semantics": "mcd-evidence/1",
+      "semantics_version": "0.3.4",
+      "limits": ["state and depth stops are bounded", "time and memory stops use unknown evidence", "evidence does not transfer a model verdict to an implementation"],
+      "surfaces": {"cli": ["check"], "mcp": ["mc_check"], "manifest": ["model-check"]},
+      "regression_fixtures": ["features/g0-engine.feature", "features/g8-parallel.feature"]
+    },
+    {
+      "id": "evidence.approximate-estimate",
+      "category": "evidence",
+      "status": "supported",
+      "semantics": "mcd-estimate-evidence/1",
+      "semantics_version": "0.3.4",
+      "limits": ["approximate evidence is a projection from mc_estimate, not a verification result", "estimate output does not establish exhaustive, bounded, or unknown verification evidence"],
+      "surfaces": {"cli": ["check --estimate"], "mcp": ["mc_estimate"], "manifest": ["model-check"]},
+      "regression_fixtures": ["features/g1-promela.feature", "features/g2-mcp.feature"]
+    },
+    {
+      "id": "model.finite-untimed",
+      "category": "model-class",
+      "status": "supported",
+      "semantics": "finite-untimed-model/1",
+      "semantics_version": "0.3.4",
+      "limits": ["all domains, queues, and process counts must be bounded", "timeout is global blocking, not elapsed time"],
+      "surfaces": {"cli": ["check"], "mcp": ["mc_check"], "manifest": ["model-check"]},
+      "regression_fixtures": ["features/g0-engine.feature"]
+    },
+    {
+      "id": "promela.embedded-c",
+      "category": "frontend",
+      "status": "unsupported",
+      "semantics": "no-host-c-execution/1",
+      "semantics_version": "0.3.4",
+      "limits": ["c_code, c_expr, c_decl, c_state, and c_track are rejected", "no embedded C effect is simulated"],
+      "surfaces": {"cli": ["parse", "check"], "mcp": ["mc_parse", "mc_check"], "manifest": ["model-check"]},
+      "regression_fixtures": ["features/g1-promela.feature"],
+      "negative_fixture": "features/g1-promela.feature"
+    },
+    {
+      "id": "promela.unless-outside-subset",
+      "category": "frontend",
+      "status": "unsupported",
+      "semantics": "promela-unless-boundary/1",
+      "semantics_version": "0.3.4",
+      "limits": ["only the documented guarded linear brace-block subset is accepted", "chained and d_step-contained forms are rejected"],
+      "surfaces": {"cli": ["parse", "check"], "mcp": ["mc_parse", "mc_check"], "manifest": ["model-check"]},
+      "regression_fixtures": ["features/g1-promela.feature"],
+      "negative_fixture": "features/g1-promela.feature"
+    },
+    {
+      "id": "petri.inhibitor-arcs",
+      "category": "frontend",
+      "status": "unsupported",
+      "semantics": "petri-inhibitor-boundary/1",
+      "semantics_version": "0.3.4",
+      "limits": ["inhibitor arcs are rejected before verification", "no finite encoding is implied"],
+      "surfaces": {"cli": ["parse", "check"], "mcp": ["mc_parse", "mc_check"], "manifest": ["model-check"]},
+      "regression_fixtures": ["features/g0-engine.feature", "features/g2-mcp.feature"],
+      "negative_fixture": "features/g2-mcp.feature"
+    },
+    {
+      "id": "property.strong-fairness",
+      "category": "property",
+      "status": "unsupported",
+      "semantics": "strong-fairness-boundary/1",
+      "semantics_version": "0.3.4",
+      "limits": ["strong fairness returns not-executed", "a weak-fairness run is not a substitute"],
+      "surfaces": {"cli": ["check"], "mcp": ["mc_check"], "manifest": ["model-check"]},
+      "regression_fixtures": ["features/g2-mcp.feature"],
+      "negative_fixture": "features/g2-mcp.feature"
+    },
+    {
+      "id": "model.timed",
+      "category": "model-class",
+      "status": "unsupported",
+      "semantics": "timed-model-boundary/1",
+      "semantics_version": "0.3.4",
+      "limits": ["no clocks, zones, regions, urgency, or time-divergence semantics", "timed questions are not verification requests for this backend"],
+      "surfaces": {"cli": [], "mcp": [], "manifest": []},
+      "regression_fixtures": ["features/m0-capability-matrix.feature"]
+    },
+    {
+      "id": "model.probabilistic",
+      "category": "model-class",
+      "status": "unsupported",
+      "semantics": "probabilistic-model-boundary/1",
+      "semantics_version": "0.3.4",
+      "limits": ["no DTMC or MDP semantics", "no probability or expectation verdict"],
+      "surfaces": {"cli": [], "mcp": [], "manifest": []},
+      "regression_fixtures": ["features/m0-capability-matrix.feature"]
+    },
+    {
+      "id": "model.symbolic",
+      "category": "model-class",
+      "status": "unsupported",
+      "semantics": "symbolic-model-boundary/1",
+      "semantics_version": "0.3.4",
+      "limits": ["no BDD or SAT symbolic verification backend", "no symbolic verdict is attributed to the explicit backend"],
+      "surfaces": {"cli": [], "mcp": [], "manifest": []},
+      "regression_fixtures": ["features/m0-capability-matrix.feature"]
+    },
+    {
+      "id": "model.unbounded",
+      "category": "model-class",
+      "status": "unsupported",
+      "semantics": "unbounded-model-boundary/1",
+      "semantics_version": "0.3.4",
+      "limits": ["no general unbounded-program or P/T-net analysis", "introduced finite bounds remain visible model assumptions"],
+      "surfaces": {"cli": [], "mcp": [], "manifest": []},
+      "regression_fixtures": ["features/m0-capability-matrix.feature"]
+    },
+    {
+      "id": "backend.external-unintegrated",
+      "category": "backend",
+      "status": "unsupported",
+      "semantics": "external-backend-boundary/1",
+      "semantics_version": "0.3.4",
+      "limits": ["an unintegrated external tool is a see-also reference, not product support", "no result is attributed to mcd without an M3.0-compliant integration"],
+      "surfaces": {"cli": [], "mcp": [], "manifest": []},
+      "regression_fixtures": ["features/m0-capability-matrix.feature"]
+    }
+  ]
+}

@@ -12,7 +12,7 @@ frontend then lowers the input to the common intermediate representation (IR), a
 the explicit-state engine explores the reachable state graph. A `verified` result is
 therefore a claim about the model, its bounds, its transition semantics, and its
 fairness assumptions; it becomes a claim about the implementation only after a
-separate conformance argument.
+separate [conformance argument](skills/model-check/references/conformance.md).
 
 ```mermaid
 flowchart TD
@@ -38,6 +38,29 @@ The recommended order is: **model → parse → simulate → estimate → sanity
 checks → safety/deadlock → liveness and fairness → explain every counterexample →
 retain the manifest and artifacts**. See [`skills/model-check/SKILL.md`](skills/model-check/SKILL.md)
 for the full decision tree and exit conditions.
+
+## Capability and semantics matrix
+
+The versioned [capability and semantics matrix](docs/capability-matrix.md) is the
+authoritative inventory of supported and unsupported product capabilities, their
+effective semantics, limits, public surfaces, and regression fixtures. Its status
+terms classify capabilities; they do not replace report statuses or rejection kinds.
+
+### Trace-adapter library
+
+`engine/trace` also exposes offline, caller-byte Go library adapters that produce
+trace-ledger evidence. They are not `mcd` commands or MCP tools, and they do not
+extend the seven-tool server contract. The current API, accepted profiles, evidence
+limits, and release-unverified Stage 4 status are recorded in
+[the trace-adapter matrix](docs/trace-adapter-matrix.md). These adapters require no
+external collector, compiler, or vendor executable; their outputs are evidence
+records, not model-checking or implementation-conformance verdicts.
+
+The current checkout also contains Stage 5–6 source and test candidates. They are
+not final validation or release evidence: explicit dossier decisions remain review
+inputs and do not automatically prove implementation conformance. Stage 7
+release gates remain open. Remote model confirmations are cancelled for this
+candidate and are not passing evidence.
 
 ## Which model should I use?
 
@@ -125,11 +148,10 @@ discarding an unfair counterexample.
 - `mcp/servers.json` — Claude Code stdio MCP server declaration using `${CLAUDE_PLUGIN_ROOT}`.
 - `skills/model-check/` — `SKILL.md`, workflows, property guidance, format references, assets, and report templates.
 - `evals-workspace/` — evaluation fixtures, graders, benchmark runs, and review data when included in the release.
-- [`test-projects/`](test-projects/) — versioned source fixtures used for model construction, review, and regression experiments; they are not plugin runtime dependencies.
 - `BUILD-PROTOCOL.md` — the six-part step protocol (scenarios first, tests, logic review, confirmation record); the build itself is documented in the build section below and in `build.sh`.
-- `RELEASE-NOTES-0.3.4.md`, `RELEASE-NOTES-0.3.3.md`, `RELEASE-NOTES-0.3.2.md`, `RELEASE-NOTES-0.3.1.md`, `RELEASE-NOTES-0.3.0.md` — release-specific changes, verdict boundaries, and known limitations.
+- `RELEASE-NOTES-0.4.0.md`, `RELEASE-NOTES-0.3.4.md`, `RELEASE-NOTES-0.3.3.md`, `RELEASE-NOTES-0.3.2.md`, `RELEASE-NOTES-0.3.1.md`, `RELEASE-NOTES-0.3.0.md` — release-specific changes, verdict boundaries, and known limitations.
 - `scripts/security-scan.sh`, `trivy.yaml`, `.trivyignore.yaml`, `.semgrepignore`, `docs/security-scanning.md`, `.github/workflows/security.yml` — the security scan (trivy, semgrep, govulncheck) and its guide.
-- [`docs/cross-model-test-comparison.md`](docs/cross-model-test-comparison.md) — comparison of source-level and bounded-model audit runs for the synthetic RE2 engine test target, with evidence boundaries and Mermaid charts.
+- [`docs/cross-model-test-comparison.md`](docs/cross-model-test-comparison.md) — comparison of source-level and bounded-model audit runs for the synthetic RE2 engine evaluation target, with evidence boundaries and Mermaid charts.
 - `AGENT-COMMON.md` — shared historical build-agent guidance.
 - `build.sh` — reproducible multi-platform build and release verification script.
 - `build-container/` — the build container (Go 1.26.9, SPIN, gcc, Python 3, the Go modules of the engine): `Dockerfile`, `build-image.sh`, the runner image, its README.
@@ -164,7 +186,7 @@ Use the public `model-check-plugin` project/repository or the complete `model-ch
 From the plugin root:
 
 ```bash
-./build.sh --host-only --version 0.3.4
+./build.sh --host-only --version 0.4.0
 engine/bin/mcd version
 ```
 
@@ -243,7 +265,7 @@ Run the checks from a clean, reviewed checkout. Do not include credentials, priv
 
 ### Build container
 
-Instead of installing the toolchain on the host, build and test in the container `<registry>/model-check/build:0.3.4` (Go 1.26.9, SPIN 6.5.2, gcc, make, git, Python 3, govulncheck, and the Go modules of the engine already downloaded; stored in the docker registry your team uses). Its definition, use and how it is built and stored are in [`build-container/README.md`](build-container/README.md).
+Instead of installing the toolchain on the host, build and test in the container `<registry>/model-check/build:0.4.0` (Go 1.26.9, SPIN 6.5.2, gcc, make, git, Python 3, govulncheck, and the Go modules of the engine already downloaded; stored in the docker registry your team uses). Its definition, use and how it is built and stored are in [`build-container/README.md`](build-container/README.md).
 
 ### Security scanning
 
@@ -289,12 +311,12 @@ What a parallel run promises, and what it changes. For a run that completes, eve
 
 When it pays and when it does not. It pays on **wide** graphs, with thousands of states in an average layer: independent or loosely coupled processes, symmetric workers, buffered pipelines with data in the messages. It does not pay on narrow or deep ones (a single counter, a chain of states: one state per layer, and a run costs the same as the sequential one at best), nor on models of under about 10^5 states, and it is a tool for **proofs**, not for finding bugs fast: a breadth-first search completes every layer above a violation before it finds it, so a user hunting a bug keeps the default depth-first search or `--por`. See `steps/perf5-confirmation.md` for the measured speedups, with the load of the machine they were taken under, and for what was not measured.
 
-What it refuses, with the reason in `search.parallel.reason` and the run executed sequentially and unchanged (so its `search.mode` is the requested one, and its `depth` and `--budget-depth` count transitions, not layers of stored states): any `ltl`, `progress` or `ctl` property in the run (a mixed run is not split), and `--por` where the reduction applies (it is depth-first; where it refuses, the parallel search runs and `search.reduction` keeps its own reason). `--workers` with `--estimate`, below 0 or above 256 is a usage error. The memory estimate counts the stored set, the records of the largest group of states and the largest frontier; the compiled copies of the model that each worker keeps are in `search.parallel.worker_bytes_est`.
+What it refuses, with the reason in `search.parallel.reason` and the run executed sequentially and unchanged (so its `search.mode` is the requested one, and its `depth` and `--budget-depth` count transitions, not layers of stored states): any `ltl` or `progress` property, a mixed temporal or safety request, CTL under fairness, and `--por` where the reduction applies (it is depth-first; where it refuses, the parallel search runs and `search.reduction` keeps its own reason). A CTL-only request with fairness none builds its complete reachable graph in parallel, then keeps CTL labelling and witness reconstruction sequential; its report is deterministic and carries the same verdict and witness as the sequential breadth-first run. A model that contains `assert` has an implicit safety property, so a CTL request on it is mixed safety-plus-CTL and runs sequentially instead. Its `depth` and `--budget-depth` retain the sequential graph's transition-depth semantics, including atomic chains. `search.parallel.layers` and `max_layer_states` describe stored-state frontier width only; they do not change CTL depth accounting. `--workers` with `--estimate`, below 0 or above 256 is a usage error. The memory estimate counts the stored set, the records of the largest group of states and the largest frontier; the compiled copies of the model that each worker keeps are in `search.parallel.worker_bytes_est`.
 
 ### Reproducible release build
 
 ```bash
-./build.sh --version 0.3.4 --source-commit <SOURCE-COMMIT> --verify-repro
+./build.sh --version 0.4.0 --source-commit <SOURCE-COMMIT> --verify-repro
 ```
 
 `<SOURCE-COMMIT>` is the commit the engine sources are built from. For a release it is the commit just before the one that commits the built files under `engine/bin/` (the artifacts commit), because a commit cannot name itself; `BUILD-INFO.json` records it as `source_commit`. Without `--source-commit` the script records `git rev-parse HEAD` of the plugin checkout (or `unknown` outside a Git checkout), which after the artifacts commit is the artifacts commit, so the committed `BUILD-INFO.json` is not reproduced from that checkout.
@@ -311,7 +333,7 @@ The script:
 For a faster local build:
 
 ```bash
-./build.sh --host-only --version 0.3.4
+./build.sh --host-only --version 0.4.0
 ```
 
 Useful options are `--source-commit HASH`, `--platforms "goos/goarch ..."`, `--out DIR`, `--no-verify`, and `--verify-repro`; the options and exit codes are listed at the top of `build.sh`. Use `--no-verify` only for an intentional intermediate build. Record which platforms were built and which were actually smoke-tested; cross-building is not the same as executing a platform binary.
@@ -349,6 +371,12 @@ engine/bin/mcd check --promela /path/to/model.pml --workers 8
 engine/bin/mcd parse --petri /path/to/net.json
 engine/bin/mcd parse --ir /path/to/model.json
 
+# Emit a deterministic static catalog of the complete canonical IR.
+engine/bin/mcd catalog --promela /path/to/model.pml > catalog.json
+
+# Confirm that a complete catalog reconstructs to the same canonical IR.
+engine/bin/mcd validate-catalog --promela /path/to/model.pml --catalog catalog.json
+
 # Check LTL or CTL formulas from the command line.
 engine/bin/mcd check --promela /path/to/model.pml --ltl '[] (request -> <> response)'
 engine/bin/mcd check --promela /path/to/model.pml --ctl 'AG (count <= 1)'
@@ -358,6 +386,19 @@ engine/bin/mcd serve --session-dir ${TMP_DIR}/mcd-sessions
 ```
 
 The accepted Promela subset is documented in [`skills/model-check/references/promela-subset.md`](skills/model-check/references/promela-subset.md). Read it before interpreting an `outside-subset` rejection. The engine is finite and explicit-state: it does not provide timed, probabilistic, symbolic, or unbounded verification.
+
+`mcd catalog` emits `mcd-static-catalog/1`: the complete canonical `mcd-ir/1`
+document and its SHA-256 reference, including static elements that may be
+unreachable at execution time. It supports structural reconstruction and
+fail-closed digest binding for future overlays. It does **not** itself prove
+behavioral equivalence, execute an optimized representation, or establish a
+claim about an implementation.
+
+`mcd validate-catalog` emits `mcd-catalog-validation/1` with
+`relation_kind: "catalog-isomorphism"` only when the supplied catalog
+reconstructs to the same canonical IR as its source model. It checks complete
+static structure, including unreachable elements, but does not validate LTS
+execution, state maps, or behavioral correspondence.
 
 ### Result vocabulary
 
@@ -424,7 +465,7 @@ SPIN and gcc compile `pan.c` into the temporary directory (`TMPDIR`, `/tmp` by d
 
 ## Files, sessions, and safety
 
-MCP sessions write IR, check, simulation, counterexample, and manifest artifacts under the configured session directory. The server applies path guards and an optional read allow-list. Do not pass arbitrary host paths, interpolate model text into shell commands, or copy models and traces containing sensitive data into public examples.
+MCP sessions write IR, check, simulation, counterexample, and manifest artifacts under the configured session directory. The server applies path guards and an optional read allow-list. `mcd serve --max-output-bytes N` bounds each persisted report, counterexample or simulation trace (16 MiB by default); an oversized artifact is refused as a tool error before writing, never silently truncated. Do not pass arbitrary host paths, interpolate model text into shell commands, or copy models and traces containing sensitive data into public examples.
 
 For CLI use, create a separate session directory and preserve the input, command line, report, and relevant traces. Never overwrite the user's source model. Treat reports and traces as potentially sensitive.
 
@@ -434,7 +475,7 @@ For CLI use, create a separate session directory and preserve the input, command
 
 ### Input size limits
 
-Model text and formulas are untrusted input. Shapes that amplify inside the frontend — expressions nested or chained thousands deep, `#define`, `inline` or `typedef` definitions that double per line, arrays of a billion elements, hundreds of deep expressions whose indented IR runs to gigabytes, formulas whose normal form doubles per `<->` — used to end `mcd`, and a running `mcd serve`, with a fatal error. The engine now measures the size of what it builds and refuses such an input by name, as a rejection (`outside-subset` for a model, `ltl`/`ctl` for a formula, `ir` for an IR document) whose message says `limit of the engine`. The limits (expression height 1 000, statement nesting 1 000, macro and inline expansion 4 000 000 tokens, 100 000 typedef fields, arrays of 65 535, a state vector of 1 048 576 slots, an IR weight of 4 000 000, a formula normal form of 100 000 weighted nodes) sit far above any real model; the full table is in [`skills/model-check/references/promela-subset.md`](skills/model-check/references/promela-subset.md) §3 and [`properties-ltl-ctl.md`](skills/model-check/references/properties-ltl-ctl.md) §2. A formula within the limits can still be slow to translate into its automaton; that is bounded by the time budget of the check, not by the parser.
+Model text and formulas are untrusted input. A CLI file source above 16 MiB is rejected before it is read into a frontend (`input-too-large`, exit 2); an MCP server applies the same 16 MiB default to inline and allowed-file sources before frontend parsing. Operators can choose another MCP ceiling with `mcd serve --max-input-bytes N`; an oversized MCP source returns structured `outcome: "rejected"` and does not create a new session (a supplied existing session records the rejected call). Shapes that amplify inside the frontend — expressions nested or chained thousands deep, `#define`, `inline` or `typedef` definitions that double per line, arrays of a billion elements, hundreds of deep expressions whose indented IR runs to gigabytes, formulas whose normal form doubles per `<->` — used to end `mcd`, and a running `mcd serve`, with a fatal error. The engine now measures the size of what it builds and refuses such an input by name, as a rejection (`outside-subset` for a model, `ltl`/`ctl` for a formula, `ir` for an IR document) whose message says `limit of the engine`. The limits (expression height 1 000, statement nesting 1 000, macro and inline expansion 4 000 000 tokens, 100 000 typedef fields, arrays of 65 535, a state vector of 1 048 576 slots, an IR weight of 4 000 000, a formula normal form of 100 000 weighted nodes) sit far above any real model; the full table is in [`skills/model-check/references/promela-subset.md`](skills/model-check/references/promela-subset.md) §3 and [`properties-ltl-ctl.md`](skills/model-check/references/properties-ltl-ctl.md) §2. A formula within the limits can still be slow to translate into its automaton; that is bounded by the time budget of the check, not by the parser.
 
 ## Troubleshooting
 

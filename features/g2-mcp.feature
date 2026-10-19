@@ -151,6 +151,25 @@ Feature: G2 — MCP server with the seven tools, session directory, budgets
     Then the call is not an error
     And the answer field "type_error" mentions "normal form"
 
+  Scenario: an input beyond the source-byte limit is rejected before frontend parsing
+    Given an MCP server with a fresh session base directory and maximum input bytes 64
+    When I call "mc_parse" with a 65-byte Promela source
+    Then the call is not an error
+    And the answer field "outcome" is "rejected"
+    And the rejection kind is "input-too-large"
+    And the rejection reason mentions "input limit"
+    When I call "mc_parse" with the Promela source "active proctype P(){ skip }"
+    Then the call is not an error
+    And the answer field "outcome" is "ir"
+
+  Scenario: a report beyond the output-byte limit is refused without poisoning its session
+    Given an MCP server with a fresh session base directory and maximum output bytes 64
+    And a session in which the Petri net "testdata/petri/petrinet1.json" was parsed
+    When I call "mc_check" in that session with the model's own properties
+    Then the call is an error whose message mentions "output limit"
+    When I call "mc_lint_property" in that session with kind "ltl" and formula "[] (p1 >= 0)"
+    Then the call is not an error
+
   # --- mc_check --------------------------------------------------------------
 
   Scenario: mc_check finds the deadlock of petrinet1 and stores the counterexample in the session directory
