@@ -1,0 +1,119 @@
+name: Release binaries
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing published release tag (for example v0.4.0)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-binaries-${{ github.event.release.tag_name || inputs.tag }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GOTOOLCHAIN: local
+    permissions:
+      contents: read
+    outputs:
+      tag: ${{ steps.source.outputs.tag }}
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: refs/tags/${{ github.event.release.tag_name || inputs.tag }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate release version and source
+        id: source
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+        run: python3 scripts/validate-release.py --tag "$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Preflight published mutable release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ steps.source.outputs.tag }}
+        run: |
+          test "$(gh api "repos/$GH_REPO/releases/tags/$RELEASE_TAG" \
+            --jq '.draft == false and (.immutable != true)')" = true
+
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: engine/go.mod
+          cache: false
+
+      - name: Test release validation
+        run: |
+          python3 -m unittest discover -s scripts -p test_validate_release.py
+          cd engine
+          go test . -run '^TestRelease' -count=1 -timeout 2m
+
+      - name: Build reproducible platform binaries
+        env:
+          VERSION: ${{ steps.source.outputs.version }}
+          SOURCE_COMMIT: ${{ steps.source.outputs.source_commit }}
+        run: |
+          ./build.sh --version "$VERSION" --source-commit "$SOURCE_COMMIT" \
+            --platforms "linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64" \
+            --out "$RUNNER_TEMP/release-assets" --verify-repro
+          cd "$RUNNER_TEMP/release-assets"
+          sha256sum --check SHA256SUMS
+
+      - name: Transfer release assets
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-binaries
+          path: ${{ runner.temp }}/release-assets/
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Download this run's release assets
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-binaries
+          path: release-assets
+
+      - name: Check and upload assets without replacing existing files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.build.outputs.tag }}
+        run: |
+          test "$(gh api "repos/$GH_REPO/releases/tags/$RELEASE_TAG" \
+            --jq '.draft == false and (.immutable != true)')" = true
+          cd release-assets
+          assets=(
+            mcd-linux-amd64 mcd-linux-arm64
+            mcd-darwin-amd64 mcd-darwin-arm64 mcd-windows-amd64.exe
+            mcd mcd.exe mcd.cmd SHA256SUMS BUILD-INFO.json
+          )
+          for asset in "${assets[@]}"; do
+            test -s "$asset"
+          done
+          sha256sum --check SHA256SUMS
+          gh release upload "$RELEASE_TAG" "${assets[@]}"
