@@ -103,11 +103,12 @@ this finite fixture under the stated modelling assumptions.
 ## Outstanding confirmation gate
 
 The required bounded remote model confirmation has **not** passed yet. The
-`ml` preflight reported available capacity, but the final candidate still needs
-to be available on that host. The `relay-huron` attempt could not authenticate
-with the configured SSH identity. No remote model result is claimed here.
+the remote comparison host preflight reported available capacity, but the final candidate still needs
+to be available on that host. The designated second remote-host attempt could
+not authenticate with the configured SSH identity. No remote model result is
+claimed here.
 
 Before this work can be reported as fully confirmed, synchronize the committed
 candidate through the repository’s normal remote workflow, restore authorized
-access to `relay-huron`, and perform the bounded confirmation on both `ml` and
-`relay-huron` while monitoring load.
+access to the designated remote host, and perform the bounded confirmation on
+both hosts while monitoring load.

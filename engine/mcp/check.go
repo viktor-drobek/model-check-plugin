@@ -51,7 +51,7 @@ type CheckIn struct {
 	Budget     *Budget      `json:"budget,omitempty" jsonschema:"limits; an absent or 0 field takes the server default (the same reading as mcd check); fields above the server ceiling are clamped"`
 	Search     string       `json:"search,omitempty" jsonschema:"dfs | bfs (default dfs; bfs gives shortest counterexamples)"`
 	POR        bool         `json:"por,omitempty" jsonschema:"partial-order reduction of the safety search (default false): far fewer states, the same verdicts for deadlock, assert, invariant and reach, but the counts are those of the reduced graph and the first counterexample may differ. Depth-first only, no ltl/progress/ctl property in the call, no rendezvous channel, channel named by a value, timeout or provided in the model (atomic sequences, run and the process table are reduced): otherwise the run is unreduced and search.reduction says why"`
-	Workers    int          `json:"workers,omitempty" jsonschema:"parallel search of the safety properties by this many workers (default 0 = sequential; clamped to the server ceiling, which is GOMAXPROCS unless configured). When it is applied it is a level-synchronous breadth-first search: for a run that completes, the verdicts and the states and transitions are the sequential search's, counterexamples are shortest ones, and search.mode is bfs; depth counts layers of stored states, so an atomic sequence that runs through is one unit of depth and of the depth budget and one that blocks part-way is one unit per uninterrupted run (the sequential searches count each of its steps); the report is the same for every worker count. It pays on wide state graphs (search.parallel.layers and max_layer_states say how wide) and not on narrow or deep ones, and it is not for finding bugs fast. Refused, with the reason in search.parallel, when the call has an ltl, progress or ctl property, or when por applies: the run is then the sequential one, with its own search mode, and depth and the depth budget count transitions"`
+	Workers    int          `json:"workers,omitempty" jsonschema:"parallel search by this many workers (default 0 = sequential; clamped to the server ceiling, which is GOMAXPROCS unless configured). Safety properties use a level-synchronous breadth-first search with shortest counterexamples and stored-state-layer depth. A CTL-only call with fairness none, no partial-order reduction, no caller-supplied visited set, and no implicit assert safety property builds its reachable graph in parallel, then labels it and reconstructs witnesses sequentially. CTL depth and its depth budget retain the sequential graph transition-depth semantics, including atomic sequences. When applied, search.mode is bfs; completed verdicts, states and transitions equal the sequential search. The report is the same for every worker count apart from search.parallel metadata. It pays on wide graphs (search.parallel.layers and max_layer_states say how wide) and not on narrow or deep ones. LTL, progress, mixed safety plus CTL, fairness, partial-order reduction, and a caller-supplied visited set fall back to sequential execution with the reason in search.parallel"`
 	NoTiming   bool         `json:"no_timing,omitempty" jsonschema:"omit time_ms from the report so that reports are byte-for-byte reproducible"`
 	Aggregate  bool         `json:"aggregate,omitempty" jsonschema:"also return one aggregate status by the fixed priority invalid-model > not-executed > violated > inconclusive > unknown > verified"`
 }
@@ -334,7 +334,22 @@ func (s *Server) check(ctx context.Context, req *sdk.CallToolRequest, in CheckIn
 	sess.mu.Lock()
 	rel := sess.next("check", ".json")
 	sess.mu.Unlock()
-	if out.ReportPath, err = sess.WriteFile(rel, data); err != nil {
+	if err = sess.CheckOutputSize(rel, data); err != nil {
+		return nil, nil, err
+	}
+	for _, p := range rep.Properties {
+		if p.Counterexample != nil {
+			if err = s.checkTraceOutputSize(sess, p.Counterexample); err != nil {
+				return nil, nil, err
+			}
+		}
+		if p.Witness != nil {
+			if err = s.checkTraceOutputSize(sess, p.Witness); err != nil {
+				return nil, nil, err
+			}
+		}
+	}
+	if out.ReportPath, err = sess.WriteOutputFile(rel, data); err != nil {
 		return nil, nil, err
 	}
 	artifacts = append(artifacts, rel)
@@ -373,6 +388,14 @@ func (s *Server) check(ctx context.Context, req *sdk.CallToolRequest, in CheckIn
 	return nil, out, nil
 }
 
+func (s *Server) checkTraceOutputSize(sess *Session, t *cex.Trace) error {
+	data, err := json.MarshalIndent(t, "", "  ")
+	if err != nil {
+		return err
+	}
+	return sess.CheckOutputSize("cex/pending.json", append(data, '\n'))
+}
+
 // internalToolError is the tool error for a defect of the engine found while
 // running a check (a recovered panic of a parallel worker): not a refusal of the
 // input, so not a rejection, and no verdict. It is nil for any other error.
@@ -402,16 +425,18 @@ func (s *Server) storeTrace(sess *Session, property, role string, t *cex.Trace) 
 	sess.mu.Lock()
 	id := sess.next("cex", "")
 	rel := filepath.Join("cex", id+".json")
-	sess.cexs = append(sess.cexs, cexEntry{ID: id, Property: property, Role: role, Path: rel})
 	sess.mu.Unlock()
 	data, err := json.MarshalIndent(t, "", "  ")
 	if err != nil {
 		return nil, "", err
 	}
-	p, err := sess.WriteFile(rel, append(data, '\n'))
+	p, err := sess.WriteOutputFile(rel, append(data, '\n'))
 	if err != nil {
 		return nil, "", err
 	}
+	sess.mu.Lock()
+	sess.cexs = append(sess.cexs, cexEntry{ID: id, Property: property, Role: role, Path: rel})
+	sess.mu.Unlock()
 	ref := &TraceRef{ID: id, Path: p, Summary: t.Summary, Steps: len(t.Steps), UserNames: t.UserNames(), Loop: t.Loop}
 	if ref.UserNames == nil {
 		ref.UserNames = []string{}

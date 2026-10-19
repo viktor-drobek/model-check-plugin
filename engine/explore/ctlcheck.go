@@ -32,6 +32,34 @@ const (
 
 // runCTL checks one ctl property and returns its outcome.
 func runCTL(ctx0 *search, base *ir.Model, prop ir.Property, opt Options) (Outcome, error) {
+	return runCTLGraph(ctx0, base, prop, opt, nil)
+}
+
+// preflightCTL validates the part of a CTL request that does not need a graph.
+// It lets Run avoid constructing a graph for a call in which every formula is
+// individually refused because its model has no process table.
+func preflightCTL(base *ir.Model, prop ir.Property, opt Options) (bool, error) {
+	if opt.Fairness == FairnessWeak || opt.Fairness == FairnessStrong {
+		return true, nil
+	}
+	if prop.Formula == "" {
+		return false, &FormulaError{PropertyID: prop.ID, Logic: "ctl",
+			Err: fmt.Errorf("a ctl property needs a formula: there is no \"the model as written\" reading of CTL (that reading belongs to a never claim, which is an ltl property)")}
+	}
+	l, err := ir.NewLayout(base)
+	if err != nil {
+		return false, err
+	}
+	f, err := ctl.Parse(prop.Formula, ctl.Options{Defines: opt.Defines, Env: ctl.ModelEnv(l)})
+	if err != nil {
+		return false, &FormulaError{PropertyID: prop.ID, Logic: "ctl", Err: err}
+	}
+	return formulaTableRefusal(l, f) == "", nil
+}
+
+// runCTLGraph labels graph when it is supplied; otherwise it builds the same
+// sequential graph as the standalone CTL entry point historically did.
+func runCTLGraph(ctx0 *search, base *ir.Model, prop ir.Property, opt Options, graph *Graph) (Outcome, error) {
 	start := time.Now()
 	o := Outcome{Property: prop}
 	info := &TemporalInfo{Logic: "ctl", Source: "formula", Formula: prop.Formula, Atoms: []string{}, Fairness: opt.Fairness, Note: ctlTotalNote}
@@ -67,20 +95,33 @@ func runCTL(ctx0 *search, base *ir.Model, prop ir.Property, opt Options) (Outcom
 		return o, nil
 	}
 
-	g, err := BuildGraph(ctx0.ctx, base, opt)
-	if err != nil {
-		return o, err
+	g := graph
+	builtHere := g == nil
+	if g == nil {
+		var err error
+		g, err = BuildGraph(ctx0.ctx, base, opt)
+		if err != nil {
+			return o, err
+		}
 	}
-	o.Stats = g.Stats
+	statsCopy := *g.Stats
+	o.Stats = &statsCopy
+	setElapsed := func() {
+		if builtHere {
+			o.Stats.Elapsed = time.Since(start)
+			return
+		}
+		o.Stats.Elapsed = g.Stats.Elapsed + time.Since(start)
+	}
 	if g.Invalid != "" {
 		o.Status, o.Evidence, o.Reason, o.Trace = InvalidModel, EvUnknown, g.Invalid, g.InvalidTrace
-		o.Stats.Elapsed = time.Since(start)
+		setElapsed()
 		return o, nil
 	}
 	if !g.Stats.Complete {
 		o.Status, o.Evidence = Inconclusive, budgetEvidence(g.Stats.Stop)
 		o.Reason = g.Stats.Stop + "; a CTL verdict needs the complete reachable graph, because a fixed point over a partial graph answers a different question"
-		o.Stats.Elapsed = time.Since(start)
+		setElapsed()
 		return o, nil
 	}
 	g.BuildPred()
@@ -117,7 +158,7 @@ func runCTL(ctx0 *search, base *ir.Model, prop ir.Property, opt Options) (Outcom
 	budgetOut := func() (Outcome, error) {
 		o.Status, o.Evidence, o.Reason = Inconclusive, EvUnknown, ctl.ErrBudget.Error()
 		o.Stats.Complete, o.Stats.Stop = false, ctl.ErrBudget.Error()
-		o.Stats.Elapsed = time.Since(start)
+		setElapsed()
 		return o, nil
 	}
 	lab, err := ctl.LabelCtx(ctx0.ctx, gg, nf, val)
@@ -169,9 +210,16 @@ func runCTL(ctx0 *search, base *ir.Model, prop ir.Property, opt Options) (Outcom
 	if o.Trace == nil && info.WitnessNote == "" {
 		info.WitnessNote = "not available"
 	}
+	if opt.ctlAfterWitness != nil {
+		opt.ctlAfterWitness()
+	}
 	// Vacuity (FR-011): a hint from the atom statistics of the same graph,
 	// never a change of the verdict.
-	stats, err := ctl.Stats(gg, f, val)
+	stats, err := ctl.StatsCtx(ctx0.ctx, gg, f, val)
+	if errors.Is(err, ctl.ErrBudget) {
+		setElapsed()
+		return o, nil
+	}
 	if err != nil {
 		return o, err
 	}
@@ -180,7 +228,7 @@ func runCTL(ctx0 *search, base *ir.Model, prop ir.Property, opt Options) (Outcom
 		cov = append(cov, Coverage{Text: st.Atom.Text, EverTrue: st.EverTrue, EverFalse: st.EverFalse})
 	}
 	applyVacuity(&o, cov, ctl.Antecedents(f), g.Len())
-	o.Stats.Elapsed = time.Since(start)
+	setElapsed()
 	return o, nil
 }
 

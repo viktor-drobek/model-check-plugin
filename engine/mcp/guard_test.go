@@ -1,6 +1,7 @@
 package mcp
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -100,6 +101,38 @@ func TestWriteFileRefusesEscape(t *testing.T) {
 	}
 	if p, err := sess.WriteFile("ok/inside.json", []byte("y")); err != nil || !strings.HasPrefix(p, sess.Dir) {
 		t.Errorf("WriteFile inside: %q %v", p, err)
+	}
+}
+
+func TestWriteOutputFileEnforcesPerArtifactLimit(t *testing.T) {
+	ss, err := NewSessions(t.TempDir(), false, ServerParams{MaxOutputBytes: 3})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sess, err := ss.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	path, err := sess.WriteOutputFile("trace/exact.json", []byte("abc"))
+	if err != nil {
+		t.Fatalf("exact-limit output: %v", err)
+	}
+	if got, err := os.ReadFile(path); err != nil || string(got) != "abc" {
+		t.Fatalf("exact-limit output = %q, %v", got, err)
+	}
+
+	_, err = sess.WriteOutputFile("trace/oversized.json", []byte("abcd"))
+	var limit *OutputLimitError
+	if !errors.As(err, &limit) || limit.Size != 4 || limit.Limit != 3 {
+		t.Fatalf("oversized output error = %v", err)
+	}
+	if fileExists(filepath.Join(sess.Dir, "trace", "oversized.json")) {
+		t.Fatal("oversized output was written")
+	}
+
+	if _, err := sess.WriteFile("ir/model.json", []byte("abcd")); err != nil {
+		t.Fatalf("IR write unexpectedly used output limit: %v", err)
 	}
 }
 

@@ -159,6 +159,17 @@ func registerG1Steps(sc *godog.ScenarioContext) {
 		}
 		return nil
 	})
+	sc.Step(`^the CLI estimate projection evidence is "([^"]*)"$`, func(ev string) error {
+		var doc map[string]any
+		if err := json.Unmarshal(w.stdout.Bytes(), &doc); err != nil {
+			return fmt.Errorf("stdout is not an estimate: %s", w.stdout.String())
+		}
+		projection, _ := doc["projection"].(map[string]any)
+		if projection == nil || projection["evidence"] != ev {
+			return fmt.Errorf("projection %v, want evidence %s", projection, ev)
+		}
+		return nil
+	})
 	sc.Step(`^the rejection has kind "([^"]*)" and status "([^"]*)"$`, func(kind, status string) error {
 		e, err := w.errorBody()
 		if err != nil {

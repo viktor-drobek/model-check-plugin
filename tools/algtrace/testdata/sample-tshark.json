@@ -1,0 +1,12 @@
+[
+  {
+    "_source": {
+      "layers": {
+        "frame": {"frame.number": ["1"]},
+        "ip": {"ip.src": ["192.0.2.10"], "ip.dst": ["192.0.2.20"]},
+        "udp": {"udp.srcport": ["5000"], "udp.dstport": ["6000"]},
+        "example": {"example.type": ["HELLO"]}
+      }
+    }
+  }
+]

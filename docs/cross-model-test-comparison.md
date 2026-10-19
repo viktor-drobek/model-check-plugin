@@ -11,11 +11,6 @@ Raw local audit bundles are not part of this public plugin artifact. This docume
 therefore reports only the retained outcomes, model identities, and interpretation
 boundaries.
 
-The audited source fixture is included at
-[`../test-projects/synthetic-re2-engine/`](../test-projects/synthetic-re2-engine/).
-It makes the target implementation, frozen JSONL cases, and local validation
-instructions available without publishing private audit workspaces.
-
 ## Evidence boundary
 
 Two evidence classes answer different questions:

@@ -156,7 +156,6 @@ Feature: G3 evals — stage 2 after G1: E1 and E5 with and without the skill
     And "references/promela-subset.md" lists these constructs as outside the subset:
       | inline    |
       | typedef   |
-      | unless    |
       | provided  |
       | c_code    |
       | c_expr    |

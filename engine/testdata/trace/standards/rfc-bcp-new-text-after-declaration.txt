@@ -1,0 +1,10 @@
+Request for Comments: 9039
+Category: Informational
+
+The key words "MUST" in this document are to be interpreted as described in RFC 8174.
+
+A genuine requirement MUST become a candidate.
+
+New text:
+
+Senders MUST reject the value.

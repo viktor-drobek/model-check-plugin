@@ -50,3 +50,43 @@ func TestCTLLabellingStopsAtTheTimeBudget(t *testing.T) {
 		t.Fatalf("trace %v, note %q: want no trace and the note", o.Trace, o.Temporal.WitnessNote)
 	}
 }
+
+func TestCTLVacuityBudgetKeepsDecidedVerdict(t *testing.T) {
+	res, perr := promela.Parse([]byte("byte x;\nactive proctype P(){ do :: x = 1 :: x = 0 od }\n"), "tiny-loop.pml", nil)
+	if perr != nil {
+		t.Fatal(perr)
+	}
+	m := res.Model
+	m.Properties = []ir.Property{{ID: "ctl1", Kind: ir.KindCTL, Formula: "AG (x <= 1)", Text: "AG (x <= 1)"}}
+	baseline, err := Run(context.Background(), m, Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := outcome(t, baseline, "ctl1")
+	hasVacuityWarning := false
+	for _, warning := range want.Warnings {
+		if strings.HasPrefix(warning, "vacuity hint for") {
+			hasVacuityWarning = true
+			break
+		}
+	}
+	if !hasVacuityWarning {
+		t.Fatalf("baseline must produce a vacuity warning for this test; got %q", want.Warnings)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	r, err := Run(ctx, m, Options{ctlAfterWitness: cancel})
+	if err != nil {
+		t.Fatal(err)
+	}
+	o := outcome(t, r, "ctl1")
+	if o.Status != want.Status || o.Evidence != want.Evidence {
+		t.Fatalf("vacuity budget changed the verdict to %s / %s: %s", o.Status, o.Evidence, o.Reason)
+	}
+	if (o.Trace == nil) != (want.Trace == nil) {
+		t.Fatalf("vacuity budget changed trace availability from %v to %v", want.Trace != nil, o.Trace != nil)
+	}
+	if len(o.Warnings) != 0 {
+		t.Fatalf("vacuity warnings %v, want optional hints omitted after the budget", o.Warnings)
+	}
+}

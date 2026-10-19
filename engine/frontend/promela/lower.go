@@ -1327,6 +1327,58 @@ func (l *lowerer) lowerStmt(it Item, from, to int, ctx seqCtx, first bool) *Erro
 		// lone goto/break inside it is its own transition.
 		lo, id := len(in.edges), l.blockID
 		err := l.lowerSeq(s.Items, from, to, seqCtx{breakTo: ctx.breakTo, isOption: first, optLine: ctx.optLine})
+		if err == nil && s.Escape != nil {
+			if len(l.curDStep) != 0 {
+				return outside(l.file, s.Pos.Line, s.Pos.Col, "unless", "unless inside d_step is outside the subset")
+			}
+			escapeLo := len(in.edges)
+			l.cur = in
+			err = l.lowerSeq(s.Escape.Items, from, to, seqCtx{breakTo: ctx.breakTo})
+			if err == nil {
+				l.blockID++
+				group := l.blockID
+				seen := map[int]bool{}
+				var sources []int
+				for i := lo; i < escapeLo; i++ {
+					source := in.edges[i].From
+					if !seen[source] {
+						seen[source] = true
+						sources = append(sources, source)
+					}
+				}
+				type escapeEntry struct {
+					edge    ir.Edge
+					panLine int
+				}
+				var entry []escapeEntry
+				for i := escapeLo; i < len(in.edges); i++ {
+					if in.edges[i].From == from {
+						entry = append(entry, escapeEntry{edge: in.edges[i], panLine: in.panLines[i]})
+					}
+				}
+				for _, source := range sources {
+					for i := lo; i < escapeLo; i++ {
+						if in.edges[i].From == source {
+							in.edges[i].Priority, in.edges[i].PriorityGroup = 1, group
+						}
+					}
+					for _, entry := range entry {
+						if source == from {
+							for i := escapeLo; i < len(in.edges); i++ {
+								if in.edges[i].From == from {
+									in.edges[i].PriorityGroup = group
+								}
+							}
+							continue
+						}
+						e := entry.edge
+						e.From, e.PriorityGroup = source, group
+						in.edges = append(in.edges, e)
+						in.panLines = append(in.panLines, entry.panLine)
+					}
+				}
+			}
+		}
 		if s.Kind == "atomic" || s.Kind == "d_step" {
 			in.blockRange[id] = [2]int{lo, len(in.edges)}
 		}

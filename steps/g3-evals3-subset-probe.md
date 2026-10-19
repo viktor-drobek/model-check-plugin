@@ -79,7 +79,7 @@ G5-дополнении + G6-упаковке. **73 пробы.** При пер�
 | `out-chan-array.pml` | arrays of channels | inside | parsed |  |
 | `out-chan-uninitialised.pml` | uninitialised channel variables | inside | parsed |  |
 | `out-nr-pr.pml` | _nr_pr | inside | parsed |  |
-| `out-unless.pml` | unless | outside | rejected `outside-subset` | construct outside subset: unless (plan 14 §5.2: outside the subset) (out-unless.pml, line 5) |
+| `out-unless.pml` | unless | inside | parsed |  |
 | `out-c-code.pml` | c_code | outside | rejected `outside-subset` | construct outside subset: c_code (embedded C is outside the subset) (out-c-code.pml, line 4) |
 | `out-c-expr.pml` | c_expr | outside | rejected `outside-subset` | construct outside subset: c_expr (embedded C is outside the subset) (out-c-expr.pml, line 4) |
 | `out-c-decl.pml` | c_decl | outside | rejected `outside-subset` | construct outside subset: c_decl (embedded C is outside the subset) (out-c-decl.pml, line 4) |

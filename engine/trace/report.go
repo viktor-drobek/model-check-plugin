@@ -118,7 +118,7 @@ func SARIF(d *Document) ([]byte, error) {
 		Version: "2.1.0",
 		Schema:  "https://json.schemastore.org/sarif-2.1.0.json",
 		Runs: []sarifRun{{
-			Tool:    sarifTool{Driver: sarifDriver{Name: "mcd-trace-ledger", Version: "1", Rules: rules, Properties: map[string]string{"schema": Schema}}},
+			Tool:    sarifTool{Driver: sarifDriver{Name: "mcd-trace-ledger", Version: "1", Rules: rules, Properties: map[string]string{"schema": canonical.Schema}}},
 			Results: results,
 		}},
 	}

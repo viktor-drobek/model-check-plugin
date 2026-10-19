@@ -7,6 +7,8 @@
 //
 //	mcd parse   --petri file.json | --ir file.json | --promela file.pml [-D NAME[=val]]…
 //	                                                            → IR JSON
+//	mcd catalog --petri file.json | --ir file.json | --promela file.pml [-D NAME[=val]]…
+//	                                                            → static catalog JSON
 //	mcd check  (--petri file.json | --ir file.json | --promela file.pml [-D …])
 //	           [--ltl 'formula']… [--ctl 'formula']… [--progress]
 //	           [--fairness none|weak|strong] [--max-procs N]
@@ -117,7 +119,56 @@ const (
 	DefaultDepth  = 1_000_000
 	DefaultMS     = 60_000
 	DefaultMemMB  = 1024
+	// MaxInputBytes bounds a model source before frontend parsing. Frontend
+	// limits protect structural amplification; this limit prevents an
+	// unbounded source file from being materialized first.
+	MaxInputBytes int64 = 16 << 20
 )
+
+// InputLimitError reports a model source that exceeds the configured byte
+// ceiling before it reaches a frontend.
+type InputLimitError struct {
+	Size  int64
+	Limit int64
+	Path  string
+}
+
+func (e *InputLimitError) Error() string {
+	return fmt.Sprintf("input limit of %d bytes exceeded by %d-byte source", e.Limit, e.Size)
+}
+
+// CheckInputSize rejects a source larger than maxBytes.
+func CheckInputSize(size, maxBytes int64) error {
+	if maxBytes < 0 {
+		return fmt.Errorf("input limit must not be negative")
+	}
+	if size > maxBytes {
+		return &InputLimitError{Size: size, Limit: maxBytes}
+	}
+	return nil
+}
+
+// ReadInputFile reads at most maxBytes of a model source plus one byte to
+// distinguish an exact limit from an oversized file.
+func ReadInputFile(path string, maxBytes int64) ([]byte, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	data, err := io.ReadAll(io.LimitReader(f, maxBytes+1))
+	if err != nil {
+		return nil, err
+	}
+	if err := CheckInputSize(int64(len(data)), maxBytes); err != nil {
+		var limit *InputLimitError
+		if errors.As(err, &limit) {
+			limit.Path = path
+		}
+		return nil, err
+	}
+	return data, nil
+}
 
 // rejection is the JSON body printed for exit code 2.
 type rejection struct {
@@ -154,7 +205,7 @@ func Run(args []string, stdout, stderr io.Writer) (code int) {
 		}
 	}()
 	if len(args) == 0 {
-		fmt.Fprintln(stderr, "usage: mcd (parse|check|version) [flags]")
+		fmt.Fprintln(stderr, "usage: mcd (parse|catalog|validate-catalog|check|version) [flags]")
 		return ExitTool
 	}
 	switch args[0] {
@@ -163,10 +214,14 @@ func Run(args []string, stdout, stderr io.Writer) (code int) {
 		return ExitOK
 	case "parse":
 		return runParse(args[1:], stdout, stderr)
+	case "catalog":
+		return runCatalog(args[1:], stdout, stderr)
+	case "validate-catalog":
+		return runValidateCatalog(args[1:], stdout, stderr)
 	case "check":
 		return runCheck(args[1:], stdout, stderr)
 	}
-	fmt.Fprintf(stderr, "mcd: unknown command %q (parse|check|version)\n", args[0])
+	fmt.Fprintf(stderr, "mcd: unknown command %q (parse|catalog|validate-catalog|check|version)\n", args[0])
 	return ExitTool
 }
 
@@ -187,6 +242,10 @@ type Parsed struct {
 }
 
 func loadInput(petriPath, irPath, promelaPath string, defines []string) (*input, error) {
+	return loadInputWithLimit(petriPath, irPath, promelaPath, defines, MaxInputBytes)
+}
+
+func loadInputWithLimit(petriPath, irPath, promelaPath string, defines []string, maxBytes int64) (*input, error) {
 	n := 0
 	in := &input{defines: defines}
 	for kind, path := range map[string]string{"petri": petriPath, "ir": irPath, "promela": promelaPath} {
@@ -198,12 +257,20 @@ func loadInput(petriPath, irPath, promelaPath string, defines []string) (*input,
 	if n != 1 {
 		return nil, errors.New("exactly one of --petri, --ir or --promela is required")
 	}
-	data, err := os.ReadFile(in.path)
+	data, err := ReadInputFile(in.path, maxBytes)
 	if err != nil {
 		return nil, err
 	}
 	in.data = data
 	return in, nil
+}
+
+func inputLimitRejection(err error) *rejectionBody {
+	var limit *InputLimitError
+	if !errors.As(err, &limit) {
+		return nil
+	}
+	return &rejectionBody{Kind: "input-too-large", Status: "not-executed", Path: limit.Path, Message: limit.Error()}
 }
 
 // toIR translates the input; a frontend error or an IR validation error is
@@ -289,6 +356,9 @@ func runParse(args []string, stdout, stderr io.Writer) int {
 	}
 	in, err := loadInput(*petriPath, *irPath, *promelaPath, defines)
 	if err != nil {
+		if rej := inputLimitRejection(err); rej != nil {
+			return reject(stdout, rej)
+		}
 		fmt.Fprintln(stderr, "mcd parse:", err)
 		return ExitTool
 	}
@@ -304,6 +374,107 @@ func runParse(args []string, stdout, stderr io.Writer) int {
 		return ExitTool
 	}
 	stdout.Write(out)
+	return ExitOK
+}
+
+func runCatalog(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("mcd catalog", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	petriPath := fs.String("petri", "", "Petri net JSON file (frontend/petri/schema.json)")
+	irPath := fs.String("ir", "", "IR JSON file (validated and cataloged)")
+	promelaPath := fs.String("promela", "", "Promela file (the subset of plan 14 §5.2)")
+	var defines defineList
+	fs.Var(&defines, "D", "preprocessor symbol NAME or NAME=value (repeatable)")
+	maxProcs := fs.Int("max-procs", promela.DefaultMaxProcs, "instances pre-instantiated per proctype that a run can create repeatedly")
+	if err := fs.Parse(args); err != nil {
+		return ExitTool
+	}
+	in, err := loadInput(*petriPath, *irPath, *promelaPath, defines)
+	if err != nil {
+		if rej := inputLimitRejection(err); rej != nil {
+			return reject(stdout, rej)
+		}
+		fmt.Fprintln(stderr, "mcd catalog:", err)
+		return ExitTool
+	}
+	in.maxProcs = *maxProcs
+	parsed, rej := toIR(in)
+	if rej != nil {
+		return reject(stdout, rej)
+	}
+	printWarnings(stderr, parsed.Warnings)
+	catalog, err := ir.NewStaticCatalog(parsed.Model)
+	if err != nil {
+		fmt.Fprintln(stderr, "mcd catalog:", err)
+		return ExitTool
+	}
+	out, err := catalog.MarshalJSON()
+	if err != nil {
+		fmt.Fprintln(stderr, "mcd catalog:", err)
+		return ExitTool
+	}
+	_, _ = stdout.Write(out)
+	return ExitOK
+}
+
+func runValidateCatalog(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("mcd validate-catalog", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	catalogPath := fs.String("catalog", "", "static catalog JSON file")
+	petriPath := fs.String("petri", "", "Petri net JSON file (frontend/petri/schema.json)")
+	irPath := fs.String("ir", "", "IR JSON file (validated and structurally compared)")
+	promelaPath := fs.String("promela", "", "Promela file (the subset of plan 14 §5.2)")
+	var defines defineList
+	fs.Var(&defines, "D", "preprocessor symbol NAME or NAME=value (repeatable)")
+	maxProcs := fs.Int("max-procs", promela.DefaultMaxProcs, "instances pre-instantiated per proctype that a run can create repeatedly")
+	if err := fs.Parse(args); err != nil {
+		return ExitTool
+	}
+	if fs.NArg() != 0 {
+		fmt.Fprintf(stderr, "mcd validate-catalog: unexpected positional arguments: %s\n", strings.Join(fs.Args(), " "))
+		return ExitTool
+	}
+	if *catalogPath == "" {
+		fmt.Fprintln(stderr, "mcd validate-catalog: --catalog is required")
+		return ExitTool
+	}
+	in, err := loadInput(*petriPath, *irPath, *promelaPath, defines)
+	if err != nil {
+		if rej := inputLimitRejection(err); rej != nil {
+			return reject(stdout, rej)
+		}
+		fmt.Fprintln(stderr, "mcd validate-catalog:", err)
+		return ExitTool
+	}
+	in.maxProcs = *maxProcs
+	parsed, rej := toIR(in)
+	if rej != nil {
+		return reject(stdout, rej)
+	}
+	catalogData, err := ReadInputFile(*catalogPath, MaxInputBytes)
+	if err != nil {
+		if rej := inputLimitRejection(err); rej != nil {
+			return reject(stdout, rej)
+		}
+		fmt.Fprintln(stderr, "mcd validate-catalog:", err)
+		return ExitTool
+	}
+	catalog, err := ir.ReadStaticCatalog(catalogData)
+	if err != nil {
+		return reject(stdout, &rejectionBody{Kind: "ir", Status: "not-executed", Path: *catalogPath, Message: err.Error()})
+	}
+	validation, err := ir.ValidateCatalogIsomorphism(parsed.Model, catalog)
+	if err != nil {
+		return reject(stdout, &rejectionBody{Kind: "ir", Status: "not-executed", Path: *catalogPath, Message: err.Error()})
+	}
+	printWarnings(stderr, parsed.Warnings)
+	enc := json.NewEncoder(stdout)
+	enc.SetIndent("", "  ")
+	enc.SetEscapeHTML(false)
+	if err := enc.Encode(validation); err != nil {
+		fmt.Fprintln(stderr, "mcd validate-catalog:", err)
+		return ExitTool
+	}
 	return ExitOK
 }
 
@@ -354,6 +525,9 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 	}
 	in, err := loadInput(*petriPath, *irPath, *promelaPath, defines)
 	if err != nil {
+		if rej := inputLimitRejection(err); rej != nil {
+			return reject(stdout, rej)
+		}
 		fmt.Fprintln(stderr, "mcd check:", err)
 		return ExitTool
 	}

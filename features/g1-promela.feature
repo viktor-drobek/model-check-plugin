@@ -153,6 +153,36 @@ Feature: G1 Promela subset — chapter 2–3 models through the Promela frontend
     And the reason for "deadlock" mentions "block in d_step"
     And the reason for "deadlock" mentions "x == 2"
 
+  Scenario: an enabled unless escape preempts the main sequence before its first statement
+    Given the Promela file "testdata/promela/unless-preempts-entry.pml"
+    When I execute "mcd check --promela <model> --no-timing"
+    Then the command exits with 0
+    And property "assert" is "verified" with evidence "exhaustive"
+    And property "deadlock" is "verified" with evidence "exhaustive"
+    And the search is complete
+
+  Scenario: an unless escape preempts a later main statement when its guard becomes enabled
+    Given the Promela file "testdata/promela/unless-preempts.pml"
+    When I execute "mcd check --promela <model> --no-timing"
+    Then the command exits with 0
+    And property "assert" is "verified" with evidence "exhaustive"
+    And property "deadlock" is "verified" with evidence "exhaustive"
+    And the search is complete
+
+  Scenario: unless inside an enclosing d_step is rejected before exploration
+    Given the Promela file "testdata/promela/unless-in-dstep.pml"
+    When I execute "mcd check --promela <model> --no-timing"
+    Then the command exits with 2
+    And the rejection has kind "outside-subset" and status "not-executed"
+    And the rejection mentions "unless"
+
+  Scenario: chained unless is rejected as an unsupported construct
+    Given the Promela file "testdata/promela/unless-chained.pml"
+    When I execute "mcd parse --promela <model>"
+    Then the command exits with 2
+    And the rejection has kind "outside-subset" and status "not-executed"
+    And the rejection mentions "unless"
+
   # ---------------------------------------------------------------- rejections: not-executed, never invalid-model
 
   Scenario: a model with c_code is rejected naming the construct, file and line
@@ -483,6 +513,7 @@ Feature: G1 Promela subset — chapter 2–3 models through the Promela frontend
     Given the Promela file "testdata/unbounded/atomic-never-ends.pml"
     When I execute "mcd check --promela <model> --estimate --estimate-ms 2000 --no-timing"
     Then the command exits with 0
+    And the CLI estimate projection evidence is "approximate"
 
   @spin
   Scenario Outline: pandiff agrees with pan on the models that read _nr_pr without run
@@ -525,6 +556,7 @@ Feature: G1 Promela subset — chapter 2–3 models through the Promela frontend
     Given the Promela file "testdata/budget/time-budget.pml"
     When I execute "mcd check --promela <model> --estimate --estimate-ms 300 --no-timing"
     Then the command exits with 0
+    And the CLI estimate projection evidence is "approximate"
     And the command finished within 5 seconds
 
   # ---------------------------------------------------------------- memory of a breadth-first descent (issue #7)

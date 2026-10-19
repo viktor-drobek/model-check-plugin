@@ -1,0 +1,1 @@
+{"schema":"mcd-runtime-span/1","trace_id":"trace.demo","span_id":"span.one","parent_id":"","name":"drop","kind":"server","status":"ok","start_ns":0,"end_ns":1}

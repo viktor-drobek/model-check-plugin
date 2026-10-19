@@ -1,0 +1,7 @@
+Request for Comments: 9004                                     E. Example
+Updates: 1111, 2222                                           1 April 2026
+Category: Standards Track                                     October 2026
+
+The key words "MUST" and "SHOULD" are to be interpreted as described in BCP 14.
+
+An implementation MUST preserve the source revision.

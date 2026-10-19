@@ -154,10 +154,10 @@ type Options struct {
 	// porNoProviso switches the cycle proviso off. Tests only: it shows what
 	// the proviso is for.
 	porNoProviso bool
-	// ctlAfterGraph and ctlAfterLabel are test hooks of the CTL check: they
-	// run once the graph is complete and once the labelling is done, where a
-	// test ends the context to pin the two budget stops of issue #8.
-	ctlAfterGraph, ctlAfterLabel func()
+	// ctlAfterGraph, ctlAfterLabel and ctlAfterWitness are test hooks of the
+	// CTL check. Tests end the context at each boundary to pin the mandatory
+	// graph/labelling stops and the best-effort witness/vacuity phases.
+	ctlAfterGraph, ctlAfterLabel, ctlAfterWitness func()
 	// porTrace, when set, is called with every stored state the reduced search
 	// picks an ample set for and the choice (por.go pick). Tests only: the
 	// acyclicity audit of the cycle proviso reads the reduced graph from it.
@@ -183,6 +183,10 @@ type Options struct {
 	// par holds the controls of the parallel search that tests force to
 	// extremes (parallel.go). Nil in production.
 	par *parKnobs
+	// graphParallel is set by Run after it has established that this is an
+	// eligible CTL-only call. BuildGraph itself never infers eligibility from
+	// Workers, because it is also used by sequential fallback paths.
+	graphParallel bool
 	// Fairness applies to ltl and progress properties: "" or "none",
 	// "weak" (pan -f, see cycle.go), "strong" (not executed, FR-008). A ctl
 	// property asked with any fairness is not executed (ctlcheck.go).
@@ -408,7 +412,32 @@ func Run(ctx context.Context, m *ir.Model, opt Options) (*Result, error) {
 	// temporal one and no property was refused (tableread.go: a call whose
 	// properties are all refused searches nothing).
 	searches := hasSafety || (len(temporal) == 0 && len(ctls) == 0 && len(c.refused) == 0)
-	parallel := s.chooseParallel(len(temporal)+len(ctls) > 0, !searches)
+	executableCTL := false
+	// Preflight is only an optimisation for a CTL-only call. In a mixed
+	// request the established execution order (safety, then LTL, then CTL)
+	// determines which formula error is reported, and safety must retain its
+	// sequential fallback even when a CTL sibling is table-refused.
+	if !hasSafety && len(temporal) == 0 {
+		for _, i := range ctls {
+			ok, err := preflightCTL(m, c.props[i], opt)
+			if err != nil {
+				return nil, err
+			}
+			executableCTL = executableCTL || ok
+		}
+	}
+	if !hasSafety && len(temporal) == 0 && len(ctls) > 0 && !executableCTL {
+		searches = false
+	}
+	ctlOnlyParallel := opt.Workers > 0 && !hasSafety && len(temporal) == 0 && executableCTL &&
+		(opt.Fairness == "" || opt.Fairness == FairnessNone) && !opt.POR && opt.NewVisited == nil
+	parallel := s.chooseParallel(len(temporal) > 0, hasSafety && len(ctls) > 0,
+		!hasSafety && len(temporal) == 0 && executableCTL && opt.POR, !searches)
+	if ctlOnlyParallel && opt.Workers > 0 {
+		parallel = true
+		s.res.Parallel = &Parallel{Requested: opt.Workers, Applied: true, Workers: opt.Workers,
+			Note: "reachable graph built in parallel; CTL labelling and witness reconstruction are sequential"}
+	}
 	if searches {
 		switch {
 		case parallel:
@@ -433,12 +462,29 @@ func Run(ctx context.Context, m *ir.Model, opt Options) (*Result, error) {
 		applyVacuity(&o, vacuityCoverage(s.res, o.Temporal), antecedentsOf(o.Temporal), s.res.States)
 		s.res.Outcomes[i] = o
 	}
+	var ctlGraph *Graph
+	if ctlOnlyParallel {
+		graphOpt := opt
+		graphOpt.graphParallel = true
+		ctlGraph, err = BuildGraph(ctx, m, graphOpt)
+		if err != nil {
+			return nil, err
+		}
+		p := s.res.Parallel
+		p.Layers, p.MaxLayerStates, p.WorkerBytesEst = ctlGraph.parallel.layers, ctlGraph.parallel.maxLayer, ctlGraph.parallel.workerBytes
+		s.res.States, s.res.Transitions, s.res.AtomicSteps, s.res.MaxDepth = ctlGraph.Stats.States, ctlGraph.Stats.Transitions, ctlGraph.Stats.AtomicSteps, ctlGraph.Stats.MaxDepth
+		s.res.MemBytes, s.res.Complete, s.res.Stop = ctlGraph.Stats.MemBytes, ctlGraph.Stats.Complete, ctlGraph.Stats.Stop
+	}
 	for _, i := range ctls {
-		o, err := runCTL(s, m, c.props[i], opt)
+		o, err := runCTLGraph(s, m, c.props[i], opt, ctlGraph)
 		if err != nil {
 			return nil, err
 		}
 		s.res.Outcomes[i] = o
+		if !hasSafety && len(temporal) == 0 && o.Stats != nil {
+			s.res.States, s.res.Transitions, s.res.AtomicSteps, s.res.MaxDepth = o.Stats.States, o.Stats.Transitions, o.Stats.AtomicSteps, o.Stats.MaxDepth
+			s.res.MemBytes, s.res.Complete, s.res.Stop = o.Stats.MemBytes, o.Stats.Complete, o.Stats.Stop
+		}
 	}
 	if !hasSafety && len(temporal) > 0 {
 		if st := s.res.Outcomes[temporal[0]].Stats; st != nil {
@@ -899,6 +945,31 @@ func (s *search) allTerminated(state []byte) bool {
 // enabled reports whether e can be taken in state (timeout as currently set
 // in the layout). For a rendezvous send it asks whether some partner exists.
 func (s *search) enabled(e *cEdge, state []byte) (bool, error) {
+	ok, err := s.enabledRaw(e, state)
+	if err != nil || !ok {
+		return ok, err
+	}
+	if e.e.Priority == 0 || e.e.PriorityGroup == 0 {
+		return true, nil
+	}
+	loc := s.c.layout.ReadPC(state, e.proc)
+	for _, oi := range s.c.procs[e.proc].out[loc] {
+		o := &s.c.procs[e.proc].edge[oi]
+		if o == e || o.e.PriorityGroup != e.e.PriorityGroup || o.e.Priority >= e.e.Priority {
+			continue
+		}
+		ok, err := s.enabledRaw(o, state)
+		if err != nil || ok {
+			return false, err
+		}
+	}
+	return true, nil
+}
+
+// enabledRaw evaluates an edge without considering competing priorities.
+// Priority selection is applied by enabled after all ordinary Promela
+// enabledness rules have been evaluated.
+func (s *search) enabledRaw(e *cEdge, state []byte) (bool, error) {
 	// `provided` gates every transition of the process, `else` and the
 	// `-end-` transition included.
 	if ok, err := s.providedHolds(e.proc, state); err != nil || !ok {
@@ -911,7 +982,7 @@ func (s *search) enabled(e *cEdge, state []byte) (bool, error) {
 			if o == e || o.e.Else {
 				continue
 			}
-			ok, err := s.enabled(o, state)
+			ok, err := s.enabledRaw(o, state)
 			if err != nil || ok {
 				return false, err
 			}

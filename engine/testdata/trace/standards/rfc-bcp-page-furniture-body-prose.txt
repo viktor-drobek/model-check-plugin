@@ -1,0 +1,8 @@
+Request for Comments: 9048
+Category: Informational
+
+The key words "MUST" in this document are to be interpreted as described in RFC 8174.
+
+Servers MUST return page 1
+
+RFC 9000  endpoints MUST discard such packets.

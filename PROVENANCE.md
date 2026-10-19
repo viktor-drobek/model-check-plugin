@@ -28,10 +28,48 @@ current engine implements every technique in the cited work.
 - **SPIN project.** The project homepage is the authoritative public entry point
   for SPIN releases, documentation, and examples.
   [spinroot.com](https://spinroot.com/)
+- **S. Bradner, “Key words for use in RFCs to Indicate Requirement Levels,” RFC
+  2119 / BCP 14 (1997).** This is the original terminology reference used by the
+  offline RFC source adapter when it identifies only candidate normative language.
+  [RFC Editor](https://www.rfc-editor.org/rfc/rfc2119.html)
+- **B. Leiba, “Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words,” RFC
+  8174 / BCP 14 (2017).** This updates BCP 14 terminology and informs the
+  adapter's deliberately narrow, in-document declaration predicate.
+  [RFC Editor](https://www.rfc-editor.org/rfc/rfc8174.html)
+- **IEEE Std 802.1Q-2022, _Bridges and Bridged Networks_.** This standard is a
+  cited identity in the offline IEEE clause-manifest example; the adapter does not
+  ingest or redistribute the licensed document.
 - **U. Karpov, _Model Checking: Verification of Concurrent Systems_** (Russian).
   The Google Books record is used as the public bibliographic reference for the
   Russian-language terminology and examples.
   [Google Books](https://books.google.com/books/about/MODEL_%D0%A1HECKING_%D0%92%D0%B5%D1%80%D0%B8%D1%84%D0%B8%D0%BA%D0%B0%D1%86%D0%B8%D1%8F.html?id=xpui56eRsHgC)
+
+## Offline protocol-adapter fixtures
+
+The TShark projection, Kaitai/Spicy raw-registration and grammar-reference fixtures
+in `engine/trace/protocol/*_test.go` and `engine/steps_g9_protocol_test.go` are
+synthetic inline bytes authored for this repository and distributed under its
+license. They contain no third-party capture, packet payload, grammar corpus or
+restricted text. Version strings (`4.4.10`, `0.10`, `1.12.0`) identify the closed
+admission profiles, not executions or verified behaviour of those external tools.
+No external parser implementation or grammar text was copied. The adapter's
+semantics and claims are specified in [Offline protocol artifacts](docs/protocol-artifacts.md)
+and tested locally; a producer label is not proof of producer identity or parser
+correctness.
+
+## Synthetic runtime-span fixtures
+
+The runtime-span export and raw-span fixtures in `engine/trace/protocol/*_test.go`
+and `engine/steps_g9_protocol_test.go` are synthetic inline bytes authored for
+this repository and distributed under its license. They contain no third-party
+trace, OTLP/OTel payload, collector output, or restricted text. The `schema`
+literals `mcd-runtime-span-export/1` and `mcd-runtime-span/1` identify the closed
+admission profile only; a producer name, collector assertion, or build revision
+recorded in a fixture is a caller assertion, not proof of producer identity,
+collection behaviour, or implementation conformance. The profile is specified in
+[Explicit offline runtime-span records](docs/runtime-spans.md) and tested
+locally; it is a named caller projection that emits no inferred communication
+edges and makes no verification claim.
 
 ## Monorepo-only source notes
 

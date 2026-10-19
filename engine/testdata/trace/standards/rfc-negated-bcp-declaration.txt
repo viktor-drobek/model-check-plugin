@@ -1,0 +1,6 @@
+Request for Comments: 9023
+Category: Informational
+
+It is false that the key words "MUST" are to be interpreted as described in RFC 8174.
+
+An implementation MUST not become a candidate.

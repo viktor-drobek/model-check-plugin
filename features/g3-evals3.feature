@@ -251,7 +251,6 @@ Feature: G3 evals — stage 3 after G4: E2, E2b and E4 with and without the skil
 
     Examples:
       | probe                    | kind           | construct |
-      | out-unless               | outside-subset | `unless`  |
       | out-c-code               | outside-subset | `c_code`  |
       | out-eval-in-receive      | outside-subset | `eval(e)` |
       | out-priority             | outside-subset | `priority n` |
@@ -267,6 +266,7 @@ Feature: G3 evals — stage 3 after G4: E2, E2b and E4 with and without the skil
 
     Examples:
       | probe                  | construct   |
+      | out-unless             | `unless`    |
       | out-inline             | `inline`    |
       | out-typedef            | `typedef`   |
       | out-provided           | `provided`  |

@@ -264,6 +264,12 @@ type Edge struct {
 	// Else marks a Promela `else`: the edge is enabled iff no other edge
 	// out of the same location is enabled. Guard must be nil.
 	Else bool `json:"else,omitempty"`
+	// Priority orders otherwise competing edges from one location. Lower
+	// values win; zero preserves the historical unprioritized behavior.
+	Priority int `json:"priority,omitempty"`
+	// PriorityGroup limits priority competition to edges introduced by one
+	// frontend construct. Zero means no priority group.
+	PriorityGroup int `json:"priority_group,omitempty"`
 	// DStep: after this edge the same process continues at once with the
 	// first enabled edge of its new location, inside the same step, and so
 	// on while the edges taken carry DStep; intermediate states are not

@@ -1,0 +1,5 @@
+Request for Comments: 9015
+Category: Informational
+Keywords: key words are to be interpreted as described in BCP 14
+
+An implementation MUST not be authorized by header text.

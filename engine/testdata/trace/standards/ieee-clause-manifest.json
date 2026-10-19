@@ -1,0 +1,11 @@
+{
+  "standard_id": "IEEE 802.1Q",
+  "edition": "2022",
+  "document_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  "clauses": [
+    {
+      "anchor": "8.6.8",
+      "summary": "The bridge relay function forwards a frame only according to the declared forwarding rule."
+    }
+  ]
+}

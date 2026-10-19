@@ -14,12 +14,12 @@ N=6 K=4 (579 195 and 8 108 731 states), `par-two` N=1000 (4 010 007), `par-chain
 Comparison baselines: the default depth-first search (`dfs`) and the breadth-first search (`bfs`,
 `--bfs`); `par w` is `--workers w`, which is a breadth-first search by `w` workers.
 
-| | Local (this machine) | `ml` (a 32-core host) |
+| | Local (this machine) | comparison host (a 32-core host) |
 |---|---|---|
 | CPU | Intel Xeon Gold 6154, 16 cores, 2 NUMA nodes | Intel Xeon Gold 6154, 32 cores, 4 NUMA nodes |
 | Memory | 30 GB | 60 GB |
 | Binary | `go test ./explore -run TestTuneParallel` of the tree at `bfefda4` (the parallel code is unchanged since) | `engine/bin/mcd-linux-amd64` of the release build, version 0.3.0, run as `mcd check` |
-| Harness | the tuning harness: 3 repetitions, best and mean wall time | `steps/release-0.3.0-speedup-ml.tsv` (raw rows), 3 repetitions per cell, median |
+| Harness | the tuning harness: 3 repetitions, best and mean wall time | `steps/release-0.3.0-speedup-comparison.tsv` (raw rows), 3 repetitions per cell, median |
 | Load | the job started when CPU use was 3% (the load average, 2.4, was the decay of earlier work); nothing else of the author's ran | before every run a script waited until CPU use was at most 10%; the host had no other heavy job (load average 0.05 before the series); the `load1` column of the table includes the load of the series itself |
 | Pinning | none | none, and one series pinned to NUMA node 0 (`numactl --cpunodebind=0 --membind=0`, 8 cores) |
 
@@ -34,7 +34,7 @@ Comparison baselines: the default depth-first search (`dfs`) and the breadth-fir
 | client | 0.336 | 0.416 (x0.8) | 0.232 (x1.4) | 0.128 (x2.6) | 0.088 (x3.8) | 0.101 (x3.3) |
 | counters | 1.487 | 1.292 (x1.2) | 0.938 (x1.6) | 0.505 (x2.9) | 0.427 (x3.5) | 0.221 (x6.7) |
 
-## `ml`, median of 3 (wall seconds; speed-up against the default depth-first search, and against `--bfs`)
+## comparison host, median of 3 (wall seconds; speed-up against the default depth-first search, and against `--bfs`)
 
 | model | dfs | bfs | w=1 | w=2 | w=4 | w=8 | w=16 | w=32 |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -49,7 +49,7 @@ Against the breadth-first search with one worker's worth of the same algorithm (
 the like-for-like baseline of the parallel search (it is breadth-first too), `w=8` gives x9.0 on
 `indep6`, x7.4 on `counters`, x4.6 on `client`, x6.0 on `indep5`.
 
-Pinned to NUMA node 0 on `ml` (8 cores, median of 3), speed-up against the default depth-first search:
+Pinned to NUMA node 0 on the comparison host (8 cores, median of 3), speed-up against the default depth-first search:
 `indep6` w=1 x1.0, w=2 x1.5, w=4 x3.2, w=8 x5.0 (3.175 s); `counters` w=1 x1.5, w=2 x2.6, w=4 x4.8, w=8 x6.7
 (0.352 s); `two` w=4 x1.2, w=8 x1.4 (2.123 s). On this host placing the 8 workers on one node did
 not hurt and, on `counters` and `two`, was faster than 8 unpinned workers (x6.7 against x5.4, x1.4
@@ -60,17 +60,17 @@ x2.9) too.
 
 - **The stop rule of `perf5-confirmation.md`** (abandon the parallel search if it gives less than x3
   at 8 workers on `bench-indep` N=6 or `counters-10-6` at a load of 2 or below) is **not triggered** on
-  either machine, against the default search: `indep6` x5.3 (local) and x4.9 (`ml`), `counters` x3.5
-  (local, best of 3) and x5.4 (`ml`). The criterion was taken at a load of 2 or below: the local run
-  started at 3% CPU use (load average 2.4 and falling), the `ml` series ran with the host otherwise
+  either machine, against the default search: `indep6` x5.3 (local) and x4.9 (comparison host), `counters` x3.5
+  (local, best of 3) and x5.4 (comparison host). The criterion was taken at a load of 2 or below: the local run
+  started at 3% CPU use (load average 2.4 and falling), the comparison host series ran with the host otherwise
   idle; neither is a controlled experiment, and no run was repeated at a second load.
 - **It pays on wide graphs and not on narrow ones**, as the README says. `two` (two counters, one
   state per layer at the frontier of the product) and `chain` do not speed up at any worker count (x0.8
   to x1.2): the layers are narrow.
 - **One worker is not free.** `w=1` is slower than the depth-first search on four of the six models
   (x0.8 to x0.9 locally): the layered search costs a constant factor; it wins only with more workers.
-- **Scaling stops near 16 workers** on these models (`w=32` gains nothing over `w=16` on `ml`).
-- **NUMA placement mattered less than the earlier record feared** on `ml`; that record's cores 0 and 8
+- **Scaling stops near 16 workers** on these models (`w=32` gains nothing over `w=16` on the comparison host).
+- **NUMA placement mattered less than the earlier record feared** on the comparison host; that record's cores 0 and 8
   case (two workers on different nodes) was not repeated here.
 
 ## What was not measured

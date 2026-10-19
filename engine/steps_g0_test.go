@@ -14,6 +14,7 @@ import (
 	"github.com/cucumber/godog"
 
 	"modelcheck/cli"
+	"modelcheck/ir"
 )
 
 // g0World is the per-scenario state for features/g0-engine.feature. Every
@@ -323,6 +324,34 @@ func registerG0Steps(sc *godog.ScenarioContext) {
 	sc.Step(`^the saved outputs "([^"]*)" and "([^"]*)" are byte-identical$`, func(a, b string) error {
 		if !bytes.Equal(w.saved[a], w.saved[b]) {
 			return fmt.Errorf("%s and %s differ", a, b)
+		}
+		return nil
+	})
+	sc.Step(`^the saved catalog "([^"]*)" has schema "([^"]*)" and a canonical "([^"]*)" digest$`, func(name, schema, catalogSchema string) error {
+		var catalog struct {
+			Schema     string `json:"schema"`
+			CatalogRef struct {
+				Schema string `json:"schema"`
+				SHA256 string `json:"sha256"`
+			} `json:"catalog_ref"`
+			IR json.RawMessage `json:"ir"`
+		}
+		if err := json.Unmarshal(w.saved[name], &catalog); err != nil {
+			return fmt.Errorf("catalog %s: %w", name, err)
+		}
+		if catalog.Schema != schema || catalog.CatalogRef.Schema != catalogSchema || len(catalog.CatalogRef.SHA256) != 64 || len(catalog.IR) == 0 {
+			return fmt.Errorf("catalog %s = %+v, want schema %q, catalog schema %q, SHA-256 digest, and IR", name, catalog, schema, catalogSchema)
+		}
+		model, err := ir.UnmarshalJSON(catalog.IR)
+		if err != nil {
+			return fmt.Errorf("catalog %s IR: %w", name, err)
+		}
+		expected, err := ir.NewStaticCatalog(model)
+		if err != nil {
+			return fmt.Errorf("catalog %s canonical IR: %w", name, err)
+		}
+		if catalog.CatalogRef != expected.CatalogRef {
+			return fmt.Errorf("catalog %s reference = %+v, want %+v", name, catalog.CatalogRef, expected.CatalogRef)
 		}
 		return nil
 	})

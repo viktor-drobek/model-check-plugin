@@ -21,7 +21,6 @@ var outsideKeywords = map[string][2]string{
 	"c_state":      {"c_state", "embedded C is outside the subset"},
 	"c_track":      {"c_track", "embedded C is outside the subset"},
 	"c_expr":       {"c_expr", "embedded C is outside the subset"},
-	"unless":       {"unless", "plan 14 §5.2: outside the subset"},
 	"priority":     {"priority", "process priorities are outside the subset"},
 	"ltl":          {"ltl", "inline LTL blocks are outside the subset; use never { }"},
 	"trace":        {"trace", "event traces are outside the subset"},
@@ -129,6 +128,10 @@ func (p *parser) expectIdent() (Token, *Error) {
 func (p *parser) outsideAt(t Token) *Error {
 	k := outsideKeywords[t.Text]
 	return outside(p.file, t.Line, t.Col, k[0], k[1])
+}
+
+func (p *parser) outsideUnless(t Token) *Error {
+	return outside(p.file, t.Line, t.Col, "unless", "only a linear guarded brace-block escape is supported")
 }
 
 // ---- module -----------------------------------------------------------------
@@ -708,11 +711,29 @@ func (p *parser) seq(closers ...string) ([]Item, *Error) {
 		if err != nil {
 			return nil, err
 		}
-		items = append(items, it)
 		t = p.peek()
 		if t.isIdent("unless") {
-			return nil, p.outsideAt(t)
+			unless := t
+			main, ok := it.Stmt.(*Block)
+			if !ok || main.Kind != "" {
+				return nil, p.outsideUnless(unless)
+			}
+			p.next()
+			escape, _, err := p.body()
+			if err != nil {
+				return nil, err
+			}
+			if !simpleUnlessMain(main) || !simpleUnlessEscape(escape) {
+				return nil, p.outsideUnless(unless)
+			}
+			main.Escape = escape
+			it.To = p.i
+			t = p.peek()
+			if t.isIdent("unless") {
+				return nil, p.outsideUnless(t)
+			}
 		}
+		items = append(items, it)
 		// A separator is optional after a compound statement (SPIN accepts
 		// "} stmt" and "fi stmt").
 		switch it.Stmt.(type) {
@@ -723,6 +744,43 @@ func (p *parser) seq(closers ...string) ([]Item, *Error) {
 			return nil, p.errAt(t, "expected \";\" or \"->\" after a statement, got %s", t)
 		}
 	}
+}
+
+func simpleUnlessMain(b *Block) bool {
+	for _, it := range b.Items {
+		if len(it.Labels) != 0 {
+			return false
+		}
+		switch it.Stmt.(type) {
+		case *ExprStmt, *Assign, *Assert:
+		default:
+			return false
+		}
+	}
+	return len(b.Items) > 0
+}
+
+func simpleUnlessEscape(b *Block) bool {
+	if len(b.Items) == 0 {
+		return false
+	}
+	if len(b.Items[0].Labels) != 0 {
+		return false
+	}
+	if _, ok := b.Items[0].Stmt.(*ExprStmt); !ok {
+		return false
+	}
+	for _, it := range b.Items[1:] {
+		if len(it.Labels) != 0 {
+			return false
+		}
+		switch it.Stmt.(type) {
+		case *ExprStmt, *Assign, *Assert:
+		default:
+			return false
+		}
+	}
+	return true
 }
 
 func (p *parser) item() (Item, *Error) {

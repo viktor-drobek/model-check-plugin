@@ -209,6 +209,29 @@ Feature: G0 engine — Petri nets through IR to a JSON verdict via the mcd CLI
     Then the exit code is 0
     And every global variable and every edge of the IR has an origin with a user name
 
+  Scenario: a static catalog is canonical and binds its complete IR
+    Given the Petri net file "testdata/petri/petrinet1.json"
+    When I run "mcd catalog --petri <file>" and save the output as "catalog1"
+    And I run "mcd catalog --petri <file>" and save the output as "catalog2"
+    Then the saved outputs "catalog1" and "catalog2" are byte-identical
+    And the saved catalog "catalog1" has schema "mcd-static-catalog/1" and a canonical "mcd-ir/1" digest
+
+  Scenario: a static catalog validates structural isomorphism with its source IR
+    Given the Petri net file "testdata/petri/petrinet1.json"
+    When I run "mcd catalog --petri <file>" and save the output as "catalog"
+    And I run "mcd validate-catalog --petri <file> --catalog catalog"
+    Then the exit code is 0
+    And the output mentions "catalog-isomorphism"
+
+  Scenario: a static catalog rejects a structurally different source IR
+    Given the Petri net file "testdata/petri/petrinet1.json"
+    When I run "mcd catalog --petri <file>" and save the output as "catalog"
+    And the Petri net file "testdata/petri/petrinet2.json"
+    When I run "mcd validate-catalog --petri <file> --catalog catalog"
+    Then the exit code is 2
+    And the error kind is "ir"
+    And the error message mentions "catalog structural mismatch"
+
   # --- CLI contract --------------------------------------------------------
 
   Scenario: mcd version prints the engine version

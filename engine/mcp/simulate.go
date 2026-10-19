@@ -204,7 +204,7 @@ func (s *Server) simulate(ctx context.Context, req *sdk.CallToolRequest, in Simu
 	sess.mu.Lock()
 	rel := sess.next("sim", ".json")
 	sess.mu.Unlock()
-	if out.TracePath, err = sess.WriteFile(rel, append(data, '\n')); err != nil {
+	if out.TracePath, err = sess.WriteOutputFile(rel, append(data, '\n')); err != nil {
 		return nil, nil, err
 	}
 	artifacts = []string{rel}

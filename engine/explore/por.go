@@ -566,6 +566,11 @@ func analyzePOR(c *compiled) *porPlan {
 	}
 	for p := range m.Processes {
 		pr := &m.Processes[p]
+		for ei := range pr.Edges {
+			if pr.Edges[ei].PriorityGroup != 0 {
+				return &porPlan{reason: "the model has grouped transition priorities, whose enabledness dependencies this version of the reduction does not model"}
+			}
+		}
 		if pr.Provided != nil {
 			return &porPlan{reason: fmt.Sprintf("the process %s has a provided clause, which guards every step of the process and which this version of the reduction does not model", pr.Name)}
 		}

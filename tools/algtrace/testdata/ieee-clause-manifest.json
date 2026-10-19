@@ -1,0 +1,10 @@
+{
+  "standard": "IEEE 802.1Q-2022",
+  "document_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  "clauses": [
+    {
+      "id": "8.6.8",
+      "summary": "Ingress filtering requirement, recorded from a licensed copy."
+    }
+  ]
+}

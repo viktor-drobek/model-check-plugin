@@ -24,6 +24,11 @@ ordered so that exits come before continuations. If no branch fits, that is a de
 in this file — record it in the report's Limitations and pick the branch that claims
 least.
 
+Before selecting a frontend, property class, or backend, read the versioned
+[capability and semantics matrix](../../../docs/capability-matrix.md). It records
+what the shipped product supports, its effective semantics, its limits, and the
+fixture that backs the claim; its capability statuses do not replace result statuses.
+
 ## 2. Mandatory questions (11 §4)
 
 Ask what is missing and cannot be safely inferred; group the questions; do not repeat
@@ -99,7 +104,7 @@ need the user's explicit confirmation, defaults are not enough.
 
 The engine has no symmetry or abstraction, and its partial-order reduction (`mcd check --por`, or `por: true` in `mc_check`) is opt-in and covers the safety search only: `deadlock`, `assert`, `invariant`, `reach`, depth-first. It refuses, and says why in `search.reduction`, any model with a rendezvous channel, a channel named by a value, `timeout` or `provided`, and any run that checks an `ltl`, `progress` or `ctl` property — so it can never be applied to a formula with `X`, nor to priorities. It does cover atomic sequences and `run` with the process table (`_nr_pr`: a model that reads it is reduced, not refused; the step that creates a process and the end of every process stay unreduced, because they write the table): a ring of processes started by `init { atomic { run ... } }` is its best case, with a pipeline of producer, filter and consumer over buffered channels. Use it when a safety check ends `inconclusive` on a state budget and the processes mostly work on their own data or pass messages along buffered channels. Report the run as reduced, quote `reduced_states` and `fully_expanded_states`, and do not compare its state count with the unreduced one, with SPIN's `pan -c0`, or with a bound you gave: the count is that of the reduced graph. The verdicts are the ones to carry over. Without `--por`, record that the search is unreduced.
 
-Parallelism is not a reduction, and it is the other opt-in for a safety check that is too slow or ends `inconclusive` on a state budget: `--workers N` (`workers` in `mc_check`) searches the same graph with N workers, breadth-first. For a run that completes the verdicts and the counts are the sequential ones exactly, so unlike `--por` the counts can be compared with `pan -c0`; the report says `search.mode: "bfs"`, its `depth` is the number of breadth-first layers (an atomic sequence that runs through is one unit of it and of `--budget-depth`, and one that blocks part-way counts one unit per uninterrupted run, where `--bfs` counts every step, so on a model with atomic sequences the two can differ; a refused run is the sequential one and counts transitions) and its counterexamples are shortest ones in layers. Try it when the state graph is wide (the run's `search.parallel.layers` and `max_layer_states` say how wide: thousands of states in an average layer is the target); do not try it on a single long chain or counter, on a model of under about 10^5 states, or to find a bug fast (a violation is found only after every layer above it is complete; hunt with the default depth-first search or `--por`). It is refused, and the run is the sequential one, with an `ltl`, `progress` or `ctl` property in the run, and where `--por` applies. Report the run as parallel and quote `search.parallel`.
+Parallelism is not a reduction, and it is the other opt-in for a safety check that is too slow or ends `inconclusive` on a state budget: `--workers N` (`workers` in `mc_check`) searches the same graph with N workers, breadth-first. For a run that completes the verdicts and the counts are the sequential ones exactly, so unlike `--por` the counts can be compared with `pan -c0`; the report says `search.mode: "bfs"`, its `depth` is the number of breadth-first layers (an atomic sequence that runs through is one unit of it and of `--budget-depth`, and one that blocks part-way counts one unit per uninterrupted run, where `--bfs` counts every step, so on a model with atomic sequences the two can differ; a refused run is the sequential one and counts transitions) and its counterexamples are shortest ones in layers. Try it when the state graph is wide (the run's `search.parallel.layers` and `max_layer_states` say how wide: thousands of states in an average layer is the target); do not try it on a single long chain or counter, on a model of under about 10^5 states, or to find a bug fast (a violation is found only after every layer above it is complete; hunt with the default depth-first search or `--por`). An eligible CTL-only request with fairness none builds its reachable graph in parallel, then labels it and reconstructs witnesses sequentially. A model containing `assert` has an implicit safety property, so a CTL request on it is mixed safety-plus-CTL and runs sequentially instead. CTL keeps the sequential graph's transition-depth and `--budget-depth` semantics, including atomic chains; `search.parallel.layers` and `max_layer_states` describe stored-state frontier width only. The parallel search is refused, and the sequential run is unchanged, for `ltl`, `progress`, mixed temporal or safety requests, CTL with fairness, and `--por` where the reduction applies. Report the run as parallel and quote `search.parallel`.
 
 ### Node 9 — size estimate
 
@@ -110,6 +115,9 @@ Run `mc_estimate` and record states, transitions, growth, and the projected fit 
 ### Node 10 — artefacts
 
 Before running: model, property list with IDs, mapping table, intake card, and the budget.
+When a result may support an implementation claim, also open a conformance dossier
+from `assets/conformance-dossier-template.md` and follow `conformance.md`; a model
+verdict alone is not an implementation verdict.
 
 `mc_manifest` takes **only** `session_id`. It renders what the session recorded by itself:
 the tool calls in order with their applied parameters (search, fairness, budget, seed,

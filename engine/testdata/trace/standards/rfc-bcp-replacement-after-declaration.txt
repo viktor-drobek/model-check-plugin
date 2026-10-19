@@ -1,0 +1,12 @@
+Request for Comments: 9037
+Category: Informational
+
+The key words "MUST" in this document are to be interpreted as described in RFC 8174.
+
+A genuine requirement MUST become a candidate.
+
+OLD: First replacement paragraph.
+
+RFC 2119 senders MUST not become a candidate.
+
+Another replacement requirement MUST not become a candidate.

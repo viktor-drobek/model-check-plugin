@@ -128,6 +128,10 @@ proctype P() provided (cond) { ... }
   per point between statements cannot tell the two apart. Earlier versions
   gave the control up at the back edge of such a loop and could report an
   assertion violation pan does not find.
+- **unless**: `{ main } unless { guard -> effects }` — a linear escape block.
+  The escape is tested before every main statement; when its guard is enabled,
+  it preempts the remaining main block. Choice/loop, channel, `goto`, labels,
+  nested blocks, and multi-option bodies remain outside the subset.
 
 ### 1.6 Assertions
 
@@ -219,7 +223,7 @@ The following constructs are **rejected** with a structured error
 | Construct | Reason |
 |-----------|--------|
 | `c_code`, `c_decl`, `c_state`, `c_track`, `c_expr` | Embedded C is outside the subset |
-| `unless` | Plan 14 §5.2: outside the subset |
+| complex `unless` escape | Only a linear guarded brace-block escape is supported |
 | `priority` | Process priorities are outside the subset |
 | `ltl { ... }` | Inline LTL blocks; use `never { }` instead |
 | `trace`, `notrace` | Event traces are outside the subset |

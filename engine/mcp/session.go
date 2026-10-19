@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"sync"
@@ -17,6 +18,10 @@ import (
 // MCPSchema identifies the shape of the tool inputs and outputs of this
 // package. It changes when a tool's input or output changes incompatibly.
 const MCPSchema = "mcd-mcp/1"
+
+// DefaultMaxOutputBytes bounds one persisted report or trace. It prevents an
+// otherwise valid bounded run from exhausting the session filesystem.
+const DefaultMaxOutputBytes int64 = 16 << 20
 
 // Sessions owns the base directory and the live sessions. One session is
 // one directory <base>/<id>; the id is what every tool answer carries.
@@ -33,16 +38,24 @@ type Sessions struct {
 
 // ServerParams is the server configuration a manifest records (NFR-002).
 type ServerParams struct {
-	DefaultBudget Budget   `json:"default_budget"`
-	Ceiling       Budget   `json:"ceiling"`
-	Concurrency   int      `json:"concurrency"`
-	MaxWorkers    int      `json:"max_workers,omitempty"`
-	AllowRead     []string `json:"allow_read"`
+	DefaultBudget  Budget   `json:"default_budget"`
+	Ceiling        Budget   `json:"ceiling"`
+	Concurrency    int      `json:"concurrency"`
+	MaxWorkers     int      `json:"max_workers,omitempty"`
+	MaxInputBytes  int64    `json:"max_input_bytes"`
+	MaxOutputBytes int64    `json:"max_output_bytes"`
+	AllowRead      []string `json:"allow_read"`
 }
 
 // NewSessions creates (if needed) the base directory. base "" means a fresh
 // temporary directory.
 func NewSessions(base string, cleanup bool, params ServerParams) (*Sessions, error) {
+	if params.MaxOutputBytes < 0 {
+		return nil, errors.New("max output bytes must not be negative")
+	}
+	if params.MaxOutputBytes == math.MaxInt64 {
+		return nil, errors.New("max output bytes must be below 9223372036854775807")
+	}
 	if base == "" {
 		d, err := os.MkdirTemp("", "mcd-sessions-")
 		if err != nil {
@@ -59,6 +72,9 @@ func NewSessions(base string, cleanup bool, params ServerParams) (*Sessions, err
 	}
 	if params.AllowRead == nil {
 		params.AllowRead = []string{}
+	}
+	if params.MaxOutputBytes == 0 {
+		params.MaxOutputBytes = DefaultMaxOutputBytes
 	}
 	return &Sessions{base: abs, cleanup: cleanup, byID: map[string]*Session{}, params: params}, nil
 }
@@ -84,7 +100,7 @@ func (ss *Sessions) New() (*Session, error) {
 			}
 			return nil, err
 		}
-		s := &Session{ID: id, Dir: dir}
+		s := &Session{ID: id, Dir: dir, maxOutputBytes: ss.params.MaxOutputBytes}
 		s.manifest = Manifest{
 			SessionID: id,
 			Created:   now.Format(time.RFC3339),
@@ -133,8 +149,9 @@ func (ss *Sessions) Close() error {
 // Session is one client session: a directory, a manifest and the parsed
 // model of the session when there is one.
 type Session struct {
-	ID  string
-	Dir string
+	ID             string
+	Dir            string
+	maxOutputBytes int64
 
 	mu       sync.Mutex
 	manifest Manifest
@@ -184,6 +201,42 @@ func (s *Session) WriteFile(rel string, data []byte) (string, error) {
 		return "", err
 	}
 	return p, nil
+}
+
+// OutputLimitError reports one persisted report or trace that is larger than
+// the configured per-artifact output ceiling.
+type OutputLimitError struct {
+	Path  string
+	Size  int64
+	Limit int64
+}
+
+func (e *OutputLimitError) Error() string {
+	return fmt.Sprintf("output limit of %d bytes exceeded by %d-byte artifact %q", e.Limit, e.Size, e.Path)
+}
+
+// WriteOutputFile writes a persisted report or trace only when it fits the
+// configured per-artifact ceiling. It intentionally does not apply to parsed
+// IR or the rolling manifest, which have separate input and metadata bounds.
+func (s *Session) WriteOutputFile(rel string, data []byte) (string, error) {
+	if err := s.CheckOutputSize(rel, data); err != nil {
+		return "", err
+	}
+	return s.WriteFile(rel, data)
+}
+
+// CheckOutputSize validates one serialized output artifact before any session
+// write begins, allowing callers that write related artifacts to preflight the
+// whole group and avoid partial output on a limit refusal.
+func (s *Session) CheckOutputSize(rel string, data []byte) error {
+	limit := s.maxOutputBytes
+	if limit <= 0 {
+		limit = DefaultMaxOutputBytes
+	}
+	if int64(len(data)) > limit {
+		return &OutputLimitError{Path: rel, Size: int64(len(data)), Limit: limit}
+	}
+	return nil
 }
 
 // ReadFile reads a session file through the same guard.

@@ -164,6 +164,38 @@ Feature: G3 skill package — documentation half
       | budget      |
       | evidence    |
 
+  # ---------------------------------------------------------- conformance
+  Scenario: The skill ships a model-to-implementation conformance workflow
+    Then the file "references/conformance.md" exists
+    And "references/conformance.md" mentions each of:
+      | implementation revision |
+      | scheduler               |
+      | memory model            |
+      | source-to-model mapping |
+      | preservation obligation |
+      | unresolved assumptions  |
+      | model verdict           |
+      | implementation claim    |
+
+  Scenario: The skill ships a reviewable conformance dossier template
+    Then the file "assets/conformance-dossier-template.md" exists
+    And "assets/conformance-dossier-template.md" has these headings in this order:
+      | Identity and scope        |
+      | Model and implementation  |
+      | Mapping and abstraction   |
+      | Preservation obligations  |
+      | Evidence and review       |
+      | Revalidation              |
+
+  Scenario: The skill includes a worked conformance mismatch example
+    Then the file "examples/conformance-turnstile/dossier.md" exists
+    And "examples/conformance-turnstile/dossier.md" mentions each of:
+      | deliberate mismatch |
+      | blocked             |
+      | Model verdict       |
+      | implementation      |
+      | Revalidation        |
+
   Scenario: Petri-net JSON schema is valid and admits inhibitor arcs only to reject them (aligned)
     Then "assets/petri-net.schema.json" parses as JSON
     And the schema declares "$schema" as JSON Schema draft 2020-12

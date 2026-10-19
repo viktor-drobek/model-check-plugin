@@ -7,8 +7,30 @@ import (
 	"strings"
 	"testing"
 
+	"modelcheck/cex"
 	"modelcheck/explore"
 )
+
+func TestStoreTraceDoesNotRegisterOversizedArtifact(t *testing.T) {
+	ss, err := NewSessions(t.TempDir(), false, ServerParams{MaxOutputBytes: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sess, err := ss.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _, err = (&Server{}).storeTrace(sess, "p", "counterexample", &cex.Trace{Summary: "x"})
+	var limit *OutputLimitError
+	if !errors.As(err, &limit) {
+		t.Fatalf("storeTrace error = %v, want OutputLimitError", err)
+	}
+	sess.mu.Lock()
+	defer sess.mu.Unlock()
+	if len(sess.cexs) != 0 {
+		t.Fatalf("registered traces after refused write = %#v", sess.cexs)
+	}
+}
 
 func TestAnInternalErrorIsAToolErrorNotARejection(t *testing.T) {
 	s := &Server{errw: io.Discard}

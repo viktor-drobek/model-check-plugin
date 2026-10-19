@@ -14,7 +14,10 @@ import (
 	"strings"
 )
 
-const Schema = "mcd-trace-ledger/1"
+const (
+	Schema   = "mcd-trace-ledger/1"
+	SchemaV2 = "mcd-trace-ledger/2"
+)
 
 const maxJSONNestingDepth = 64
 
@@ -42,6 +45,7 @@ const (
 	RuntimeSpan     NodeKind = "RuntimeSpan"
 	Counterexample  NodeKind = "Counterexample"
 	ReviewDecision  NodeKind = "ReviewDecision"
+	GrammarArtifact NodeKind = "GrammarArtifact"
 )
 
 // EdgeKind identifies a closed set of relations between ledger nodes.
@@ -149,6 +153,13 @@ type Document struct {
 // UnmarshalJSON parses and validates a trace ledger. The parser rejects
 // duplicate keys, unknown fields, and trailing values at every object level.
 func UnmarshalJSON(data []byte) (*Document, error) {
+	if selectsSchemaV2(data) {
+		return unmarshalV2JSON(data)
+	}
+	return unmarshalV1JSON(data)
+}
+
+func unmarshalV1JSON(data []byte) (*Document, error) {
 	if err := rejectDuplicateKeys(data); err != nil {
 		return nil, fmt.Errorf("trace: %w", err)
 	}
@@ -164,6 +175,9 @@ func UnmarshalJSON(data []byte) (*Document, error) {
 	if _, err := dec.Token(); err != io.EOF {
 		return nil, fmt.Errorf("trace: trailing data after the document")
 	}
+	if d.Schema != Schema {
+		return nil, fmt.Errorf("trace: schema is %q, want %q", d.Schema, Schema)
+	}
 	if err := Validate(&d); err != nil {
 		return nil, fmt.Errorf("trace: %w", err)
 	}
@@ -176,9 +190,17 @@ func Validate(d *Document) error {
 	if d == nil {
 		return fmt.Errorf("document is nil")
 	}
-	if d.Schema != Schema {
+	switch d.Schema {
+	case Schema:
+		return validateDocument(d, false)
+	case SchemaV2:
+		return validateDocument(d, true)
+	default:
 		return fmt.Errorf("schema is %q, want %q", d.Schema, Schema)
 	}
+}
+
+func validateDocument(d *Document, schemaV2 bool) error {
 	if d.Nodes == nil || d.Edges == nil || d.Evidence == nil || d.Gaps == nil {
 		return fmt.Errorf("nodes, edges, evidence, and gaps must be arrays")
 	}
@@ -189,7 +211,7 @@ func Validate(d *Document) error {
 		if err := validID(n.ID, path+".id"); err != nil {
 			return err
 		}
-		if !validNodeKind(n.Kind) {
+		if !validNodeKind(n.Kind, schemaV2) {
 			return fmt.Errorf("%s.kind %q is outside the vocabulary", path, n.Kind)
 		}
 		if strings.TrimSpace(n.Label) == "" {
@@ -201,13 +223,20 @@ func Validate(d *Document) error {
 		if err := validateProvenance(n.Provenance, path+".provenance"); err != nil {
 			return err
 		}
-		if err := validateEvidenceIDs(n.Evidence, path+".evidence"); err != nil {
-			return err
+		if schemaV2 && n.Kind == GrammarArtifact {
+			if err := uniqueIDs(n.Evidence, path+".evidence"); err != nil {
+				return err
+			}
+		} else {
+			if err := validateEvidenceIDs(n.Evidence, path+".evidence"); err != nil {
+				return err
+			}
 		}
 		nodes[n.ID] = n
 	}
 
 	edges := make(map[string]Edge, len(d.Edges))
+	incidentNodes := make(map[string]bool, len(d.Nodes))
 	for i, e := range d.Edges {
 		path := fmt.Sprintf("edges[%d]", i)
 		if err := validID(e.ID, path+".id"); err != nil {
@@ -232,6 +261,8 @@ func Validate(d *Document) error {
 			return err
 		}
 		edges[e.ID] = e
+		incidentNodes[e.Source] = true
+		incidentNodes[e.Target] = true
 	}
 
 	evidence := make(map[string]Evidence, len(d.Evidence))
@@ -253,6 +284,11 @@ func Validate(d *Document) error {
 			return err
 		}
 		evidence[ev.ID] = ev
+	}
+	if schemaV2 {
+		if err := validateV2GrammarArtifacts(d, nodes, incidentNodes, evidence); err != nil {
+			return err
+		}
 	}
 
 	referencedEvidence := make(map[string]bool, len(d.Evidence))
@@ -286,7 +322,7 @@ func Validate(d *Document) error {
 		if !referencedEvidence[ev.ID] {
 			return fmt.Errorf("evidence[%d] %q is not listed by its subject", i, ev.ID)
 		}
-		if err := validateEvidenceApplicability(ev, nodes, edges, fmt.Sprintf("evidence[%d]", i)); err != nil {
+		if err := validateEvidenceApplicability(ev, nodes, edges, fmt.Sprintf("evidence[%d]", i), schemaV2); err != nil {
 			return err
 		}
 	}
@@ -388,7 +424,13 @@ func validateSubject(subject string, nodes map[string]Node, edges map[string]Edg
 	return nil
 }
 
-func validateEvidenceApplicability(ev Evidence, nodes map[string]Node, edges map[string]Edge, path string) error {
+func validateEvidenceApplicability(ev Evidence, nodes map[string]Node, edges map[string]Edge, path string, schemaV2 bool) error {
+	if schemaV2 && ev.Level == Grammar {
+		kind, id, _ := strings.Cut(ev.Subject, ":")
+		if kind != "node" || nodes[id].Kind != GrammarArtifact {
+			return fmt.Errorf("%s.level %q must apply only to a GrammarArtifact node", path, ev.Level)
+		}
+	}
 	if ev.Level != Modelled && ev.Level != Verified {
 		return nil
 	}
@@ -415,7 +457,10 @@ func isModelArtifact(kind NodeKind) bool {
 	return false
 }
 
-func validNodeKind(kind NodeKind) bool {
+func validNodeKind(kind NodeKind, schemaV2 bool) bool {
+	if schemaV2 && kind == GrammarArtifact {
+		return true
+	}
 	switch kind {
 	case Issue, Requirement, Assumption, StandardClause, ProtocolMessage, BinaryField, SourceSymbol, Endpoint, ModelTransition, Property, Scenario, Test, RuntimeSpan, Counterexample, ReviewDecision:
 		return true

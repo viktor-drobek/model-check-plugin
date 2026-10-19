@@ -1,0 +1,12 @@
+Request for Comments: 9033
+Category: Informational
+
+Authors may incorporate this phrase:
+
+Example Author                                                [Page 2]
+
+RFC 9033                 Example Protocol              October 2026
+
+The key words "MUST" in this document are to be interpreted as described in RFC 8174.
+
+An implementation MUST not become a candidate.
