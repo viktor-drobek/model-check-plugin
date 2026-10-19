@@ -313,6 +313,59 @@ When it pays and when it does not. It pays on **wide** graphs, with thousands of
 
 What it refuses, with the reason in `search.parallel.reason` and the run executed sequentially and unchanged (so its `search.mode` is the requested one, and its `depth` and `--budget-depth` count transitions, not layers of stored states): any `ltl` or `progress` property, a mixed temporal or safety request, CTL under fairness, and `--por` where the reduction applies (it is depth-first; where it refuses, the parallel search runs and `search.reduction` keeps its own reason). A CTL-only request with fairness none builds its complete reachable graph in parallel, then keeps CTL labelling and witness reconstruction sequential; its report is deterministic and carries the same verdict and witness as the sequential breadth-first run. A model that contains `assert` has an implicit safety property, so a CTL request on it is mixed safety-plus-CTL and runs sequentially instead. Its `depth` and `--budget-depth` retain the sequential graph's transition-depth semantics, including atomic chains. `search.parallel.layers` and `max_layer_states` describe stored-state frontier width only; they do not change CTL depth accounting. `--workers` with `--estimate`, below 0 or above 256 is a usage error. The memory estimate counts the stored set, the records of the largest group of states and the largest frontier; the compiled copies of the model that each worker keeps are in `search.parallel.worker_bytes_est`.
 
+### GitHub Release binaries
+
+The standalone repository's [Release binaries workflow](.github/workflows/release.yml)
+attaches the five platform binaries (Linux amd64/arm64, macOS amd64/arm64,
+Windows amd64), wrappers, `SHA256SUMS`, and `BUILD-INFO.json` when a GitHub Release
+is published. It runs on GitHub-hosted Ubuntu runners, uses the Go version from
+`engine/go.mod`, and calls `build.sh --verify-repro`. Only the Linux amd64 binary
+is executed by this workflow; other targets are cross-built, not smoke-tested.
+These assets supplement the complete plugin source tree; they are not a standalone
+plugin installation.
+
+Create a tag such as `v0.4.0` (or `0.4.0`) on the reviewed source commit, with the
+same version in `plugin.json` and `.claude-plugin/plugin.json`, and publish its
+GitHub Release. The tagged commit must include the workflow and its validation
+script. The build records that tag's resolved commit as `source_commit`; it writes
+to a temporary directory and does not change tracked `engine/bin/` files. This
+CI build is separate from reproducing the binaries committed in the repository.
+The build job has read-only repository access; only the publish job has
+`contents: write`, using the automatic `GITHUB_TOKEN`. No additional secret is
+required. Repository policy must allow GitHub-hosted runners and that permission.
+
+To attach assets to an existing published release after the workflow has reached
+the default branch:
+
+```bash
+gh workflow run release.yml --repo viktor-drobek/model-check-plugin -f tag=v0.4.0
+```
+
+The selected tag must contain the workflow helpers and match both manifests.
+Draft and immutable releases are refused before building and checked again before
+upload. GitHub immutable releases must be disabled for this published-release
+workflow: assets are attached after publication. If immutable releases are
+required, use a separate draft-upload-publish process instead.
+Existing assets are never overwritten: a rerun with
+same-named assets fails rather than replacing them. If a partial upload occurred,
+an operator must inspect the release and deliberately remove the conflicting
+assets before retrying. Do not move a published tag to repair a failed build.
+
+Download the binary for your platform from the release, along with `SHA256SUMS`,
+and verify its matching checksum entry before execution. On Linux, for example:
+
+```bash
+sha256sum --check --ignore-missing SHA256SUMS
+chmod +x mcd-linux-amd64
+./mcd-linux-amd64 version
+```
+
+Ensure the checker reports `mcd-linux-amd64: OK`; missing files are ignored in this
+single-binary example. On macOS use `shasum -a 256` and compare the named entry;
+on Windows use `Get-FileHash -Algorithm SHA256`. Raw POSIX assets may need
+`chmod +x` after download. The workflow is not a substitute for the full test,
+security, review, and platform-execution release gates below.
+
 ### Reproducible release build
 
 ```bash
